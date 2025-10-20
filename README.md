@@ -21,9 +21,9 @@ System Modules List
 - Manage Extra Activities Module
 
 Tech Stack:
-Frontend: Flutter
-Backend: Laravel
-Database: MySQL
-Authentication: Laravel Sanctum
-Hosting: Laravel Forge / Firebase
-AI：Vertex AI (optional)
+- Frontend: Flutter
+- Backend: Laravel
+- Database: MySQL
+- Authentication: Laravel Sanctum
+- Hosting: Laravel Forge / Firebase
+- AI：Vertex AI (optional)
