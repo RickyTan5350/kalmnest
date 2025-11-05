@@ -1,23 +1,3 @@
-<<<<<<< HEAD
-# kalmnest
-
-Project Overview
-The AI-Assisted Gamified Learning Platform is designed to enhance student engagement and motivation in learning web programming.
-
-System Modules List
-- User Profile Module - Manisha
-- Notes Module - Loke Pei En
-- Game Module - Ng De Sheng
-- Achievement Module - Kwan Jin Ping
-- Class Module - Sia Jun Yi
-- Support Module - Tan Li Ji
-
-Tech Stack:
-- Frontend: Flutter
-- Backend: Laravel
-- Database: MySQL
-- AI：Gemini API
-=======
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
@@ -77,4 +57,3 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
->>>>>>> 1bf9f26 (Initial project commit)
