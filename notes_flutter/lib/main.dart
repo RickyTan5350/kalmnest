@@ -137,6 +137,7 @@ class _MainScreenState extends State<MainScreen> {
 }
 
 // This is your original form, just moved into its own widget
+// This is your original form, just moved into its own widget
 class UploadNotePage extends StatefulWidget {
   const UploadNotePage({super.key});
 
@@ -156,156 +157,172 @@ class _UploadNotePageState extends State<UploadNotePage> {
   @override
   Widget build(BuildContext context) {
     // The main form content is now the root widget
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Text(
-                'Upload New Note',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              //Text(
-              //'Add educational materials: interactive code lessons and markdown notes',
-              //style: Theme.of(context).textTheme.titleSmall,
-              //),
-              const SizedBox(height: 24),
-
-              // Topic Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedTopic,
-                decoration: const InputDecoration(
-                  labelText: 'Topic *',
-                ),
-                hint: const Text('Select a topic'),
-                items: _topics.map((String topic) {
-                  return DropdownMenuItem<String>(
-                    value: topic,
-                    child: Text(topic),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedTopic = newValue;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Title Field
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Title *',
-                  hintText: 'Select existing or type new title',
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Markdown & Media Section
-              const Text('Markdown Notes (Optional)',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Padding(
+      // 1. This Padding adds space AROUND the card
+      padding: const EdgeInsets.all(24.0),
+      child: Card(
+        // 2. This is the new Card widget
+        // You can adjust elevation, shape, etc., based on your theme
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          // You might want a slight border to match your theme
+          // side: BorderSide(color: Colors.grey[300]!) 
+        ),
+        clipBehavior: Clip.antiAlias, // Ensures content respects the rounded corners
+        child: SingleChildScrollView(
+          child: Padding(
+            // 3. This Padding adds space INSIDE the card
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Media Files',
-                      style: TextStyle(color: Colors.black54)),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.upload_file_outlined),
-                    label: const Text('Upload Media'),
-                    onPressed: () {
-                      // Handle media upload
+                  // Header
+                  Text(
+                    'Upload New Note',
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  //Text(
+                  //'Add educational materials: interactive code lessons and markdown notes',
+                  //style: Theme.of(context).textTheme.titleSmall,
+                  //),
+                  const SizedBox(height: 24),
+
+                  // Topic Dropdown
+                  DropdownButtonFormField<String>(
+                    value: _selectedTopic,
+                    decoration: const InputDecoration(
+                      labelText: 'Topic *',
+                    ),
+                    hint: const Text('Select a topic'),
+                    items: _topics.map((String topic) {
+                      return DropdownMenuItem<String>(
+                        value: topic,
+                        child: Text(topic),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      setState(() {
+                        _selectedTopic = newValue;
+                      });
                     },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Title Field
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Title *',
+                      hintText: 'Select existing or type new title',
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Markdown & Media Section
+                  const Text('Markdown Notes (Optional)',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Media Files',
+                          style: TextStyle(color: Colors.black54)),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.upload_file_outlined),
+                        label: const Text('Upload Media'),
+                        onPressed: () {
+                          // Handle media upload
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Live Preview
+                  const Text('Live Preview',
+                      style: TextStyle(color: Colors.black54)),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    height: 200,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: const Text('hi'),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Interactive Code Editor
+                  const Text('Code Editor (Optional)',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: const Text(
+                      'Please select a topic first to enable the code editor',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Upload By Field
+                  TextFormField(
+                    initialValue: 'John Doe',
+                    enabled: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Upload By *',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Visibility Toggle
+                  SwitchListTile(
+                    title: const Text('Note Visibility'),
+                    subtitle: const Text('Make this note visible to students'),
+                    value: _isNoteVisible,
+                    onChanged: (bool value) {
+                      setState(() {
+                        _isNoteVisible = value;
+                      });
+                    },
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: Colors.blue,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Submit Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.upload),
+                      label: const Text('Upload Note'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        // Handle form submission
+                      },
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-
-              // Live Preview
-              const Text('Live Preview',
-                  style: TextStyle(color: Colors.black54)),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                height: 200,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: const Text('hi'),
-              ),
-              const SizedBox(height: 24),
-
-              // Interactive Code Editor
-              const Text('Code Editor (Optional)',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: const Text(
-                  'Please select a topic first to enable the code editor',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Upload By Field
-              TextFormField(
-                initialValue: 'John Doe',
-                enabled: false,
-                decoration: const InputDecoration(
-                  labelText: 'Upload By *',
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Visibility Toggle
-              SwitchListTile(
-                title: const Text('Note Visibility'),
-                subtitle: const Text('Make this note visible to students'),
-                value: _isNoteVisible,
-                onChanged: (bool value) {
-                  setState(() {
-                    _isNoteVisible = value;
-                  });
-                },
-                contentPadding: EdgeInsets.zero,
-                activeColor: Colors.blue,
-              ),
-              const SizedBox(height: 24),
-
-              // Submit Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.upload),
-                  label: const Text('Upload Note'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    // Handle form submission
-                  },
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
