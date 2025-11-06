@@ -1,4 +1,4 @@
-# appdev1_flutter
+# notes_flutter
 
 A new Flutter project.
 
