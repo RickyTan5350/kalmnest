@@ -43,8 +43,8 @@ class _EmailWidgetState extends State<EmailWidget> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: widget.onSelected,
-      child: Card(
-        elevation: 0,
+      child: Card(      //use card
+        elevation: 0,     //card in flat style
         color: _surfaceColor,
         clipBehavior: Clip.hardEdge,
         child: Column(
