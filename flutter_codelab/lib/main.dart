@@ -14,8 +14,10 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData.light(),
-      home: Feed(currentUser: data.user_0),
+      theme: ThemeData( 
+        useMaterial3: true,
+        colorSchemeSeed: Colors.indigo),
+        home: Feed(currentUser: data.user_0),
     );
   }
 }
@@ -30,6 +32,8 @@ class Feed extends StatefulWidget {
 }
 
 class _FeedState extends State<Feed> {
+
+  
   late final _colorScheme = Theme.of(context).colorScheme;
   late final _backgroundColor = Color.alphaBlend(
     _colorScheme.primary.withAlpha(36),
@@ -37,7 +41,7 @@ class _FeedState extends State<Feed> {
   );
 
    int selectedIndex = 0;         //added line
-
+    
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +67,7 @@ class _FeedState extends State<Feed> {
         elevation: 0,
         backgroundColor: Colors.white,
         destinations: destinations.map<NavigationDestination>((d) {
-          return NavigationDestination(icon: Icon(d.icon), label: d.label);
+          return NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: d.label);
         }).toList(),
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) {
