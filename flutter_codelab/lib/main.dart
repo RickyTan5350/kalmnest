@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'util.dart';
+import 'theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'models/data.dart' as data;
 import 'models/models.dart';
@@ -15,24 +17,13 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseLightTheme = ThemeData.light();
-    final lightTheme = baseLightTheme.copyWith(
-      textTheme: GoogleFonts.robotoSlabTextTheme(
-        baseLightTheme.textTheme,
-      ),
-    );
-
-    final baseDarkTheme = ThemeData.dark();
-    final darkTheme = baseDarkTheme.copyWith(
-      textTheme: GoogleFonts.robotoSlabTextTheme(
-        baseDarkTheme.textTheme,
-      ),
-    ); 
+    TextTheme textTheme = createTextTheme(context, "Roboto Slab", "Roboto Slab");
+    MaterialTheme theme = MaterialTheme(textTheme); 
     return MaterialApp(
-      theme: lightTheme,
-      darkTheme: darkTheme,
+      theme: theme.light(),     // <-- Uses your custom light colors + text
+      darkTheme: theme.dark(),  // <-- Uses your custom dark colors + text
       themeMode: ThemeMode.system,
-      home: Feed(currentUser: data.user_0),
+      home: Feed(currentUser: data.user_0)
     );
   }
 }
@@ -54,7 +45,7 @@ class _FeedState extends State<Feed> {
   );
 
   int selectedIndex = 0;
-  // Add from here...
+ 
   bool wideScreen = false;
 
   bool _isRailExtended = false;
@@ -66,11 +57,11 @@ class _FeedState extends State<Feed> {
     final double width = MediaQuery.of(context).size.width;
     wideScreen = width > 600;
   }
-  // ... to here.
+ 
 
   @override
   Widget build(BuildContext context) {
-    // Modify from here...
+    
     return Scaffold(
       body: Row(
         children: [
@@ -90,7 +81,7 @@ class _FeedState extends State<Feed> {
                 });
               },
             ),
-          // The brackets were moved from above
+          
           Expanded(
             child: Container(
               color: _backgroundColor,
@@ -105,8 +96,8 @@ class _FeedState extends State<Feed> {
               ),
             ),
           ),
-        ], // <-- This now closes the Row's children
-      ), // <-- This now closes the Row
+        ], 
+      ), 
       floatingActionButton: wideScreen
           ? null
           : FloatingActionButton(
@@ -126,6 +117,6 @@ class _FeedState extends State<Feed> {
               },
             ),
     );
-    // ... to here.
+    
   }
 }
