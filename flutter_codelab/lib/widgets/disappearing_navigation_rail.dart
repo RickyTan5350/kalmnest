@@ -108,13 +108,7 @@ class DisappearingNavigationRail extends StatelessWidget {
         },
         extended: isExtended,
         groupAlignment: -1.0,
-
-        // --- THIS IS THE FIX ---
-        // Add this line to disable the default indicator,
-        // which is what's showing the hover color.
         useIndicator: false,
-        // --- END OF FIX ---
-
         destinations: allDestinations,
       ),
     );

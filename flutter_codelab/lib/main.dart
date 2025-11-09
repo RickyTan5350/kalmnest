@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-// Remove the destination.dart import, it's not required
+import 'package:google_fonts/google_fonts.dart';
 import 'models/data.dart' as data;
 import 'models/models.dart';
 import 'widgets/disappearing_bottom_navigation_bar.dart'; // Add import
@@ -17,7 +16,12 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData.light(),
+      theme: ThemeData.light().copyWith(
+        textTheme: GoogleFonts.robotoSlabTextTheme(
+          ThemeData.light().textTheme,
+        ),
+      ),
+      
       home: Feed(currentUser: data.user_0),
     );
   }
