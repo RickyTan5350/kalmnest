@@ -15,13 +15,23 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData.light().copyWith(
-        textTheme: GoogleFonts.robotoSlabTextTheme(
-          ThemeData.light().textTheme,
-        ),
+    final baseLightTheme = ThemeData.light();
+    final lightTheme = baseLightTheme.copyWith(
+      textTheme: GoogleFonts.robotoSlabTextTheme(
+        baseLightTheme.textTheme,
       ),
-      
+    );
+
+    final baseDarkTheme = ThemeData.dark();
+    final darkTheme = baseDarkTheme.copyWith(
+      textTheme: GoogleFonts.robotoSlabTextTheme(
+        baseDarkTheme.textTheme,
+      ),
+    ); 
+    return MaterialApp(
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: ThemeMode.system,
       home: Feed(currentUser: data.user_0),
     );
   }
