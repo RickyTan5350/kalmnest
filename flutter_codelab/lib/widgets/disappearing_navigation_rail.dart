@@ -8,48 +8,66 @@ class DisappearingNavigationRail extends StatelessWidget {
     required this.backgroundColor,
     required this.selectedIndex,
     this.onDestinationSelected,
-    required this.isExtended, // <-- 1. ADD THIS
+    required this.isExtended,
     required this.onMenuPressed,
   });
 
   final Color backgroundColor;
   final int selectedIndex;
   final ValueChanged<int>? onDestinationSelected;
-  final bool isExtended; // <-- 3. ADD THIS
-  final VoidCallback onMenuPressed; // <-- 4. ADD THIS
+  final bool isExtended;
+  final VoidCallback onMenuPressed;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return NavigationRail(
-      selectedIndex: selectedIndex,
-      backgroundColor: backgroundColor,
-      onDestinationSelected: onDestinationSelected,
-      extended: isExtended,
-      leading: Column(
-        children: [
-          IconButton(onPressed: onMenuPressed, icon: const Icon(Icons.menu)),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(15)),
-            ),
-            backgroundColor: colorScheme.tertiaryContainer,
-            foregroundColor: colorScheme.onTertiaryContainer,
-            onPressed: () {},
-            child: const Icon(Icons.add),
+    final List<NavigationRailDestination> allDestinations = [
+      // Item 0: The Menu button
+      NavigationRailDestination(icon: Icon(Icons.menu), label: Text('Menu')),
+      // Item 1: The Add button (styled to look like your FAB)
+      NavigationRailDestination(
+        icon: Container(
+          width: 40, // FAB.small size
+          height: 40,
+          decoration: BoxDecoration(
+            color: colorScheme.tertiaryContainer,
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
           ),
-        ],
+          child: Icon(Icons.add, color: colorScheme.onTertiaryContainer),
+        ),
+        label: Text('Create'),
       ),
-      groupAlignment: -0.85,
-      destinations: destinations.map((d) {
+      // The rest of your original destinations
+      ...destinations.map((d) {
         return NavigationRailDestination(
           icon: Icon(d.icon),
           selectedIcon: Icon(d.selectedIcon),
           label: Text(d.label),
-
         );
-      }).toList(),
+      }),
+    ];
+
+    return NavigationRail(
+      // Add 2 to the selectedIndex to account for Menu and Add
+      selectedIndex: selectedIndex + 2,
+      backgroundColor: backgroundColor,
+      onDestinationSelected: (int index) {
+        if (index == 0) {
+          // This is the Menu button
+          onMenuPressed();
+        } else if (index == 1) {
+          // This is the Add button
+          // Add your "onPressed" logic here
+        } else {
+          // This is a real destination, so call the original callback
+          // subtracting 2 to get the correct original index
+          onDestinationSelected?.call(index - 2);
+        }
+      },
+      extended: isExtended,
+      // leading is removed
+      groupAlignment: -1.0, // Aligns all items to the top
+      destinations: allDestinations, // Use our new combined list
     );
   }
 }
