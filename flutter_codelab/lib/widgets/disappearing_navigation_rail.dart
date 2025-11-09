@@ -8,11 +8,15 @@ class DisappearingNavigationRail extends StatelessWidget {
     required this.backgroundColor,
     required this.selectedIndex,
     this.onDestinationSelected,
+    required this.isExtended, // <-- 1. ADD THIS
+    required this.onMenuPressed,
   });
 
   final Color backgroundColor;
   final int selectedIndex;
   final ValueChanged<int>? onDestinationSelected;
+  final bool isExtended; // <-- 3. ADD THIS
+  final VoidCallback onMenuPressed; // <-- 4. ADD THIS
 
   @override
   Widget build(BuildContext context) {
@@ -21,9 +25,10 @@ class DisappearingNavigationRail extends StatelessWidget {
       selectedIndex: selectedIndex,
       backgroundColor: backgroundColor,
       onDestinationSelected: onDestinationSelected,
+      extended: isExtended,
       leading: Column(
         children: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.menu)),
+          IconButton(onPressed: onMenuPressed, icon: const Icon(Icons.menu)),
           const SizedBox(height: 8),
           FloatingActionButton(
             shape: const RoundedRectangleBorder(
