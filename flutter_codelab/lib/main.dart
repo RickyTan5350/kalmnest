@@ -54,10 +54,9 @@ class _FeedState extends State<Feed> {
    // This switch statement checks the currently selected page
    switch (selectedIndex) {
    case 4: // This is the index for 'AchievementPage'
-    Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const CreateAchievementPage()),
-    );
+    
+    showCreateAchievementDialog(context);
+    
   break;
 
    case 2: // This is the index for 'NotePage'
