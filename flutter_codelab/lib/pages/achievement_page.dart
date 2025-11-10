@@ -1,29 +1,88 @@
+// lib/pages/achievement_page.dart
+
 import 'package:flutter/material.dart';
 
-class AchievementPage extends StatelessWidget {
+class AchievementPage extends StatefulWidget {
   const AchievementPage({super.key});
 
   @override
+  State<AchievementPage> createState() => _AchievementPageState();
+}
+
+class _AchievementPageState extends State<AchievementPage> {
+  final List<String> _topics = ['HTML', 'CSS', 'JS', 'PHP', 'Level', 'Quiz'];
+  String _selectedTopic = 'CSS'; // Default selected topic
+
+  @override
   Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.all(16.0), // Padding around the card
+      padding: const EdgeInsets.all(16.0), // Outer padding around the card
       child: Card(
         elevation: 2.0,
         child: SizedBox(
           width: double.infinity,
           height: double.infinity,
           child: Padding(
-            padding: const EdgeInsets.all(16.0), // Padding inside the card
+            padding: const EdgeInsets.all(16.0), // Inner padding inside the card
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Title
                 Text(
-                  'Achievements',
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  "Achievements",
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: colors.onSurface,
+                      ),
                 ),
+
                 const SizedBox(height: 16),
-                const Text('---Achievements---'),
-                // Add more widgets to this Column
+
+                // Search Bar (moved above chips)
+                SizedBox(
+                  width: 300,
+                  child: SearchBar(
+                    
+                    hintText: "Achievement Name",
+                    trailing: <Widget>[
+                      IconButton(
+                        icon: const Icon(Icons.search),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Chips
+                Wrap(
+                  spacing: 10.0,
+                  runSpacing: 10.0,
+                  children: _topics.map((topic) {
+                    final bool isSelected = _selectedTopic == topic;
+                    return FilterChip(
+                      label:
+                          Text(topic, style: TextStyle(color: colors.onSurface)),
+                      selected: isSelected,
+                      onSelected: (bool selected) {
+                        setState(() {
+                          if (selected) _selectedTopic = topic;
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Placeholder for Achievement List
+                const Expanded(
+                  child: Center(
+                    child: Text('Achievement List Goes Here'),
+                  ),
+                ),
               ],
             ),
           ),
