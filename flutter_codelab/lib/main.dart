@@ -8,6 +8,7 @@ import 'widgets/disappearing_bottom_navigation_bar.dart';
 import 'widgets/disappearing_navigation_rail.dart';
 import 'widgets/email_list_view.dart';
 import 'pages/pages.dart';
+import 'package:flutter_codelab/widgets/create_achievement_page.dart';
 
 void main() {
   runApp(const MainApp());
@@ -35,6 +36,7 @@ class Feed extends StatefulWidget {
   State<Feed> createState() => _FeedState();
 }
 
+
 class _FeedState extends State<Feed> {
   // --- DELETE THE COLOR VARIABLES FROM HERE ---
 
@@ -48,6 +50,29 @@ class _FeedState extends State<Feed> {
     final double width = MediaQuery.of(context).size.width;
     wideScreen = width > 600;
   }
+  void _onAddButtonPressed() {
+   // This switch statement checks the currently selected page
+   switch (selectedIndex) {
+   case 4: // This is the index for 'AchievementPage'
+    Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const CreateAchievementPage()),
+    );
+  break;
+
+   case 2: // This is the index for 'NotePage'
+ // TODO: Create and navigate to a 'CreateNotePage'
+{{// Navigator.push(
+  //   context,
+  //   MaterialPageRoute(builder: (context) => const CreateNotePage()),
+ // );
+ print('TODO: Open Create Note Page');
+ break;}}
+
+default:
+print("No 'add' action for index $selectedIndex");
+}
+}
 
   @override
   Widget build(BuildContext context) {
@@ -84,8 +109,11 @@ class _FeedState extends State<Feed> {
               onMenuPressed: () {
                 setState(() {
                   _isRailExtended = !_isRailExtended;
-                });
+                },
+                
+                );
               },
+              onAddButtonPressed: _onAddButtonPressed,
             ),
           Expanded(
             child: Container(
@@ -100,7 +128,7 @@ class _FeedState extends State<Feed> {
           : FloatingActionButton(
               backgroundColor: _colorScheme.tertiaryContainer,
               foregroundColor: _colorScheme.onTertiaryContainer,
-              onPressed: () {},
+              onPressed: _onAddButtonPressed,
               child: const Icon(Icons.add),
             ),
       bottomNavigationBar: wideScreen
