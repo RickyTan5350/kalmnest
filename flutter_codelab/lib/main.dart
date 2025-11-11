@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'util.dart';
 import 'theme.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'models/data.dart' as data;
 import 'models/models.dart';
 import 'widgets/disappearing_bottom_navigation_bar.dart';
 import 'widgets/disappearing_navigation_rail.dart';
-import 'widgets/email_list_view.dart';
 import 'pages/pages.dart';
 import 'package:flutter_codelab/widgets/create_achievement_page.dart';
+import 'package:flutter_codelab/widgets/create_feedback.dart';
 
 void main() {
   runApp(const MainApp());
@@ -86,6 +85,16 @@ class _FeedState extends State<Feed> {
     
   break;
 
+   case 6: // This is the index for 'FeedbackPage'
+    showCreateFeedbackDialog(
+          context: context,
+          showSnackBar: _showSnackBar,
+          onFeedbackAdded: (feedback) {
+            // Optionally do something after feedback is added
+          },
+        );
+    break;
+
    case 2: // This is the index for 'NotePage'
  // TODO: Create and navigate to a 'CreateNotePage'
 {{// Navigator.push(
@@ -103,21 +112,21 @@ print("No 'add' action for index $selectedIndex");
   @override
   Widget build(BuildContext context) {
     // --- ADD THE COLOR AND PAGE VARIABLES HERE ---
-    final _colorScheme = Theme.of(context).colorScheme;
-    final _backgroundColor = Color.alphaBlend(
-      _colorScheme.primary.withAlpha(36),
-      _colorScheme.surface,
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = Color.alphaBlend(
+      colorScheme.primary.withAlpha(36),
+      colorScheme.surface,
     );
 
     final List<Widget> pages = [
-      const UserPage(), // Index 0
-      const GamePage(), // Index 1
+      const UserPage(), 
+      const GamePage(), 
       const NotePage(),
-      const ClassPage(), //utter Index 3
-      const AchievementPage(), // Index 4
-      const AiChatPage(), // Index 5
+      const ClassPage(), 
+      const AchievementPage(), 
+      const AiChatPage(), 
+      const FeedbackPage(),
     ];
-    // --- END OF FIX ---
 
     return Scaffold(
       body: Row(
@@ -125,7 +134,7 @@ print("No 'add' action for index $selectedIndex");
           if (wideScreen)
             DisappearingNavigationRail(
               selectedIndex: selectedIndex,
-              backgroundColor: _backgroundColor, // <-- Now uses the fresh color
+              backgroundColor: backgroundColor, // <-- Now uses the fresh color
               onDestinationSelected: (index) {
                 setState(() {
                   selectedIndex = index;
@@ -143,7 +152,7 @@ print("No 'add' action for index $selectedIndex");
             ),
           Expanded(
             child: Container(
-              color: _backgroundColor, // <-- Now uses the fresh color
+              color: backgroundColor, // <-- Now uses the fresh color
               child: pages[selectedIndex],
             ),
           ),
@@ -152,8 +161,8 @@ print("No 'add' action for index $selectedIndex");
       floatingActionButton: wideScreen
           ? null
           : FloatingActionButton(
-              backgroundColor: _colorScheme.tertiaryContainer,
-              foregroundColor: _colorScheme.onTertiaryContainer,
+              backgroundColor: colorScheme.tertiaryContainer,
+              foregroundColor: colorScheme.onTertiaryContainer,
               onPressed: _onAddButtonPressed,
               child: const Icon(Icons.add),
             ),

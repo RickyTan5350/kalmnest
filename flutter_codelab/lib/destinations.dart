@@ -14,4 +14,5 @@ const List<Destination> destinations = <Destination>[
   Destination(Icons.co_present, Icons.co_present_outlined, 'Class'),
   Destination(Icons.emoji_events,  Icons.emoji_events_outlined, 'Achievement',),
   Destination(Icons.auto_awesome, Icons.auto_awesome_outlined, 'AI chat'),
+  Destination(Icons.feedback, Icons.feedback_outlined, 'Feedback'),
 ];

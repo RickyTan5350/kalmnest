@@ -136,7 +136,7 @@ class _CreateAchievementDialogState extends State<CreateAchievementDialog>{
       hintStyle: TextStyle(
         color: colorScheme.onSurfaceVariant.withOpacity(0.6),
       ),
-      fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
       filled: true,
     );
   }
@@ -226,7 +226,7 @@ class _CreateAchievementDialogState extends State<CreateAchievementDialog>{
 
                 // Category Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   dropdownColor: const Color(0xFF2E313D),
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
@@ -252,7 +252,7 @@ class _CreateAchievementDialogState extends State<CreateAchievementDialog>{
 
                 // Level Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedLevel,
+                  initialValue: _selectedLevel,
                   dropdownColor: const Color(0xFF2E313D),
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
