@@ -52,7 +52,7 @@ class DisappearingNavigationRail extends StatelessWidget {
           selectedIcon: Icon(d.selectedIcon),
           label: Text(d.label),
         );
-      }).toList(),
+      }),
     ];
 
     // This Theme wrapper removes the splash/ripple and other hover effects
