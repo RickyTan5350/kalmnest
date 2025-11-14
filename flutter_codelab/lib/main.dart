@@ -92,6 +92,7 @@ class _FeedState extends State<Feed> {
           onFeedbackAdded: (feedback) {
             // Optionally do something after feedback is added
           },
+          authToken: '', // TODO: Pass actual auth token from your auth provider
         );
     break;
 
@@ -125,7 +126,8 @@ print("No 'add' action for index $selectedIndex");
       const ClassPage(), 
       const AchievementPage(), 
       const AiChatPage(), 
-      const FeedbackPage(),
+      // TODO: Pass actual auth token from your auth provider
+      const FeedbackPage(authToken: null),
     ];
 
     return Scaffold(
