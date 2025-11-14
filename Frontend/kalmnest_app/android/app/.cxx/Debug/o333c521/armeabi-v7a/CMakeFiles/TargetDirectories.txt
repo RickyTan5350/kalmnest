@@ -1,2 +1,0 @@
-C:/Users/ricky/ADproject/Frontend/kalmnest_app/android/app/.cxx/Debug/o333c521/armeabi-v7a/CMakeFiles/edit_cache.dir
-C:/Users/ricky/ADproject/Frontend/kalmnest_app/android/app/.cxx/Debug/o333c521/armeabi-v7a/CMakeFiles/rebuild_cache.dir
