@@ -1,4 +1,3 @@
-//lib/main.dart
 import 'package:flutter/material.dart';
 import 'util.dart';
 import 'theme.dart';
@@ -27,7 +26,7 @@ class MainApp extends StatelessWidget {
     );
     MaterialTheme theme = MaterialTheme(textTheme);
     return MaterialApp(
-      theme: theme.light(), // <-- Uses your custom light colors + text
+      theme: theme.dark(), // <-- Uses your custom light colors + text
       darkTheme: theme.dark(), // <-- Uses your custom dark colors + text
       themeMode: ThemeMode.system,
       home: Feed(currentUser: data.user_0),
@@ -180,3 +179,4 @@ class _FeedState extends State<Feed> {
     );
   }
 }
+
