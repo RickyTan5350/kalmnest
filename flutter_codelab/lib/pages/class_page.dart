@@ -1,65 +1,66 @@
 import 'package:flutter/material.dart';
 import '../widgets/class_list_statistic.dart';
 import '../widgets/class_list_section.dart';
-import '../widgets/bottom_navigation_bar.dart';
-// import '../widgets/search_bar.dart' as custom_search; // add a prefix
-// import '../models/models.dart';
+import '../widgets/create_class_page.dart';
+// import '../widgets/search_bar.dart';
 
 class ClassPage extends StatelessWidget {
   const ClassPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 2.0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: SizedBox(
-          width: double.infinity,
-          height: double.infinity,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Class',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 16),
+    final colorScheme = Theme.of(context).colorScheme;
 
-                // Class statistics
-                const ClassStatisticsSection(),
-                const SizedBox(height: 16),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Class"),
+        elevation: 0,
+      ),
 
-                // Search bar (use prefix)
-                SizedBox(
-                  width: 300,
-                  child: SearchBar(
-                    hintText: "Class Name",
-                    trailing: <Widget>[
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {},
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Class list
-                const Expanded(child: ClassListSection()),
-                const SizedBox(height: 16),
-
-                // At the bottom of your Column
-                const BottomNavigationBarWidget(),
-              ],
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: colorScheme.primary,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreateClassScreen(),
             ),
-          ),
+          );
+        },
+        child: Icon(
+          Icons.add,
+          color: colorScheme.onPrimary,
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ClassStatisticsSection(),
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: 300,
+              child: SearchBar(
+                hintText: "Class Name",
+                trailing: <Widget>[
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            const Expanded(child: ClassListSection()),
+          ],
         ),
       ),
     );
   }
 }
+
