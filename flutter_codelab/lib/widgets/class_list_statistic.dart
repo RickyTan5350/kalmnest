@@ -21,18 +21,19 @@ class ClassStatisticsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final stats = [
       StatItem(label: 'Total Classes', value: '20'),
-      StatItem(label: 'Assigned teacher', value: '15', change: '+1'),
-      StatItem(label: 'Enrolled students', value: '150', change: '+10'),
+      StatItem(label: 'Assigned Teacher', value: '15', change: '+1'),
+      StatItem(label: 'Enrolled Students', value: '150', change: '+10'),
     ];
 
     return Row(
-      children: stats
-          .map(
-            (stat) => Expanded(
-              child: _StatCard(stat: stat),
-            ),
-          )
-          .toList(),
+      children: stats.map((stat) {
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: _StatCard(stat: stat),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -48,54 +49,51 @@ class _StatCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Card(
-      elevation: 0,
+      elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: colorScheme.outline.withOpacity(0.15),
-          width: 1,
+          color: colorScheme.outlineVariant.withOpacity(0.2),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Label
             Text(
               stat.label,
               style: textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.normal,
                 color: colorScheme.onSurfaceVariant,
-                height: 1.4,
               ),
             ),
-            const SizedBox(height: 4),
-            // Value
+            const SizedBox(height: 6),
             Text(
               stat.value,
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w500,
+              style: textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
                 color: colorScheme.onSurface,
-                height: 1.4,
               ),
             ),
-            // Change
-            if (stat.change != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  stat.change!,
-                  style: textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.normal,
-                    color: colorScheme.primary,
-                    height: 1.4,
+            if (stat.change != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.trending_up, size: 16, color: colorScheme.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    stat.change!,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                    ),
                   ),
-                ),
+                ],
               ),
+            ],
           ],
         ),
       ),
     );
   }
 }
+
