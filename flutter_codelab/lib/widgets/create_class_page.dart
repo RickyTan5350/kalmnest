@@ -15,8 +15,6 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
   final _classNameController = TextEditingController();
   final _descriptionController = TextEditingController();
   int? _selectedTeacher;
-
-  // List to store selected students
   List<String?> _selectedStudents = [null];
 
   @override
@@ -38,12 +36,8 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
   void _createClass() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // Replace with actual adminId from your app/session
       int adminId = 1;
-      int teacherId = _selectedTeacher!; // Already int
-
-      // make sure teacherId is integer
-
+      int teacherId = _selectedTeacher!;
       String description = _descriptionController.text;
       String className = _classNameController.text;
 
@@ -56,9 +50,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Class created successfully!'),
-            backgroundColor: Color(0xFF39B5E7),
+          SnackBar(
+            content: const Text('Class created successfully!'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
         _resetForm();
@@ -73,308 +67,224 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     }
   }
 
+  InputDecoration _inputDecoration({
+    required String labelText,
+    required IconData icon,
+    String? hintText,
+    required ColorScheme colorScheme,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.outline),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+      ),
+      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      hintStyle: TextStyle(
+        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+      ),
+      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.25),
+      filled: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFF2E313D), // Same as dialog
       appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        elevation: 1,
+        backgroundColor: const Color(0xFF2E313D),
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Create New Class',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: Container(
+            width: 420,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2E313D),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: colorScheme.outlineVariant),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Add a new class to the system',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Card container
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFBDBDBD), width: 1.35),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
-                  Container(
-                    height: 70,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                      ),
+                  Text(
+                    'Create New Class',
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
                     ),
-                    padding: const EdgeInsets.all(24),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Class Name
+                  TextFormField(
+                    controller: _classNameController,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: 'Class Name',
+                      hintText: 'Enter class name',
+                      icon: Icons.class_,
+                      colorScheme: colorScheme,
+                    ),
+                    validator: (value) => (value == null || value.isEmpty)
+                        ? 'Please enter class name'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Description
+                  TextFormField(
+                    controller: _descriptionController,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: 'Description',
+                      hintText: 'Enter description',
+                      icon: Icons.description,
+                      colorScheme: colorScheme,
+                    ),
+                    validator: (value) => (value == null || value.isEmpty)
+                        ? 'Please enter description'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Teacher Dropdown
+                  DropdownButtonFormField<int>(
+                    value: _selectedTeacher,
+                    dropdownColor: const Color(0xFF2E313D),
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: 'Assign Teacher',
+                      hintText: 'Select teacher',
+                      icon: Icons.person,
+                      colorScheme: colorScheme,
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 1, child: Text('Teacher 1')),
+                      DropdownMenuItem(value: 2, child: Text('Teacher 2')),
+                      DropdownMenuItem(value: 3, child: Text('Teacher 3')),
+                    ],
+                    onChanged: (value) {
+                      setState(() => _selectedTeacher = value);
+                    },
+                    validator: (value) =>
+                        value == null ? 'Please select a teacher' : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Students
+                  Text(
+                    'Enroll Students',
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 8),
+
+                  Column(
+                    children: List.generate(_selectedStudents.length, (index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedStudents[index],
+                          dropdownColor: const Color(0xFF2E313D),
+                          style: TextStyle(color: colorScheme.onSurface),
+                          decoration: _inputDecoration(
+                            labelText: 'Student ${index + 1}',
+                            icon: Icons.person_add,
+                            colorScheme: colorScheme,
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'student1',
+                              child: Text('Student 1'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'student2',
+                              child: Text('Student 2'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'student3',
+                              child: Text('Student 3'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() => _selectedStudents[index] = value);
+                          },
+                        ),
+                      );
+                    }),
+                  ),
+
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() => _selectedStudents.add(null));
+                    },
+                    icon: Icon(Icons.add, color: colorScheme.onSurface),
+                    label: Text(
+                      'Add Student',
+                      style: TextStyle(color: colorScheme.onSurface),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: _resetForm,
+                        child: Text(
+                          'Reset',
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _createClass,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
-                            Icons.add,
-                            color: Colors.white,
-                            size: 24,
-                          ),
                         ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Enter class information',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Class Name
-                          const Text('Class Name *'),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _classNameController,
-                            decoration: InputDecoration(
-                              hintText: 'Enter class name',
-                              filled: true,
-                              fillColor: const Color(0xFFEEEEEE),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                            ),
-                            validator: (value) =>
-                                (value == null || value.isEmpty)
-                                ? 'Please enter class name'
-                                : null,
-                          ),
-
-                          const SizedBox(height: 16),
-                          // Description
-                          const Text('Description *'),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _descriptionController,
-                            decoration: InputDecoration(
-                              hintText: 'Enter description',
-                              filled: true,
-                              fillColor: const Color(0xFFEEEEEE),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                            ),
-                            validator: (value) =>
-                                (value == null || value.isEmpty)
-                                ? 'Please enter description'
-                                : null,
-                          ),
-
-                          const SizedBox(height: 16),
-                          // Teacher selection
-                          const Text('Assign Teacher *'),
-                          const SizedBox(height: 8),
-                          DropdownButtonFormField<int>(
-                            value: _selectedTeacher,
-                            decoration: InputDecoration(
-                              hintText: 'Select teacher',
-                              filled: true,
-                              fillColor: const Color(0xFFEEEEEE),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 1,
-                                child: Text('Teacher 1'),
-                              ),
-                              DropdownMenuItem(
-                                value: 2,
-                                child: Text('Teacher 2'),
-                              ),
-                              DropdownMenuItem(
-                                value: 3,
-                                child: Text('Teacher 3'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedTeacher = value;
-                              });
-                            },
-                            validator: (value) => value == null
-                                ? 'Please select a teacher'
-                                : null,
-                          ),
-                          const SizedBox(height: 16),
-                          // Student selection
-                          const Text('Enroll Students'),
-                          const SizedBox(height: 8),
-
-                          Column(
-                            children: List.generate(_selectedStudents.length, (
-                              index,
-                            ) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: DropdownButtonFormField<String>(
-                                  value: _selectedStudents[index],
-                                  decoration: InputDecoration(
-                                    hintText: 'Select student ${index + 1}',
-                                    filled: true,
-                                    fillColor: const Color(0xFFEEEEEE),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'student1',
-                                      child: Text('Student 1'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'student2',
-                                      child: Text('Student 2'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'student3',
-                                      child: Text('Student 3'),
-                                    ),
-                                  ],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedStudents[index] = value;
-                                    });
-                                  },
-                                ),
-                              );
-                            }),
-                          ),
-
-                          TextButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _selectedStudents.add(null);
-                              });
-                            },
-                            icon: const Icon(
-                              Icons.add,
-                              color: Color(0xFF1C1B1F),
-                            ),
-                            label: const Text(
-                              'Add Student',
-                              style: TextStyle(color: Color(0xFF1C1B1F)),
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
-                          // Buttons: Reset Form & Create Class
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              OutlinedButton(
-                                onPressed: _resetForm,
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  side: const BorderSide(
-                                    color: Color(0xFFBDBDBD),
-                                    width: 1.35,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Reset Form',
-                                  style: TextStyle(
-                                    color: Color(0xFF1C1B1F),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              ElevatedButton(
-                                onPressed: _createClass,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: colorScheme.primary,
-                                  foregroundColor: colorScheme.onPrimary,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: const Text('Create Class'),
-                              ),
-                            ],
-                          ),
-                        ],
+                        child: const Text('Create'),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
