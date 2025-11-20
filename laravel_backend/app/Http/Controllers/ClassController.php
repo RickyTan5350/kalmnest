@@ -10,11 +10,17 @@ class ClassController extends Controller
     // existing web methods (index, create, store) can remain for Blade usage
 
     // -------- API methods (JSON) --------
-    public function indexApi()
-    {
-        $classes = ClassModel::all();
-        return response()->json(['data' => $classes], 200);
-    }
+ public function indexApi(Request $request)
+{
+    // number of items per page
+    $perPage = $request->input('per_page', 5);   // default = 5
+
+    // paginate results
+    $classes = ClassModel::paginate($perPage);
+
+    return response()->json($classes, 200);
+}
+
 
     public function showApi($id)
     {
@@ -25,28 +31,34 @@ class ClassController extends Controller
         return response()->json(['data' => $class], 200);
     }
 
-    public function storeApi(Request $request)
-    {
-        $validated = $request->validate([
-            'class_name' => 'required|string|max:100',
-            'teacher_id' => 'required|integer',
-            'description' => 'nullable|string',
-            'admin_id'   => 'required|integer',
-            // If you want 'students' array: 'students' => 'array', 'students.*' => 'integer'
-        ]);
+   public function storeApi(Request $request)
+{
+    // DEBUG LOGS
+    Log::info('🔥 storeApi called');
+    Log::info('Incoming API data: ' . json_encode($request->all()));
 
-        try {
-            $newClass = ClassModel::create($validated);
+    $validated = $request->validate([
+        'class_name' => 'required|string|max:100',
+        'teacher_id' => 'required|integer',
+        'description' => 'nullable|string',
+        'admin_id'   => 'required|integer',
+    ]);
 
-            return response()->json([
-                'message' => 'Class created successfully',
-                'data' => $newClass
-            ], 201);
-        } catch (\Exception $e) {
-          Log::error('Class store error: '.$e->getMessage());
-            return response()->json(['message' => 'Server error'], 500);
-        }
+    try {
+        $newClass = ClassModel::create($validated);
+
+        Log::info('✔️ Class created: ' . json_encode($newClass));
+
+        return response()->json([
+            'message' => 'Class created successfully',
+            'data' => $newClass
+        ], 201);
+        
+    } catch (\Exception $e) {
+        Log::error('❌ Class store error: '.$e->getMessage());
+        return response()->json(['message' => 'Server error'], 500);
     }
+}
 
     public function updateApi(Request $request, $id)
     {
