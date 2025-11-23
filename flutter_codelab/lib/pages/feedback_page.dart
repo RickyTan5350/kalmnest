@@ -190,8 +190,11 @@ class _FeedbackPageState extends State<FeedbackPage> {
                         );
                       },
                     ),
-      
-      
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openCreateFeedbackDialog,
+        tooltip: 'Add Feedback',
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
