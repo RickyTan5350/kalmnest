@@ -204,58 +204,26 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                 const SizedBox(height: 24),
 
                 // Student Dropdown
-                _isLoadingStudents
-                    ? SizedBox(
-                        height: 50,
-                        child: Center(
-                          child: CircularProgressIndicator(color: colorScheme.primary),
-                        ),
-                      )
-                    : DropdownButtonFormField<String?>(
-                        initialValue: _selectedStudentId,
-                        dropdownColor: const Color(0xFF2E313D),
-                        style: TextStyle(color: colorScheme.onSurface),
-                        decoration: _inputDecoration(
-                          labelText: 'Select Student',
-                          icon: Icons.person,
-                          colorScheme: colorScheme,
-                        ),
-                        hint: Text('Select a student', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                        items: [
-                          if (_students.isEmpty)
-                            DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text('No students available', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                            )
-                          else
-                            ..._students
-                                .map<DropdownMenuItem<String?>>((student) {
-                                  final id = student['id'] as String? ?? '';
-                                  final name = student['name'] as String? ?? 'Unknown';
-                                  if (id.isEmpty) return const DropdownMenuItem(value: null, child: SizedBox.shrink());
-                                  return DropdownMenuItem<String?>(
-                                    value: id,
-                                    child: Text(name),
-                                  );
-                                })
-                                .toList(),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedStudentId = value;
-                            if (value != null && value.isNotEmpty) {
-                              _selectedStudent = _students
-                                  .firstWhere((s) => s['id'] == value, orElse: () => {'name': 'Unknown'})['name'] as String?;
-                            }
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a student';
-                          }
-                          return null;
-                        },
-                      ),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedStudent,
+                  dropdownColor: const Color(0xFF2E313D),
+                  style: TextStyle(color: colorScheme.onSurface),
+                  decoration: _inputDecoration(
+                    labelText: 'Select Student',
+                    icon: Icons.person,
+                    colorScheme: colorScheme,
+                  ),
+                  items: _students
+                      .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                      .toList(),
+                  onChanged: (value) => setState(() => _selectedStudent = value),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select a student';
+                    }
+                    return null;
+                  },
+                ),
                 const SizedBox(height: 16),
 
                 // Topic
