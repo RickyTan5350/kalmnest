@@ -43,3 +43,19 @@ class User {      //single user
   final String avatarUrl; //web address for the user's profile picture
   final DateTime lastActive;
 }
+
+class FeedbackData {
+  final String feedbackId;
+  final String studentName;
+  final String studentId;
+  final String topic;
+  final String feedback;
+
+  FeedbackData({
+    required this.feedbackId,
+    required this.studentName,
+    required this.studentId,
+    required this.topic,
+    required this.feedback,
+  });
+}

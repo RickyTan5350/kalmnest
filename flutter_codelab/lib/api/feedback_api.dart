@@ -144,4 +144,45 @@ class FeedbackApiService {
       throw Exception('Error creating feedback: $e');
     }
   }
+  Future<void> deleteFeedback(String feedbackId) async {
+  final url = Uri.parse('$baseUrl/feedback/$feedbackId');
+
+  final response = await http.delete(
+    url,
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    },
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception('Failed to delete feedback');
+  }
+}
+
+  Future<void> editFeedback({
+    required String feedbackId,
+    required String topic,
+    required String comment,
+  }) async {
+    final url = Uri.parse('$baseUrl/feedback/$feedbackId');
+
+    final response = await http.put(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: jsonEncode({
+        'topic': topic,
+        'comment': comment,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update feedback');
+    }
+}
+
 }

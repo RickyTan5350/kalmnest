@@ -1,20 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/feedback_api.dart';
-
-// Model to hold feedback data
-class FeedbackData {
-  final String studentName;
-  final String studentId;
-  final String topic;
-  final String feedback;
-
-  FeedbackData({
-    required this.studentName,
-    required this.studentId,
-    required this.topic,
-    required this.feedback,
-  });
-}
+import '../models/models.dart';
 
 void showCreateFeedbackDialog({
   required BuildContext context,
@@ -120,6 +106,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
 
       // Create local FeedbackData object
       final feedbackData = FeedbackData(
+        feedbackId: '',
         studentName: _selectedStudent!,
         studentId: _selectedStudentId!,
         topic: _topicController.text,
@@ -182,7 +169,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF2E313D),
+      backgroundColor: const Color.fromARGB(255, 229, 234, 255),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.all(24.0),
       content: SizedBox(
@@ -213,7 +200,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                       )
                     : DropdownButtonFormField<String?>(
                         value: _selectedStudentId,
-                        dropdownColor: const Color(0xFF2E313D),
+                        dropdownColor: const Color.fromARGB(255, 216, 222, 242),
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Select Student',

@@ -21,8 +21,8 @@ class MainApp extends StatelessWidget {
     TextTheme textTheme = createTextTheme(context, "Roboto Slab", "Roboto Slab");
     MaterialTheme theme = MaterialTheme(textTheme);
     return MaterialApp(
-        theme: theme.light(), // <-- Uses your custom light colors + text
-        darkTheme: theme.dark(), // <-- Uses your custom dark colors + text
+        debugShowCheckedModeBanner: false, 
+        theme: theme.light(), 
         themeMode: ThemeMode.system,
         home: Feed(currentUser: data.user_0));
   }
