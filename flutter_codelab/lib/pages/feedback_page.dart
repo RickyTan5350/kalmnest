@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/widgets/create_feedback.dart';
+import 'package:flutter_codelab/widgets/create_feedback.dart' as create_fb;
 import 'package:flutter_codelab/api/feedback_api.dart';
-
+import 'package:flutter_codelab/widgets/edit_feedback.dart' as edit_fb;
+import 'package:flutter_codelab/models/models.dart';
 class FeedbackPage extends StatefulWidget {
   final String? authToken; // Pass auth token from your auth provider
 
@@ -36,6 +37,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
         _feedbackList.clear();
         for (var fb in feedbacks) {
           _feedbackList.add(FeedbackData(
+            feedbackId: fb['feedback_id']?.toString() ?? '',
             studentName: fb['student_name'] ?? 'Unknown',
             studentId: fb['student_id'] ?? '',
             topic: fb['topic'] ?? '',
@@ -75,13 +77,63 @@ class _FeedbackPageState extends State<FeedbackPage> {
   }
 
   void _openCreateFeedbackDialog() {
-    showCreateFeedbackDialog(
+    create_fb.showCreateFeedbackDialog(
       context: context,
       showSnackBar: _showSnackBar,
       onFeedbackAdded: _addFeedback,
-      authToken: widget.authToken ?? '', // Default to empty string if null
+      authToken: widget.authToken ?? '', 
     );
   }
+
+  void _confirmDelete(FeedbackData fb) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("Delete Feedback"),
+      content: Text("Are you sure you want to delete this feedback?"),
+      actions: [
+        TextButton(
+          child: const Text("Cancel"),
+          onPressed: () => Navigator.pop(context),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text("Delete"),
+          onPressed: () async {
+            Navigator.pop(context);
+            try {
+              await _apiService.deleteFeedback(fb.feedbackId);
+              setState(() => _feedbackList.remove(fb));
+              _showSnackBar(context, 'Feedback deleted', Colors.green);
+            } catch (e) {
+              _showSnackBar(context, 'Delete failed: $e', Colors.red);
+            }
+          },
+        ),
+      ],
+    ),
+  );
+}
+  void _updateFeedback(FeedbackData updated) {
+  setState(() {
+    final index =
+        _feedbackList.indexWhere((f) => f.feedbackId == updated.feedbackId);
+    if (index != -1) {
+      _feedbackList[index] = updated;
+    }
+  });
+}
+
+
+void _openEditDialog(FeedbackData fb) {
+  edit_fb.showEditFeedbackDialog(
+    context: context,
+    feedback: fb,
+    onUpdated: _updateFeedback,
+    showSnackBar: _showSnackBar,
+    authToken: widget.authToken ?? '',
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -184,17 +236,25 @@ class _FeedbackPageState extends State<FeedbackPage> {
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                      IconButton(
+                                       icon: Icon(Icons.edit, color: Colors.blue),
+                                       onPressed: () => _openEditDialog(feedback),
+                                      ),
+                                      IconButton(
+                                       icon: Icon(Icons.delete, color: Colors.red),
+                                       onPressed: () => _confirmDelete(feedback),
+                                      ),
+                                   ],
+                                 ),
+                               ],
                             ),
                           ),
                         );
                       },
                     ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openCreateFeedbackDialog,
-        tooltip: 'Add Feedback',
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
