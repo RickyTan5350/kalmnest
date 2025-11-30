@@ -1,28 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'theme/theme.dart';
-
-// const seedColor = Color(0xFF73EDEF);
-
-// final ThemeData lightTheme = ThemeData(
-//   useMaterial3: true,
-//   colorScheme: ColorScheme.fromSeed(
-//     seedColor: seedColor,
-//     brightness: Brightness.light,
-//   )
-// );
-
-// final ThemeData darkTheme = ThemeData(
-//   useMaterial3: true,
-//   colorScheme: ColorScheme.fromSeed(
-//     seedColor: seedColor,
-//     brightness: Brightness.dark,
-//   ),
-// );
-
-final TextTheme robotoTheme = GoogleFonts.robotoTextTheme();
-
-final MaterialTheme achievementsTheme = MaterialTheme(robotoTheme);
+import 'theme/util.dart';
+import 'local_storage_helper.dart';
+// import 'achievement_api.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,6 +14,12 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    TextTheme textTheme = createTextTheme(
+      context,
+      "Roboto Slab",
+      "Roboto Slab",
+    );
+    MaterialTheme achievementsTheme = MaterialTheme(textTheme);
     return MaterialApp(
       title: 'Achievements',
       // Use the 'light()' method for the light theme
@@ -41,7 +27,7 @@ class MyApp extends StatelessWidget {
 
       // Use the 'dark()' method for the dark theme
       darkTheme: achievementsTheme.dark(),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
       home: const MyAchievementsPage(),
     );
   }
@@ -164,11 +150,7 @@ class _MyAchievementsPageState extends State<MyAchievementsPage> {
                       padding: const EdgeInsets.only(left: 24.0, top: 27.0),
                       child: Text(
                         "Achievements",
-                        style: TextStyle(
-                          color: colors.onSurface,
-                          fontSize: 28,
-                          fontFamily: 'Roboto',
-                        ),
+                        style: TextStyle(color: colors.onSurface, fontSize: 28),
                       ),
                     ),
 
@@ -189,7 +171,7 @@ class _MyAchievementsPageState extends State<MyAchievementsPage> {
                                   style: TextStyle(
                                     color: colors.onSurface,
                                     fontSize: 14,
-                                    fontFamily: 'Roboto',
+
                                     letterSpacing: 0.10,
                                   ),
                                 ),
@@ -203,7 +185,7 @@ class _MyAchievementsPageState extends State<MyAchievementsPage> {
                                   style: TextStyle(
                                     color: colors.onSurface,
                                     fontSize: 14,
-                                    fontFamily: 'Roboto',
+
                                     letterSpacing: 0.10,
                                   ),
                                 ),
@@ -217,7 +199,7 @@ class _MyAchievementsPageState extends State<MyAchievementsPage> {
                                   style: TextStyle(
                                     color: colors.onSurface,
                                     fontSize: 14,
-                                    fontFamily: 'Roboto',
+
                                     letterSpacing: 0.10,
                                   ),
                                 ),
@@ -231,7 +213,7 @@ class _MyAchievementsPageState extends State<MyAchievementsPage> {
                                   style: TextStyle(
                                     color: colors.onSurface,
                                     fontSize: 14,
-                                    fontFamily: 'Roboto',
+
                                     letterSpacing: 0.10,
                                   ),
                                 ),
@@ -245,7 +227,7 @@ class _MyAchievementsPageState extends State<MyAchievementsPage> {
                                   style: TextStyle(
                                     color: colors.onSurface,
                                     fontSize: 14,
-                                    fontFamily: 'Roboto',
+
                                     letterSpacing: 0.10,
                                   ),
                                 ),
@@ -259,7 +241,7 @@ class _MyAchievementsPageState extends State<MyAchievementsPage> {
                                   style: TextStyle(
                                     color: colors.onSurface,
                                     fontSize: 14,
-                                    fontFamily: 'Roboto',
+
                                     letterSpacing: 0.10,
                                   ),
                                 ),
@@ -350,13 +332,30 @@ class _AchievementFormDialogState extends State<AchievementFormDialog> {
   void _submitForm() {
     // Validate the form
     if (_formKey.currentState!.validate()) {
-      // Form is valid, do something with the data
-      final String achievementName = _nameController.text;
-      final String description = _descriptionController.text;
+      final uuidGenerator = const Uuid();
+      List<Achievement> achievementsToWrite = [
+        Achievement(
+          achievementId: uuidGenerator.v4(), // required String
+          achievementName: _nameController.text, // required String
+          title: _titleController.text, // required String
+          description:
+              _descriptionController.text, // optional String (can be omitted)
+          type: _selectedCategory ?? 'Level', // required String
+          levelId: 'L1', // required String
+          createdBy: 'user123', // required String
+          createdAt: DateTime.now(),
+        ),
+      ];
 
-      print('Achievement Name: $achievementName');
-      print('Description: $description');
-      print('Category: $_selectedCategory');
+      try {
+        final fileHelper = FileHelper();
+
+        fileHelper.writeAchievements(achievementsToWrite);
+
+        print('✅ New achievement data saved successfully.');
+      } catch (e) {
+        print('❌ Failed to write achievements: $e');
+      }
 
       // Close the dialog and pass back data (optional)
       Navigator.of(context).pop(true); // Pop with a success flag
@@ -395,11 +394,11 @@ class _AchievementFormDialogState extends State<AchievementFormDialog> {
                 labelText: 'Displaying Achievment Title',
                 icon: Icon(Icons.description),
               ),
-              maxLines: 2, // Optional: for a larger text field
+              //maxLines: 2, // Optional: for a larger text field
             ),
             const SizedBox(height: 16),
 
-             TextFormField(
+            TextFormField(
               controller: _descriptionController,
               decoration: const InputDecoration(
                 labelText: 'Achievement Description',
@@ -411,34 +410,36 @@ class _AchievementFormDialogState extends State<AchievementFormDialog> {
 
             // Field 3: Description
             // Inside your Column:
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start, // Aligns icon with the top
-            children: [
-              // 1. The icon
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0), // Adjust to vertically align
-                child: const Icon(Icons.category),
-              ),
-
-              // 2. The space
-              const SizedBox(width: 16),
-
-              // 3. The DropdownMenu
-              Expanded(
-                child: DropdownMenu<String>(
-                  width: MediaQuery.of(context).size.width * 0.2,
-                  label: const Text('Category'),
-                  onSelected: (String? value) {
-                    // ...
-                  },
-                  dropdownMenuEntries: const <DropdownMenuEntry<String>>[
-                    DropdownMenuEntry(value: 'html', label: 'HTML'),
-                    DropdownMenuEntry(value: 'css', label: 'CSS'),
-                    DropdownMenuEntry(value: 'js', label: 'JS'),
-                  ],
+            Row(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start, // Aligns icon with the top
+              children: [
+                // 1. The icon
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: 8.0,
+                  ), // Adjust to vertically align
+                  child: const Icon(Icons.category),
                 ),
-              ),
+
+                // 2. The space
+                const SizedBox(width: 16),
+
+                // 3. The DropdownMenu
+                Expanded(
+                  child: DropdownMenu<String>(
+                    width: MediaQuery.of(context).size.width * 0.2,
+                    label: const Text('Category'),
+                    onSelected: (String? value) {
+                      // ...
+                    },
+                    dropdownMenuEntries: const <DropdownMenuEntry<String>>[
+                      DropdownMenuEntry(value: 'html', label: 'HTML'),
+                      DropdownMenuEntry(value: 'css', label: 'CSS'),
+                      DropdownMenuEntry(value: 'js', label: 'JS'),
+                    ],
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -488,10 +489,7 @@ class _AchievementFormDialogState extends State<AchievementFormDialog> {
             ),
 
             // Field 4: Category
-            
             const SizedBox(height: 16),
-
-            
 
             const SizedBox(height: 16),
             AchievementTypeRadio(
