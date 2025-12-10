@@ -11,7 +11,8 @@ class FeedbackApiService {
 
   Map<String, String> get headers => {
     'Content-Type': 'application/json',
-    if (token != null) 'Authorization': 'Bearer $token',
+    'Accept': 'application/json',
+    if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
   };
 
   /// Test if backend is reachable
@@ -33,7 +34,7 @@ class FeedbackApiService {
   Future<List<Map<String, dynamic>>> getStudents() async {
     try {
       print('Fetching students from: $baseUrl/students');
-      final response = await http.get(Uri.parse('$baseUrl/students')).timeout(const Duration(seconds: 5));
+      final response = await http.get(Uri.parse('$baseUrl/students'), headers: headers).timeout(const Duration(seconds: 5));
 
       print('Students response status: ${response.statusCode}');
       print('Students response body: ${response.body}');
@@ -146,14 +147,7 @@ class FeedbackApiService {
   }
   Future<void> deleteFeedback(String feedbackId) async {
   final url = Uri.parse('$baseUrl/feedback/$feedbackId');
-
-  final response = await http.delete(
-    url,
-    headers: {
-      'Authorization': 'Bearer $token',
-      'Accept': 'application/json',
-    },
-  );
+  final response = await http.delete(url, headers: headers);
 
   if (response.statusCode != 200) {
     throw Exception('Failed to delete feedback');
@@ -169,11 +163,7 @@ class FeedbackApiService {
 
     final response = await http.put(
       url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
+      headers: headers,
       body: jsonEncode({
         'topic': topic,
         'comment': comment,

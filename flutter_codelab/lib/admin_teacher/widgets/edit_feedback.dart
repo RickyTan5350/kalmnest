@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/feedback_api.dart';
-import '../pages/feedback_page.dart';
-import '../models/models.dart';
+import 'package:flutter_codelab/models/models.dart';
 
 void showEditFeedbackDialog({
   required BuildContext context,
@@ -73,6 +72,8 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
           feedbackId: widget.feedback.feedbackId,
           studentName: widget.feedback.studentName,
           studentId: widget.feedback.studentId,
+          teacherName: widget.feedback.teacherName, // Will be updated from API
+          teacherId: widget.feedback.teacherId, // Will be updated from API
           topic: _topicController.text,
           feedback: _feedbackController.text,
         ),
@@ -89,10 +90,9 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
 
     return AlertDialog(
-      backgroundColor: const Color.fromARGB(255, 224, 230, 255),
+      backgroundColor: const Color.fromARGB(255, 236, 236, 255),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       content: Form(
         key: _formKey,

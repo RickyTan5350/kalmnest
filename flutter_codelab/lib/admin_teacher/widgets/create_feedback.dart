@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/feedback_api.dart';
-import '../models/models.dart';
+import 'package:flutter_codelab/models/models.dart';
 
 void showCreateFeedbackDialog({
   required BuildContext context,
@@ -40,7 +40,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _topicController = TextEditingController();
   final TextEditingController _feedbackController = TextEditingController();
-  final FeedbackApiService _apiService;
+  late final FeedbackApiService _apiService;
 
   String? _selectedStudent;
   String? _selectedStudentId;
@@ -49,12 +49,11 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
 
   List<Map<String, dynamic>> _students = [];
 
-  _CreateFeedbackDialogState()
-      : _apiService = FeedbackApiService();
-
   @override
   void initState() {
     super.initState();
+    // Initialize FeedbackApiService WITH the auth token
+    _apiService = FeedbackApiService(token: widget.authToken);
     _loadStudents();
   }
 
@@ -109,6 +108,8 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
         feedbackId: '',
         studentName: _selectedStudent!,
         studentId: _selectedStudentId!,
+        teacherName: 'Unknown', // Will be updated from API
+        teacherId: '', // Will be updated from API
         topic: _topicController.text,
         feedback: _feedbackController.text,
       );
@@ -169,7 +170,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return AlertDialog(
-      backgroundColor: const Color.fromARGB(255, 229, 234, 255),
+      backgroundColor: const Color.fromARGB(255, 244, 246, 255),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.all(24.0),
       content: SizedBox(
@@ -199,8 +200,8 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                         ),
                       )
                     : DropdownButtonFormField<String?>(
-                        value: _selectedStudentId,
-                        dropdownColor: const Color.fromARGB(255, 216, 222, 242),
+                        initialValue: _selectedStudentId,
+                        dropdownColor: const Color.fromARGB(255, 239, 243, 255),
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Select Student',
@@ -225,7 +226,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                                     child: Text(name),
                                   );
                                 })
-                                .toList(),
+                                ,
                         ],
                         onChanged: (value) {
                           setState(() {

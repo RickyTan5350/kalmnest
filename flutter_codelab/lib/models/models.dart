@@ -48,6 +48,8 @@ class FeedbackData {
   final String feedbackId;
   final String studentName;
   final String studentId;
+  final String teacherName;
+  final String teacherId;
   final String topic;
   final String feedback;
 
@@ -55,6 +57,8 @@ class FeedbackData {
     required this.feedbackId,
     required this.studentName,
     required this.studentId,
+    required this.teacherName,
+    required this.teacherId,
     required this.topic,
     required this.feedback,
   });
