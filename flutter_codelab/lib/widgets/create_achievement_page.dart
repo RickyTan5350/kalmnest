@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
 
-void showCreateAchievementDialog({
+/*void showCreateAchievementDialog({
   required BuildContext context,
   // Pass the SnackBar helper from the main page to ensure it works with the Scaffold
   required void Function(BuildContext context, String message, Color color)
@@ -15,7 +15,8 @@ void showCreateAchievementDialog({
     },
   );
 }
-
+*/
+/*
 class CreateAchievementDialog extends StatefulWidget {
   final void Function(BuildContext context, String message, Color color)
   showSnackBar;
@@ -40,8 +41,6 @@ class _CreateAchievementDialogState extends State<CreateAchievementDialog>{
 
   String? _selectedCategory;
   String? _selectedLevel;
-
-  bool _isLoading = false;
 
   final List<String> _categories = [
     'HTML',
@@ -313,3 +312,4 @@ class _CreateAchievementDialogState extends State<CreateAchievementDialog>{
     );
   }
 }
+*/

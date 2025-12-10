@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/widgets/create_feedback.dart' as create_fb;
 import 'package:flutter_codelab/api/feedback_api.dart';
-import 'package:flutter_codelab/widgets/edit_feedback.dart' as edit_fb;
 import 'package:flutter_codelab/models/models.dart';
-class FeedbackPage extends StatefulWidget {
-  final String? authToken; // Pass auth token from your auth provider
+import 'package:flutter_codelab/admin_teacher/widgets/create_feedback.dart' as create_fb;
+import 'package:flutter_codelab/admin_teacher/widgets/edit_feedback.dart' as edit_fb;
 
-  const FeedbackPage({super.key, this.authToken});
+class FeedbackPage extends StatefulWidget {
+  final String? authToken; 
+  final dynamic currentUser; 
+  final List<String>? availableStudents; 
+
+  const FeedbackPage({
+    super.key,
+    this.authToken,
+    this.currentUser,
+    this.availableStudents,
+  });
 
   @override
   State<FeedbackPage> createState() => _FeedbackPageState();
@@ -40,6 +48,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
             feedbackId: fb['feedback_id']?.toString() ?? '',
             studentName: fb['student_name'] ?? 'Unknown',
             studentId: fb['student_id'] ?? '',
+            teacherName: fb['teacher_name'] ?? 'Unknown',
+            teacherId: fb['teacher_id'] ?? '',
             topic: fb['topic'] ?? '',
             feedback: fb['feedback'] ?? '',
           ));
@@ -140,7 +150,21 @@ void _openEditDialog(FeedbackData fb) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Feedback')),
+      appBar: AppBar(
+        title: const Text('Feedback'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Center(
+              child: IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: 'Add Feedback',
+                onPressed: _openCreateFeedbackDialog,
+              ),
+            ),
+          ),
+        ],
+      ),
       body: _isLoading
           ? Center(
               child: CircularProgressIndicator(color: colorScheme.primary),
@@ -239,16 +263,16 @@ void _openEditDialog(FeedbackData fb) {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                      IconButton(
-                                       icon: Icon(Icons.edit, color: Colors.blue),
-                                       onPressed: () => _openEditDialog(feedback),
-                                      ),
-                                      IconButton(
-                                       icon: Icon(Icons.delete, color: Colors.red),
-                                       onPressed: () => _confirmDelete(feedback),
-                                      ),
-                                   ],
-                                 ),
+                                    IconButton(
+                                      icon: Icon(Icons.edit, color: Colors.blue),
+                                      onPressed: () => _openEditDialog(feedback),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () => _confirmDelete(feedback),
+                                    ),
+                                  ],
+                                ),
                                ],
                             ),
                           ),
