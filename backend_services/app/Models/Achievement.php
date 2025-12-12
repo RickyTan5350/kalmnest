@@ -31,7 +31,7 @@ class Achievement extends Model
     }
 
     public function level(){
-
+        return $this->belongsTo(Level::class, 'associated_level', 'level_id');
     }
 
     public function created_by(){

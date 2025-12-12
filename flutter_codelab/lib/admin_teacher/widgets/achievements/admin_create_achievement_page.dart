@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'package:flutter_codelab/api/game_api.dart';
+import 'package:flutter_codelab/models/level.dart';
 
 void showCreateAchievementDialog({
   required BuildContext context,
@@ -37,7 +39,8 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
   final TextEditingController _achievementDescriptionController =
   TextEditingController();
   final TextEditingController _achievementTitleController =
-  TextEditingController();
+      TextEditingController();
+  final TextEditingController _levelDisplayController = TextEditingController();
 
   List<AchievementData> _existingAchievements = [];
 
@@ -52,19 +55,25 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
 
   final List<Map<String, dynamic>> iconOptions = achievementIconOptions;
 
-  final List<String> _levels = [
-    '',
-    'Level 1',
-    'Level 2',
-    'Level 3',
-    'Level 4',
-    'Level 5',
-  ];
+  List<LevelModel> _levels = [];
+
+  List<LevelModel> get _filteredLevels {
+    if (_selectedIcon == null) return _levels;
+    return _levels.where((l) {
+      final type = l.levelTypeName?.toLowerCase() ?? '';
+      final icon = _selectedIcon!.toLowerCase();
+      // Heuristic: Check if the level type name allows the icon tag
+      // e.g. "HTML Basics" contains "html"
+      return type.contains(icon);
+    }).toList();
+  }
+
 
   @override
   void initState() {
     super.initState();
     _fetchExistingAchievements();
+    _fetchLevels();
 
     // Clear errors when the user starts typing
     _achievementNameController.addListener(() {
@@ -73,6 +82,19 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
     _achievementTitleController.addListener(() {
       if (_titleError != null) setState(() => _titleError = null);
     });
+  }
+
+  Future<void> _fetchLevels() async {
+    try {
+      final levels = await GameAPI.fetchLevels();
+      if (mounted) {
+        setState(() {
+          _levels = levels;
+        });
+      }
+    } catch (e) {
+      print('Could not fetch levels: $e');
+    }
   }
 
   Future<void> _fetchExistingAchievements() async {
@@ -93,7 +115,91 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
     _achievementNameController.dispose();
     _achievementDescriptionController.dispose();
     _achievementTitleController.dispose();
+    _levelDisplayController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showLevelSelectionDialog() async {
+    // 1. Get the list of options based on current icon filter
+    final options = _filteredLevels;
+    
+    // 2. Show Dialog
+    final LevelModel? result = await showDialog<LevelModel>(
+      context: context,
+      builder: (context) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final filteredOptions = options.where((level) {
+              final name = level.levelName?.toLowerCase() ?? '';
+              return name.contains(searchQuery.toLowerCase());
+            }).toList();
+
+            return AlertDialog(
+              title: const Text('Select Level'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Search Bar
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Search',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          searchQuery = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    // List
+                    Flexible(
+                      child: filteredOptions.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Text('No levels found.'),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: filteredOptions.length,
+                              itemBuilder: (context, index) {
+                                final level = filteredOptions[index];
+                                return ListTile(
+                                  title: Text(level.levelName ?? 'Unknown'),
+                                  subtitle: Text(level.levelTypeName ?? ''),
+                                  onTap: () {
+                                    Navigator.pop(context, level);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    // 3. Handle Result
+    if (result != null) {
+      setState(() {
+        _selectedLevel = result.levelId;
+        _levelDisplayController.text = result.levelName ?? '';
+      });
+    }
   }
 
   Future<void> _submitForm() async {
@@ -116,7 +222,7 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
       achievementName: _achievementNameController.text,
       achievementTitle: _achievementTitleController.text,
       achievementDescription: _achievementDescriptionController.text,
-      level: _selectedLevel,
+      levelId: _selectedLevel, // This now holds the ID string from the dropdown
       icon: _selectedIcon,
     );
 
@@ -378,25 +484,45 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
                       ],
                     ),
                   )).toList(),
-                  onChanged: (newValue) => setState(() => _selectedIcon = newValue),
+                  onChanged: (newValue) {
+                    setState(() {
+                      _selectedIcon = newValue;
+                      // Clear selected level on icon change to ensure consistency
+                      _selectedLevel = null;
+                      _levelDisplayController.clear();
+                    });
+                  },
                   validator: (value) => value == null ? 'Please select an icon.' : null,
                 ),
                 const SizedBox(height: 16),
 
                 // Level Dropdown
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedLevel,
-                  dropdownColor: colorScheme.surfaceContainer,
+                // Level Selection (Searchable)
+                TextFormField(
+                  controller: _levelDisplayController,
+                  readOnly: true,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Level Name',
+                    labelText: 'Associated Level',
+                    hintText: 'Select a level',
                     icon: Icons.signal_cellular_alt,
                     colorScheme: colorScheme,
+                  ).copyWith(
+                    suffixIcon: Icon(Icons.arrow_drop_down, color: colorScheme.onSurfaceVariant),
                   ),
-                  items: _levels.map((value) =>
-                      DropdownMenuItem(value: value, child: Text(value))
-                  ).toList(),
-                  onChanged: (value) => setState(() => _selectedLevel = value),
+                  onTap: _showLevelSelectionDialog,
+                  validator: (value) {
+                     // Check if valid level is selected
+                     if (_selectedIcon != null && _selectedLevel == null) {
+                       // Only require level if an icon is selected? 
+                       // Or maybe level is optional. The original code had a "None" option.
+                       // Let's assume it's optional but if they picked one it's fine.
+                       // Use "None" button in dialog? Or just allow empty?
+                       // Standard: if it's required. Let's make it optional as per original "None" option.
+                       return null; 
+                     }
+                     return null;
+                  },
                 ),
                 const SizedBox(height: 24),
 

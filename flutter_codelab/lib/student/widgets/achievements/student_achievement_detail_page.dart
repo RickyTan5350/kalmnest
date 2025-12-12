@@ -136,7 +136,7 @@ class _StudentAchievementDetailPageState extends State<StudentAchievementDetailP
                     ),
                     const SizedBox(height: 8),
                     Chip(
-                      label: Text('Level: ${_displayData.level ?? 'N/A'}'),
+                      label: Text('Level: ${_displayData.levelName ?? 'N/A'}'),
                       backgroundColor: color.withOpacity(0.1),
                     ),
                   ],
