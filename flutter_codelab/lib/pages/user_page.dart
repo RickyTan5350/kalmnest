@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user_list_content.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/user_list_content.dart';
 
 class UserPage extends StatelessWidget {
   const UserPage({super.key});

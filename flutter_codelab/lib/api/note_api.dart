@@ -4,10 +4,7 @@ import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/note_data.dart';
 
-
-// Ensure this URL is accessible from your emulator/device.
-const String _apiUrl = 'http://backend_services.test/api/notes';
-
+const String _apiUrl = 'https://backend_services.test/api/notes';
 
 class NoteApi {
   static const String validationErrorCode = '422';

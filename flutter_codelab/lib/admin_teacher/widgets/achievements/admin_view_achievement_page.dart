@@ -353,7 +353,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                 final String description =
                     item.achievementDescription?.toLowerCase() ?? '';
                 final String icon = item.icon?.toLowerCase() ?? '';
-                final String level = item.level?.toLowerCase() ?? '';
+                final String level = item.levelName?.toLowerCase() ?? '';
 
                 final isMatchingSearch =
                     widget.searchText.isEmpty ||

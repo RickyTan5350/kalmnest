@@ -11,13 +11,54 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-
+use App\Http\Requests\UpdateUserRequest;
+use App\Http\Requests\DeleteUserRequest;
 class UserController extends Controller
 {
     /**
      * Display a listing of the resource.
      * Handles Search (by name) and Filtering (by role, status).
      */
+
+    // ==========================================
+    // AUTHENTICATION HELPERS 
+    // ==========================================
+private function isAdmin()
+    {
+        if (!Auth::check()) return false;
+
+        $userRoleName = DB::table('users')
+                            ->join('roles', 'users.role_id', '=', 'roles.role_id')
+                            ->where('users.user_id', Auth::id())
+                            ->value('roles.role_name');
+
+        return $userRoleName === 'Admin';
+    }
+
+    private function isAdminOrTeacher()
+    {
+        if (!Auth::check()) return false;
+
+        $userRoleName = DB::table('users')
+                            ->join('roles', 'users.role_id', '=', 'roles.role_id')
+                            ->where('users.user_id', Auth::id())
+                            ->value('roles.role_name');
+
+        return $userRoleName === 'Admin' || $userRoleName === 'Teacher';
+    }
+
+    private function isStudent()
+    {
+        if (!Auth::check()) return false;
+
+        $userRoleName = DB::table('users')
+                            ->join('roles', 'users.role_id', '=', 'roles.role_id')
+                            ->where('users.user_id', Auth::id())
+                            ->value('roles.role_name');
+
+        return $userRoleName === 'Student';
+    }
+
     public function index(Request $request)
     {
         $query = User::with('role'); // Eager load role relationship
@@ -139,19 +180,75 @@ class UserController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, User $user)
+public function update(UpdateUserRequest $request, User $user)
     {
-        //
+        // 1. Get the validated data
+        $validatedData = $request->validated();
+        
+        // 2. Handle Role Name to Role ID conversion
+        if (isset($validatedData['role_name'])) {
+            $roleName = $validatedData['role_name'];
+            $role = DB::table('roles')
+                        ->where('role_name', $roleName)
+                        ->first(['role_id']);
+
+            // If a role is found, replace 'role_name' with 'role_id'
+            if ($role) {
+                unset($validatedData['role_name']);
+                $validatedData['role_id'] = $role->role_id;
+            } else {
+                // This case should be caught by the 'exists' rule in UpdateUserRequest, 
+                // but we keep a defensive check.
+                return response()->json([
+                    'message' => "The role '$roleName' is not valid.",
+                ], 422); 
+            }
+        }
+
+        // 3. Update User
+        // Note: The User model handles password hashing automatically via the 'casts' property
+        try {
+            $user->update($validatedData);
+
+            // 4. Return the updated user data
+            return response()->json([
+                'message' => 'User profile updated successfully.',
+                // Reload 'role' in case role_id was changed
+                'user' => $user->load('role'), 
+            ], 200);
+            
+        } catch (\Exception $e) {
+            Log::error('USER_UPDATE_FAILED: ' . $e->getMessage()); 
+            return response()->json([
+                'message' => 'Failed to update user due to a server error.',
+                'error' => $e->getMessage()
+            ], 500); 
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(User $user)
+public function destroy(User $user, DeleteUserRequest $request) 
     {
-        //
-    }
+        // Authorization (Admin only & no self-deletion) is handled entirely 
+        // by the DeleteUserRequest Form Request validation that runs before this code.
+        
+        // Revoke all Sanctum tokens associated with this user for a clean delete.
+        $user->tokens()->delete();
 
+        // The model's delete method triggers the cascade actions defined in migrations
+        if ($user->delete()) {
+            return response()->json([
+                'message' => 'User account and associated data successfully deleted.',
+                'user_id' => $user->user_id
+            ], 200);
+        }
+
+        return response()->json([
+            'message' => 'Failed to delete user account.'
+        ], 500);
+    }
     public function login(Request $request)
     {
         // 1. Validate the incoming request data

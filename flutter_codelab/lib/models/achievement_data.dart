@@ -3,10 +3,11 @@ class AchievementData {
   final String? achievementName;
   final String? achievementTitle;
   final String? achievementDescription;
-  final String? level;
   final String? icon;
   final String? creatorId;
   final String? creatorName;
+  final String? levelId;
+  final String? levelName;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -16,7 +17,8 @@ class AchievementData {
     this.achievementTitle,
     this.achievementDescription,
     this.icon,
-    this.level,
+    this.levelId,
+    this.levelName,
     this.creatorId,
     this.creatorName,
     this.createdAt,
@@ -29,7 +31,8 @@ class AchievementData {
       achievementName: json['achievement_name'] as String?, 
       achievementDescription: json['description'] as String?, 
       achievementTitle: json['title'] as String?, 
-      level: json['associated_level'] as String?,
+      levelId: json['associated_level'] as String?,
+      levelName: json['level_name'] as String?,
       icon: json['icon'] as String?, 
       creatorId: json['created_by'] as String?,
       creatorName: json['creator_name'] as String?,
@@ -47,7 +50,7 @@ class AchievementData {
       'achievement_name': achievementName,
       'title': achievementTitle,
       'description': achievementDescription,
-      'associated_level': level,
+      'associated_level': levelId,
       'icon': icon,
     };
   }

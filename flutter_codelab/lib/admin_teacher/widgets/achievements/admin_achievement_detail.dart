@@ -108,7 +108,7 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
                 'achievement_name': _displayData.achievementName, // Added
                 'title': _displayData.achievementTitle,
                 'description': _displayData.achievementDescription,
-                'associated_level': _displayData.level, // Added
+                'associated_level': _displayData.levelId, // Added
                 'icon': _displayData.icon, // Added
               };
 
@@ -161,7 +161,7 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
                     ),
                     const SizedBox(height: 8),
                     Chip(
-                      label: Text(_displayData.level ?? 'No Level'),
+                      label: Text(_displayData.levelName ?? 'No Level'),
                       backgroundColor: color.withOpacity(0.1),
                     ),
                   ],
@@ -192,6 +192,7 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
               // Info Fields
               _buildSectionTitle(context, 'General Info'),
               _buildInfoRow(context, 'Internal Name', _displayData.achievementName),
+              _buildInfoRow(context, 'Associated Level', _displayData.levelName ?? 'None'),
               _buildInfoRow(context, 'Creator', _displayData.creatorName ?? 'Loading...'),
 
               const Divider(height: 30),
