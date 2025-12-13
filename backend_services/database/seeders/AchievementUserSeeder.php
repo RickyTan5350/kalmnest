@@ -30,11 +30,23 @@ class AchievementUserSeeder extends Seeder
             ->value('achievement_id');
 
         $achievement2Id = DB::table('achievements')
-            ->where('achievement_name', 'pengenalan html')
+            ->where('achievement_name', 'System Setup Complete')
+            ->value('achievement_id');
+
+        $achievementHtml1Id = DB::table('achievements')
+            ->where('achievement_name', 'html level 1: <p>')
+            ->value('achievement_id');
+
+        $achievementHtml2Id = DB::table('achievements')
+            ->where('achievement_name', 'html level 2: style')
+            ->value('achievement_id');
+
+        $achievementCss1Id = DB::table('achievements')
+            ->where('achievement_name', 'css level 1: atribut')
             ->value('achievement_id');
 
         // Safety check: Ensure all records exist before trying to seed
-        if (!$studentCharlieId || !$studentDianaId || !$achievement1Id || !$achievement2Id) {
+        if (!$studentCharlieId || !$studentDianaId || !$achievement1Id) {
             $this->command->error('Skipping AchievementUserSeeder: Required Users or Achievements not found.');
             return;
         }
@@ -69,6 +81,52 @@ class AchievementUserSeeder extends Seeder
                 'id' => (string) Str::uuid7(),
                 'user_id' => $studentDianaId,
                 'achievement_id' => $achievement2Id,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ],
+
+            // --- Additional Achievements for Charlie ---
+            [
+                'id' => (string) Str::uuid7(),
+                'user_id' => $studentCharlieId,
+                'achievement_id' => $achievementHtml1Id,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ],
+            [
+                'id' => (string) Str::uuid7(),
+                'user_id' => $studentCharlieId,
+                'achievement_id' => $achievementHtml2Id,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ],
+            [
+                'id' => (string) Str::uuid7(),
+                'user_id' => $studentCharlieId,
+                'achievement_id' => $achievementCss1Id,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ],
+
+            // --- Additional Achievements for Diana ---
+            [
+                'id' => (string) Str::uuid7(),
+                'user_id' => $studentDianaId,
+                'achievement_id' => $achievementHtml1Id,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ],
+            [
+                'id' => (string) Str::uuid7(),
+                'user_id' => $studentDianaId,
+                'achievement_id' => $achievementHtml2Id,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ],
+            [
+                'id' => (string) Str::uuid7(),
+                'user_id' => $studentDianaId,
+                'achievement_id' => $achievementCss1Id,
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],

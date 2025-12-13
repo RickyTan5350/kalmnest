@@ -16,7 +16,7 @@ class Notes extends Model
     protected $fillable = [
         'topic_id',
         'title',
-        'file_path',
+        'file_id',
         'created_by',
         'visibility',
     ];
@@ -37,4 +37,9 @@ class Notes extends Model
     public function createdBy(){
         return $this->belongsTo(User::class, 'note_created_by', 'id');
     }
+    public function attachments()
+{
+    // "belongsToMany" tells Laravel to look for the 'note_files' pivot table
+    return $this->belongsToMany(File::class, 'note_files', 'note_id', 'file_id');
+}
 }

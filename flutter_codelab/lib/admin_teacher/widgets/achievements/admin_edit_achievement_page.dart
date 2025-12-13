@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
@@ -41,6 +42,11 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
   late TextEditingController _achievementTitleController;
   late TextEditingController _achievementDescriptionController;
 
+  // Validation State
+  List<AchievementData> _existingAchievements = [];
+  String? _nameError;
+  String? _titleError;
+
   String? _selectedIcon;
   String? _selectedLevel;
   bool _isLoading = false;
@@ -58,19 +64,40 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
   @override
   void initState() {
     super.initState();
-    // --- PRE-LOAD DATA ---
-    // We map the keys passed from the detail page to the controllers
+    // 1. Pre-load Data
     _achievementNameController = TextEditingController(text: widget.achievement['achievement_name']);
     _achievementTitleController = TextEditingController(text: widget.achievement['title']);
     _achievementDescriptionController = TextEditingController(text: widget.achievement['description']);
 
-    // Pre-select dropdowns (ensure value exists in options to avoid crash)
     _selectedIcon = widget.achievement['icon'];
     _selectedLevel = widget.achievement['associated_level'];
 
-    // Safety check: if the loaded level isn't in our list, default to empty/null
     if (!_levels.contains(_selectedLevel)) {
       _selectedLevel = null;
+    }
+
+    // 2. Fetch Existing Data for Uniqueness Check
+    _fetchExistingAchievements();
+
+    // 3. Clear Server Errors on Typing
+    _achievementNameController.addListener(() {
+      if (_nameError != null) setState(() => _nameError = null);
+    });
+    _achievementTitleController.addListener(() {
+      if (_titleError != null) setState(() => _titleError = null);
+    });
+  }
+
+  Future<void> _fetchExistingAchievements() async {
+    try {
+      final list = await _achievementApi.fetchBriefAchievements();
+      if (mounted) {
+        setState(() {
+          _existingAchievements = list;
+        });
+      }
+    } catch (e) {
+      print('Warning: Could not fetch list for uniqueness check: $e');
     }
   }
 
@@ -86,11 +113,13 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     required String labelText,
     required IconData icon,
     String? hintText,
+    String? errorText, // Added errorText support
     required ColorScheme colorScheme,
   }) {
     return InputDecoration(
       labelText: labelText,
       hintText: hintText,
+      errorText: errorText, // Display server error
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -104,6 +133,10 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.primary, width: 2),
       ),
+      errorBorder: OutlineInputBorder( // Red border on error
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.error),
+      ),
       labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
       hintStyle: TextStyle(
         color: colorScheme.onSurfaceVariant.withOpacity(0.6),
@@ -114,12 +147,17 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
   }
 
   Future<void> _saveChanges() async {
+    // 1. Reset Server Errors
+    setState(() {
+      _nameError = null;
+      _titleError = null;
+    });
+
+    // 2. Client-Side Validation
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    // Construct the data object for the API
-    // We use the ID passed in the map to know which one to update
     String id = widget.achievement['achievement_id'].toString();
 
     final updatedData = AchievementData(
@@ -127,23 +165,20 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
       achievementName: _achievementNameController.text,
       achievementTitle: _achievementTitleController.text,
       achievementDescription: _achievementDescriptionController.text,
-      level: _selectedLevel,
+      levelId: _selectedLevel,
       icon: _selectedIcon,
     );
 
     try {
-      // Assuming your API has an update method.
-      // If not, you might need to implement: await _achievementApi.updateAchievement(id, updatedData);
-      // For now, I will use the pattern from your create page but targeting an update.
       await _achievementApi.updateAchievement(id, updatedData);
 
       if (mounted) {
         widget.showSnackBar(context, 'Changes saved successfully!', Colors.green);
-        Navigator.of(context).pop(true); // Return true to trigger refresh
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
-        widget.showSnackBar(context, 'Error updating: $e', Colors.red);
+        _handleSubmissionError(e);
       }
     } finally {
       if (mounted) {
@@ -152,10 +187,72 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     }
   }
 
+  void _handleSubmissionError(Object e) {
+    String errorString = e.toString();
+    const specificStudentMessage = 'Access Denied: Only Admins or Teachers can create achievements.';
+
+    // --- CASE 1: Authorization ---
+    if (errorString.contains(specificStudentMessage)) {
+      widget.showSnackBar(
+        context,
+        specificStudentMessage,
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 2: Validation Error (422 JSON) ---
+    else if (errorString.startsWith('Exception: ${AchievementApi.validationErrorCode}:')) {
+      final jsonPart = errorString.substring(
+        'Exception: ${AchievementApi.validationErrorCode}:'.length,
+      );
+
+      try {
+        final Map<String, dynamic> errors = jsonDecode(jsonPart);
+        setState(() {
+          if (errors.containsKey('achievement_name')) {
+            _nameError = (errors['achievement_name'] as List).first.toString();
+          }
+          if (errors.containsKey('title')) {
+            _titleError = (errors['title'] as List).first.toString();
+          }
+          // Catch-all for other naming conventions
+          if (errors.containsKey('name')) {
+            _nameError = (errors['name'] as List).first.toString();
+          }
+        });
+        _formKey.currentState!.validate(); // Refresh UI
+      } catch (parseError) {
+        widget.showSnackBar(context, 'Validation Error: $jsonPart', Colors.red);
+      }
+    }
+    // --- CASE 3: Database Integrity (500) ---
+    else if (errorString.contains('Integrity constraint violation') ||
+        errorString.contains('Duplicate entry')) {
+      setState(() {
+        if (errorString.contains('achievements_achievement_name_unique')) {
+          _nameError = 'This internal name is already in use.';
+        }
+        if (errorString.contains('title_unique')) {
+          _titleError = 'This title is already in use.';
+        }
+      });
+
+      _formKey.currentState!.validate(); // Refresh UI
+
+      if (_nameError == null && _titleError == null) {
+        widget.showSnackBar(context, 'Database Error: Duplicate entry.', Colors.red);
+      }
+    }
+    // --- CASE 4: Generic ---
+    else {
+      widget.showSnackBar(context, 'Error updating: $e', Colors.red);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final String currentId = widget.achievement['achievement_id'].toString();
 
     return AlertDialog(
       backgroundColor: colorScheme.surface,
@@ -166,6 +263,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -185,8 +283,24 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                     labelText: 'Achievement Name',
                     icon: Icons.emoji_events,
                     colorScheme: colorScheme,
+                    errorText: _nameError, // Server error
                   ),
-                  validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+                  validator: (value) {
+                    if (_nameError != null) return _nameError; // Server error priority
+
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a name';
+                    }
+
+                    // Client-Side Uniqueness (Excluding current item)
+                    final isDuplicate = _existingAchievements.any((item) {
+                      return item.achievementId != currentId &&
+                          item.achievementName?.trim().toLowerCase() == value.trim().toLowerCase();
+                    });
+
+                    if (isDuplicate) return 'Name already in use.';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -198,8 +312,24 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                     labelText: 'Achievement Title',
                     icon: Icons.title,
                     colorScheme: colorScheme,
+                    errorText: _titleError, // Server error
                   ),
-                  validator: (value) => value!.isEmpty ? 'Please enter a title' : null,
+                  validator: (value) {
+                    if (_titleError != null) return _titleError;
+
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a title';
+                    }
+
+                    // Client-Side Uniqueness (Excluding current item)
+                    final isDuplicate = _existingAchievements.any((item) {
+                      return item.achievementId != currentId &&
+                          item.achievementTitle?.trim().toLowerCase() == value.trim().toLowerCase();
+                    });
+
+                    if (isDuplicate) return 'Title already in use.';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 

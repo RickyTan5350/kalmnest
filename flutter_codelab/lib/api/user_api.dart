@@ -1,17 +1,37 @@
 import 'dart:convert';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_codelab/api/auth_api.dart';
 
 class UserApi {
   // Existing base URL for single user operations
-  final String _baseUrl = 'http://backend_services.test/api/user'; 
+  final String _baseUrl = 'https://backend_services.test/api/user'; 
   // New base URL for list operations
-  final String _listUrl = 'http://backend_services.test/api/users';
+  final String _listUrl = 'https://backend_services.test/api/users';
 
   static const validationErrorCode = 422;
   static const forbiddenErrorCode = 403;
+  
+  // --- NEW: Authentication Helper to inject Bearer Token ---
+  Future<Map<String, String>> _getAuthHeaders() async {
+    Map<String, String> headers = {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Accept': 'application/json',
+    };
 
-  // --- EXISTING CREATE METHOD ---
+    final token = await AuthApi.getToken();
+
+    if (token == null || token.isEmpty) {
+      throw Exception("Authentication required. Please log in to perform this action.");
+    }
+    
+    headers['Authorization'] = 'Bearer $token';
+    
+    return headers;
+  }
+  // -----------------------------------------------------
+
+  // --- EXISTING CREATE METHOD (Public route, no token needed) ---
   Future<void> createUser(UserData data) async {
     final url = Uri.parse(_baseUrl);
     
@@ -40,7 +60,7 @@ class UserApi {
     }
   }
 
-  // --- NEW GET USERS METHOD (Filter & Search) ---
+  // --- UPDATED GET USERS METHOD ---
   Future<List<UserListItem>> getUsers({
     String? search,
     String? roleName,
@@ -56,9 +76,12 @@ class UserApi {
     final uri = Uri.parse(_listUrl).replace(queryParameters: queryParams);
 
     try {
+      // 1. Get authenticated headers
+      final headers = await _getAuthHeaders(); 
+      
       final response = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers, // <-- USE AUTH HEADERS HERE
       );
 
       if (response.statusCode == 200) {
@@ -71,17 +94,19 @@ class UserApi {
         throw Exception('Failed to load users: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Network Error: $e');
+      throw Exception('Network Error or Auth Error: $e');
     }
   }
 
-Future<UserDetails> getUserDetails(String userId) async {
+  // --- UPDATED GET USER DETAILS METHOD ---
+  Future<UserDetails> getUserDetails(String userId) async {
     final url = Uri.parse('$_listUrl/$userId'); // results in /api/users/{id}
 
     try {
+      final headers = await _getAuthHeaders(); // Get authenticated headers
       final response = await http.get(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers, // <-- USE AUTH HEADERS HERE
       );
 
       if (response.statusCode == 200) {
@@ -92,8 +117,90 @@ Future<UserDetails> getUserDetails(String userId) async {
         throw Exception('Failed to load user details: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Network Error: $e');
+      throw Exception('Network Error or Auth Error: $e');
     }
   }
   
+  // --- UPDATED DELETE USER METHOD ---
+ Future<void> deleteUser(String userId) async {
+    final url = Uri.parse('$_listUrl/$userId'); 
+    
+    // 1. Get the Authorization Token
+    final token = await AuthApi.getToken(); 
+
+    if (token == null || token.isEmpty) { 
+      throw Exception('Authentication token is missing or invalid. Please re-login.');
+    }
+
+    try {
+      final response = await http.delete(
+        url,
+        // 2. Add the Authorization Header, using the dynamic $token variable
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', 
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('User deleted successfully: $userId');
+        return;
+      } else if (response.statusCode == 404) {
+        throw Exception('404: User not found.');
+      } else if (response.statusCode == forbiddenErrorCode) {
+        // CRITICAL FIX: Throw a clean, specific message for 403 without decoding body.
+        throw Exception('403: Only Administrators can delete user accounts.');
+      } else {
+        // Log the server's full response body on unexpected error
+        print('DELETE FAILED. Status: ${response.statusCode}, Body: ${response.body}');
+        throw Exception('${response.statusCode}: Failed to delete user. Server message: ${response.body}');
+      }
+    } catch (e) {
+      // If a FormatException (from trying to decode HTML) happens here,
+      // it means the server returned an unexpected format for a non-403 error.
+      if (e is FormatException) {
+         throw Exception('Network Error: Server returned an unexpected response format.');
+      }
+      rethrow;
+    }
+  }
+
+  // --- UPDATED UPDATE USER METHOD ---
+  Future<void> updateUser(String userId, Map<String, dynamic> data) async {
+    // Uses the protected PUT /api/users/{id} route
+    final url = Uri.parse('$_listUrl/$userId'); 
+    
+    // 1. Get the Authorization Token
+    final token = await AuthApi.getToken(); 
+
+    if (token == null || token.isEmpty) { 
+      throw Exception('Authentication token is missing or invalid. Please re-login.');
+    }
+
+    try {
+      final response = await http.put(
+        url,
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token', 
+        }, 
+        body: jsonEncode(data), // Send the update map
+      );
+
+      if (response.statusCode == 200) {
+        print('User updated successfully: ${response.body}');
+        return;
+      } else if (response.statusCode == validationErrorCode) {
+        final errorBody = jsonDecode(response.body);
+        final errors = errorBody['errors'] as Map<String, dynamic>;
+        String errorMessage = errors.values.expand((list) => list).join('\n');
+        throw Exception('$validationErrorCode: $errorMessage');
+      } else {
+        // Includes 403 Forbidden or 404 Not Found
+        throw Exception('${response.statusCode}: Failed to update user. Server message: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Network Error: $e');
+    }
+  }
 }
