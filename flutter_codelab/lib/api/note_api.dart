@@ -4,22 +4,20 @@ import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/note_data.dart';
 
-
-// Ensure this URL is accessible from your emulator/device.
-const String _apiUrl = 'http://backend_services.test/api/notes';
-
+const String _apiUrl = 'https://backend_services.test/api/notes';
 
 class NoteApi {
   static const String validationErrorCode = '422';
 
   // --- CREATE NOTE ---
   Future<void> createNote(NoteData data) async {
+    
     final body = jsonEncode(data.toJson());
     try {
       print('Sending POST request to: $_apiUrl');
       
       final response = await http.post(
-        Uri.parse(_apiUrl), 
+        Uri.parse('$_apiUrl/new'),  
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
@@ -185,6 +183,14 @@ class NoteApi {
     } catch (e) {
       print('Error deleting note: $e');
       return false;
+    }
+  }
+
+  // --- DELETE MULTIPLE NOTES ---
+  Future<void> deleteNotes(List<dynamic> ids) async {
+    // Iterate and delete individually since no batch endpoint is known
+    for (final id in ids) {
+      await deleteNote(id.toString());
     }
   }
 }

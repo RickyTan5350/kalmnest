@@ -165,7 +165,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
       achievementName: _achievementNameController.text,
       achievementTitle: _achievementTitleController.text,
       achievementDescription: _achievementDescriptionController.text,
-      level: _selectedLevel,
+      levelId: _selectedLevel,
       icon: _selectedIcon,
     );
 

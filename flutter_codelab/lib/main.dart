@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_create_note_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
+import 'admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
+import 'admin_teacher/widgets/game/create_game_page.dart';
+import 'admin_teacher/widgets/note/admin_create_note_page.dart';
 import 'util.dart';
 import 'theme.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'models/data.dart' as data;
+import 'models/models.dart';
 import 'pages/pages.dart';
 import 'package:flutter_codelab/admin_teacher//widgets/achievements/admin_create_achievement_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/create_account_form.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.dart';
 import 'package:flutter_codelab/pages/login_page.dart';
 import 'models/user_data.dart';
 import 'api/auth_api.dart';
@@ -90,11 +94,11 @@ class _FeedState extends State<Feed> {
         backgroundColor: color,
         duration: const Duration(seconds: 4), // Display time
         behavior:
-        SnackBarBehavior.floating, // For better appearance on wider screens
+            SnackBarBehavior.floating, // For better appearance on wider screens
       ),
     );
   }
-  
+
   // NEW: Confirmation Dialog
   Future<bool?> _confirmLogout() {
     return showDialog<bool>(
@@ -125,12 +129,12 @@ class _FeedState extends State<Feed> {
     if (confirmed != true) {
       return; // User cancelled the operation
     }
-    
+
     // 2. Proceed with logout only if confirmed
     try {
       await AuthApi.logout(widget.currentUser.id);
     } catch (e) {
-      // Log the error but continue with navigation, 
+      // Log the error but continue with navigation,
       // as local storage clearance is critical and should have happened.
       print('Logout API call failed, but continuing to clear session: $e');
     }
@@ -139,7 +143,7 @@ class _FeedState extends State<Feed> {
       // Navigate back to the LoginPage and clear the navigation stack
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginPage()),
-            (Route<dynamic> route) => false, // Predicate: Remove all routes below
+        (Route<dynamic> route) => false, // Predicate: Remove all routes below
       );
     }
   }
@@ -155,12 +159,29 @@ class _FeedState extends State<Feed> {
     // This switch statement checks the currently selected page
     switch (selectedIndex) {
       case 0: // This is the index for 'UserPage' (Index 0)
-      // ADD THIS CASE FOR USER PAGE
-        showCreateUserAccountDialog(
+        // CHECK if the current user is a Student OR a Teacher
+        if (widget.currentUser.isStudent || widget.currentUser.isTeacher) { 
+          _showSnackBar(
+            context,
+            'You do not have permission to create user accounts.', 
+            Theme.of(context).colorScheme.error,
+          );
+        } else {
+          // Only Admins can proceed to create a new user account
+          showCreateUserAccountDialog(
+            context: context,
+            showSnackBar: _showSnackBar,
+          );
+        }
+        break;
+        
+      case 1:
+        showCreateGamePage(
           context: context,
           showSnackBar: _showSnackBar,
+          userRole:
+              widget.currentUser.roleName, // <-- pass the current user role
         );
-        break;
       case 2:
        if (widget.currentUser.isStudent) {
           // 2. BLOCK: Show error message
@@ -181,9 +202,13 @@ class _FeedState extends State<Feed> {
         
 
       case 4: // This is the index for 'AchievementPage'
-        if(widget.currentUser.isStudent){
-          _showSnackBar(context, 'You do not have access to this function', Theme.of(context).colorScheme.error);
-        }else{
+        if (widget.currentUser.isStudent) {
+          _showSnackBar(
+            context,
+            'You do not have access to this function',
+            Theme.of(context).colorScheme.error,
+          );
+        } else {
           showCreateAchievementDialog(
             context: context,
             showSnackBar: _showSnackBar,
@@ -207,7 +232,7 @@ class _FeedState extends State<Feed> {
 
     final List<Widget> pages = [
       const UserPage(), // Index 0
-      const GamePage(), // Index 1
+      GamePage(userRole: widget.currentUser.roleName), // Index 1
       NotePage(
         currentUser: widget.currentUser,
       ),
@@ -231,7 +256,7 @@ class _FeedState extends State<Feed> {
                 setState(() {
                   selectedIndex = index;
                 });
-                },
+              },
               // REMOVED onLogoutPressed
               isExtended: _isRailExtended,
               onMenuPressed: () {
@@ -253,9 +278,7 @@ class _FeedState extends State<Feed> {
                     onLogoutPressed: _handleLogout,
                   ),
                   // Main Page Content (Expanded to fill the remaining space)
-                  Expanded(
-                    child: pages[selectedIndex],
-                  ),
+                  Expanded(child: pages[selectedIndex]),
                 ],
               ),
             ),
@@ -265,21 +288,21 @@ class _FeedState extends State<Feed> {
       floatingActionButton: wideScreen
           ? null
           : FloatingActionButton(
-        backgroundColor: colorScheme.tertiaryContainer,
-        foregroundColor: colorScheme.onTertiaryContainer,
-        onPressed: _onAddButtonPressed,
-        child: const Icon(Icons.add),
-      ),
+              backgroundColor: colorScheme.tertiaryContainer,
+              foregroundColor: colorScheme.onTertiaryContainer,
+              onPressed: _onAddButtonPressed,
+              child: const Icon(Icons.add),
+            ),
       bottomNavigationBar: wideScreen
           ? null
           : DisappearingBottomNavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            selectedIndex = index;
-          });
-        },
-      ),
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (index) {
+                setState(() {
+                  selectedIndex = index;
+                });
+              },
+            ),
     );
   }
 }

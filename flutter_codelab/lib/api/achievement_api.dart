@@ -7,9 +7,9 @@ import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'auth_api.dart';
 
 //server URL: set your own
-const String _apiUrl = 'http://backend_services.test/api/achievements';
+const String _apiUrl = 'https://backend_services.test/api/achievements';
 
-IconData _getIconData(String iconValue) {
+IconData _getIconData(String iconValue) {  
   try {
     final entry = achievementIconOptions.firstWhere(
           (opt) => opt['value'] == iconValue,
