@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:webview_windows/webview_windows.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 class RunCodePage extends StatefulWidget {
@@ -14,7 +14,7 @@ class RunCodePage extends StatefulWidget {
 
 class _RunCodePageState extends State<RunCodePage> {
   late TextEditingController _codeController;
-  final WebviewController _webViewController = WebviewController();
+  InAppWebViewController? _webViewController;
   final TextEditingController _urlBarController = TextEditingController(text: "https://mysite.com/preview");
   
   bool _isRealBrowserReady = false;
@@ -29,8 +29,8 @@ class _RunCodePageState extends State<RunCodePage> {
     _codeController = TextEditingController(text: widget.initialCode);
     _updateTitleFromCode(widget.initialCode);
     
-    // NOTE: We load libraries inside initWebView() to ensure they are ready before running code.
-    initWebView();
+    // Load libraries in background
+    _loadBundledLibraries();
   }
 
   // --- 1. Load Libraries from Assets ---
@@ -57,46 +57,6 @@ class _RunCodePageState extends State<RunCodePage> {
         }
       }
     });
-  }
-
-  Future<void> initWebView() async {
-    try {
-      await _webViewController.initialize();
-      _webViewController.setBackgroundColor(Colors.white);
-      _webViewController.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
-
-      _webViewController.url.listen((url) {
-        if (mounted) _urlBarController.text = url;
-      });
-      
-      _webViewController.title.listen((title) {
-        if (mounted && title.isNotEmpty) {
-           setState(() => _browserTitle = title);
-        }
-      });
-
-      // --- CRITICAL FIX: Load libraries & wait before running ---
-      await _loadBundledLibraries();
-      
-      final fullHtml = _wrapHtml(_codeController.text);
-      await _webViewController.loadStringContent(fullHtml);
-
-      if (!mounted) return;
-      setState(() {
-        _isRealBrowserReady = true;
-      });
-
-    } catch (e) {
-      print("Error initializing WebView: $e");
-    }
-  }
-
-  @override
-  void dispose() {
-    _codeController.dispose();
-    _urlBarController.dispose();
-    _webViewController.dispose();
-    super.dispose();
   }
 
   // --- FIXED SMART WRAPPER ---
@@ -192,9 +152,9 @@ class _RunCodePageState extends State<RunCodePage> {
   void _runCode() {
     _updateTitleFromCode(_codeController.text);
 
-    if (_isRealBrowserReady) {
+    if (_webViewController != null) {
        final fullHtml = _wrapHtml(_codeController.text);
-      _webViewController.loadStringContent(fullHtml);
+      _webViewController!.loadData(data: fullHtml);
     }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Code executed!'), duration: Duration(milliseconds: 500)),
@@ -202,11 +162,18 @@ class _RunCodePageState extends State<RunCodePage> {
   }
 
   void _loadRealUrl(String url) {
-    if (!_isRealBrowserReady) return;
+    if (_webViewController == null) return;
     if (!url.startsWith('http')) {
       url = 'https://$url';
     }
-    _webViewController.loadUrl(url);
+    _webViewController!.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    _urlBarController.dispose();
+    super.dispose();
   }
 
   @override
@@ -333,7 +300,7 @@ class _RunCodePageState extends State<RunCodePage> {
                     ),
                     child: Row(
                       children: [
-                        IconButton(icon: const Icon(Icons.refresh, size: 18, color: Colors.black54), onPressed: () => _webViewController.reload()),
+                        IconButton(icon: const Icon(Icons.refresh, size: 18, color: Colors.black54), onPressed: () => _webViewController?.reload()),
                         Expanded(
                           child: Container(
                             height: 28,
@@ -359,33 +326,37 @@ class _RunCodePageState extends State<RunCodePage> {
                     ),
                   ),
 
-                  // Hybrid Preview Stack
+                  // Real Browser
                   Expanded(
-                    child: Stack(
-                      children: [
-                        // Layer 1: Instant Static Preview
-                        Positioned.fill(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(8.0),
-                            child: HtmlWidget(
-                              _codeController.text,
-                              textStyle: const TextStyle(color: Colors.black, fontFamily: 'sans-serif'),
-                              customWidgetBuilder: (element) {
-                                // Hide invisible tags/scripts from the static preview
-                                if (['head', 'title', 'style', 'script', 'meta', 'link'].contains(element.localName)) {
-                                  return const SizedBox.shrink();
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ),
-                        // Layer 2: Real Browser
-                        if (_isRealBrowserReady)
-                          Positioned.fill(
-                            child: Webview(_webViewController),
-                          ),
-                      ],
+                    child: InAppWebView(
+                      initialSettings: InAppWebViewSettings(
+                        isInspectable: true,
+                        mediaPlaybackRequiresUserGesture: false,
+                        allowsInlineMediaPlayback: true,
+                        iframeAllow: "camera; microphone",
+                        iframeAllowFullscreen: true,
+                      ),
+                      onWebViewCreated: (controller) async {
+                        _webViewController = controller;
+                        _isRealBrowserReady = true;
+                        
+                        // Load initial content
+                         final fullHtml = _wrapHtml(_codeController.text);
+                         await _webViewController!.loadData(data: fullHtml);
+                      },
+                      onLoadStop: (controller, url) {
+                        if (mounted) {
+                           _urlBarController.text = url.toString();
+                        }
+                      },
+                      onTitleChanged: (controller, title) {
+                        if (mounted && title != null && title.isNotEmpty) {
+                           setState(() => _browserTitle = title);
+                        }
+                      },
+                      onConsoleMessage: (controller, consoleMessage) {
+                        print("Console: ${consoleMessage.message}");
+                      },
                     ),
                   ),
                 ],

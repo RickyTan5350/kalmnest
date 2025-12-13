@@ -71,7 +71,7 @@ class LocalAchievementStorage {
       'title': a.achievementTitle,
       'description': a.achievementDescription,
       'icon': a.icon,
-      'associated_level': a.level,
+      'associated_level': a.levelName,
       'obtained_at': DateTime.now().toIso8601String(),
     }).toList();
 

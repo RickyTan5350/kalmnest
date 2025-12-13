@@ -66,48 +66,68 @@ class AchievementController extends Controller
 
     public function getAchievement($id) 
     {
-        // 1. Permission Gate: Allow both Students and Staff
-    if (!$this->isAdminOrTeacher() && !$this->isStudent()) {
-        return response()->json(['message' => 'Access Denied.'], 403);
+        if (!$this->isAdminOrTeacher() && !$this->isStudent()) {
+            return response()->json(['message' => 'Access Denied.'], 403);
+        }
+
+        // 2. Start the query builder
+        $query = DB::table('achievements')
+                    ->where('achievements.achievement_id', $id);
+
+        // 3. Conditional Selection based on Role
+        if ($this->isStudent()) {
+            // STUDENTS: See only what is necessary for the UI
+            // Note: We include 'created_at' because your Flutter app uses it as a fallback date
+            $query->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
+                ->leftJoin('levels', 'achievements.associated_level', '=', 'levels.level_id')
+                ->select(
+                    'achievements.achievement_id',
+                    'achievements.title',
+                    'achievements.description',
+                    'achievements.icon',
+                    'achievements.associated_level as level', // Aliasing if needed
+                    'achievements.associated_level',
+                    'achievements.created_at', 
+                    'users.name as creator_name',
+                    'levels.level_name'
+                );
+        } else {
+            // ADMINS/TEACHERS: See everything (including updated_at, raw IDs, etc.)
+            $query->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
+                ->leftJoin('levels', 'achievements.associated_level', '=', 'levels.level_id')
+                ->select(
+                    'achievements.*', 
+                    'users.name as creator_name',
+                    'users.email as creator_email', // Example: Admins might need to contact the creator
+                    'levels.level_name'
+                );
+        }
+
+        $achievement = $query->first(); 
+
+        if (!$achievement) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json($achievement);
     }
 
-    // 2. Start the query builder
-    $query = DB::table('achievements')
-                ->where('achievements.achievement_id', $id);
+    // public function getLevelsForDropdown()
+    // {
+    //     // 1. Auth Check (Admin/Teacher only)
+    //     if (!$this->isAdminOrTeacher()) {
+    //         return response()->json(['message' => 'Access Denied.'], 403);
+    //     }
 
-    // 3. Conditional Selection based on Role
-    if ($this->isStudent()) {
-        // STUDENTS: See only what is necessary for the UI
-        // Note: We include 'created_at' because your Flutter app uses it as a fallback date
-        $query->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
-              ->select(
-                  'achievements.achievement_id',
-                  'achievements.title',
-                  'achievements.description',
-                  'achievements.icon',
-                  'achievements.associated_level as level', // Aliasing if needed
-                  'achievements.associated_level',
-                  'achievements.created_at', 
-                  'users.name as creator_name'
-              );
-    } else {
-        // ADMINS/TEACHERS: See everything (including updated_at, raw IDs, etc.)
-        $query->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
-              ->select(
-                  'achievements.*', 
-                  'users.name as creator_name',
-                  'users.email as creator_email' // Example: Admins might need to contact the creator
-              );
-    }
+    //     // 2. Fetch only ID and Name
+    //     // We use DB::table assuming your table is named 'levels'
+    //     $levels = DB::table('levels')
+    //                 ->select('level_id', 'level_name') // Adjust 'level_name' if your column is different (e.g., 'title')
+    //                 ->orderBy('level_name', 'asc')
+    //                 ->get();
 
-    $achievement = $query->first(); 
-
-    if (!$achievement) {
-        return response()->json(['message' => 'Not found'], 404);
-    }
-
-    return response()->json($achievement);
-    }
+    //     return response()->json($levels);
+    // }
 
     // ==========================================
     // MANAGEMENT METHODS (Admin & Teacher Only)
@@ -233,10 +253,12 @@ class AchievementController extends Controller
 
     public function unlock(UnlockAchievementRequest $request)
     {
-        $request->validate(['achievement_id' => 'required|exists:achievements,achievement_id']);
-        
         $user = $request->user(); 
-        $user->achievements()->syncWithoutDetaching([$request->achievement_id]);
+        
+        // FIX: We pass a second array with extra column values (the pivot 'id')
+        $user->achievements()->syncWithoutDetaching([
+            $request->achievement_id => ['id' => (string) Str::uuid7()]
+        ]);
 
         Log::info("ACHIEVEMENT_UNLOCKED: Achievement {$request->achievement_id} unlocked by Student " . Auth::id());
 

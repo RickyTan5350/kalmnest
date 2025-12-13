@@ -5,12 +5,18 @@ import 'package:flutter_codelab/student/widgets/note/student_note_detail.dart';
 
 class GridLayoutView extends StatelessWidget {
   final List<Map<String, dynamic>> achievements;
-  final bool isStudent; 
+  final bool isStudent;
+  final Set<dynamic> selectedIds;
+  final void Function(dynamic) onToggleSelection;
+  final Map<dynamic, GlobalKey> itemKeys;
 
   const GridLayoutView({
     super.key,
     required this.achievements,
     required this.isStudent,
+    required this.selectedIds,
+    required this.onToggleSelection,
+    required this.itemKeys,
   });
 
   @override
@@ -26,45 +32,63 @@ class GridLayoutView extends StatelessWidget {
           childAspectRatio: 0.9,
         ),
         itemBuilder: (context, index) {
-          return _buildNoteCard(context, achievements[index]);
+          final item = achievements[index];
+          final dynamic id = item['id'];
+          final GlobalKey key = itemKeys.putIfAbsent(id, () => GlobalKey());
+
+          return Container(
+            key: key,
+            child: _buildNoteCard(context, item, id),
+          );
         },
       ),
     );
   }
 
-  Widget _buildNoteCard(BuildContext context, Map<String, dynamic> item) {
+  Widget _buildNoteCard(BuildContext context, Map<String, dynamic> item, dynamic id) {
     final String title = item['title'];
     final IconData icon = item['icon'] ?? Icons.note;
     final Color color = item['color'] ?? Colors.blue;
     final String? preview = item['preview'];
+    final bool isSelected = selectedIds.contains(id);
 
     return Card(
       elevation: 1.0,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.3), width: 1),
+        side: BorderSide(
+          color: isSelected 
+              ? Theme.of(context).colorScheme.primary 
+              : Theme.of(context).colorScheme.outline.withOpacity(0.3), 
+          width: isSelected ? 2.0 : 1.0
+        ),
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: InkWell(
         onTap: () {
-          // FIX: Check isStudent to navigate to the correct page
-          if (isStudent) {
-            Navigator.push(context, MaterialPageRoute(
-              builder: (context) => StudentNoteDetailPage(
-                noteId: item['id'].toString(),
-                noteTitle: title,
-              ),
-            ));
+          if (selectedIds.isNotEmpty) {
+            onToggleSelection(id);
           } else {
-            Navigator.push(context, MaterialPageRoute(
-              builder: (context) => AdminNoteDetailPage(
-                noteId: item['id'].toString(),
-                noteTitle: title,
-                isStudent: false, // Required for admin logic
-              ),
-            ));
+            // FIX: Check isStudent to navigate to the correct page
+            if (isStudent) {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (context) => StudentNoteDetailPage(
+                  noteId: id.toString(),
+                  noteTitle: title,
+                ),
+              ));
+            } else {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (context) => AdminNoteDetailPage(
+                  noteId: id.toString(),
+                  noteTitle: title,
+                  isStudent: false, // Required for admin logic
+                ),
+              ));
+            }
           }
         },
+        onLongPress: () => onToggleSelection(id),
         child: Stack(
           children: [
             Positioned.fill(

@@ -41,7 +41,7 @@ class _StudentViewAchievementsPageState
 
   IconData _getIconData(String? iconValue) {
     final entry = achievementIconOptions.firstWhere(
-          (opt) => opt['value'] == iconValue,
+      (opt) => opt['value'] == iconValue,
       orElse: () => {'icon': Icons.help_outline},
     );
     return entry['icon'] as IconData;
@@ -49,11 +49,16 @@ class _StudentViewAchievementsPageState
 
   Color _getColor(String? iconValue) {
     switch (iconValue) {
-      case 'html': return Colors.orange;
-      case 'css': return Colors.green;
-      case 'javascript': return Colors.yellow;
-      case 'php': return Colors.blue;
-      default: return Colors.grey;
+      case 'html':
+        return Colors.orange;
+      case 'css':
+        return Colors.green;
+      case 'javascript':
+        return Colors.yellow;
+      case 'php':
+        return Colors.blue;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -128,10 +133,10 @@ class _StudentViewAchievementsPageState
   }
 
   Widget _buildAchievementCard(
-      BuildContext context,
-      Map<String, dynamic> item,
-      AchievementData originalItem,
-      ) {
+    BuildContext context,
+    Map<String, dynamic> item,
+    AchievementData originalItem,
+  ) {
     final String title = item['title'];
     final IconData icon = item['icon'];
     final Color color = item['color'];
@@ -177,7 +182,11 @@ class _StudentViewAchievementsPageState
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Icon(Icons.check_circle, size: 20, color: Colors.green),
+                      const Icon(
+                        Icons.check_circle,
+                        size: 20,
+                        color: Colors.green,
+                      ),
                     ],
                   ),
                 ),
@@ -263,15 +272,18 @@ class _StudentViewAchievementsPageState
 
           List<AchievementData> filteredData = originalData.where((item) {
             final String title = item.achievementTitle?.toLowerCase() ?? '';
-            final String description = item.achievementDescription?.toLowerCase() ?? '';
+            final String description =
+                item.achievementDescription?.toLowerCase() ?? '';
             final String icon = item.icon?.toLowerCase() ?? '';
-            final String level = item.level?.toLowerCase() ?? '';
+            final String level = item.levelName?.toLowerCase() ?? '';
 
-            final isMatchingSearch = widget.searchText.isEmpty ||
+            final isMatchingSearch =
+                widget.searchText.isEmpty ||
                 title.contains(widget.searchText) ||
                 description.contains(widget.searchText);
 
-            final isMatchingTopic = widget.selectedTopic == null ||
+            final isMatchingTopic =
+                widget.selectedTopic == null ||
                 icon.contains(widget.selectedTopic!) ||
                 (widget.selectedTopic! == 'level' && level.isNotEmpty) ||
                 (widget.selectedTopic! == 'quiz');
@@ -292,7 +304,9 @@ class _StudentViewAchievementsPageState
             );
           }
 
-          final List<Map<String, dynamic>> uiData = _transformData(filteredData);
+          final List<Map<String, dynamic>> uiData = _transformData(
+            filteredData,
+          );
 
           if (widget.layout == ViewLayout.grid) {
             return CustomScrollView(
@@ -303,7 +317,12 @@ class _StudentViewAchievementsPageState
                     children: [
                       _buildOfflineBanner(),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                        padding: const EdgeInsets.fromLTRB(
+                          16.0,
+                          8.0,
+                          16.0,
+                          16.0,
+                        ),
                         child: Text(
                           "Showing ${uiData.length} unlocked achievements",
                         ),
@@ -316,12 +335,12 @@ class _StudentViewAchievementsPageState
                   sliver: SliverGrid.builder(
                     itemCount: uiData.length,
                     gridDelegate:
-                    const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 250.0,
-                      mainAxisSpacing: 12.0,
-                      crossAxisSpacing: 12.0,
-                      childAspectRatio: 0.9,
-                    ),
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 250.0,
+                          mainAxisSpacing: 12.0,
+                          crossAxisSpacing: 12.0,
+                          childAspectRatio: 0.9,
+                        ),
                     itemBuilder: (context, index) {
                       final item = uiData[index];
                       final originalItem = filteredData[index];
@@ -342,7 +361,8 @@ class _StudentViewAchievementsPageState
                     itemCount: filteredData.length,
                     itemBuilder: (context, index) {
                       final item = filteredData[index];
-                      final originalItem = filteredData[index]; // Needed for nav
+                      final originalItem =
+                          filteredData[index]; // Needed for nav
                       final transformedItem = uiData[index];
 
                       return Card(
@@ -352,14 +372,17 @@ class _StudentViewAchievementsPageState
                         ),
                         shape: RoundedRectangleBorder(
                           side: BorderSide(
-                            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outline.withOpacity(0.3),
                             width: 1.0,
                           ),
                           borderRadius: BorderRadius.circular(12.0),
                         ),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: transformedItem['color'].withOpacity(0.1),
+                            backgroundColor: transformedItem['color']
+                                .withOpacity(0.1),
                             foregroundColor: transformedItem['color'],
                             child: Icon(transformedItem['icon']),
                           ),
