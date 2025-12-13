@@ -410,23 +410,42 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
 
   // --- CONTENT BUILDERS ---
 
+  // In admin_view_note_page.dart
+
   Widget _buildSliverContent(BuildContext context, List<NoteBrief> notes) {
     if (widget.layout == ViewLayout.grid) {
-      // Use Shared Grid View
+      // 1. Create a map for fast lookup (Optimization)
+      final noteMap = {for (var n in notes) n.noteId: n};
+
       return GridLayoutView(
         achievements: notes.map((n) => {
           'id': n.noteId,
           'title': n.title,
-          'icon': Icons.article_outlined, 
+          'icon': Icons.article_outlined,
           'color': Colors.blue,
           'preview': 'Tap to edit...',
         }).toList(),
-        isStudent: false, 
+        isStudent: false,
         selectedIds: _selectedIds,
         onToggleSelection: _toggleSelection,
         itemKeys: _gridItemKeys,
+        
+        // 2. ADD THIS: Handle the tap event for Admin
+        onTap: (id) {
+          final note = noteMap[id];
+          if (note != null) {
+            Navigator.push(context, MaterialPageRoute(
+              builder: (context) => AdminNoteDetailPage(
+                noteId: note.noteId,
+                noteTitle: note.title,
+                isStudent: false,
+              ),
+            ));
+          }
+        },
       );
     } else {
+      // List View logic remains the same...
       return SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         sliver: SliverList(
