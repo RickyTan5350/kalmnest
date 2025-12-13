@@ -3,6 +3,10 @@ import 'package:flutter_codelab/api/note_api.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:flutter_codelab/student/widgets/note/student_note_detail.dart';
 
+// --- NEW IMPORTS: Reuse Admin/Teacher Widgets for consistency ---
+import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout_view.dart';
+import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
+
 // Local Enums
 enum SortType { alphabetical, number }
 enum SortOrder { ascending, descending }
@@ -29,6 +33,9 @@ class _StudentViewPageState extends State<StudentViewPage> {
 
   SortType _currentSortType = SortType.alphabetical;
   SortOrder _currentSortOrder = SortOrder.ascending;
+
+  // --- NEW: Keys required by GridLayoutView ---
+  final Map<dynamic, GlobalKey> _gridItemKeys = {};
 
   @override
   void initState() {
@@ -92,41 +99,58 @@ class _StudentViewPageState extends State<StudentViewPage> {
 
           final List<NoteBrief> sortedList = _sortNotes(filteredList);
 
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
-                  child: _buildSortHeader(context, sortedList.length),
+          // Prepare map for onTap lookup
+          final Map<dynamic, NoteBrief> noteMap = { for (var note in sortedList) note.noteId: note };
+
+          // --- MODIFIED: Wrap in SelectionGestureWrapper & use GridLayoutView ---
+          return SelectionGestureWrapper(
+            // Students don't use selection, but the wrapper is needed for layout consistency
+            isDesktop: false, 
+            selectedIds: const {},
+            itemKeys: _gridItemKeys.map((k, v) => MapEntry(k.toString(), v)),
+            onLongPressStart: (_) {}, // No-op for student
+            onLongPressMoveUpdate: (_) {},
+            onLongPressEnd: (_) {},
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+                    child: _buildSortHeader(context, sortedList.length),
+                  ),
                 ),
-              ),
-              
-              widget.isGrid
-                  ? SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 200,
-                          childAspectRatio: 1.0, // Square shape
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) => _buildGridCard(context, sortedList[index]),
-                          childCount: sortedList.length,
+                
+                widget.isGrid
+                    ? GridLayoutView(
+                        achievements: sortedList.map((n) => {
+                          'id': n.noteId,
+                          'title': n.title,
+                          'icon': Icons.description_outlined, // Consistent icon
+                          'color': Colors.blue, 
+                          'preview': 'Tap to read...', // Text shown in image
+                        }).toList(),
+                        isStudent: true, // IMPORTANT: Sets specific student interaction
+                        selectedIds: const {},
+                        onToggleSelection: (_) {}, 
+                        itemKeys: _gridItemKeys,
+                        onTap: (id) {
+                           // Handle navigation here
+                           if (noteMap.containsKey(id)) {
+                             _openNote(context, noteMap[id]!);
+                           }
+                        },
+                      )
+                    : SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => _buildListCard(context, sortedList[index]),
+                            childCount: sortedList.length,
+                          ),
                         ),
                       ),
-                    )
-                  : SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) => _buildListCard(context, sortedList[index]),
-                          childCount: sortedList.length,
-                        ),
-                      ),
-                    ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -151,7 +175,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
             "$count Results", 
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface, // Theme text color
+              color: colorScheme.onSurface, 
             ),
           ),
           Row(
@@ -161,7 +185,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
                 underline: const SizedBox(),
                 isDense: true,
                 dropdownColor: colorScheme.surfaceContainer,
-                style: TextStyle(color: colorScheme.onSurface), // Theme text color
+                style: TextStyle(color: colorScheme.onSurface), 
                 onChanged: (SortType? newValue) {
                   if (newValue != null) setState(() => _currentSortType = newValue);
                 },
@@ -178,12 +202,12 @@ class _StudentViewPageState extends State<StudentViewPage> {
                     Icon(
                       _currentSortOrder == SortOrder.ascending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, 
                       size: 16,
-                      color: colorScheme.onSurface, // Theme text color
+                      color: colorScheme.onSurface, 
                     ),
                     const SizedBox(width: 4),
                     Text(
                       _currentSortOrder == SortOrder.ascending ? "Low-High" : "High-Low",
-                      style: TextStyle(color: colorScheme.onSurface), // Theme text color
+                      style: TextStyle(color: colorScheme.onSurface), 
                     ),
                   ],
                 ),
@@ -195,76 +219,73 @@ class _StudentViewPageState extends State<StudentViewPage> {
     );
   }
 
-  Widget _buildGridCard(BuildContext context, NoteBrief note) {
-    final colorScheme = Theme.of(context).colorScheme;
+  // NOTE: _buildGridCard was deleted as it is replaced by GridLayoutView
+// inside student_view_page.dart
 
-    return GestureDetector(
-      onTap: () => _openNote(context, note),
-      child: Card(
-        elevation: 0,
-        color: colorScheme.surfaceContainer, // Theme Card Color
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  Widget _buildListCard(BuildContext context, NoteBrief note) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      elevation: 0,
+      // Match Admin color (Surface) instead of SurfaceContainer
+      color: colorScheme.surface, 
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: colorScheme.outlineVariant,
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.0),
+        onTap: () => _openNote(context, note),
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
             children: [
-              // Theme Icon Color (Primary)
-              Icon(Icons.menu_book_rounded, color: colorScheme.primary, size: 28),
+              // 1. The Square Icon Container (Same as Admin)
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.description_outlined, color: colorScheme.onPrimaryContainer),
+              ),
+              const SizedBox(width: 16),
               
+              // 2. Title and Subtitle
               Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: HighlightText(
-                    text: note.title,
-                    query: widget.query,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold, 
-                      fontSize: 14,
-                      color: colorScheme.onSurface, // Theme Text Color
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Keep HighlightText so search still works visually
+                    HighlightText(
+                      text: note.title,
+                      query: widget.query,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap to read',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant
+                      ),
+                    ),
+                  ],
                 ),
               ),
               
-              Text(
-                "Tap to read", 
-                style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant) // Theme Secondary Text Color
-              ),
+              // 3. The Chevron Arrow (Same as Admin)
+              Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildListCard(BuildContext context, NoteBrief note) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 8),
-      color: colorScheme.surfaceContainer,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Icon(Icons.menu_book_rounded, color: colorScheme.primary), // Theme Icon Color
-        title: HighlightText(
-          text: note.title,
-          query: widget.query,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: colorScheme.onSurface, // Theme Text Color
-          ),
-        ),
-        subtitle: Text(
-          "Tap to read",
-          style: TextStyle(color: colorScheme.onSurfaceVariant), // Theme Secondary Text Color
-        ),
-        onTap: () => _openNote(context, note),
       ),
     );
   }
@@ -279,7 +300,6 @@ class _StudentViewPageState extends State<StudentViewPage> {
   }
 }
 
-// Utility Widget for highlighting text (Coloring the searched query)
 class HighlightText extends StatelessWidget {
   final String text;
   final String query;
@@ -321,7 +341,6 @@ class HighlightText extends StatelessWidget {
       final String match = text.substring(index, index + query.length);
       spans.add(TextSpan(
         text: match,
-        // Use THEME Colors for Highlight
         style: highlightStyle ?? 
             style?.copyWith(
               backgroundColor: colorScheme.primaryContainer, 
