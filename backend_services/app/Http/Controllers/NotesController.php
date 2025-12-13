@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateNotesRequest;
 use App\Models\Notes;
+use App\Models\File;
 use App\Models\Topic;
 use Illuminate\Http\Request;
-use Illuminate\Contracts\Filesystem;
 use Illuminate\Support\Facades\DB;
 use Exception;
 use Illuminate\Support\Facades\Storage;
@@ -15,162 +15,368 @@ use Illuminate\Support\Str;
 class NotesController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Get brief details of notes for list view.
      */
-    public function index()
+    public function showNotesBrief()
     {
-    
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    public function showNotesBrief(){
         $notesBrief = DB::table('notes')
-                                ->select('*')
-                                ->get();
+            ->select('*')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return response()->json($notesBrief);
     }
     
+    /**
+     * Legacy/Direct upload function for images/attachments
+     */
     public function uploadFile(Request $request)
     {
         $request->validate([
-            // 'file' is the key used in your Flutter code (request.files.add)
-            'file' => 'required|file|max:20480|mimes:pdf,doc,docx,txt,png,jpg,jpeg', 
-            // Max size is 20MB (20480 KB)
+            'file' => 'required|file|max:20480|mimes:pdf,doc,docx,txt,png,jpg,gif', 
         ]);
 
-        // 2. Check if the file exists in the request
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            
-            // Generate a unique filename to prevent overwrites
             $originalName = $file->getClientOriginalName();
             $safeFileName = (string) Str::uuid() . '_' . time() . '.' . $file->getClientOriginalExtension();
 
             try {
-                // 3. Store the file
-                // This saves the file to the 'public/uploads' directory 
-                // within your storage path (storage/app/public/uploads).
                 $path = $file->storeAs('uploads', $safeFileName, 'public');
 
-                // 4. Return a successful JSON response
                 return response()->json([
                     'message' => 'File uploaded successfully',
                     'original_name' => $originalName,
                     'file_url' => Storage::url($path),
                 ], 200);
-                
 
             } catch (\Exception $e) {
-                // Handle storage errors
                 return response()->json(['message' => 'File upload failed: ' . $e->getMessage()], 500);
             }
         }
 
-        // Should not be reached if validation is correct
         return response()->json(['message' => 'No file received.'], 400);
-    
     }
+
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created Note and link its files.
      */
     public function store(CreateNotesRequest $request)
     {
-        //
+        // 1. Get Admin/Teacher ID
+        $adminRoleID = DB::table('roles')->where('role_name', 'Admin')->value('role_id');
+        $adminUserID = DB::table('users')->where('role_id', $adminRoleID)->value('user_id');
+        
         $validatedData = $request->validated();
 
+        // 2. Handle Topic Logic
         $topicName = $validatedData['topic'];
         $topic = Topic::where('topic_name', $topicName)->first(['topic_id']);
 
-        // Check if the topic was found (although validation should prevent it from not being found)
         if (!$topic) {
-            // This is a safety net; the form request should catch this.
-            return response()->json([
-                'message' => "The topic '$topicName' is not valid.",
-            ], 422); // 422 Unprocessable Entity
+            return response()->json(['message' => "The topic '$topicName' is not valid."], 422); 
         }
 
-    // 2. 🔄 Replace the 'topic' name with the 'topic_id'
-    // Assuming your Note model expects a 'topic_id' column, 
-    // we remove 'topic' and add 'topic_id'.
         unset($validatedData['topic']);
-        $validatedData['topic_id'] = $topic->id;
-        // 🚨 ENSURE THIS ID EXISTS AND IS AN ADMIN/TEACHER
-        $debugUserId = '019a7b53-7330-7249-a4c6-1489dd90825a'; 
+        $validatedData['topic_id'] = $topic->topic_id; 
         
-        // This line temporarily sets the creator ID for debugging.
+        $debugUserId = $adminUserID; 
         $validatedData['created_by'] = $debugUserId; 
 
-         try {
-            // 6. This will now run.
-            $note = Notes::create($validatedData);
+        // --- START DB TRANSACTION ---
+        DB::beginTransaction(); 
 
-            // 7. Return JSON response with status 201 (Created)
+        try {
+            // 3. Handle Main Markdown File
+            if ($request->hasFile('file')) {
+                $mdFile = $request->file('file');
+                $mdPath = $mdFile->store('notes', 'public'); 
+
+                $mainFileRecord = File::create([
+                    'file_path' => $mdPath,
+                    'type'      => $mdFile->getClientOriginalExtension(),
+                ]);
+                
+                $validatedData['file_id'] = $mainFileRecord->file_id;
+            }
+
+            // 4. Create the Note
+            $note = Notes::create($validatedData);
+            
+            // 5. Link Attachments (Pivot Table)
+            if ($request->has('attachment_ids')) {
+                $ids = $request->input('attachment_ids');
+                if (is_array($ids) && count($ids) > 0) {
+                    $note->attachments()->attach($ids);
+                }
+            }
+
+            DB::commit(); 
+
             return response()->json([
-                'message' => 'Note created successfully (via debug ID).',
-                'note' => $note,
+                'message' => 'Note created and files linked successfully.',
+                'note' => $note
             ], 201);
             
         } catch (Exception $e) {
-            
-            // 8. Catch the specific error from your SQL trigger
-            if (Str::contains($e->getMessage(), 'Note can only be created by an Admin or a Teacher')) {
-                // Log this specific, expected error
-                \Log::warning('NOTE_AUTH_FAILED: ' . $e->getMessage());
-                return response()->json([
-                    'message' => 'Access Denied: The provided user ID (debug or authenticated) is not an Admin or Teacher.',
-                ], 403); // 403 Forbidden
-            }
-
-            // 9. Generic server error response
-            \Log::error('NOTE_CREATE_FAILED: ' . $e->getMessage()); // Log the error!
+            DB::rollBack(); 
             return response()->json([
-                'message' => 'Failed to create note due to a server error.',
+                'message' => 'Error creating note', 
                 'error' => $e->getMessage()
-            ], 500); // 500 Internal Server Error
+            ], 500);
         }
     }
-        
-
-        
-    
 
     /**
-     * Display the specified resource.
+     * Retrieve the raw Markdown content for a specific note.
+     * Route: GET /api/notes/{id}/content
      */
-    public function show(Notes $note)
+    public function getNoteContent($id)
     {
-        //
+        $note = Notes::find($id);
+
+        if (!$note) {
+            return response()->json(['message' => 'Note not found'], 404);
+        }
+
+        if (!$note->file_id) {
+            return response()->json(['content' => ''], 200); 
+        }
+
+        $fileRecord = File::find($note->file_id);
+
+        if (!$fileRecord) {
+            return response()->json(['message' => 'Linked file record not found'], 404);
+        }
+
+        if (!Storage::disk('public')->exists($fileRecord->file_path)) {
+            return response()->json(['message' => 'Physical file missing from server'], 404);
+        }
+
+        try {
+            $content = Storage::disk('public')->get($fileRecord->file_path);
+            
+            return response()->json([
+                'id' => $note->note_id,
+                'content' => $content
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json(['message' => 'Error reading file'], 500);
+        }
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Show full note details (Title, Topic, Visibility, Content)
+     * INCLUDES "AUTO-REPAIR" LOGIC to fix broken notes.
      */
-    public function edit(Notes $note)
+    public function show($id)
     {
-        //
+        $note = Notes::find($id);
+
+        if (!$note) {
+            return response()->json(['message' => 'Note not found'], 404);
+        }
+
+        // 1. Fetch Topic Name Manually
+        $topicName = 'General';
+        if ($note->topic_id) {
+             $topicObj = Topic::find($note->topic_id);
+             if ($topicObj) $topicName = $topicObj->topic_name;
+        }
+
+        // 2. ULTIMATE REPAIR LOGIC
+        $content = "";
+        $needsRepair = false;
+
+        // Check if file record exists in Database
+        if ($note->file_id) {
+            $fileRecord = File::find($note->file_id);
+            
+            if (!$fileRecord) {
+                // CASE A: Note points to a file ID that doesn't exist in 'files' table
+                $needsRepair = true;
+            } else {
+                // CASE B: 'files' table record exists, checking physical disk...
+                if (Storage::disk('public')->exists($fileRecord->file_path)) {
+                    $content = Storage::disk('public')->get($fileRecord->file_path);
+                } else {
+                    // Disk is empty. Create an empty file so we can write to it later.
+                    Storage::disk('public')->put($fileRecord->file_path, "");
+                    $content = "";
+                }
+            }
+        } else {
+            // CASE C: Note has no file_id at all.
+            $needsRepair = true;
+        }
+
+        // 3. EXECUTE REPAIR IF NEEDED
+        if ($needsRepair) {
+            $fileName = Str::uuid() . '_repaired.md';
+            $filePath = 'notes/' . $fileName;
+            
+            // Create physical empty file
+            Storage::disk('public')->put($filePath, "");
+            
+            // Create new DB record
+            $newFile = File::create([
+                'file_path' => $filePath,
+                'type'      => 'md',
+            ]);
+
+            // Link it to the note
+            $note->file_id = $newFile->file_id;
+            $note->save();
+        }
+
+        // 4. Return Data
+        return response()->json([
+            'note_id' => $note->note_id,
+            'title' => $note->title,
+            'topic' => $topicName,
+            'visibility' => (bool)$note->visibility,
+            'content' => $content,
+            'created_at' => $note->created_at,
+        ], 200);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Search functionality (Fixed Ambiguous Column Error)
      */
-    public function update(Request $request, Notes $note)
+    public function search(Request $request)
     {
-        //
+        $keyword = $request->input('query');
+        $topic = $request->input('topic');
+
+        $query = DB::table('notes')
+            ->join('topics', 'notes.topic_id', '=', 'topics.topic_id')
+            ->select('notes.*', 'topics.topic_name');
+
+        if ($request->filled('query')) {
+            $query->where('notes.title', 'LIKE', "%{$keyword}%");
+        } 
+        else if ($request->filled('topic') && $topic !== 'All') {
+            $query->where('topics.topic_name', '=', $topic);
+        }
+
+        // FIX: Specify table name 'notes.created_at'
+        $query->orderBy('notes.created_at', 'desc');
+        $results = $query->get();
+
+        return response()->json([
+            'message' => 'Search results retrieved successfully',
+            'data' => $results
+        ], 200);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Update an existing note (Title, Content, Topic, Visibility).
+     * INCLUDES FORCE-SAVE logic for missing files.
      */
-    public function destroy(Notes $note)
+    public function update(Request $request, $id)
     {
-        //
+        $request->validate([
+            'title'      => 'required|string|max:255',
+            'content'    => 'required|string',
+            'topic'      => 'required|string',  
+            'visibility' => 'required|boolean', 
+        ]);
+
+        $note = Notes::find($id);
+
+        if (!$note) {
+            return response()->json(['message' => 'Note not found'], 404);
+        }
+
+        try {
+            // 1. Update Topic
+            $topicName = $request->input('topic');
+            $topic = Topic::where('topic_name', $topicName)->first();
+            if ($topic) {
+                $note->topic_id = $topic->topic_id;
+            }
+
+            // 2. Update Fields
+            $note->title = $request->input('title');
+            $note->visibility = $request->input('visibility') ? 1 : 0;
+            
+            // 3. FORCE FILE SAVE LOGIC
+            $fileRecord = null;
+            
+            // Try to find existing file record
+            if ($note->file_id) {
+                $fileRecord = File::find($note->file_id);
+            }
+
+            // If missing (orphaned), create new record
+            if (!$fileRecord) {
+                $fileName = Str::uuid() . '_saved.md';
+                $filePath = 'notes/' . $fileName;
+                $fileRecord = File::create([
+                    'file_path' => $filePath,
+                    'type'      => 'md',
+                ]);
+                $note->file_id = $fileRecord->file_id;
+            }
+
+            // 4. Safely write content to disk (Creates if missing, Overwrites if exists)
+            Storage::disk('public')->put($fileRecord->file_path, $request->input('content'));
+
+            $note->save(); 
+
+            return response()->json([
+                'message' => 'Note updated successfully',
+                'note' => $note
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Error updating note',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove the specified note.
+     */
+    public function destroy($id)
+    {
+        $note = Notes::find($id);
+
+        if (!$note) {
+            return response()->json(['message' => 'Note not found'], 404);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $note->attachments()->detach();
+
+            if ($note->file_id) {
+                $fileRecord = File::find($note->file_id);
+
+                if ($fileRecord) {
+                    if (Storage::disk('public')->exists($fileRecord->file_path)) {
+                        Storage::disk('public')->delete($fileRecord->file_path);
+                    }
+                    $fileRecord->delete();
+                }
+            }
+
+            $note->delete();
+
+            DB::commit();
+
+            return response()->json(['message' => 'Note deleted successfully'], 200);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error deleting note',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

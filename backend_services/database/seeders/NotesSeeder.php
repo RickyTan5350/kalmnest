@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\File;
 
 class NotesSeeder extends Seeder
 {
@@ -31,7 +32,8 @@ class NotesSeeder extends Seeder
             [
                 'note_id' => (string) Str::uuid7(),
                 'title' => 'HTML Structure Basics',
-                'file_path' => 'notes/admin/html_basics.pdf',
+                // FIX: Set file_id to null as you do not want to seed files
+                'file_id' => null, 
                 'visibility' => true,
                 'topic_id' => $topicIds['HTML'],
                 'created_by' => $adminId,
@@ -42,7 +44,8 @@ class NotesSeeder extends Seeder
             [
                 'note_id' => (string) Str::uuid7(),
                 'title' => 'CSS Flexbox Layout Guide',
-                'file_path' => 'notes/admin/css_flexbox.pdf',
+                // FIX: Corrected key from 'file_path' to 'file_id' AND set value to null
+                'file_id' => null,
                 'visibility' => true,
                 'topic_id' => $topicIds['CSS'],
                 'created_by' => $adminId,
@@ -53,8 +56,9 @@ class NotesSeeder extends Seeder
             [
                 'note_id' => (string) Str::uuid7(),
                 'title' => 'JavaScript Async/Await Tutorial',
-                'file_path' => 'notes/admin/js_async.pdf',
-                'visibility' => false, // Example of an invisible note
+                // FIX: Corrected key from 'file_path' to 'file_id' AND set value to null
+                'file_id' => null, 
+                'visibility' => false,
                 'topic_id' => $topicIds['JS'],
                 'created_by' => $adminId,
                 'created_at' => now(),

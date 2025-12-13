@@ -24,7 +24,7 @@ class CreateNotesRequest extends FormRequest
         return [
             'topic'             => ['required', 'string', 'max:100', 'exists:topics,topic_name'],
             'title'             => ['required', 'string', 'max:255'],
-            'file_path'              => ['required', 'string'],
+            //'file_id'              => ['required', 'string'],
             'visibility'        => ['required', 'boolean'],
         ];
     }

@@ -11,7 +11,6 @@ class StudentViewAchievementsPage extends StatefulWidget {
   final String userId;
   final void Function(BuildContext context, String message, Color color)
   showSnackBar;
-  // NEW: Filter Parameters
   final String searchText;
   final String? selectedTopic;
 
@@ -20,7 +19,6 @@ class StudentViewAchievementsPage extends StatefulWidget {
     required this.layout,
     required this.userId,
     required this.showSnackBar,
-    // NEW: Added to constructor
     this.searchText = '',
     this.selectedTopic,
   });
@@ -33,6 +31,7 @@ class StudentViewAchievementsPage extends StatefulWidget {
 class _StudentViewAchievementsPageState
     extends State<StudentViewAchievementsPage> {
   Future<List<AchievementData>>? _myAchievements;
+  bool _isOffline = false;
 
   @override
   void initState() {
@@ -40,9 +39,7 @@ class _StudentViewAchievementsPageState
     _loadData();
   }
 
-  // --- HELPER FUNCTIONS FOR UI TRANSFORMATION (Copied from Admin View) ---
   IconData _getIconData(String? iconValue) {
-    // Uses the imported achievementIconOptions list
     final entry = achievementIconOptions.firstWhere(
       (opt) => opt['value'] == iconValue,
       orElse: () => {'icon': Icons.help_outline},
@@ -74,11 +71,9 @@ class _StudentViewAchievementsPageState
         'icon': _getIconData(iconValue),
         'color': _getColor(iconValue),
         'preview': brief.achievementDescription,
-        // 'progress' is not relevant for student's unlocked list, but let's keep the map structure simple
       };
     }).toList();
   }
-  // ------------------------------------------------------------------------
 
   Future<void> _loadData() async {
     final localStore = LocalAchievementStorage();
@@ -88,25 +83,55 @@ class _StudentViewAchievementsPageState
 
     setState(() {
       _myAchievements = localFuture;
+      _isOffline = false;
     });
 
     try {
       final cloudData = await api.fetchMyUnlockedAchievements();
-
       await localStore.saveUnlockedAchievements(widget.userId, cloudData);
 
       if (mounted) {
         setState(() {
           _myAchievements = Future.value(cloudData);
+          _isOffline = false;
         });
       }
     } catch (e) {
-      print("Offline or Server Error: $e");
-      // Optional: Show a small snackbar saying "Offline mode"
+      if (mounted) {
+        setState(() {
+          _isOffline = true;
+        });
+        widget.showSnackBar(
+          context,
+          "Unable to sync. Showing cached data.",
+          Colors.orange.shade800,
+        );
+      }
     }
   }
 
-  // --- Simplified Achievement Card for Student Grid View ---
+  // --- 1. HANDLE NAVIGATION LOGIC ---
+  void _handleAchievementTap(AchievementData originalItem) {
+    if (_isOffline) {
+      widget.showSnackBar(
+        context,
+        "Cannot view details in offline mode.",
+        Colors.grey.shade800,
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StudentAchievementDetailPage(
+          initialData: originalItem,
+          obtainedAt: originalItem.createdAt,
+        ),
+      ),
+    );
+  }
+
   Widget _buildAchievementCard(
     BuildContext context,
     Map<String, dynamic> item,
@@ -122,30 +147,16 @@ class _StudentViewAchievementsPageState
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          // Use a subtle outline color, matching the admin's unselected outline
           color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
           width: 1.0,
         ),
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: InkWell(
-        onTap: () {
-          // Student view can show a dialog or navigate to a dedicated detail page
-          // For now, let's keep it simple and just show a message.
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => StudentAchievementDetailPage(
-                initialData: originalItem,
-                // Assuming 'createdAt' holds the obtained timestamp from local storage
-                obtainedAt: originalItem.createdAt,
-              ),
-            ),
-          );
-        },
+        // --- 2. USE HANDLER IN GRID ---
+        onTap: () => _handleAchievementTap(originalItem),
         child: Stack(
           children: [
-            // Background Icon
             Positioned.fill(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -158,7 +169,6 @@ class _StudentViewAchievementsPageState
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon and Title Row
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12.0, 12.0, 4.0, 8.0),
                   child: Row(
@@ -176,11 +186,10 @@ class _StudentViewAchievementsPageState
                         Icons.check_circle,
                         size: 20,
                         color: Colors.green,
-                      ), // Unlocked indicator
+                      ),
                     ],
                   ),
                 ),
-                // Description Preview
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -200,7 +209,33 @@ class _StudentViewAchievementsPageState
       ),
     );
   }
-  // ------------------------------------------------------------------------
+
+  Widget _buildOfflineBanner() {
+    if (!_isOffline) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      color: Colors.orange.shade100,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_off, size: 16, color: Colors.orange.shade900),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              "Offline Mode: Details unavailable.",
+              style: TextStyle(
+                color: Colors.orange.shade900,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -215,18 +250,19 @@ class _StudentViewAchievementsPageState
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  _buildOfflineBanner(),
+                  const Icon(
                     Icons.emoji_events_outlined,
                     size: 64,
                     color: Colors.grey,
                   ),
-                  SizedBox(height: 16),
-                  Text("No achievements yet."),
-                  Text("Keep learning to unlock them!"),
+                  const SizedBox(height: 16),
+                  const Text("No achievements yet."),
+                  const Text("Keep learning to unlock them!"),
                 ],
               ),
             );
@@ -234,53 +270,64 @@ class _StudentViewAchievementsPageState
 
           List<AchievementData> originalData = snapshot.data!;
 
-          // --- NEW: FILTERING LOGIC ---
           List<AchievementData> filteredData = originalData.where((item) {
             final String title = item.achievementTitle?.toLowerCase() ?? '';
             final String description =
                 item.achievementDescription?.toLowerCase() ?? '';
             final String icon = item.icon?.toLowerCase() ?? '';
-            final String level = item.level?.toLowerCase() ?? '';
+            final String level = item.levelName?.toLowerCase() ?? '';
 
-            // 1. Search Text Filter
             final isMatchingSearch =
                 widget.searchText.isEmpty ||
                 title.contains(widget.searchText) ||
                 description.contains(widget.searchText);
 
-            // 2. Topic Filter (Uses the icon as the topic identifier, or level)
             final isMatchingTopic =
                 widget.selectedTopic == null ||
                 icon.contains(widget.selectedTopic!) ||
                 (widget.selectedTopic! == 'level' && level.isNotEmpty) ||
-                (widget.selectedTopic! ==
-                    'quiz'); // Assuming 'quiz' is a filterable topic
+                (widget.selectedTopic! == 'quiz');
 
             return isMatchingSearch && isMatchingTopic;
           }).toList();
 
           if (filteredData.isEmpty) {
-            return const Center(
-              child: Text("No achievements match your search or filter."),
+            return Column(
+              children: [
+                _buildOfflineBanner(),
+                const Expanded(
+                  child: Center(
+                    child: Text("No achievements match your search or filter."),
+                  ),
+                ),
+              ],
             );
           }
-          // --- END FILTERING LOGIC ---
 
-          // Transform the FILTERED data into the UI-friendly map list
           final List<Map<String, dynamic>> uiData = _transformData(
             filteredData,
           );
 
           if (widget.layout == ViewLayout.grid) {
-            // --- GRID VIEW IMPLEMENTATION (CustomScrollView + SliverGrid) ---
             return CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                    child: Text(
-                      "Showing ${uiData.length} unlocked achievements",
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildOfflineBanner(),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          16.0,
+                          8.0,
+                          16.0,
+                          16.0,
+                        ),
+                        child: Text(
+                          "Showing ${uiData.length} unlocked achievements",
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 SliverPadding(
@@ -304,46 +351,55 @@ class _StudentViewAchievementsPageState
               ],
             );
           } else {
-            // --- LIST VIEW (Updated to include the outline shape) ---
-            return ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: filteredData.length,
-              itemBuilder: (context, index) {
-                final item = filteredData[index];
-                final transformedItem =
-                    uiData[index]; // Use transformed data for icon/color
+            // --- LIST VIEW ---
+            return Column(
+              children: [
+                _buildOfflineBanner(),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: filteredData.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredData[index];
+                      final originalItem =
+                          filteredData[index]; // Needed for nav
+                      final transformedItem = uiData[index];
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 4,
-                    horizontal: 8,
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outline.withOpacity(0.3),
+                            width: 1.0,
+                          ),
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: transformedItem['color']
+                                .withOpacity(0.1),
+                            foregroundColor: transformedItem['color'],
+                            child: Icon(transformedItem['icon']),
+                          ),
+                          title: Text(item.achievementTitle ?? "Achievement"),
+                          subtitle: Text(item.achievementDescription ?? ""),
+                          trailing: const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                          ),
+                          // --- 3. USE HANDLER IN LIST ---
+                          onTap: () => _handleAchievementTap(originalItem),
+                        ),
+                      );
+                    },
                   ),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.outline.withOpacity(0.3),
-                      width: 1.0,
-                    ),
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: transformedItem['color'].withOpacity(
-                        0.1,
-                      ),
-                      foregroundColor: transformedItem['color'],
-                      child: Icon(transformedItem['icon']),
-                    ),
-                    title: Text(item.achievementTitle ?? "Achievement"),
-                    subtitle: Text(item.achievementDescription ?? ""),
-                    trailing: const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                    ),
-                  ),
-                );
-              },
+                ),
+              ],
             );
           }
         },

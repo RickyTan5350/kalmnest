@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateAchievementRequest;
+use App\Http\Requests\DeleteBatchAchievementRequest;
+use App\Http\Requests\UnlockAchievementRequest;
+use App\Http\Requests\UpdateAchievementRequest;
 use App\Models\Achievement;
 use Exception;
 
@@ -11,208 +14,263 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-
 use Illuminate\Validation\Rule;
 
 class AchievementController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    // ==========================================
+    // AUTHENTICATION HELPERS
+    // ==========================================
+
+    private function isAdminOrTeacher()
     {
-        
+        if (!Auth::check()) return false;
+
+        $userRoleName = DB::table('users')
+                            ->join('roles', 'users.role_id', '=', 'roles.role_id')
+                            ->where('users.user_id', Auth::id())
+                            ->value('roles.role_name');
+
+        return $userRoleName === 'Admin' || $userRoleName === 'Teacher';
     }
 
-    public function showAchievementsBrief(){
+    private function isStudent()
+    {
+        if (!Auth::check()) return false;
+
+        $userRoleName = DB::table('users')
+                            ->join('roles', 'users.role_id', '=', 'roles.role_id')
+                            ->where('users.user_id', Auth::id())
+                            ->value('roles.role_name');
+
+        return $userRoleName === 'Student';
+    }
+
+    // ==========================================
+    // VIEW METHODS (Admin & Teacher Only)
+    // ==========================================
+
+    public function showAchievementsBrief()
+    {
+        // View functions accessible by Admin and Teacher
+        if (!$this->isAdminOrTeacher()) {
+            return response()->json(['message' => 'Access Denied: Only staff can view the full achievement list.'], 403);
+        }
+
         $achievementBrief = DB::table('achievements')
-                                ->select('achievement_id', 'title', 'icon', 'description')
+                                ->select('achievement_id', 'achievement_name', 'title', 'icon', 'description')
                                 ->get();
 
         return response()->json($achievementBrief);
     }
 
-    public function getAchievement($id) {
-    $achievement = DB::table('achievements')
-                    // Perform a left join with the 'users' table on created_by = user_id
-                    ->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
-                    // Select all columns from 'achievements' (*)
-                    // AND select the 'name' from the 'users' table, aliased as 'creator_name'
-                    ->select('achievements.*', 'users.name as creator_name')
-                    ->where('achievements.achievement_id', $id)
-                    ->first(); // Returns the object directly, or null
-    // Check if it exists before returning
-    if (!$achievement) {
-        return response()->json(['message' => 'Not found'], 404);
-    }
-
-    return response()->json($achievement);
-}
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function getAchievement($id) 
     {
-        //
+        if (!$this->isAdminOrTeacher() && !$this->isStudent()) {
+            return response()->json(['message' => 'Access Denied.'], 403);
+        }
+
+        // 2. Start the query builder
+        $query = DB::table('achievements')
+                    ->where('achievements.achievement_id', $id);
+
+        // 3. Conditional Selection based on Role
+        if ($this->isStudent()) {
+            // STUDENTS: See only what is necessary for the UI
+            // Note: We include 'created_at' because your Flutter app uses it as a fallback date
+            $query->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
+                ->leftJoin('levels', 'achievements.associated_level', '=', 'levels.level_id')
+                ->select(
+                    'achievements.achievement_id',
+                    'achievements.title',
+                    'achievements.description',
+                    'achievements.icon',
+                    'achievements.associated_level as level', // Aliasing if needed
+                    'achievements.associated_level',
+                    'achievements.created_at', 
+                    'users.name as creator_name',
+                    'levels.level_name'
+                );
+        } else {
+            // ADMINS/TEACHERS: See everything (including updated_at, raw IDs, etc.)
+            $query->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
+                ->leftJoin('levels', 'achievements.associated_level', '=', 'levels.level_id')
+                ->select(
+                    'achievements.*', 
+                    'users.name as creator_name',
+                    'users.email as creator_email', // Example: Admins might need to contact the creator
+                    'levels.level_name'
+                );
+        }
+
+        $achievement = $query->first(); 
+
+        if (!$achievement) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json($achievement);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    // public function getLevelsForDropdown()
+    // {
+    //     // 1. Auth Check (Admin/Teacher only)
+    //     if (!$this->isAdminOrTeacher()) {
+    //         return response()->json(['message' => 'Access Denied.'], 403);
+    //     }
+
+    //     // 2. Fetch only ID and Name
+    //     // We use DB::table assuming your table is named 'levels'
+    //     $levels = DB::table('levels')
+    //                 ->select('level_id', 'level_name') // Adjust 'level_name' if your column is different (e.g., 'title')
+    //                 ->orderBy('level_name', 'asc')
+    //                 ->get();
+
+    //     return response()->json($levels);
+    // }
+
+    // ==========================================
+    // MANAGEMENT METHODS (Admin & Teacher Only)
+    // ==========================================
+
     public function store(CreateAchievementRequest $request)
     {
-        // 1. Authorization Check (API Layer)
-        if (!Auth::check()) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
-        }
-
-        $userId = Auth::id();
-
-        // Retrieve the role name for the authenticated user
-        $userRoleName = DB::table('users')
-                            ->join('roles', 'users.role_id', '=', 'roles.role_id')
-                            ->where('users.user_id', $userId)
-                            ->value('roles.role_name');
-
-        // Check if the user is an Admin or Teacher
-        if ($userRoleName !== 'Admin' && $userRoleName !== 'Teacher') {
-            Log::warning("ACHIEVEMENT_CREATE_AUTH_FAIL: User $userId attempted to create achievement with role: $userRoleName");
-            return response()->json([
-                'message' => 'Access Denied: Only Admins or Teachers can create achievements.',
-            ], 403); // 403 Forbidden
-        }
+        // if (!$this->isAdminOrTeacher()) {
+        //     Log::warning("ACHIEVEMENT_CREATE_AUTH_FAIL: User " . Auth::id());
+        //     return response()->json(['message' => 'Access Denied.'], 403);
+        // }
         
-        // 2. Process validated data and set creator
         $validatedData = $request->validated();
-        
-        // Use the authenticated user's ID for created_by
-        $validatedData['created_by'] = $userId; 
+        $validatedData['created_by'] = Auth::id(); 
 
         try {
-            // 3. Create the achievement (DB trigger provides final defense)
             $achievement = Achievement::create($validatedData);
 
-            // 4. Return success response
+            Log::info("ACHIEVEMENT_CREATED: ID {$achievement->achievement_id} ('{$achievement->achievement_name}') created by User " . Auth::id());
+
             return response()->json([
                 'message' => 'Achievement created successfully.',
                 'achievement' => $achievement,
             ], 201);
             
         } catch (Exception $e) {
-            
-            // 5. Catch the specific error from your SQL trigger (if the DB check fails)
+            // Check for specific DB trigger message safely
             if (Str::contains($e->getMessage(), 'Achievement can only be created by an Admin or a Teacher')) {
-                // Although the API check should prevent this, we handle the DB exception defensively.
-                Log::warning('ACHIEVEMENT_AUTH_FAILED (DB Triggered): ' . $e->getMessage());
-                return response()->json([
-                    'message' => 'Access Denied: The database rejected the operation. You are not authorized.',
-                ], 403); 
+                return response()->json(['message' => 'Access Denied by Database.'], 403); 
             }
-
-            // 6. Generic server error response
+            
+            // SECURITY FIX: Log the error, but return generic message to user
             Log::error('ACHIEVEMENT_CREATE_FAILED: ' . $e->getMessage()); 
+            
             return response()->json([
                 'message' => 'Failed to create achievement due to a server error.',
-                'error' => $e->getMessage()
             ], 500); 
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Achievement $achievement)
+    public function update(UpdateAchievementRequest $request, $id)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Achievement $achievement)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-   public function update(Request $request, $id)
-    {
-        // 1. Find the Achievement
         $achievement = Achievement::where('achievement_id', $id)->first();
 
         if (!$achievement) {
             return response()->json(['message' => 'Achievement not found'], 404);
         }
 
-        // 2. Validate the Request
-        // We use 'sometimes' so the user can update just one field if they want.
         try {
             $validatedData = $request->validate([
                 'achievement_name' => [
-                    'sometimes', 
-                    'string', 
-                    'max:100',
-                    // Ensure name is unique, IGNORING the current record's ID
+                    'sometimes', 'string', 'max:100',
                     Rule::unique('achievements', 'achievement_name')->ignore($id, 'achievement_id')
                 ],
-                'title' => 'sometimes|string|max:255',
+                'title' => [
+                    'sometimes', 'string', 'max:255',
+                    Rule::unique('achievements', 'title')->ignore($id, 'achievement_id')
+                ],
                 'description' => 'sometimes|string',
-                // Adjust table name/column if your levels table is different
                 'associated_level' => 'nullable|string|max:50', 
                 'icon' => 'sometimes|string|max:255',
             ]);
 
-            // 3. Update the Model
-            // The fill() method updates only the fields present in $validatedData
             $achievement->fill($validatedData);
-            
-            // If you want to track who updated it, uncomment below:
-            // $achievement->updated_by = Auth::id(); 
+            $achievement->save(); 
 
-            $achievement->save();
+            Log::info("ACHIEVEMENT_UPDATED: ID {$id} updated by User " . Auth::id());
 
-            // 4. Return JSON Response
             return response()->json([
                 'message' => 'Achievement updated successfully.',
                 'achievement' => $achievement,
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Specific handling for validation errors (422)
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $e->errors(),
-            ], 422);
+            return response()->json(['message' => 'Validation failed.', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
-            // General server error
-            \Log::error('ACHIEVEMENT_UPDATE_FAILED: ' . $e->getMessage());
+            // SECURITY FIX: Log details, return generic message
+            Log::error('ACHIEVEMENT_UPDATE_FAILED: ' . $e->getMessage() . ' Request Data: ' . json_encode($request->all()));
+            
             return response()->json([
                 'message' => 'Failed to update achievement due to a server error.',
-                'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    // POST /api/achievements/unlock
-    public function unlock(Request $request)
+    public function destroyBatch(DeleteBatchAchievementRequest $request)
     {
-        $request->validate(['achievement_id' => 'required|exists:achievements,achievement_id']);
+        if (!$this->isAdminOrTeacher()) {
+            return response()->json(['message' => 'Access Denied.'], 403);
+        }
+
+        $validatedData = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'string', 
+        ]);
+
+        $idsToDelete = $validatedData['ids'];
+
+        try {
+            $deleteCount = Achievement::whereIn('achievement_id', $idsToDelete)->delete();
+
+            if ($deleteCount == 0) {
+                return response()->json(['message' => 'No matching achievements found.'], 404);
+            }
+
+            Log::info("ACHIEVEMENTS_DELETED: " . count($idsToDelete) . " items deleted by User " . Auth::id());
+
+            return response()->json(['message' => "Successfully deleted $deleteCount achievements."], 200);
+
+        } catch (Exception $e) {
+            // SECURITY FIX: Log details, return generic message
+            Log::error('ACHIEVEMENT_DELETE_FAILED: ' . $e->getMessage() . ' IDs: ' . json_encode($idsToDelete));
+            
+            return response()->json([
+                'message' => 'Failed to delete achievements due to a server error.',
+            ], 500);
+        }
+    }
+
+    // ==========================================
+    // STUDENT METHODS (Student Only)
+    // ==========================================
+
+    public function unlock(UnlockAchievementRequest $request)
+    {
+        $user = $request->user(); 
         
-        $user = $request->user(); // Get current logged in user
-        
-        // syncWithoutDetaching ensures we don't crash if they try to unlock it twice
-        // It simply ignores duplicates
-        $user->achievements()->syncWithoutDetaching([$request->achievement_id]);
+        // FIX: We pass a second array with extra column values (the pivot 'id')
+        $user->achievements()->syncWithoutDetaching([
+            $request->achievement_id => ['id' => (string) Str::uuid7()]
+        ]);
+
+        Log::info("ACHIEVEMENT_UNLOCKED: Achievement {$request->achievement_id} unlocked by Student " . Auth::id());
 
         return response()->json(['message' => 'Achievement Unlocked!']);
     }
 
-    // GET /api/my-achievements
     public function myAchievements(Request $request)
     {
-        // Fetch user's achievements and order by most recently unlocked
+        if (!$this->isStudent()) {
+            return response()->json(['message' => 'Access Denied: Only students have achievement progress.'], 403);
+        }
+
         $achievements = $request->user()
                                 ->achievements()
                                 ->orderBy('achievement_user.created_at', 'desc')
@@ -220,46 +278,11 @@ class AchievementController extends Controller
 
         return response()->json($achievements);
     }
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Achievement $achievement)
-    {
-        //
-    }
 
-     public function destroyBatch(Request $request)
-    {
-        // 1. Validate that 'ids' is an array and each item in it is a string (or uuid)
-        $validatedData = $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'string', // Use 'uuid' if your IDs are UUIDs
-        ]);
-
-        $idsToDelete = $validatedData['ids'];
-
-        try {
-            // 2. Delete all achievements where 'achievement_id' is in the array
-            // NOTE: This assumes an Admin can delete any achievement.
-            // For role-based security, you'd check the user's role first.
-            $deleteCount = Achievement::whereIn('achievement_id', $idsToDelete)->delete();
-
-            if ($deleteCount == 0) {
-                return response()->json([
-                    'message' => 'No matching achievements found to delete.',
-                ], 404); // 404 Not Found
-            }
-
-            return response()->json([
-                'message' => "Successfully deleted $deleteCount achievements.",
-            ], 200); // 200 OK
-
-        } catch (Exception $e) {
-            \Log::error('ACHIEVEMENT_DELETE_FAILED: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Failed to delete achievements due to a server error.',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
+    // Unused method stubs
+    public function index() {}
+    public function create() {}
+    public function show(Achievement $achievement) {}
+    public function edit(Achievement $achievement) {}
+    public function destroy(Achievement $achievement) {}
 }

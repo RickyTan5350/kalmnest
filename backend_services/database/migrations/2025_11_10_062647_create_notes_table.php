@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('notes', function (Blueprint $table) {
             $table->uuid('note_id')->primary();
             $table->string('title');
-            $table->string('file_path');
+           
             $table->boolean('visibility');
 
+            $table->uuid('file_id')->nullable();
             $table->uuid('topic_id')->nullable();
             $table->uuid('created_by')->nullable();
 

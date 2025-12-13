@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\AchievementController;
+use App\Http\Controllers\NotesController;
+use App\Http\Controllers\FileController;
+use App\Http\Controllers\LevelController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\NotesController;
-use App\Http\Controllers\AchievementController;
-
+use App\Http\Requests\DeleteUserRequest;
 /*
 |--------------------------------------------------------------------------
 | Public Routes (No Authentication Required)
@@ -13,8 +15,22 @@ use App\Http\Controllers\AchievementController;
 */
 
 // Auth & Registration
-Route::post('/login', [UserController::class, 'login']);
+Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/user', [UserController::class, 'store']); // Registration
+
+// --- 1. SPECIFIC ROUTES (MUST BE AT THE TOP) ---
+// These are public so your Flutter app can access them without a token.
+
+Route::get('/notes', [NotesController::class, 'showNotesBrief']);
+Route::get('/notes/search', [NotesController::class, 'search']); 
+Route::post('/notes', [NotesController::class, 'store']);         // <--- This is the active Create Note route
+Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- This is the active Upload route
+
+Route::post('/achievements/new', [AchievementController::class, 'store']);
+Route::get('/achievements', [AchievementController::class, 'showAchievementsBrief']);
+
+Route::post('/files/upload-batch', [FileController::class, 'uploadBatch']);
+Route::post('/files/upload-independent', [FileController::class, 'uploadIndependent']);
 
 // Health & Debug
 Route::get('/health', function () {
@@ -25,10 +41,9 @@ Route::get('/test', function () {
 });
 
 
-
 /*
 |--------------------------------------------------------------------------
-| Protected Routes (Requires Login / Sanctum Token)
+| Protected Routes (Requires Sanctum Token)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:sanctum')->group(function () {
@@ -37,37 +52,92 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+Route::post('/logout', [UserController::class, 'logout']);
+// --- User Management (CRUD/View) ---
+    // All roles (Admin/Teacher/Student) can view list/search/filter
+Route::prefix('users')->group(function () {
+        // List/Search/Filter (GET /api/users)
+        Route::get('/', [UserController::class, 'index']); 
+        // View single profile (GET /api/users/{user})
+        Route::get('/{user}', [UserController::class, 'show']); 
+        // Update profile (PUT /api/users/{user})
+        Route::put('/{user}', [UserController::class, 'update']); 
+        // Delete account (DELETE /api/users/{user})
+        Route::delete('/{user}', [UserController::class, 'destroy']); 
+    });
+    // --- Current Logged-in User ---
+    Route::get('/user', fn(Request $request) => $request->user());
     Route::post('/logout', [UserController::class, 'logout']);
 
-    // --- Achievements Module ---
+    // ✅ NEW ROUTE: Get role of logged-in user
+    Route::get('/user/role', function (Request $request) {
+        $user = $request->user()->load('role');
+        return response()->json([
+            'user_id' => $user->user_id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role_name' => $user->role?->role_name ?? 'N/A',
+        ]);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Achievements Module
+    |--------------------------------------------------------------------------
+    */
     Route::prefix('achievements')->group(function () {
-        // Student Operations (Progress)
+
+        // Student Operations
         Route::get('/my-achievements', [AchievementController::class, 'myAchievements']);
         Route::post('/unlock', [AchievementController::class, 'unlock']);
-       
-        // Admin/Teacher Operations (Write)
+
+        // Admin/Teacher Operations
         Route::post('/new', [AchievementController::class, 'store']);
         Route::put('/update/{id}', [AchievementController::class, 'update']);
         Route::post('/delete-batch', [AchievementController::class, 'destroyBatch']);
-        
-        
-        
+
+        // Public endpoint inside prefix
+        Route::get('/', [AchievementController::class, 'showAchievementsBrief']);
+
+        // Change '/achievements/{id}' to '/{id}' (This maps to /api/achievements/{id})
+        Route::get('/{id}', [AchievementController::class, 'getAchievement']);
     });
 
     // --- Notes Module ---
-    // Grouped here assuming you want these protected. 
-    // If they must be public, move them out of this middleware group.
-    Route::prefix('notes')->group(function () {
-        Route::post('/', [NotesController::class, 'store']);
-        Route::post('/upload', [NotesController::class, 'uploadFile']);
-    });
+    // REMOVED: The 'notes' group was deleted from here because it was 
+    // overriding the public routes above and causing the "Unauthenticated" error.
 
+    /*
+    |--------------------------------------------------------------------------
+    | Levels (Game)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/levels', [LevelController::class, 'index']);
+    Route::post('/create-level', [LevelController::class, 'store']);
+    Route::get('/clear-files', [LevelController::class, 'clearLevelFiles']);
+    Route::put('/levels/{levelId}', [LevelController::class, 'update']);
+    Route::delete('/levels/{levelId}', [LevelController::class, 'destroy']);
+    Route::get('/level/{levelId}', [LevelController::class, 'singleLevel']);
 });
 
-// Public Read-Only Views
-Route::get('/achievements', [AchievementController::class, 'showAchievementsBrief']);
-Route::get('/achievements/{id}', [AchievementController::class, 'getAchievement']);
 
-Route::get('/notes', [NotesController::class, 'showNotesBrief']);
-Route::get('/users', [UserController::class, 'index']);
-Route::get('/users/{user}', [UserController::class, 'show']);
+/*
+|--------------------------------------------------------------------------
+| Public Read-Only Routes
+|--------------------------------------------------------------------------
+*/
+
+
+
+
+// --- 2. WILDCARD ROUTES (MUST BE AT THE BOTTOM) ---
+// These catch urls like /notes/1, /notes/50, etc.
+
+Route::get('/notes/{id}', [NotesController::class, 'show']); 
+Route::get('/notes/{id}/content', [NotesController::class, 'getNoteContent']);
+Route::put('/notes/{id}', [NotesController::class, 'update']);
+Route::delete('/notes/{id}', [NotesController::class, 'destroy']);
+// Level data I/O
+Route::post('/save-data/{dataType}/{type}', [LevelController::class, 'saveData']);
+Route::get('/get-data/{dataType}/{type}', [LevelController::class, 'getData']);
+Route::post('/save-index/{type}', [LevelController::class, 'saveToIndexFile']);
