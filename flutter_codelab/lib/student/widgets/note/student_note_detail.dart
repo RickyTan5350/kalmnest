@@ -4,6 +4,7 @@ import 'package:flutter_codelab/api/note_api.dart';
 // Make sure this import path matches where you created the file above
  
 import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 import 'package:flutter_codelab/student/widgets/note/pdf_service.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -364,61 +365,14 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                         ),
                       ),
                       if (_isSearching)
-                        Positioned(
-                          top: 16,
-                          right: 16,
-                          width: screenWidth > 350 ? 350 : screenWidth - 32,
-                          child: Material(
-                            elevation: 6,
-                            shadowColor: Colors.black26,
-                            borderRadius: BorderRadius.circular(8),
-                            color: colorScheme.surfaceContainerHigh,
-                            child: Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              child: Row(
-                                children: [
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: _searchController,
-                                      focusNode: _searchFocusNode,
-                                      cursorColor: colorScheme.primary,
-                                      style: TextStyle(color: colorScheme.onSurface),
-                                      decoration: InputDecoration(
-                                        hintText: 'Find...',
-                                        hintStyle: TextStyle(
-                                            color: colorScheme.onSurfaceVariant),
-                                        border: InputBorder.none,
-                                        contentPadding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 12),
-                                      ),
-                                    ),
-                                  ),
-                                  if (_searchTerm.isNotEmpty)
-                                    Text(
-                                      _totalMatches > 0
-                                          ? '${_currentMatchIndex + 1}/$_totalMatches'
-                                          : 'No results',
-                                      style: TextStyle(
-                                          color: _totalMatches > 0
-                                              ? colorScheme.onSurfaceVariant
-                                              : colorScheme.error,
-                                          fontSize: 14),
-                                    ),
-                                  IconButton(
-                                      icon: Icon(Icons.arrow_upward, size: 20),
-                                      onPressed: _prevMatch),
-                                  IconButton(
-                                      icon: Icon(Icons.arrow_downward, size: 20),
-                                      onPressed: _nextMatch),
-                                  IconButton(
-                                      icon: Icon(Icons.close, size: 20),
-                                      onPressed: _toggleSearch),
-                                ],
-                              ),
-                            ),
-                          ),
+                        SearchNote(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          matchCount: _currentMatchIndex,
+                          totalMatches: _totalMatches,
+                          onNext: _nextMatch,
+                          onPrev: _prevMatch,
+                          onClose: _toggleSearch,
                         ),
                     ],
                   ),
