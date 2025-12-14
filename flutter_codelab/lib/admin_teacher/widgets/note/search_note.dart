@@ -52,6 +52,11 @@ class SearchNote extends StatelessWidget {
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                   ),
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (value) {
+                    onNext();
+                    focusNode.requestFocus();
+                  },
                 ),
               ),
               if (controller.text.isNotEmpty)
