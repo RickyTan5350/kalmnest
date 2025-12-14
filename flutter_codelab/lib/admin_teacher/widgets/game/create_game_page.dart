@@ -222,7 +222,7 @@ class _LaravelWebViewState extends State<LaravelWebView> {
   @override
   Widget build(BuildContext context) {
     final unityUrl =
-        "https://backend_services.test/unity_build/index.html?role=${widget.userRole}";
+        "https://backend_services-kalmnest-.test/unity_build/index.html?role=${widget.userRole}";
 
     return InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(unityUrl)),
@@ -261,7 +261,7 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
 
   void reloadPreview(String userRole) {
     final url =
-        "https://backend_services.test/unity_build/StreamingAssets/html/index.html";
+        "https://backend_services-kalmnest-.test/unity_build/StreamingAssets/html/index.html";
 
     _webViewController.loadUrl(
       urlRequest: URLRequest(url: WebUri(url)),
@@ -271,7 +271,7 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
   @override
   Widget build(BuildContext context) {
     final url =
-        "https://backend_services.test/unity_build/StreamingAssets/html/index.html";
+        "https://backend_services-kalmnest-.test/unity_build/StreamingAssets/html/index.html";
 
     return InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(url)),

@@ -7,7 +7,7 @@ import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'auth_api.dart';
 
 //server URL: set your own
-const String _apiUrl = 'https://backend_services.test/api/achievements';
+const String _apiUrl = 'https://backend_services-kalmnest-.test/api/achievements';
 
 IconData _getIconData(String iconValue) {  
   try {

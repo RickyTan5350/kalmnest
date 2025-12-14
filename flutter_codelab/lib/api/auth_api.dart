@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // Ensure this matches your emulator/device URL
-const String _authApiUrl = 'https://backend_services.test/api';
+const String _authApiUrl = 'https://backend_services-kalmnest-.test/api';
 
 const _storage = FlutterSecureStorage();
 const String _tokenKey = 'auth_token';

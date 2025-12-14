@@ -90,7 +90,7 @@ class _GamePageState extends State<GamePage> {
           child: InAppWebView(
             initialUrlRequest: URLRequest(
               url: WebUri(
-                "https://backend_services.test/unity_build/index.html?role=${widget.userRole}&level=${level.levelId}",
+                "https://backend_services-kalmnest-.test/unity_build/index.html?role=${widget.userRole}&level=${level.levelId}",
               ),
             ),
             initialSettings: InAppWebViewSettings(javaScriptEnabled: true),
