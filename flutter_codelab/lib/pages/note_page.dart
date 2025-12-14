@@ -18,8 +18,8 @@ class NotePage extends StatefulWidget {
 }
 
 class _NotePageState extends State<NotePage> {
-  final List<String> _topics = ['HTML', 'CSS', 'JS', 'PHP'];
-  String _selectedTopic = 'CSS'; 
+  final List<String> _topics = ['All', 'HTML', 'CSS', 'JS', 'PHP'];
+  String _selectedTopic = 'All'; 
   String _searchQuery = ''; 
   ViewLayout _viewLayout = ViewLayout.grid; 
 
@@ -110,13 +110,13 @@ class _NotePageState extends State<NotePage> {
                   Expanded(
                     child: widget.currentUser.isStudent
                         ? StudentViewPage(
-                            topic: _selectedTopic,
+                            topic: _selectedTopic == 'All' ? '' : _selectedTopic,
                             query: _searchQuery,
                             isGrid: _viewLayout == ViewLayout.grid, 
                           )
                         : AdminViewNotePage(
                             layout: _viewLayout,
-                            topic: _selectedTopic, 
+                            topic: _selectedTopic == 'All' ? '' : _selectedTopic, 
                             query: _searchQuery, 
                           ),
                   ),

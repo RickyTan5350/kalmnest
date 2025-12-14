@@ -68,7 +68,11 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
 
   void _loadData() {
     setState(() {
-      _noteFuture = _api.searchNotes(widget.topic, widget.query);
+      if (widget.topic.isEmpty && widget.query.isEmpty) {
+        _noteFuture = _api.fetchBriefNote();
+      } else {
+        _noteFuture = _api.searchNotes(widget.topic, widget.query);
+      }
       _exitSelectionMode(); 
     });
   }

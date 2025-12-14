@@ -53,7 +53,11 @@ class _StudentViewPageState extends State<StudentViewPage> {
 
   void _loadData() {
     setState(() {
-      _noteFuture = _api.searchNotes(widget.topic, ''); 
+      if (widget.topic.isEmpty) {
+        _noteFuture = _api.fetchBriefNote();
+      } else {
+        _noteFuture = _api.searchNotes(widget.topic, '');
+      } 
     });
   }
 
