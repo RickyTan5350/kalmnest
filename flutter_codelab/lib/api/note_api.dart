@@ -3,23 +3,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/note_data.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
-const String _apiUrl = 'https://backend_services.test/api/notes';
+final String _apiUrl = '${ApiConstants.baseUrl}/notes';
 
 class NoteApi {
   static const String validationErrorCode = '422';
 
   // --- CREATE NOTE ---
   Future<void> createNote(NoteData data) async {
+    
     final body = jsonEncode(data.toJson());
     try {
       print('Sending POST request to: $_apiUrl');
       
       final response = await http.post(
-        Uri.parse(_apiUrl), 
+        Uri.parse('$_apiUrl/new'),  
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
+          'Host': 'backend_services.test',
         },
         body: body,
       );
@@ -42,7 +45,10 @@ class NoteApi {
   // --- FETCH ALL NOTES (Brief) ---
   Future<List<NoteBrief>> fetchBriefNote() async {
     try {
-      final response = await http.get(Uri.parse(_apiUrl));
+      final response = await http.get(
+        Uri.parse(_apiUrl),
+        headers: {'Host': 'backend_services.test'},
+      );
 
       if (response.statusCode == 200) {
         List<dynamic> jsonResponse = jsonDecode(response.body);
@@ -70,6 +76,7 @@ class NoteApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
+          'Host': 'backend_services.test',
         },
       );
 
@@ -95,6 +102,7 @@ class NoteApi {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Host': 'backend_services.test',
         },
       );
 
@@ -117,7 +125,10 @@ class NoteApi {
         'query': query,
       });
 
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {'Host': 'backend_services.test'},
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
@@ -151,6 +162,7 @@ class NoteApi {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Host': 'backend_services.test',
         },
         body: jsonEncode({
           'title': title,
@@ -177,11 +189,22 @@ class NoteApi {
     final url = Uri.parse('$_apiUrl/$id');
     
     try {
-      final response = await http.delete(url);
+      final response = await http.delete(
+        url,
+        headers: {'Host': 'backend_services.test'},
+      );
       return response.statusCode == 200 || response.statusCode == 204;
     } catch (e) {
       print('Error deleting note: $e');
       return false;
+    }
+  }
+
+  // --- DELETE MULTIPLE NOTES ---
+  Future<void> deleteNotes(List<dynamic> ids) async {
+    // Iterate and delete individually since no batch endpoint is known
+    for (final id in ids) {
+      await deleteNote(id.toString());
     }
   }
 }

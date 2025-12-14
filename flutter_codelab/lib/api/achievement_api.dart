@@ -5,38 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'auth_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 //server URL: set your own
-const String _apiUrl = 'https://backend_services.test/api/achievements';
+final String _apiUrl = '${ApiConstants.baseUrl}/achievements';
 
-IconData _getIconData(String iconValue) {  
-  try {
-    final entry = achievementIconOptions.firstWhere(
-          (opt) => opt['value'] == iconValue,
-      orElse: () => {'icon': Icons.help_outline},
-    );
-    return entry['icon'] as IconData;
-  } catch (e) {
-    return Icons.help_outline;
-  }
-}
 
-Color _getColor(String iconValue) {
-  switch (iconValue) {
-    case 'html':
-      return Colors.orange;
-    case 'css':
-      return Colors.green;
-    case 'javascript':
-      return Colors.yellow;
-    case 'php':
-      return Colors.blue;
-    case 'backend':
-      return Colors.deepPurple;
-    default:
-      return Colors.grey;
-  }
-}
 
 class AchievementApi {
   static const String validationErrorCode = '422';
@@ -46,6 +20,7 @@ class AchievementApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      'Host': 'backend_services.test', // Fix for Laravel Herd on Emulator
     };
 
     final token = await AuthApi.getToken();

@@ -242,7 +242,7 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
   void reloadPreview(String userRole) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final url =
-        "https://backend_services.test/unity_build/StreamingAssets/index.html?cb=$timestamp&role=$userRole";
+        "https://backend_services.test/unity_build/StreamingAssets/html/index.html";
 
     _webViewController.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
   }
@@ -250,7 +250,7 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
   @override
   Widget build(BuildContext context) {
     final url =
-        "https://backend_services.test/unity_build/StreamingAssets/html/index.html?role=${widget.userRole}";
+        "https://backend_services.test/unity_build/StreamingAssets/html/index.html";
 
     return InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(url)),

@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 class UserApi {
   // Existing base URL for single user operations
-  final String _baseUrl = 'https://backend_services.test/api/user'; 
+  final String _baseUrl = '${ApiConstants.baseUrl}/user'; 
   // New base URL for list operations
-  final String _listUrl = 'https://backend_services.test/api/users';
+  final String _listUrl = '${ApiConstants.baseUrl}/users';
 
   static const validationErrorCode = 422;
   static const forbiddenErrorCode = 403;
@@ -17,6 +18,7 @@ class UserApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      'Host': 'backend_services.test', // Fix for Laravel Herd on Emulator
     };
 
     final token = await AuthApi.getToken();
@@ -40,6 +42,7 @@ class UserApi {
         url,
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
+          'Host': 'backend_services.test', // Fix for Laravel Herd
         }, 
         body: jsonEncode(data.toJson()),
       );
@@ -139,6 +142,7 @@ class UserApi {
         headers: <String, String>{
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token', 
+          'Host': 'backend_services.test', // Fix for Laravel Herd
         },
       );
 
@@ -183,6 +187,7 @@ class UserApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token', 
+          'Host': 'backend_services.test', // Fix for Laravel Herd
         }, 
         body: jsonEncode(data), // Send the update map
       );
