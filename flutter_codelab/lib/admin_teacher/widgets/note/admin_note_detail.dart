@@ -11,6 +11,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'delete_note.dart';
 import 'run_code_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
+import 'package:flutter/services.dart';
 
 class AdminNoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -41,17 +43,33 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
   late TextEditingController _readOnlyController;
 
+  // --- Search State ---
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _pageFocusNode = FocusNode();
+
+  String _searchTerm = '';
+  int _currentMatchIndex = 0;
+  int _totalMatches = 0;
+  List<GlobalKey> _matchKeys = [];
+
   @override
   void initState() {
     super.initState();
     _currentTitle = widget.noteTitle;
     _readOnlyController = TextEditingController();
+    _searchController.addListener(_onSearchChanged);
     _fetchContent();
   }
 
   @override
   void dispose() {
     _readOnlyController.dispose();
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _pageFocusNode.dispose();
     super.dispose();
   }
 
@@ -122,6 +140,78 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
   // ====================================================================
   // PDF GENERATION LOGIC (With Image Support)
   // ====================================================================
+
+  // --- Search Logic ---
+  void _onSearchChanged() {
+    final term = _searchController.text.trim();
+    int newTotal = 0;
+    if (term.isNotEmpty) {
+      String htmlContent = md.markdownToHtml(
+          _markdownContent, extensionSet: md.ExtensionSet.gitHubFlavored);
+      final pattern = RegExp(
+        '(${RegExp.escape(term)})(?![^<]*>)',
+        caseSensitive: false,
+        multiLine: true,
+      );
+      newTotal = pattern.allMatches(htmlContent).length;
+    }
+
+    setState(() {
+      _searchTerm = term;
+      _totalMatches = newTotal;
+      _currentMatchIndex = 0;
+    });
+
+    if (newTotal > 0) {
+      _scrollToMatch(0);
+    }
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (_isSearching) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _searchFocusNode.requestFocus();
+        });
+      } else {
+        _searchController.clear();
+        _searchTerm = '';
+        _pageFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _scrollToMatch(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (index < _matchKeys.length && _matchKeys[index].currentContext != null) {
+        Scrollable.ensureVisible(
+          _matchKeys[index].currentContext!,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          alignment: 0.5,
+        );
+      }
+    });
+  }
+
+  void _nextMatch() {
+    if (_totalMatches > 0) {
+      setState(() {
+        _currentMatchIndex = (_currentMatchIndex + 1) % _totalMatches;
+      });
+      _scrollToMatch(_currentMatchIndex);
+    }
+  }
+
+  void _prevMatch() {
+    if (_totalMatches > 0) {
+      setState(() {
+        _currentMatchIndex = (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
+      });
+      _scrollToMatch(_currentMatchIndex);
+    }
+  }
 
   Future<void> _downloadPdf() async {
     // Show a different loading indicator for PDF download
@@ -264,6 +354,123 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
     return widgets;
   }
 
+  Widget _buildHighlightedHtml(ColorScheme colorScheme) {
+    _matchKeys = [];
+
+    String htmlContent = md.markdownToHtml(_markdownContent,
+        extensionSet: md.ExtensionSet.gitHubFlavored);
+
+    final String activeBg =
+        '#${colorScheme.primary.value.toRadixString(16).substring(2)}';
+    final String activeText =
+        '#${colorScheme.onPrimary.value.toRadixString(16).substring(2)}';
+    final String inactiveBg =
+        '#${colorScheme.primaryContainer.value.toRadixString(16).substring(2)}';
+    final String inactiveText =
+        '#${colorScheme.onPrimaryContainer.value.toRadixString(16).substring(2)}';
+    final String borderColor =
+        '#${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}';
+
+    if (_searchTerm.isNotEmpty) {
+      try {
+        final pattern = RegExp('(${RegExp.escape(_searchTerm)})(?![^<]*>)',
+            caseSensitive: false, multiLine: true);
+        int matchCounter = 0;
+        htmlContent = htmlContent.replaceAllMapped(pattern, (match) {
+          final bool isActive = matchCounter == _currentMatchIndex;
+          final String bg = isActive ? activeBg : inactiveBg;
+          final String txt = isActive ? activeText : inactiveText;
+          final String replacement =
+              '<span data-scroll-index="$matchCounter"></span><span style="background-color: $bg; color: $txt;">${match.group(1)}</span>';
+          matchCounter++;
+          return replacement;
+        });
+      } catch (e) {
+        debugPrint("Regex error: $e");
+      }
+    }
+
+    return HtmlWidget(
+      htmlContent,
+      textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 16),
+      customStylesBuilder: (element) {
+        if (element.localName == 'table') {
+          return {
+            'border-collapse': 'collapse',
+            'width': '100%',
+            'margin-bottom': '15px'
+          };
+        }
+        if (element.localName == 'th' || element.localName == 'td') {
+          return {
+            'border': '1px solid $borderColor',
+            'padding': '8px',
+            'vertical-align': 'top'
+          };
+        }
+        return null; // Fallback to default
+      },
+      customWidgetBuilder: (element) {
+        if (element.localName == 'pre') {
+          final codeText = element.text;
+          return Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: colorScheme.outlineVariant),
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Text(codeText,
+                      style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontFamily: 'monospace')),
+                ),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: InkWell(
+                  onTap: () => _openRunPage(codeText),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        borderRadius: BorderRadius.circular(4)),
+                    child: Row(
+                      children: [
+                        Icon(Icons.play_arrow,
+                            size: 14, color: colorScheme.onPrimary),
+                        const SizedBox(width: 4),
+                        Text('Run',
+                            style: TextStyle(
+                                color: colorScheme.onPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        if (element.attributes.containsKey('data-scroll-index')) {
+          final GlobalKey key = GlobalKey();
+          _matchKeys.add(key);
+          return SizedBox(width: 1, height: 1, key: key);
+        }
+        return null;
+      },
+    );
+  }
+
   // ====================================================================
   // UI BUILD METHOD
   // ====================================================================
@@ -272,22 +479,35 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Text(
-          _currentTitle,
-          style: TextStyle(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: colorScheme.surface,
-        iconTheme: IconThemeData(color: colorScheme.onSurface),
-        elevation: 0,
-        actions: [
-          if (!_isLoading) ...[
-            if (widget.isStudent)
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true): _toggleSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true): _toggleSearch,
+      },
+      child: Focus(
+        focusNode: _pageFocusNode,
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: colorScheme.surface,
+          appBar: AppBar(
+            title: Text(
+              _currentTitle,
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            backgroundColor: colorScheme.surface,
+            iconTheme: IconThemeData(color: colorScheme.onSurface),
+            elevation: 0,
+            actions: [
+              if (!_isLoading) ...[
+                IconButton(
+                  icon: Icon(_isSearching ? Icons.close : Icons.search),
+                  tooltip: _isSearching ? 'Close Search' : 'Search (Ctrl+F)',
+                  onPressed: _toggleSearch,
+                ),
+                if (widget.isStudent)
               // --- STUDENT VIEW: DOWNLOAD BUTTON ---
               _isDownloadingPdf
                   ? const Padding(
@@ -323,260 +543,159 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // --- MARKDOWN SOURCE (Hidden for Students) ---
-                  if (!widget.isStudent) ...[
-                    Expanded(
-                      flex: 1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(12),
-                                topRight: Radius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Markdown Source',
-                              style: TextStyle(
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerLow,
-                                borderRadius: const BorderRadius.only(
-                                  bottomLeft: Radius.circular(12),
-                                  bottomRight: Radius.circular(12),
-                                ),
-                                border: Border.all(
-                                  color: colorScheme.outlineVariant,
-                                ),
-                              ),
-                              child: TextField(
-                                controller: _readOnlyController,
-                                readOnly: true,
-                                maxLines: null,
-                                expands: true,
-                                style: TextStyle(
-                                  color: colorScheme.onSurface,
-                                  fontSize: 14,
-                                  fontFamily: 'monospace',
-                                  height: 1.5,
-                                ),
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.all(16),
-                                ),
-                                onTap: () {
-                                  // Redundant check, but good for safety
-                                  if (!widget.isStudent) {
-                                    Future.delayed(
-                                      const Duration(milliseconds: 50),
-                                      () {
-                                        final cursor = _readOnlyController
-                                            .selection.baseOffset;
-                                        _navigateToEdit(cursorIndex: cursor);
-                                      },
-                                    );
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                  ],
-
-                  // --- PREVIEW SECTION (Expanded for Students) ---
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(12),
-                              topRight: Radius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            'Preview',
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+          : Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // --- MARKDOWN SOURCE (Hidden for Students) ---
+                      if (!widget.isStudent) ...[
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              // Only allow tap-to-edit for Admins
-                              if (!widget.isStudent) _navigateToEdit();
-                            },
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerLow,
-                                borderRadius: const BorderRadius.only(
-                                  bottomLeft: Radius.circular(12),
-                                  bottomRight: Radius.circular(12),
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerHighest,
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(12),
+                                    topRight: Radius.circular(12),
+                                  ),
                                 ),
-                                border: Border.all(
-                                  color: colorScheme.outlineVariant,
+                                child: Text(
+                                  'Markdown Source',
+                                  style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                              child: SingleChildScrollView(
-                                child: HtmlWidget(
-                                  md.markdownToHtml(
-                                    _markdownContent,
-                                    extensionSet:
-                                        md.ExtensionSet.gitHubFlavored,
+                              Expanded(
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerLow,
+                                    borderRadius: const BorderRadius.only(
+                                      bottomLeft: Radius.circular(12),
+                                      bottomRight: Radius.circular(12),
+                                    ),
+                                    border: Border.all(
+                                      color: colorScheme.outlineVariant,
+                                    ),
                                   ),
-                                  textStyle: TextStyle(
-                                    color: colorScheme.onSurface,
-                                    fontSize: 16,
+                                  child: TextField(
+                                    controller: _readOnlyController,
+                                    readOnly: true,
+                                    maxLines: null,
+                                    expands: true,
+                                    style: TextStyle(
+                                      color: colorScheme.onSurface,
+                                      fontSize: 14,
+                                      fontFamily: 'monospace',
+                                      height: 1.5,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.all(16),
+                                    ),
+                                    onTap: () {
+                                      // Redundant check, but good for safety
+                                      if (!widget.isStudent) {
+                                        Future.delayed(
+                                          const Duration(milliseconds: 50),
+                                          () {
+                                            final cursor = _readOnlyController
+                                                .selection.baseOffset;
+                                            _navigateToEdit(cursorIndex: cursor);
+                                          },
+                                        );
+                                      }
+                                    },
                                   ),
-                                  // --- CUSTOM CODE BLOCK RENDERING ---
-                                  customWidgetBuilder: (element) {
-                                    if (element.localName == 'pre') {
-                                      final codeText = element.text;
-                                      return Stack(
-                                        children: [
-                                          Container(
-                                            width: double.infinity,
-                                            margin: const EdgeInsets.only(
-                                                bottom: 12),
-                                            padding: const EdgeInsets.fromLTRB(
-                                                16, 32, 16, 16),
-                                            decoration: BoxDecoration(
-                                              color: colorScheme
-                                                  .surfaceContainerHighest,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                  color: colorScheme
-                                                      .outlineVariant),
-                                            ),
-                                            child: SingleChildScrollView(
-                                              scrollDirection: Axis.horizontal,
-                                              child: Text(
-                                                codeText,
-                                                style: TextStyle(
-                                                  color: colorScheme
-                                                      .onSurfaceVariant,
-                                                  fontFamily: 'monospace',
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 4,
-                                            right: 4,
-                                            child: InkWell(
-                                              onTap: () =>
-                                                  _openRunPage(codeText),
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 6,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: colorScheme.primary,
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.play_arrow,
-                                                      size: 14,
-                                                      color:
-                                                          colorScheme.onPrimary,
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      'Run',
-                                                      style: TextStyle(
-                                                        color: colorScheme
-                                                            .onPrimary,
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }
-                                    return null;
-                                  },
-                                  customStylesBuilder: (element) {
-                                    if (element.localName == 'h1') {
-                                      return {
-                                        'margin-bottom': '10px',
-                                        'font-weight': 'bold',
-                                        'border-bottom':
-                                            '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}'
-                                      };
-                                    }
-                                    if (element.localName == 'table') {
-                                      return {
-                                        'border-collapse': 'collapse',
-                                        'width': '100%'
-                                      };
-                                    }
-                                    if (element.localName == 'th' ||
-                                        element.localName == 'td') {
-                                      return {
-                                        'border':
-                                            '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
-                                        'padding': '8px'
-                                      };
-                                    }
-                                    return null;
-                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                      ],
+
+                      // --- PREVIEW SECTION (Expanded for Students) ---
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Preview',
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                          ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  // Only allow tap-to-edit for Admins
+                                  if (!widget.isStudent) _navigateToEdit();
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerLow,
+                                    borderRadius: const BorderRadius.only(
+                                      bottomLeft: Radius.circular(12),
+                                      bottomRight: Radius.circular(12),
+                                    ),
+                                    border: Border.all(
+                                      color: colorScheme.outlineVariant,
+                                    ),
+                                  ),
+                                  child: SingleChildScrollView(
+                                    child: _buildHighlightedHtml(colorScheme),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                if (_isSearching)
+                  SearchNote(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    matchCount: _currentMatchIndex,
+                    totalMatches: _totalMatches,
+                    onNext: _nextMatch,
+                    onPrev: _prevMatch,
+                    onClose: _toggleSearch,
+                  ),
+              ],
             ),
+        ),
+      ),
     );
   }
 }
