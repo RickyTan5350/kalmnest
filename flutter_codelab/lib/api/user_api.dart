@@ -5,9 +5,9 @@ import 'package:flutter_codelab/api/auth_api.dart';
 
 class UserApi {
   // Existing base URL for single user operations
-  final String _baseUrl = 'https://backend_services.test/api/user'; 
+  final String _baseUrl = 'https://backend_services-kalmnest-.test/api/user'; 
   // New base URL for list operations
-  final String _listUrl = 'https://backend_services.test/api/users';
+  final String _listUrl = 'https://backend_services-kalmnest-.test/api/users';
 
   static const validationErrorCode = 422;
   static const forbiddenErrorCode = 403;
