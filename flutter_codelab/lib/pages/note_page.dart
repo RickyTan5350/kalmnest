@@ -80,7 +80,7 @@ class _NotePageState extends State<NotePage> {
                     width: 300,
                     child: SearchBar(
                       focusNode: _searchFocusNode,
-                      hintText: "Search All... (Ctrl+F)",
+                      hintText: "Search topic or title",
                       onChanged: (val) => setState(() => _searchQuery = val),
                       leading: const Icon(Icons.search), // Optional: Adds search icon inside bar like image 2
                       trailing: [
