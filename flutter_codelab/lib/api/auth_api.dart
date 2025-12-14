@@ -3,6 +3,7 @@ import 'package:flutter_codelab/student/services/local_achievement_storage.dart'
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
+
 final String _authApiUrl = ApiConstants.baseUrl;
 
 const _storage = FlutterSecureStorage();
@@ -10,7 +11,6 @@ const String _tokenKey = 'auth_token';
 const String _userKey = 'user_data';
 
 class AuthApi {
-
   // 1. LOGIN
   Future<Map<String, dynamic>> login(String email, String password) async {
     final loginUrl = '$_authApiUrl/login';
@@ -22,23 +22,37 @@ class AuthApi {
 
     try {
       print('DEBUG: Sending login request to $loginUrl');
-      final response = await http.post(
-        Uri.parse(loginUrl),
-        headers: <String, String>{
+
+      // Use http.Request instead of http.post to control redirects
+      final client = http.Client();
+      final request = http.Request('POST', Uri.parse(loginUrl))
+        ..followRedirects =
+            false // <--- STOP AUTOMATIC REDIRECTS checking
+        ..headers.addAll({
           'Content-Type': 'application/json; charset=UTF-8',
-          'Host': 'backend_services.test', // Fix for Laravel Herd on Emulator
-        },
-        body: body,
-      );
+          'Accept': 'application/json',
+          // Tell Laravel/Nginx we are using HTTPS to prevent redirect loops
+          'X-Forwarded-Proto': 'https',
+          // Only add Host header if NOT using a custom URL
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
+        })
+        ..body = body;
+
+      final streamedResponse = await client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
       print('DEBUG: Response status: ${response.statusCode}');
+      print('DEBUG: Response headers: ${response.headers}'); // Log ALL headers
+      if (response.isRedirect) {
+        print('DEBUG: Redirect Location: ${response.headers['location']}');
+      }
       print('DEBUG: Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
 
-        // The 'user' object from backend now includes the nested 'role' object
-        // We store this entire structure securely.
         final userDataJson = jsonEncode(data['user']);
 
         await _storage.write(key: _tokenKey, value: token);
@@ -47,14 +61,19 @@ class AuthApi {
         return data['user'] as Map<String, dynamic>;
       } else if (response.statusCode == 422) {
         final errors = jsonDecode(response.body);
-        // Safely extract email error or provide default
         String errorMessage = 'Login failed.';
         if (errors['errors'] != null && errors['errors']['email'] != null) {
           errorMessage = errors['errors']['email'][0];
         }
         throw Exception(errorMessage);
+      } else if (response.statusCode == 301 || response.statusCode == 302) {
+        throw Exception(
+          'Server Error ${response.statusCode}: Redirecting to ${response.headers['location']}',
+        );
       } else {
-        throw Exception('Server Error ${response.statusCode}: ${response.body}');
+        throw Exception(
+          'Server Error ${response.statusCode}: ${response.body}',
+        );
       }
     } catch (e) {
       print('DEBUG: Login Error caught: $e');
@@ -89,7 +108,9 @@ class AuthApi {
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token', // Crucial: Send the token
-            'Host': 'backend_services.test', // Fix for Laravel Herd on Emulator
+            // Only add Host header if NOT using a custom URL
+            if (ApiConstants.customBaseUrl.isEmpty)
+              'Host': 'backend_services.test',
           },
         );
       } catch (e) {
@@ -105,5 +126,5 @@ class AuthApi {
     // Clear the local achievement cache specific to the user
     final localStorage = LocalAchievementStorage();
     await localStorage.clearLocalCache(userId);
-}
+  }
 }

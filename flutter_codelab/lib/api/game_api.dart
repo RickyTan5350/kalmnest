@@ -21,7 +21,8 @@ class GameAPI {
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Host': 'backend_services.test', // Fix for Laravel Herd on Emulator
+      // Only add Host header if NOT using a custom URL
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'backend_services.test',
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }

@@ -23,7 +23,7 @@ Route::post('/user', [UserController::class, 'store']); // Registration
 
 Route::get('/notes', [NotesController::class, 'showNotesBrief']);
 Route::get('/notes/search', [NotesController::class, 'search']); 
-Route::post('/notes', [NotesController::class, 'store']);         // <--- This is the active Create Note route
+Route::post('/notes/new', [NotesController::class, 'store']);         // <--- This is the active Create Note route
 Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- This is the active Upload route
 
 Route::post('/achievements/new', [AchievementController::class, 'store']);
