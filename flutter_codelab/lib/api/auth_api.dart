@@ -2,9 +2,8 @@ import 'dart:convert';
 import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-// Ensure this matches your emulator/device URL
-const String _authApiUrl = 'https://backend_services.test/api';
+import 'package:flutter_codelab/constants/api_constants.dart';
+final String _authApiUrl = ApiConstants.baseUrl;
 
 const _storage = FlutterSecureStorage();
 const String _tokenKey = 'auth_token';
@@ -22,13 +21,17 @@ class AuthApi {
     });
 
     try {
+      print('DEBUG: Sending login request to $loginUrl');
       final response = await http.post(
         Uri.parse(loginUrl),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
+          'Host': 'backend_services.test', // Fix for Laravel Herd on Emulator
         },
         body: body,
       );
+      print('DEBUG: Response status: ${response.statusCode}');
+      print('DEBUG: Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -51,9 +54,10 @@ class AuthApi {
         }
         throw Exception(errorMessage);
       } else {
-        throw Exception('Server Error ${response.statusCode}');
+        throw Exception('Server Error ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
+      print('DEBUG: Login Error caught: $e');
       rethrow;
     }
   }
@@ -85,6 +89,7 @@ class AuthApi {
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token', // Crucial: Send the token
+            'Host': 'backend_services.test', // Fix for Laravel Herd on Emulator
           },
         );
       } catch (e) {

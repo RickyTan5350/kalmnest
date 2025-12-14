@@ -47,29 +47,16 @@ class _StudentViewAchievementsPageState
     return entry['icon'] as IconData;
   }
 
-  Color _getColor(String? iconValue) {
-    switch (iconValue) {
-      case 'html':
-        return Colors.orange;
-      case 'css':
-        return Colors.green;
-      case 'javascript':
-        return Colors.yellow;
-      case 'php':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
 
-  List<Map<String, dynamic>> _transformData(List<AchievementData> briefs) {
+
+  List<Map<String, dynamic>> _transformData(BuildContext context, List<AchievementData> briefs) {
     return briefs.map((brief) {
       final iconValue = brief.icon;
       return {
         'id': brief.achievementId,
         'title': brief.achievementTitle ?? 'No Title',
         'icon': _getIconData(iconValue),
-        'color': _getColor(iconValue),
+        'color': getAchievementColor(context, iconValue),
         'preview': brief.achievementDescription,
       };
     }).toList();
@@ -104,7 +91,7 @@ class _StudentViewAchievementsPageState
         widget.showSnackBar(
           context,
           "Unable to sync. Showing cached data.",
-          Colors.orange.shade800,
+          Theme.of(context).colorScheme.error,
         );
       }
     }
@@ -116,7 +103,7 @@ class _StudentViewAchievementsPageState
       widget.showSnackBar(
         context,
         "Cannot view details in offline mode.",
-        Colors.grey.shade800,
+        Theme.of(context).colorScheme.onSurface,
       );
       return;
     }
@@ -182,10 +169,10 @@ class _StudentViewAchievementsPageState
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Icon(
+                      Icon(
                         Icons.check_circle,
                         size: 20,
-                        color: Colors.green,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ],
                   ),
@@ -215,18 +202,18 @@ class _StudentViewAchievementsPageState
 
     return Container(
       width: double.infinity,
-      color: Colors.orange.shade100,
+      color: Theme.of(context).colorScheme.errorContainer,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       margin: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Icon(Icons.cloud_off, size: 16, color: Colors.orange.shade900),
+          Icon(Icons.cloud_off, size: 16, color: Theme.of(context).colorScheme.onErrorContainer),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               "Offline Mode: Details unavailable.",
               style: TextStyle(
-                color: Colors.orange.shade900,
+                color: Theme.of(context).colorScheme.onErrorContainer,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -255,10 +242,10 @@ class _StudentViewAchievementsPageState
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildOfflineBanner(),
-                  const Icon(
+                  Icon(
                     Icons.emoji_events_outlined,
                     size: 64,
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.outline,
                   ),
                   const SizedBox(height: 16),
                   const Text("No achievements yet."),
@@ -304,7 +291,7 @@ class _StudentViewAchievementsPageState
             );
           }
 
-          final List<Map<String, dynamic>> uiData = _transformData(
+          final List<Map<String, dynamic>> uiData = _transformData(context,
             filteredData,
           );
 
@@ -388,9 +375,9 @@ class _StudentViewAchievementsPageState
                           ),
                           title: Text(item.achievementTitle ?? "Achievement"),
                           subtitle: Text(item.achievementDescription ?? ""),
-                          trailing: const Icon(
+                          trailing: Icon(
                             Icons.check_circle,
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           // --- 3. USE HANDLER IN LIST ---
                           onTap: () => _handleAchievementTap(originalItem),

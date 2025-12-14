@@ -173,7 +173,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
       await _achievementApi.updateAchievement(id, updatedData);
 
       if (mounted) {
-        widget.showSnackBar(context, 'Changes saved successfully!', Colors.green);
+        widget.showSnackBar(context, 'Changes saved successfully!', Theme.of(context).colorScheme.primary);
         Navigator.of(context).pop(true);
       }
     } catch (e) {
@@ -221,7 +221,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
         });
         _formKey.currentState!.validate(); // Refresh UI
       } catch (parseError) {
-        widget.showSnackBar(context, 'Validation Error: $jsonPart', Colors.red);
+        widget.showSnackBar(context, 'Validation Error: $jsonPart', Theme.of(context).colorScheme.error);
       }
     }
     // --- CASE 3: Database Integrity (500) ---
@@ -239,12 +239,12 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
       _formKey.currentState!.validate(); // Refresh UI
 
       if (_nameError == null && _titleError == null) {
-        widget.showSnackBar(context, 'Database Error: Duplicate entry.', Colors.red);
+        widget.showSnackBar(context, 'Database Error: Duplicate entry.', Theme.of(context).colorScheme.error);
       }
     }
     // --- CASE 4: Generic ---
     else {
-      widget.showSnackBar(context, 'Error updating: $e', Colors.red);
+      widget.showSnackBar(context, 'Error updating: $e', Theme.of(context).colorScheme.error);
     }
   }
 
@@ -420,12 +420,12 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                         ),
                       ),
                       child: _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: colorScheme.onPrimary,
                         ),
                       )
                           : const Text('Save Changes'),
