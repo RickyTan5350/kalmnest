@@ -393,26 +393,11 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
     return HtmlWidget(
       htmlContent,
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 16),
-      customStylesBuilder: (element) {
-        if (element.localName == 'table') {
-          return {
-            'border-collapse': 'collapse',
-            'width': '100%',
-            'margin-bottom': '15px'
-          };
-        }
-        if (element.localName == 'th' || element.localName == 'td') {
-          return {
-            'border': '1px solid $borderColor',
-            'padding': '8px',
-            'vertical-align': 'top'
-          };
-        }
-        return null; // Fallback to default
-      },
       customWidgetBuilder: (element) {
         if (element.localName == 'pre') {
           final codeText = element.text;
+          // Use innerHtml to preserve highlighting spans, wrapped in pre to preserve whitespace
+          final htmlContent = '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
           return Stack(
             children: [
               Container(
@@ -426,10 +411,24 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
                 ),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: Text(codeText,
-                      style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontFamily: 'monospace')),
+                  // Use HtmlWidget to render the code with highlights
+                  child: HtmlWidget(
+                    htmlContent,
+                    textStyle: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontFamily: 'monospace',
+                    ),
+                    // Recursively handle scroll indices inside the code block
+                    customWidgetBuilder: (innerElement) {
+                      if (innerElement.attributes
+                          .containsKey('data-scroll-index')) {
+                        final GlobalKey key = GlobalKey();
+                        _matchKeys.add(key);
+                        return SizedBox(width: 1, height: 1, key: key);
+                      }
+                      return null;
+                    },
+                  ),
                 ),
               ),
               Positioned(
@@ -465,6 +464,24 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
           final GlobalKey key = GlobalKey();
           _matchKeys.add(key);
           return SizedBox(width: 1, height: 1, key: key);
+        }
+        return null;
+      },
+      // Ensure spans are styled correctly if they aren't caught by customWidgetBuilder (fallback)
+      customStylesBuilder: (element) {
+        if (element.localName == 'table') {
+          return {
+            'border-collapse': 'collapse',
+            'width': '100%',
+            'margin-bottom': '15px'
+          };
+        }
+        if (element.localName == 'th' || element.localName == 'td') {
+          return {
+            'border': '1px solid $borderColor',
+            'padding': '8px',
+            'vertical-align': 'top'
+          };
         }
         return null;
       },

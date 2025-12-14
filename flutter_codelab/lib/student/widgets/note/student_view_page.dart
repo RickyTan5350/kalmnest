@@ -299,6 +299,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
       builder: (context) => StudentNoteDetailPage(
         noteId: note.noteId, 
         noteTitle: note.title,
+        topic: widget.topic,
       ),
     ));
   }
