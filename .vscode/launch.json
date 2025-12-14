@@ -1,0 +1,65 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flutter: Emulator (Herd)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "cwd": "flutter_codelab",
+            "args": [
+                "--dart-define=PHYSICAL_DEVICE=false",
+                "--dart-define=USE_HERD=true"
+            ]
+        },
+        {
+            "name": "Flutter: Physical Device (Artisan)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "cwd": "flutter_codelab",
+            "args": [
+                "--dart-define=PHYSICAL_DEVICE=true",
+                "--dart-define=USE_HERD=false",
+                "--dart-define=LOCAL_IP=192.168.0.161"
+            ]
+        },
+        {
+            "name": "Flutter: Expose (Public URL)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "cwd": "flutter_codelab",
+            "args": [
+                "--dart-define=CUSTOM_BASE_URL=https://uezjr7ajlf.sharedwithexpose.com"
+            ]
+        },
+        {
+            "name": "Flutter: Windows (Herd)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "cwd": "flutter_codelab",
+            "deviceId": "windows"
+        },
+        {
+            "name": "Flutter: Chrome",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "cwd": "flutter_codelab",
+            "deviceId": "chrome"
+        },
+        {
+            "name": "Flutter: Edge",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "cwd": "flutter_codelab",
+            "deviceId": "edge"
+        }
+    ]
+}
