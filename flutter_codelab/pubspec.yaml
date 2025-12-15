@@ -92,6 +92,7 @@ flutter:
     - assets/a2.png
     - assets/a3.png
     - assets/unity_webgl/
+    - assets/CodePlay.png
 
 
   # To add assets to your application, add an assets section, like this:
