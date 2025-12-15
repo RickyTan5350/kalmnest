@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'dart:io'; // For HttpOverrides
 import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
 import 'admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
-import 'admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'admin_teacher/widgets/game/create_game_page.dart';
 import 'admin_teacher/widgets/note/admin_create_note_page.dart';
 import 'util.dart';
 import 'theme.dart';
