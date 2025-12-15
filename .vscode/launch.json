@@ -34,32 +34,8 @@
             "program": "lib/main.dart",
             "cwd": "flutter_codelab",
             "args": [
-                "--dart-define=CUSTOM_BASE_URL=https://pmdgnzcotw.sharedwithexpose.com"
+                "--dart-define=CUSTOM_BASE_URL=https://uezjr7ajlf.sharedwithexpose.com"
             ]
-        },
-        {
-            "name": "Flutter: Windows (Herd)",
-            "request": "launch",
-            "type": "dart",
-            "program": "lib/main.dart",
-            "cwd": "flutter_codelab",
-            "deviceId": "windows"
-        },
-        {
-            "name": "Flutter: Chrome",
-            "request": "launch",
-            "type": "dart",
-            "program": "lib/main.dart",
-            "cwd": "flutter_codelab",
-            "deviceId": "chrome"
-        },
-        {
-            "name": "Flutter: Edge",
-            "request": "launch",
-            "type": "dart",
-            "program": "lib/main.dart",
-            "cwd": "flutter_codelab",
-            "deviceId": "edge"
         }
     ]
 }

@@ -21,13 +21,14 @@ class AchievementPage extends StatefulWidget {
 
 class _AchievementPageState extends State<AchievementPage> {
   final List<String> _topics = [
+    'All',
     'HTML',
     'CSS',
     'JS',
     'PHP',
     'Level',
     'Quiz',
-    'All',
+   
   ]; // Added 'All'
   String _selectedTopic = 'All'; // Default to 'All'
   ViewLayout _viewLayout = ViewLayout.grid;
