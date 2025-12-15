@@ -6,7 +6,6 @@ import 'package:flutter_codelab/constants/api_constants.dart';
 
 class UserApi {
   // Existing base URL for single user operations
-  final String _baseUrl = '${ApiConstants.baseUrl}/user';
   final String _baseUrl = 'https://backend_services.test/api/user'; 
   // New base URL for list operations
   final String _listUrl = 'https://backend_services.test/api/users';
