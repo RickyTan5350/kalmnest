@@ -12,7 +12,9 @@ import 'package:flutter/services.dart'; // For HapticFeedback
 import 'note_grid_layout_view.dart';
 
 enum ViewLayout { list, grid }
+
 enum SortType { alphabetical, number }
+
 enum SortOrder { ascending, descending }
 
 class AdminViewNotePage extends StatefulWidget {
@@ -38,8 +40,8 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
   SortType _currentSortType = SortType.alphabetical;
   SortOrder _currentSortOrder = SortOrder.ascending;
   bool _isSelectionMode = false;
-  final Set<dynamic> _selectedIds = {}; 
-  
+  final Set<dynamic> _selectedIds = {};
+
   // High-performance selection State
   final Map<dynamic, GlobalKey> _gridItemKeys = {};
   final Set<dynamic> _dragProcessedIds = {};
@@ -49,8 +51,10 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
 
   bool get _isDesktop {
     final p = Theme.of(context).platform;
-    return p == TargetPlatform.windows || p == TargetPlatform.linux || p == TargetPlatform.macOS;
-  } 
+    return p == TargetPlatform.windows ||
+        p == TargetPlatform.linux ||
+        p == TargetPlatform.macOS;
+  }
 
   @override
   void initState() {
@@ -73,7 +77,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       } else {
         _noteFuture = _api.searchNotes(widget.topic, widget.query);
       }
-      _exitSelectionMode(); 
+      _exitSelectionMode();
     });
   }
 
@@ -108,12 +112,19 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Delete Notes"),
-        content: Text("Are you sure you want to delete ${_selectedIds.length} notes?"),
+        content: Text(
+          "Are you sure you want to delete ${_selectedIds.length} notes?",
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: const Text("Delete"),
           ),
         ],
@@ -121,11 +132,11 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
     );
 
     if (confirm == true) {
-      await _api.deleteNotes(_selectedIds.toList()); 
+      await _api.deleteNotes(_selectedIds.toList());
       setState(() {
-        _loadData(); 
+        _loadData();
         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text("${_selectedIds.length} notes deleted")),
+          SnackBar(content: Text("${_selectedIds.length} notes deleted")),
         );
         _exitSelectionMode();
       });
@@ -142,7 +153,8 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       final dynamic id = entry.key;
       final GlobalKey key = entry.value;
 
-      final RenderBox? renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? renderBox =
+          key.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox != null) {
         final localPosition = renderBox.globalToLocal(position);
         if (renderBox.size.contains(localPosition)) {
@@ -171,10 +183,14 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       final dynamic id = entry.key;
       final GlobalKey key = entry.value;
 
-      final RenderBox? renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? renderBox =
+          key.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox == null) continue;
 
-      final Offset itemPosition = renderBox.localToGlobal(Offset.zero, ancestor: context.findRenderObject());
+      final Offset itemPosition = renderBox.localToGlobal(
+        Offset.zero,
+        ancestor: context.findRenderObject(),
+      );
       final Rect itemRect = itemPosition & renderBox.size;
 
       if (selectionBox.overlaps(itemRect)) {
@@ -184,7 +200,8 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       }
     }
 
-    if (_selectedIds.length != newSelection.length || !_selectedIds.containsAll(newSelection)) {
+    if (_selectedIds.length != newSelection.length ||
+        !_selectedIds.containsAll(newSelection)) {
       setState(() {
         _selectedIds.clear();
         _selectedIds.addAll(newSelection);
@@ -211,7 +228,9 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       } else {
         comparison = a.noteId.compareTo(b.noteId);
       }
-      return _currentSortOrder == SortOrder.ascending ? comparison : -comparison;
+      return _currentSortOrder == SortOrder.ascending
+          ? comparison
+          : -comparison;
     });
     return sortedList;
   }
@@ -225,7 +244,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       onWillPop: () async {
         if (_isSelectionMode) {
           _exitSelectionMode();
-          return false; 
+          return false;
         }
         return true;
       },
@@ -238,7 +257,12 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
             }
 
             if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}", style: TextStyle(color: colorScheme.error)));
+              return Center(
+                child: Text(
+                  "Error: ${snapshot.error}",
+                  style: TextStyle(color: colorScheme.error),
+                ),
+              );
             }
 
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -246,12 +270,18 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.search_off, size: 48, color: colorScheme.outline),
+                    Icon(
+                      Icons.search_off,
+                      size: 48,
+                      color: colorScheme.outline,
+                    ),
                     const SizedBox(height: 10),
                     Text(
                       "No notes found.",
                       // FIX: 'textTheme' was undefined. Used 'theme.textTheme'.
-                      style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -263,16 +293,18 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
 
             return SelectionGestureWrapper(
               isDesktop: _isDesktop,
-              selectedIds: _selectedIds.map((e) => e.toString()).toSet(), // Conv to set string if needed, or update wrapper to generic? 
-              // Wrapper expects Set<String>. NoteBrief ID might be int. 
+              selectedIds: _selectedIds
+                  .map((e) => e.toString())
+                  .toSet(), // Conv to set string if needed, or update wrapper to generic?
+              // Wrapper expects Set<String>. NoteBrief ID might be int.
               // Let's check wrapper definition. Wrapper: final Set<String> selectedIds;
-              // So I must cast or convert. 'NoteBrief' id is likely int. 
-              // Correction: specific admin_view_note handles dynamic, but wrapper expects String? 
+              // So I must cast or convert. 'NoteBrief' id is likely int.
+              // Correction: specific admin_view_note handles dynamic, but wrapper expects String?
               // checking wrapper file: "final Set<String> selectedIds;"
-              // So I better convert to String for the wrapper, or update the wrapper. 
+              // So I better convert to String for the wrapper, or update the wrapper.
               // Updating the wrapper is risky if used elsewhere. Converting here is safer.
               itemKeys: _gridItemKeys.map((k, v) => MapEntry(k.toString(), v)),
-              
+
               onLongPressStart: (details) {
                 if (_isDesktop) {
                   _initialSelection = Set.from(_selectedIds);
@@ -294,18 +326,26 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                 }
               },
               onLongPressEnd: (_) => _endDrag(),
-              
+
               child: Stack(
                 children: [
                   CustomScrollView(
                     slivers: [
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+                          padding: const EdgeInsets.fromLTRB(
+                            16.0,
+                            12.0,
+                            16.0,
+                            16.0,
+                          ),
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 300),
                             child: _isSelectionMode
-                                ? _buildSelectionHeader(context, sortedList.length)
+                                ? _buildSelectionHeader(
+                                    context,
+                                    sortedList.length,
+                                  )
                                 : _buildSortHeader(context, sortedList.length),
                           ),
                         ),
@@ -338,7 +378,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
   Widget _buildSortHeader(BuildContext context, int count) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Container(
       key: const ValueKey("SortHeader"),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -350,7 +390,12 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text("$count Results", style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            "$count Results",
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           Row(
             children: [
               DropdownButton<SortType>(
@@ -358,25 +403,53 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                 underline: const SizedBox(),
                 isDense: true,
                 onChanged: (SortType? newValue) {
-                  if (newValue != null) setState(() => _currentSortType = newValue);
+                  if (newValue != null)
+                    setState(() => _currentSortType = newValue);
                 },
                 items: const [
-                  DropdownMenuItem(value: SortType.alphabetical, child: Text("Name")),
+                  DropdownMenuItem(
+                    value: SortType.alphabetical,
+                    child: Text("Name"),
+                  ),
                   DropdownMenuItem(value: SortType.number, child: Text("ID")),
                 ],
               ),
-              Container(height: 20, width: 1, margin: const EdgeInsets.symmetric(horizontal: 12), color: colorScheme.outlineVariant),
+              Container(
+                height: 20,
+                width: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: colorScheme.outlineVariant,
+              ),
               InkWell(
-                onTap: () => setState(() => _currentSortOrder = _currentSortOrder == SortOrder.ascending ? SortOrder.descending : SortOrder.ascending),
+                onTap: () => setState(
+                  () => _currentSortOrder =
+                      _currentSortOrder == SortOrder.ascending
+                      ? SortOrder.descending
+                      : SortOrder.ascending,
+                ),
                 child: Row(
                   children: [
-                    Icon(_currentSortOrder == SortOrder.ascending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 16),
+                    Icon(
+                      _currentSortOrder == SortOrder.ascending
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
+                      size: 16,
+                    ),
                     const SizedBox(width: 4),
-                    Text(_currentSortOrder == SortOrder.ascending ? "Low-High" : "High-Low"),
+                    Text(
+                      _currentSortOrder == SortOrder.ascending
+                          ? "Low-High"
+                          : "High-Low",
+                    ),
                   ],
                 ),
               ),
             ],
+          ),
+          IconButton(
+            icon: Icon(Icons.refresh, color: colorScheme.primary),
+            onPressed: () => _loadData(),
+            tooltip: "Refresh List",
           ),
         ],
       ),
@@ -399,8 +472,14 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
         children: [
           Row(
             children: [
-              IconButton(icon: const Icon(Icons.close), onPressed: _exitSelectionMode),
-              Text("${_selectedIds.length} Selected", style: theme.textTheme.titleMedium),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+              ),
+              Text(
+                "${_selectedIds.length} Selected",
+                style: theme.textTheme.titleMedium,
+              ),
             ],
           ),
           IconButton(
@@ -422,29 +501,36 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       final noteMap = {for (var n in notes) n.noteId: n};
 
       return GridLayoutView(
-        achievements: notes.map((n) => {
-          'id': n.noteId,
-          'title': n.title,
-          'icon': Icons.article_outlined,
-          'color': Colors.blue,
-          'preview': 'Tap to edit...',
-        }).toList(),
+        achievements: notes
+            .map(
+              (n) => {
+                'id': n.noteId,
+                'title': n.title,
+                'icon': Icons.article_outlined,
+                'color': Colors.blue,
+                'preview': 'Tap to edit...',
+              },
+            )
+            .toList(),
         isStudent: false,
         selectedIds: _selectedIds,
         onToggleSelection: _toggleSelection,
         itemKeys: _gridItemKeys,
-        
+
         // 2. ADD THIS: Handle the tap event for Admin
         onTap: (id) {
           final note = noteMap[id];
           if (note != null) {
-            Navigator.push(context, MaterialPageRoute(
-              builder: (context) => AdminNoteDetailPage(
-                noteId: note.noteId,
-                noteTitle: note.title,
-                isStudent: false,
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AdminNoteDetailPage(
+                  noteId: note.noteId,
+                  noteTitle: note.title,
+                  isStudent: false,
+                ),
               ),
-            ));
+            );
           }
         },
       );
@@ -453,17 +539,20 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       return SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         sliver: SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (BuildContext context, int index) {
-              final note = notes[index];
-              final GlobalKey key = _gridItemKeys.putIfAbsent(note.noteId, () => GlobalKey());
-              return Container(
-                key: key,
-                child: _buildSelectableListTile(context, note),
-              );
-            },
-            childCount: notes.length,
-          ),
+          delegate: SliverChildBuilderDelegate((
+            BuildContext context,
+            int index,
+          ) {
+            final note = notes[index];
+            final GlobalKey key = _gridItemKeys.putIfAbsent(
+              note.noteId,
+              () => GlobalKey(),
+            );
+            return Container(
+              key: key,
+              child: _buildSelectableListTile(context, note),
+            );
+          }, childCount: notes.length),
         ),
       );
     }
@@ -477,7 +566,9 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
-      color: isSelected ? colorScheme.primaryContainer.withOpacity(0.3) : colorScheme.surface,
+      color: isSelected
+          ? colorScheme.primaryContainer.withOpacity(0.3)
+          : colorScheme.surface,
       shape: RoundedRectangleBorder(
         side: BorderSide(
           color: isSelected ? colorScheme.primary : colorScheme.outlineVariant,
@@ -493,13 +584,17 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
             _toggleSelection(item.noteId);
           } else {
             // FIX: Use AdminNoteDetailPage
-            Navigator.push(context, MaterialPageRoute(
-              builder: (context) => AdminNoteDetailPage(
-                noteId: item.noteId, 
-                noteTitle: item.title,
-                isStudent: false, // Required by AdminNoteDetailPage constructor
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AdminNoteDetailPage(
+                  noteId: item.noteId,
+                  noteTitle: item.title,
+                  isStudent:
+                      false, // Required by AdminNoteDetailPage constructor
+                ),
               ),
-            ));
+            );
           }
         },
         child: Padding(
@@ -510,17 +605,25 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                 Padding(
                   padding: const EdgeInsets.only(right: 16.0),
                   child: Icon(
-                    isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                    color: isSelected ? colorScheme.primary : colorScheme.outline,
+                    isSelected
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.outline,
                   ),
                 ),
               Container(
-                width: 48, height: 48,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.description_outlined, color: colorScheme.onPrimaryContainer),
+                child: Icon(
+                  Icons.description_outlined,
+                  color: colorScheme.onPrimaryContainer,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -538,7 +641,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                     Text(
                       'Tap to edit',
                       style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],

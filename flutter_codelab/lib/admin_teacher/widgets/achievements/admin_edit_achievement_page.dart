@@ -7,7 +7,8 @@ import 'package:flutter_codelab/constants/achievement_constants.dart';
 Future<void> showEditAchievementDialog({
   required BuildContext context,
   required Map<String, dynamic> achievement, // Data to pre-fill
-  required void Function(BuildContext context, String message, Color color) showSnackBar,
+  required void Function(BuildContext context, String message, Color color)
+  showSnackBar,
 }) {
   return showDialog(
     context: context,
@@ -22,7 +23,8 @@ Future<void> showEditAchievementDialog({
 
 class EditAchievementDialog extends StatefulWidget {
   final Map<String, dynamic> achievement;
-  final void Function(BuildContext context, String message, Color color) showSnackBar;
+  final void Function(BuildContext context, String message, Color color)
+  showSnackBar;
 
   const EditAchievementDialog({
     super.key,
@@ -65,9 +67,15 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
   void initState() {
     super.initState();
     // 1. Pre-load Data
-    _achievementNameController = TextEditingController(text: widget.achievement['achievement_name']);
-    _achievementTitleController = TextEditingController(text: widget.achievement['title']);
-    _achievementDescriptionController = TextEditingController(text: widget.achievement['description']);
+    _achievementNameController = TextEditingController(
+      text: widget.achievement['achievement_name'],
+    );
+    _achievementTitleController = TextEditingController(
+      text: widget.achievement['title'],
+    );
+    _achievementDescriptionController = TextEditingController(
+      text: widget.achievement['description'],
+    );
 
     _selectedIcon = widget.achievement['icon'];
     _selectedLevel = widget.achievement['associated_level'];
@@ -133,7 +141,8 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.primary, width: 2),
       ),
-      errorBorder: OutlineInputBorder( // Red border on error
+      errorBorder: OutlineInputBorder(
+        // Red border on error
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.error),
       ),
@@ -173,7 +182,11 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
       await _achievementApi.updateAchievement(id, updatedData);
 
       if (mounted) {
-        widget.showSnackBar(context, 'Changes saved successfully!', Colors.green);
+        widget.showSnackBar(
+          context,
+          'Changes saved successfully!',
+          Colors.green,
+        );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
@@ -189,7 +202,8 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
 
   void _handleSubmissionError(Object e) {
     String errorString = e.toString();
-    const specificStudentMessage = 'Access Denied: Only Admins or Teachers can create achievements.';
+    const specificStudentMessage =
+        'Access Denied: Only Admins or Teachers can create achievements.';
 
     // --- CASE 1: Authorization ---
     if (errorString.contains(specificStudentMessage)) {
@@ -200,7 +214,9 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
       );
     }
     // --- CASE 2: Validation Error (422 JSON) ---
-    else if (errorString.startsWith('Exception: ${AchievementApi.validationErrorCode}:')) {
+    else if (errorString.startsWith(
+      'Exception: ${AchievementApi.validationErrorCode}:',
+    )) {
       final jsonPart = errorString.substring(
         'Exception: ${AchievementApi.validationErrorCode}:'.length,
       );
@@ -239,7 +255,11 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
       _formKey.currentState!.validate(); // Refresh UI
 
       if (_nameError == null && _titleError == null) {
-        widget.showSnackBar(context, 'Database Error: Duplicate entry.', Colors.red);
+        widget.showSnackBar(
+          context,
+          'Database Error: Duplicate entry.',
+          Colors.red,
+        );
       }
     }
     // --- CASE 4: Generic ---
@@ -254,189 +274,235 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     final textTheme = Theme.of(context).textTheme;
     final String currentId = widget.achievement['achievement_id'].toString();
 
-    return AlertDialog(
-      backgroundColor: colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      contentPadding: const EdgeInsets.all(24.0),
-      content: SizedBox(
-        width: 360,
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Edit Achievement',
-                  style: textTheme.titleLarge?.copyWith(
-                    color: colorScheme.onSurface,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: AlertDialog(
+        backgroundColor: colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.all(24.0),
+        content: SizedBox(
+          width: 360,
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Edit Achievement',
+                    style: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // Achievement Name
-                TextFormField(
-                  controller: _achievementNameController,
-                  style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: 'Achievement Name',
-                    icon: Icons.emoji_events,
-                    colorScheme: colorScheme,
-                    errorText: _nameError, // Server error
+                  // Achievement Name
+                  TextFormField(
+                    controller: _achievementNameController,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: 'Achievement Name',
+                      icon: Icons.emoji_events,
+                      colorScheme: colorScheme,
+                      errorText: _nameError, // Server error
+                    ),
+                    validator: (value) {
+                      if (_nameError != null)
+                        return _nameError; // Server error priority
+
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a name';
+                      }
+
+                      // Client-Side Uniqueness (Excluding current item)
+                      final isDuplicate = _existingAchievements.any((item) {
+                        return item.achievementId != currentId &&
+                            item.achievementName?.trim().toLowerCase() ==
+                                value.trim().toLowerCase();
+                      });
+
+                      if (isDuplicate) return 'Name already in use.';
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (_nameError != null) return _nameError; // Server error priority
+                  const SizedBox(height: 16),
 
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a name';
-                    }
+                  // Title
+                  TextFormField(
+                    controller: _achievementTitleController,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: 'Achievement Title',
+                      icon: Icons.title,
+                      colorScheme: colorScheme,
+                      errorText: _titleError, // Server error
+                    ),
+                    validator: (value) {
+                      if (_titleError != null) return _titleError;
 
-                    // Client-Side Uniqueness (Excluding current item)
-                    final isDuplicate = _existingAchievements.any((item) {
-                      return item.achievementId != currentId &&
-                          item.achievementName?.trim().toLowerCase() == value.trim().toLowerCase();
-                    });
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a title';
+                      }
 
-                    if (isDuplicate) return 'Name already in use.';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
+                      // Client-Side Uniqueness (Excluding current item)
+                      final isDuplicate = _existingAchievements.any((item) {
+                        return item.achievementId != currentId &&
+                            item.achievementTitle?.trim().toLowerCase() ==
+                                value.trim().toLowerCase();
+                      });
 
-                // Title
-                TextFormField(
-                  controller: _achievementTitleController,
-                  style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: 'Achievement Title',
-                    icon: Icons.title,
-                    colorScheme: colorScheme,
-                    errorText: _titleError, // Server error
+                      if (isDuplicate) return 'Title already in use.';
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (_titleError != null) return _titleError;
+                  const SizedBox(height: 16),
 
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a title';
-                    }
-
-                    // Client-Side Uniqueness (Excluding current item)
-                    final isDuplicate = _existingAchievements.any((item) {
-                      return item.achievementId != currentId &&
-                          item.achievementTitle?.trim().toLowerCase() == value.trim().toLowerCase();
-                    });
-
-                    if (isDuplicate) return 'Title already in use.';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Description
-                TextFormField(
-                  controller: _achievementDescriptionController,
-                  style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: 'Description',
-                    icon: Icons.description,
-                    colorScheme: colorScheme,
+                  // Description
+                  TextFormField(
+                    controller: _achievementDescriptionController,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: 'Description',
+                      icon: Icons.description,
+                      colorScheme: colorScheme,
+                    ),
+                    maxLines: 3,
+                    validator: (value) =>
+                        value!.isEmpty ? 'Please enter a description' : null,
                   ),
-                  maxLines: 3,
-                  validator: (value) => value!.isEmpty ? 'Please enter a description' : null,
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // Category Icon Dropdown
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedIcon,
-                  dropdownColor: colorScheme.surfaceContainer,
-                  style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: 'Icon',
-                    icon: Icons.photo_library,
-                    colorScheme: colorScheme,
+                  // Category Icon Dropdown
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedIcon,
+                    dropdownColor: colorScheme.surfaceContainer,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: 'Icon',
+                      icon: Icons.photo_library,
+                      colorScheme: colorScheme,
+                    ),
+                    items: iconOptions.map((option) {
+                      return DropdownMenuItem<String>(
+                        value: option['value'] as String,
+                        child: Row(
+                          children: [
+                            Icon(
+                              option['icon'] as IconData,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(option['display'] as String),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setState(() => _selectedIcon = val),
+                    validator: (val) =>
+                        val == null ? 'Please select an icon' : null,
                   ),
-                  items: iconOptions.map((option) {
-                    return DropdownMenuItem<String>(
-                      value: option['value'] as String,
-                      child: Row(
-                        children: [
-                          Icon(
-                            option['icon'] as IconData,
-                            color: colorScheme.onSurfaceVariant,
+                  const SizedBox(height: 16),
+
+                  // Level Dropdown
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedLevel,
+                    dropdownColor: colorScheme.surfaceContainer,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: 'Level',
+                      icon: Icons.signal_cellular_alt,
+                      colorScheme: colorScheme,
+                    ),
+                    items: _levels.map((val) {
+                      return DropdownMenuItem(value: val, child: Text(val));
+                    }).toList(),
+                    onChanged: (val) => setState(() => _selectedLevel = val),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).maybePop(false),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _saveChanges,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(width: 10),
-                          Text(option['display'] as String),
-                        ],
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Save Changes'),
                       ),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => _selectedIcon = val),
-                  validator: (val) => val == null ? 'Please select an icon' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Level Dropdown
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedLevel,
-                  dropdownColor: colorScheme.surfaceContainer,
-                  style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: 'Level',
-                    icon: Icons.signal_cellular_alt,
-                    colorScheme: colorScheme,
+                    ],
                   ),
-                  items: _levels.map((val) {
-                    return DropdownMenuItem(value: val, child: Text(val));
-                  }).toList(),
-                  onChanged: (val) => setState(() => _selectedLevel = val),
-                ),
-                const SizedBox(height: 24),
-
-                // Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _saveChanges,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                          : const Text('Save Changes'),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<bool> _onWillPop() async {
+    final hasChanges =
+        _achievementNameController.text !=
+            widget.achievement['achievement_name'] ||
+        _achievementTitleController.text != widget.achievement['title'] ||
+        _achievementDescriptionController.text !=
+            widget.achievement['description'] ||
+        _selectedIcon != widget.achievement['icon'] ||
+        _selectedLevel != widget.achievement['associated_level'];
+
+    if (!hasChanges) {
+      return true;
+    }
+
+    final shouldDiscard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Changes?'),
+        content: const Text(
+          'You have unsaved changes. Are you sure you want to discard them?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+
+    return shouldDiscard ?? false;
   }
 }

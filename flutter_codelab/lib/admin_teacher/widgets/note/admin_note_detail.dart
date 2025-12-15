@@ -100,9 +100,9 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -147,7 +147,9 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
     int newTotal = 0;
     if (term.isNotEmpty) {
       String htmlContent = md.markdownToHtml(
-          _markdownContent, extensionSet: md.ExtensionSet.gitHubFlavored);
+        _markdownContent,
+        extensionSet: md.ExtensionSet.gitHubFlavored,
+      );
       final pattern = RegExp(
         '(${RegExp.escape(term)})(?![^<]*>)',
         caseSensitive: false,
@@ -184,7 +186,8 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
   void _scrollToMatch(int index) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (index < _matchKeys.length && _matchKeys[index].currentContext != null) {
+      if (index < _matchKeys.length &&
+          _matchKeys[index].currentContext != null) {
         Scrollable.ensureVisible(
           _matchKeys[index].currentContext!,
           duration: const Duration(milliseconds: 300),
@@ -207,7 +210,8 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
   void _prevMatch() {
     if (_totalMatches > 0) {
       setState(() {
-        _currentMatchIndex = (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
+        _currentMatchIndex =
+            (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
       });
       _scrollToMatch(_currentMatchIndex);
     }
@@ -221,8 +225,9 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
       final pdf = pw.Document();
 
       // 1. Parse Markdown and Download Images
-      final List<pw.Widget> contentWidgets =
-          await _buildPdfContent(_markdownContent);
+      final List<pw.Widget> contentWidgets = await _buildPdfContent(
+        _markdownContent,
+      );
 
       // 2. Build the PDF Page
       pdf.addPage(
@@ -326,12 +331,20 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
             );
             widgets.add(pw.SizedBox(height: 10));
           } else {
-            widgets.add(pw.Text("[Image failed to load]",
-                style: const pw.TextStyle(color: PdfColors.red)));
+            widgets.add(
+              pw.Text(
+                "[Image failed to load]",
+                style: const pw.TextStyle(color: PdfColors.red),
+              ),
+            );
           }
         } catch (e) {
-          widgets.add(pw.Text("[Error loading image]",
-              style: const pw.TextStyle(color: PdfColors.red)));
+          widgets.add(
+            pw.Text(
+              "[Error loading image]",
+              style: const pw.TextStyle(color: PdfColors.red),
+            ),
+          );
         }
       }
 
@@ -357,8 +370,10 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
   Widget _buildHighlightedHtml(ColorScheme colorScheme) {
     _matchKeys = [];
 
-    String htmlContent = md.markdownToHtml(_markdownContent,
-        extensionSet: md.ExtensionSet.gitHubFlavored);
+    String htmlContent = md.markdownToHtml(
+      _markdownContent,
+      extensionSet: md.ExtensionSet.gitHubFlavored,
+    );
 
     final String activeBg =
         '#${colorScheme.primary.value.toRadixString(16).substring(2)}';
@@ -373,8 +388,11 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
     if (_searchTerm.isNotEmpty) {
       try {
-        final pattern = RegExp('(${RegExp.escape(_searchTerm)})(?![^<]*>)',
-            caseSensitive: false, multiLine: true);
+        final pattern = RegExp(
+          '(${RegExp.escape(_searchTerm)})(?![^<]*>)',
+          caseSensitive: false,
+          multiLine: true,
+        );
         int matchCounter = 0;
         htmlContent = htmlContent.replaceAllMapped(pattern, (match) {
           final bool isActive = matchCounter == _currentMatchIndex;
@@ -397,7 +415,8 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         if (element.localName == 'pre') {
           final codeText = element.text;
           // Use innerHtml to preserve highlighting spans, wrapped in pre to preserve whitespace
-          final htmlContent = '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
+          final htmlContent =
+              '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
           return Stack(
             children: [
               Container(
@@ -420,8 +439,9 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
                     ),
                     // Recursively handle scroll indices inside the code block
                     customWidgetBuilder: (innerElement) {
-                      if (innerElement.attributes
-                          .containsKey('data-scroll-index')) {
+                      if (innerElement.attributes.containsKey(
+                        'data-scroll-index',
+                      )) {
                         final GlobalKey key = GlobalKey();
                         _matchKeys.add(key);
                         return SizedBox(width: 1, height: 1, key: key);
@@ -437,21 +457,30 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
                 child: InkWell(
                   onTap: () => _openRunPage(codeText),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                        color: colorScheme.primary,
-                        borderRadius: BorderRadius.circular(4)),
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                     child: Row(
                       children: [
-                        Icon(Icons.play_arrow,
-                            size: 14, color: colorScheme.onPrimary),
+                        Icon(
+                          Icons.play_arrow,
+                          size: 14,
+                          color: colorScheme.onPrimary,
+                        ),
                         const SizedBox(width: 4),
-                        Text('Run',
-                            style: TextStyle(
-                                color: colorScheme.onPrimary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold)),
+                        Text(
+                          'Run',
+                          style: TextStyle(
+                            color: colorScheme.onPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -473,14 +502,14 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
           return {
             'border-collapse': 'collapse',
             'width': '100%',
-            'margin-bottom': '15px'
+            'margin-bottom': '15px',
           };
         }
         if (element.localName == 'th' || element.localName == 'td') {
           return {
             'border': '1px solid $borderColor',
             'padding': '8px',
-            'vertical-align': 'top'
+            'vertical-align': 'top',
           };
         }
         return null;
@@ -498,8 +527,10 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyF, control: true): _toggleSearch,
-        const SingleActivator(LogicalKeyboardKey.keyF, meta: true): _toggleSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+            _toggleSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+            _toggleSearch,
       },
       child: Focus(
         focusNode: _pageFocusNode,
@@ -520,197 +551,215 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
             actions: [
               if (!_isLoading) ...[
                 IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh',
+                  onPressed: _fetchContent,
+                ),
+                IconButton(
                   icon: Icon(_isSearching ? Icons.close : Icons.search),
                   tooltip: _isSearching ? 'Close Search' : 'Search (Ctrl+F)',
                   onPressed: _toggleSearch,
                 ),
                 if (widget.isStudent)
-              // --- STUDENT VIEW: DOWNLOAD BUTTON ---
-              _isDownloadingPdf
-                  ? const Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : IconButton(
-                      icon: const Icon(Icons.download),
-                      tooltip: 'Download PDF',
-                      onPressed: _downloadPdf,
-                    )
-            else ...[
-              // --- ADMIN VIEW: EDIT/DELETE ---
-              IconButton(
-                icon: const Icon(Icons.edit),
-                tooltip: 'Edit Note',
-                onPressed: () => _navigateToEdit(),
-              ),
-              IconButton(
-                icon: Icon(Icons.delete, color: colorScheme.error),
-                tooltip: 'Delete Note',
-                onPressed: () =>
-                    DeleteNoteHandler.showDeleteDialog(context, widget.noteId),
-              ),
-            ],
-          ],
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // --- MARKDOWN SOURCE (Hidden for Students) ---
-                      if (!widget.isStudent) ...[
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainerHighest,
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(12),
-                                    topRight: Radius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Markdown Source',
-                                  style: TextStyle(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerLow,
-                                    borderRadius: const BorderRadius.only(
-                                      bottomLeft: Radius.circular(12),
-                                      bottomRight: Radius.circular(12),
-                                    ),
-                                    border: Border.all(
-                                      color: colorScheme.outlineVariant,
-                                    ),
-                                  ),
-                                  child: TextField(
-                                    controller: _readOnlyController,
-                                    readOnly: true,
-                                    maxLines: null,
-                                    expands: true,
-                                    style: TextStyle(
-                                      color: colorScheme.onSurface,
-                                      fontSize: 14,
-                                      fontFamily: 'monospace',
-                                      height: 1.5,
-                                    ),
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.all(16),
-                                    ),
-                                    onTap: () {
-                                      // Redundant check, but good for safety
-                                      if (!widget.isStudent) {
-                                        Future.delayed(
-                                          const Duration(milliseconds: 50),
-                                          () {
-                                            final cursor = _readOnlyController
-                                                .selection.baseOffset;
-                                            _navigateToEdit(cursorIndex: cursor);
-                                          },
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
+                  // --- STUDENT VIEW: DOWNLOAD BUTTON ---
+                  _isDownloadingPdf
+                      ? const Padding(
+                          padding: EdgeInsets.all(12.0),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                        ),
-                        const SizedBox(width: 24),
-                      ],
-
-                      // --- PREVIEW SECTION (Expanded for Students) ---
-                      Expanded(
-                        flex: 1,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerHighest,
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(12),
-                                  topRight: Radius.circular(12),
-                                ),
-                              ),
-                              child: Text(
-                                'Preview',
-                                style: TextStyle(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  // Only allow tap-to-edit for Admins
-                                  if (!widget.isStudent) _navigateToEdit();
-                                },
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerLow,
-                                    borderRadius: const BorderRadius.only(
-                                      bottomLeft: Radius.circular(12),
-                                      bottomRight: Radius.circular(12),
-                                    ),
-                                    border: Border.all(
-                                      color: colorScheme.outlineVariant,
-                                    ),
-                                  ),
-                                  child: SingleChildScrollView(
-                                    child: _buildHighlightedHtml(colorScheme),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.download),
+                          tooltip: 'Download PDF',
+                          onPressed: _downloadPdf,
+                        )
+                else ...[
+                  // --- ADMIN VIEW: EDIT/DELETE ---
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    tooltip: 'Edit Note',
+                    onPressed: () => _navigateToEdit(),
                   ),
-                ),
-                if (_isSearching)
-                  SearchNote(
-                    controller: _searchController,
-                    focusNode: _searchFocusNode,
-                    matchCount: _currentMatchIndex,
-                    totalMatches: _totalMatches,
-                    onNext: _nextMatch,
-                    onPrev: _prevMatch,
-                    onClose: _toggleSearch,
+                  IconButton(
+                    icon: Icon(Icons.delete, color: colorScheme.error),
+                    tooltip: 'Delete Note',
+                    onPressed: () => DeleteNoteHandler.showDeleteDialog(
+                      context,
+                      widget.noteId,
+                    ),
                   ),
+                ],
               ],
-            ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // --- MARKDOWN SOURCE (Hidden for Students) ---
+                          if (!widget.isStudent) ...[
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          colorScheme.surfaceContainerHighest,
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(12),
+                                        topRight: Radius.circular(12),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Markdown Source',
+                                      style: TextStyle(
+                                        color: colorScheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.surfaceContainerLow,
+                                        borderRadius: const BorderRadius.only(
+                                          bottomLeft: Radius.circular(12),
+                                          bottomRight: Radius.circular(12),
+                                        ),
+                                        border: Border.all(
+                                          color: colorScheme.outlineVariant,
+                                        ),
+                                      ),
+                                      child: TextField(
+                                        controller: _readOnlyController,
+                                        readOnly: true,
+                                        maxLines: null,
+                                        expands: true,
+                                        style: TextStyle(
+                                          color: colorScheme.onSurface,
+                                          fontSize: 14,
+                                          fontFamily: 'monospace',
+                                          height: 1.5,
+                                        ),
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.all(16),
+                                        ),
+                                        onTap: () {
+                                          // Redundant check, but good for safety
+                                          if (!widget.isStudent) {
+                                            Future.delayed(
+                                              const Duration(milliseconds: 50),
+                                              () {
+                                                final cursor =
+                                                    _readOnlyController
+                                                        .selection
+                                                        .baseOffset;
+                                                _navigateToEdit(
+                                                  cursorIndex: cursor,
+                                                );
+                                              },
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                          ],
+
+                          // --- PREVIEW SECTION (Expanded for Students) ---
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(12),
+                                      topRight: Radius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Preview',
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      // Only allow tap-to-edit for Admins
+                                      if (!widget.isStudent) _navigateToEdit();
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.surfaceContainerLow,
+                                        borderRadius: const BorderRadius.only(
+                                          bottomLeft: Radius.circular(12),
+                                          bottomRight: Radius.circular(12),
+                                        ),
+                                        border: Border.all(
+                                          color: colorScheme.outlineVariant,
+                                        ),
+                                      ),
+                                      child: SingleChildScrollView(
+                                        child: _buildHighlightedHtml(
+                                          colorScheme,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isSearching)
+                      SearchNote(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        matchCount: _currentMatchIndex,
+                        totalMatches: _totalMatches,
+                        onNext: _nextMatch,
+                        onPrev: _prevMatch,
+                        onClose: _toggleSearch,
+                      ),
+                  ],
+                ),
         ),
       ),
     );

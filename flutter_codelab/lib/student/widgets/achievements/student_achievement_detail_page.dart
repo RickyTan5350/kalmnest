@@ -20,10 +20,12 @@ class StudentAchievementDetailPage extends StatefulWidget {
   });
 
   @override
-  State<StudentAchievementDetailPage> createState() => _StudentAchievementDetailPageState();
+  State<StudentAchievementDetailPage> createState() =>
+      _StudentAchievementDetailPageState();
 }
 
-class _StudentAchievementDetailPageState extends State<StudentAchievementDetailPage> {
+class _StudentAchievementDetailPageState
+    extends State<StudentAchievementDetailPage> {
   late AchievementData _displayData;
   bool _isLoading = true;
   final AchievementApi _api = AchievementApi();
@@ -68,7 +70,7 @@ class _StudentAchievementDetailPageState extends State<StudentAchievementDetailP
   IconData _getIconData(String? iconValue) {
     try {
       final entry = achievementIconOptions.firstWhere(
-            (opt) => opt['value'] == iconValue,
+        (opt) => opt['value'] == iconValue,
         orElse: () => {'icon': Icons.help_outline},
       );
       return entry['icon'] as IconData;
@@ -79,12 +81,18 @@ class _StudentAchievementDetailPageState extends State<StudentAchievementDetailP
 
   Color _getColor(String? iconValue) {
     switch (iconValue) {
-      case 'html': return Colors.orange;
-      case 'css': return Colors.green;
-      case 'javascript': return Colors.yellow;
-      case 'php': return Colors.blue;
-      case 'backend': return Colors.deepPurple;
-      default: return Colors.grey;
+      case 'html':
+        return Colors.orange;
+      case 'css':
+        return Colors.green;
+      case 'javascript':
+        return Colors.yellow;
+      case 'php':
+        return Colors.blue;
+      case 'backend':
+        return Colors.deepPurple;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -106,10 +114,22 @@ class _StudentAchievementDetailPageState extends State<StudentAchievementDetailP
         title: const Text('Achievement Unlocked!'),
         backgroundColor: color.withOpacity(0.2),
         // NO edit button for the student view
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              if (_displayData.achievementId != null) {
+                setState(() => _isLoading = true);
+                _fetchFullDetails(_displayData.achievementId!);
+              }
+            },
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          if(_displayData.achievementId != null) {
+          if (_displayData.achievementId != null) {
             await _fetchFullDetails(_displayData.achievementId!);
           }
         },
@@ -155,9 +175,10 @@ class _StudentAchievementDetailPageState extends State<StudentAchievementDetailP
               _isLoading
                   ? const LinearProgressIndicator()
                   : Text(
-                _displayData.achievementDescription ?? 'Description not available.',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
+                      _displayData.achievementDescription ??
+                          'Description not available.',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
 
               const Divider(height: 30),
 
@@ -166,11 +187,19 @@ class _StudentAchievementDetailPageState extends State<StudentAchievementDetailP
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : Column(
-                children: [
-                  _buildInfoRow(context, 'Created By', _displayData.creatorName ?? 'N/A'),
-                  _buildInfoRow(context, 'Topic Icon', _displayData.icon ?? 'N/A'),
-                ],
-              ),
+                      children: [
+                        _buildInfoRow(
+                          context,
+                          'Created By',
+                          _displayData.creatorName ?? 'N/A',
+                        ),
+                        _buildInfoRow(
+                          context,
+                          'Topic Icon',
+                          _displayData.icon ?? 'N/A',
+                        ),
+                      ],
+                    ),
             ],
           ),
         ),

@@ -40,14 +40,14 @@ class GridLayoutView extends StatelessWidget {
           final GlobalKey key = itemKeys.putIfAbsent(id, () => GlobalKey());
 
           return Container(
-              key: key,
-              child: _buildAchievementCard(
-                context,
-                item,
-                originalItem: originalItem, // <-- Pass the full object
-                isSelected: isSelected,
-                onToggle: () => onToggleSelection(id),
-              )
+            key: key,
+            child: _buildAchievementCard(
+              context,
+              item,
+              originalItem: originalItem, // <-- Pass the full object
+              isSelected: isSelected,
+              onToggle: () => onToggleSelection(id),
+            ),
           );
         },
       ),
@@ -55,12 +55,12 @@ class GridLayoutView extends StatelessWidget {
   }
 
   Widget _buildAchievementCard(
-      BuildContext context,
-      Map<String, dynamic> item,{
-        required AchievementData originalItem, // <-- Receive full object
-        required bool isSelected,
-        required VoidCallback onToggle,
-      }) {
+    BuildContext context,
+    Map<String, dynamic> item, {
+    required AchievementData originalItem, // <-- Receive full object
+    required bool isSelected,
+    required VoidCallback onToggle,
+  }) {
     final String title = item['title'];
     final IconData icon = item['icon'];
     final Color color = item['color'];
@@ -71,7 +71,9 @@ class GridLayoutView extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.outline.withOpacity(0.3),
           width: isSelected ? 2.0 : 1.0,
         ),
         borderRadius: BorderRadius.circular(12.0),
@@ -99,10 +101,7 @@ class GridLayoutView extends StatelessWidget {
                 padding: const EdgeInsets.all(16.0),
                 child: FittedBox(
                   fit: BoxFit.contain,
-                  child: Icon(
-                    icon,
-                    color: color.withOpacity(0.1),
-                  ),
+                  child: Icon(icon, color: color.withOpacity(0.1)),
                 ),
               ),
             ),
@@ -137,7 +136,59 @@ class GridLayoutView extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (item['unlockedCount'] != null &&
+                                item['totalStudents'] != null)
+                              Text(
+                                '${item['unlockedCount']} / ${item['totalStudents']} Students',
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (item['unlockedCount'] != null &&
+                          item['totalStudents'] != null &&
+                          item['totalStudents'] > 0)
+                        SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween<double>(
+                              begin: 0.0,
+                              end:
+                                  (item['unlockedCount'] as int) /
+                                  (item['totalStudents'] as int),
+                            ),
+                            duration: const Duration(milliseconds: 1500),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, value, _) =>
+                                CircularProgressIndicator(
+                                  value: value,
+                                  strokeWidth: 3,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    color,
+                                  ),
+                                ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],

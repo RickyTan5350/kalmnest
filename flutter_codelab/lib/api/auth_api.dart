@@ -58,11 +58,17 @@ class AuthApi {
           errorMessage = errors['errors']['email'][0];
         }
         throw Exception(errorMessage);
+      } else if (response.statusCode == 301 || response.statusCode == 302) {
+        throw Exception(
+          'Server Error ${response.statusCode}: Redirecting to ${response.headers['location']}',
+        );
       } else {
-        print('Server Error ${response.statusCode}: ${response.body}');
-        throw Exception('Server Error ${response.statusCode}');
+        throw Exception(
+          'Server Error ${response.statusCode}: ${response.body}',
+        );
       }
     } catch (e) {
+      print('DEBUG: Login Error caught: $e');
       rethrow;
     }
   }

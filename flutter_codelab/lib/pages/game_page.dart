@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/play_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/play_game_page.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/game_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/edit_game_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/create_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/edit_game_page.dart';
 
 class GamePage extends StatefulWidget {
   final String userRole; // Current user role
@@ -45,8 +45,11 @@ class _GamePageState extends State<GamePage> {
   List<LevelModel> _applySearch(List<LevelModel> levels, String query) {
     if (query.isEmpty) return levels;
     return levels
-        .where((level) =>
-            (level.levelName ?? '').toLowerCase().contains(query.toLowerCase()))
+        .where(
+          (level) => (level.levelName ?? '').toLowerCase().contains(
+            query.toLowerCase(),
+          ),
+        )
         .toList();
   }
 
@@ -68,8 +71,9 @@ class _GamePageState extends State<GamePage> {
   }
 
   void showSnackBar(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 
   void _onAddLevelPressed() {
@@ -134,6 +138,14 @@ class _GamePageState extends State<GamePage> {
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(color: colors.onSurface),
                     ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh Levels',
+                      onPressed: () {
+                        fetchLevels(topic: _selectedTopic);
+                      },
+                    ),
                     const Spacer(),
                     if (!isStudent)
                       ElevatedButton(
@@ -185,116 +197,116 @@ class _GamePageState extends State<GamePage> {
                   child: _loading
                       ? const Center(child: CircularProgressIndicator())
                       : _filteredLevels.isEmpty
-                          ? const Center(child: Text('No levels found'))
-                          : ListView.builder(
-                              itemCount: _filteredLevels.length,
-                              itemBuilder: (context, index) {
-                                final level = _filteredLevels[index];
-                                final levelTypeName =
-                                    level.levelTypeName ?? 'Unknown';
+                      ? const Center(child: Text('No levels found'))
+                      : ListView.builder(
+                          itemCount: _filteredLevels.length,
+                          itemBuilder: (context, index) {
+                            final level = _filteredLevels[index];
+                            final levelTypeName =
+                                level.levelTypeName ?? 'Unknown';
 
-                                return ListTile(
-                                  title: Text(level.levelName ?? '',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  subtitle: Text(levelTypeName),
-                                  leading: const Icon(Icons.videogame_asset),
-                                  trailing: isStudent
-                                      ? null
-                                      : Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.edit,
-                                                color: Colors.blue,
-                                              ),
-                                              onPressed: () async {
-                                                final currentLevel =
-                                                    await GameAPI.fetchLevelById(
-                                                      level.levelId!,
-                                                    );
-                                                if (currentLevel == null) {
-                                                  showSnackBar(
-                                                    context,
-                                                    "Failed to load level data",
-                                                    Colors.red,
-                                                  );
-                                                  return;
-                                                }
-
-                                                await showEditGamePage(
-                                                  context: context,
-                                                  showSnackBar: showSnackBar,
-                                                  level: currentLevel,
-                                                  userRole: widget.userRole,
+                            return ListTile(
+                              title: Text(
+                                level.levelName ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(levelTypeName),
+                              leading: const Icon(Icons.videogame_asset),
+                              trailing: isStudent
+                                  ? null
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            color: Colors.blue,
+                                          ),
+                                          onPressed: () async {
+                                            final currentLevel =
+                                                await GameAPI.fetchLevelById(
+                                                  level.levelId!,
                                                 );
-
-                                                fetchLevels(topic: _selectedTopic);
-                                              },
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.delete,
-                                                color: Colors.red,
-                                              ),
-                                              onPressed: () {
-                                                showDialog(
-                                                  context: context,
-                                                  builder: (context) =>
-                                                      AlertDialog(
-                                                    title: const Text(
-                                                      'Delete Level',
-                                                    ),
-                                                    content: const Text(
-                                                      'Are you sure you want to delete this level?',
-                                                    ),
-                                                    actions: [
-                                                      TextButton(
-                                                        child:
-                                                            const Text('Cancel'),
-                                                        onPressed: () =>
-                                                            Navigator.pop(
-                                                                context),
-                                                      ),
-                                                      TextButton(
-                                                        child: const Text(
-                                                          'Delete',
-                                                          style: TextStyle(
-                                                            color: Colors.red,
-                                                          ),
-                                                        ),
-                                                        onPressed: () {
-                                                          Navigator.pop(context);
-                                                          deleteLevel(
-                                                            level.levelId!,
-                                                          );
-                                                        },
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                  onTap: isStudent
-                                      ? () async {
-                                          final currentLevel =
-                                              await GameAPI.fetchLevelById(
-                                                level.levelId!,
+                                            if (currentLevel == null) {
+                                              showSnackBar(
+                                                context,
+                                                "Failed to load level data",
+                                                Colors.red,
                                               );
-                                          showPlayGamePage(
-                                            context: context,
-                                            showSnackBar: showSnackBar,
-                                            level: currentLevel!,
-                                            userRole: widget.userRole,
+                                              return;
+                                            }
+
+                                            await showEditGamePage(
+                                              context: context,
+                                              showSnackBar: showSnackBar,
+                                              level: currentLevel,
+                                              userRole: widget.userRole,
+                                            );
+
+                                            fetchLevels(topic: _selectedTopic);
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete,
+                                            color: Colors.red,
+                                          ),
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: const Text(
+                                                  'Delete Level',
+                                                ),
+                                                content: const Text(
+                                                  'Are you sure you want to delete this level?',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    child: const Text('Cancel'),
+                                                    onPressed: () =>
+                                                        Navigator.pop(context),
+                                                  ),
+                                                  TextButton(
+                                                    child: const Text(
+                                                      'Delete',
+                                                      style: TextStyle(
+                                                        color: Colors.red,
+                                                      ),
+                                                    ),
+                                                    onPressed: () {
+                                                      Navigator.pop(context);
+                                                      deleteLevel(
+                                                        level.levelId!,
+                                                      );
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                              onTap: isStudent
+                                  ? () async {
+                                      final currentLevel =
+                                          await GameAPI.fetchLevelById(
+                                            level.levelId!,
                                           );
-                                        }
-                                      : null,
-                                );
-                              },
-                            ),
+                                      showPlayGamePage(
+                                        context: context,
+                                        showSnackBar: showSnackBar,
+                                        level: currentLevel!,
+                                        userRole: widget.userRole,
+                                      );
+                                    }
+                                  : null,
+                            );
+                          },
+                        ),
                 ),
               ],
             ),

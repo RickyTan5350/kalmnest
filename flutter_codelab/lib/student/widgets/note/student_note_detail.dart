@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_codelab/api/note_api.dart';
 // Make sure this import path matches where you created the file above
 
+
 import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 import 'package:flutter_codelab/student/widgets/note/pdf_service.dart';
@@ -96,6 +97,12 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
             color: isError ? colorScheme.onError : colorScheme.onSecondary,
           ),
         ),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: isError ? colorScheme.onError : colorScheme.onSecondary,
+          ),
+        ),
         backgroundColor: isError ? colorScheme.error : colorScheme.secondary,
         behavior: SnackBarBehavior.floating,
       ),
@@ -167,6 +174,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (index < _matchKeys.length &&
           _matchKeys[index].currentContext != null) {
+      if (index < _matchKeys.length &&
+          _matchKeys[index].currentContext != null) {
         Scrollable.ensureVisible(
           _matchKeys[index].currentContext!,
           duration: const Duration(milliseconds: 300),
@@ -189,6 +198,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   void _prevMatch() {
     if (_totalMatches > 0) {
       setState(() {
+        _currentMatchIndex =
+            (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
         _currentMatchIndex =
             (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
       });
@@ -307,7 +318,13 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                             horizontal: 12,
                             vertical: 6,
                           ),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
+                            color: colorScheme.primary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                             color: colorScheme.primary,
                             borderRadius: BorderRadius.circular(4),
                           ),
@@ -318,7 +335,20 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                                 size: 14,
                                 color: colorScheme.onPrimary,
                               ),
+                              Icon(
+                                Icons.play_arrow,
+                                size: 14,
+                                color: colorScheme.onPrimary,
+                              ),
                               const SizedBox(width: 4),
+                              Text(
+                                'Run',
+                                style: TextStyle(
+                                  color: colorScheme.onPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               Text(
                                 'Run',
                                 style: TextStyle(
@@ -349,12 +379,14 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
             'border-collapse': 'collapse',
             'width': '100%',
             'margin-bottom': '15px',
+            'margin-bottom': '15px',
           };
         }
         if (element.localName == 'th' || element.localName == 'td') {
           return {
             'border': '1px solid $borderColor',
             'padding': '8px',
+            'vertical-align': 'top',
             'vertical-align': 'top',
           };
         }
@@ -370,6 +402,10 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
     return CallbackShortcuts(
       bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+            _toggleSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+            _toggleSearch,
         const SingleActivator(LogicalKeyboardKey.keyF, control: true):
             _toggleSearch,
         const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
@@ -392,10 +428,23 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              title: Text(
+                _currentTitle,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               backgroundColor: colorScheme.surface,
               iconTheme: IconThemeData(color: colorScheme.onSurface),
               elevation: 0,
               actions: [
+                if (!_isLoading)
+                  IconButton(
+                    icon: Icon(Icons.refresh, color: colorScheme.onSurface),
+                    tooltip: 'Refresh',
+                    onPressed: _fetchContent,
+                  ),
                 IconButton(
                   icon: Icon(_isSearching ? Icons.close : Icons.search),
                   tooltip: _isSearching ? 'Close Search' : 'Search (Ctrl+F)',
@@ -413,6 +462,14 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                           ),
                         ),
                       )
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      )
                     : IconButton(
                         icon: const Icon(Icons.download),
                         onPressed: _downloadPdf,
@@ -421,6 +478,11 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
               ],
             ),
             body: _isLoading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: colorScheme.primary,
+                    ),
+                  )
                 ? Center(
                     child: CircularProgressIndicator(
                       color: colorScheme.primary,

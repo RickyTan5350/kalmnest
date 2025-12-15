@@ -323,8 +323,18 @@ class _StudentViewAchievementsPageState
                           16.0,
                           16.0,
                         ),
-                        child: Text(
-                          "Showing ${uiData.length} unlocked achievements",
+                        child: Row(
+                          children: [
+                            Text(
+                              "Showing ${uiData.length} unlocked achievements",
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.refresh),
+                              onPressed: _loadData,
+                              tooltip: "Refresh List",
+                            ),
+                          ],
                         ),
                       ),
                     ],

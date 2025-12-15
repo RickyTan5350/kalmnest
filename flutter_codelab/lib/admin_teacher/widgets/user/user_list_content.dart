@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/user_api.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'user_detail_page.dart';
+
 class UserListContent extends StatefulWidget {
   const UserListContent({super.key});
 
@@ -95,7 +96,8 @@ class _UserListContentState extends State<UserListContent> {
             controller: _searchController,
             hintText: 'Search users...',
             padding: const WidgetStatePropertyAll<EdgeInsets>(
-                EdgeInsets.symmetric(horizontal: 16.0)),
+              EdgeInsets.symmetric(horizontal: 16.0),
+            ),
             leading: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
             trailing: [
               if (_searchController.text.isNotEmpty)
@@ -106,6 +108,11 @@ class _UserListContentState extends State<UserListContent> {
                     _fetchUsers();
                   },
                 ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _fetchUsers,
+                tooltip: 'Refresh',
+              ),
               IconButton(
                 icon: Icon(Icons.arrow_forward, color: colorScheme.primary),
                 onPressed: _fetchUsers,
@@ -123,7 +130,7 @@ class _UserListContentState extends State<UserListContent> {
             children: [
               Text('Filters:', style: textTheme.labelLarge),
               const SizedBox(width: 12),
-              
+
               // Role Filters
               ..._roles.map((role) {
                 final isSelected = _selectedRole == role;
@@ -141,10 +148,13 @@ class _UserListContentState extends State<UserListContent> {
                   ),
                 );
               }),
-              
+
               SizedBox(
-                height: 24, 
-                child: VerticalDivider(width: 24, color: colorScheme.outlineVariant)
+                height: 24,
+                child: VerticalDivider(
+                  width: 24,
+                  color: colorScheme.outlineVariant,
+                ),
               ),
 
               // Status Filters
@@ -161,7 +171,9 @@ class _UserListContentState extends State<UserListContent> {
                       });
                       _fetchUsers();
                     },
-                    avatar: isSelected ? const Icon(Icons.check, size: 18) : null,
+                    avatar: isSelected
+                        ? const Icon(Icons.check, size: 18)
+                        : null,
                   ),
                 );
               }),
@@ -177,105 +189,125 @@ class _UserListContentState extends State<UserListContent> {
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : _errorMessage != null
-                  ? Center(child: Text('Error: $_errorMessage', style: TextStyle(color: colorScheme.error)))
-                  : _users.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.search_off, size: 64, color: colorScheme.outline),
-                              const SizedBox(height: 16),
-                              Text('No users found', style: textTheme.titleMedium),
-                            ],
+              ? Center(
+                  child: Text(
+                    'Error: $_errorMessage',
+                    style: TextStyle(color: colorScheme.error),
+                  ),
+                )
+              : _users.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 64,
+                        color: colorScheme.outline,
+                      ),
+                      const SizedBox(height: 16),
+                      Text('No users found', style: textTheme.titleMedium),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: _users.length,
+                  itemBuilder: (context, index) {
+                    final user = _users[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      clipBehavior: Clip.hardEdge,
+                      elevation:
+                          0, // Reduced elevation for cleaner look inside the main card
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(color: colorScheme.outlineVariant),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        // --- Added Hover Effects ---
+                        hoverColor: colorScheme.primary.withOpacity(0.08),
+                        splashColor: colorScheme.primary.withOpacity(0.12),
+                        mouseCursor: SystemMouseCursors.click,
+
+                        leading: CircleAvatar(
+                          backgroundColor: _getRoleColor(
+                            user.roleName,
+                            colorScheme,
                           ),
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.zero,
-                          itemCount: _users.length,
-                          itemBuilder: (context, index) {
-                            final user = _users[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              clipBehavior: Clip.hardEdge,
-                              elevation: 0, // Reduced elevation for cleaner look inside the main card
-                              shape: RoundedRectangleBorder(
-                                side: BorderSide(color: colorScheme.outlineVariant),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: ListTile(
-                                // --- Added Hover Effects ---
-                                hoverColor: colorScheme.primary.withOpacity(0.08),
-                                splashColor: colorScheme.primary.withOpacity(0.12),
-                                mouseCursor: SystemMouseCursors.click,
-                                
-                                leading: CircleAvatar(
-                                  backgroundColor: _getRoleColor(user.roleName, colorScheme),
-                                  foregroundColor: colorScheme.onPrimary,
-                                  child: Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : '?'),
+                          foregroundColor: colorScheme.onPrimary,
+                          child: Text(
+                            user.name.isNotEmpty
+                                ? user.name[0].toUpperCase()
+                                : '?',
+                          ),
+                        ),
+                        title: Text(
+                          user.name,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(user.email, style: textTheme.bodyMedium),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    user.roleName,
+                                    style: textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ),
-                                title: Text(
-                                  user.name,
-                                  style: textTheme.titleMedium?.copyWith(
+                                const SizedBox(width: 8),
+                                Text(
+                                  user.accountStatus.toUpperCase(),
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: user.accountStatus == 'active'
+                                        ? Colors.green
+                                        : colorScheme.error,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Text(user.email, style: textTheme.bodyMedium),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.surfaceContainerHighest,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            user.roleName,
-                                            style: textTheme.labelSmall?.copyWith(
-                                              color: colorScheme.onSurfaceVariant,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          user.accountStatus.toUpperCase(),
-                                          style: textTheme.labelSmall?.copyWith(
-                                            color: user.accountStatus == 'active' 
-                                                ? Colors.green 
-                                                : colorScheme.error,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                isThreeLine: true,
-onTap: () async {
-                                  // Use await to wait for the detail page to close
-                                  final bool? deleted = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => UserDetailPage(
-                                        userId: user.id, 
-                                        userName: user.name
-                                      ),
-                                    ),
-                                  );
-                                  // If the result is true (meaning user was deleted), refresh the list
-                                  if (deleted == true) {
-                                    _fetchUsers();
-                                  }
-                                },
-                              ),
-                            );
-                          },
+                              ],
+                            ),
+                          ],
                         ),
+                        isThreeLine: true,
+                        onTap: () async {
+                          // Use await to wait for the detail page to close
+                          final bool? deleted = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UserDetailPage(
+                                userId: user.id,
+                                userName: user.name,
+                              ),
+                            ),
+                          );
+                          // If the result is true (meaning user was deleted), refresh the list
+                          if (deleted == true) {
+                            _fetchUsers();
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );
