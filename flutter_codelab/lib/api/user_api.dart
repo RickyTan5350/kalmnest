@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/api/api_constants.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 class UserApi {
   // Existing base URL for single user operations
@@ -18,6 +18,8 @@ class UserApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      // Only add Host header if NOT using a custom URL
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'backend_services.test',
     };
 
     final token = await AuthApi.getToken();
@@ -43,7 +45,9 @@ class UserApi {
         url,
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
-          'Accept': 'application/json',
+          // Only add Host header if NOT using a custom URL
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
         },
         body: jsonEncode(data.toJson()),
       );
@@ -147,6 +151,9 @@ class UserApi {
         headers: <String, String>{
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          // Only add Host header if NOT using a custom URL
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
         },
       );
 
@@ -199,6 +206,9 @@ class UserApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token',
+          // Only add Host header if NOT using a custom URL
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
         },
         body: jsonEncode(data), // Send the update map
       );
