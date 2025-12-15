@@ -19,7 +19,7 @@ class UserApi {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
       // Only add Host header if NOT using a custom URL
-      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'backend_services.test',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     final token = await AuthApi.getToken();
@@ -46,8 +46,7 @@ class UserApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           // Only add Host header if NOT using a custom URL
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
+          if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
         },
         body: jsonEncode(data.toJson()),
       );
@@ -152,8 +151,7 @@ class UserApi {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
           // Only add Host header if NOT using a custom URL
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
+          if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
         },
       );
 
@@ -207,8 +205,7 @@ class UserApi {
           'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token',
           // Only add Host header if NOT using a custom URL
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
+          if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
         },
         body: jsonEncode(data), // Send the update map
       );
