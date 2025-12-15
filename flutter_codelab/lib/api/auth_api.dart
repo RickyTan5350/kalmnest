@@ -3,15 +3,16 @@ import 'package:flutter_codelab/student/services/local_achievement_storage.dart'
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'package:flutter_codelab/api/api_constants.dart';
+
 // Ensure this matches your emulator/device URL
-const String _authApiUrl = 'https://backend_services.test/api';
+const String _authApiUrl = ApiConstants.baseUrl;
 
 const _storage = FlutterSecureStorage();
 const String _tokenKey = 'auth_token';
 const String _userKey = 'user_data';
 
 class AuthApi {
-
   // 1. LOGIN
   Future<Map<String, dynamic>> login(String email, String password) async {
     final loginUrl = '$_authApiUrl/login';
@@ -26,22 +27,29 @@ class AuthApi {
         Uri.parse(loginUrl),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json',
         },
         body: body,
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final token = data['token'];
+        try {
+          final data = jsonDecode(response.body);
+          final token = data['token'];
 
-        // The 'user' object from backend now includes the nested 'role' object
-        // We store this entire structure securely.
-        final userDataJson = jsonEncode(data['user']);
+          // The 'user' object from backend now includes the nested 'role' object
+          // We store this entire structure securely.
+          final userDataJson = jsonEncode(data['user']);
 
-        await _storage.write(key: _tokenKey, value: token);
-        await _storage.write(key: _userKey, value: userDataJson);
+          await _storage.write(key: _tokenKey, value: token);
+          await _storage.write(key: _userKey, value: userDataJson);
 
-        return data['user'] as Map<String, dynamic>;
+          return data['user'] as Map<String, dynamic>;
+        } catch (e) {
+          print('JSON Decode Error: $e');
+          print('Response Body: ${response.body}');
+          throw Exception('Failed to decode server response. See logs.');
+        }
       } else if (response.statusCode == 422) {
         final errors = jsonDecode(response.body);
         // Safely extract email error or provide default
@@ -51,6 +59,7 @@ class AuthApi {
         }
         throw Exception(errorMessage);
       } else {
+        print('Server Error ${response.statusCode}: ${response.body}');
         throw Exception('Server Error ${response.statusCode}');
       }
     } catch (e) {
@@ -100,5 +109,5 @@ class AuthApi {
     // Clear the local achievement cache specific to the user
     final localStorage = LocalAchievementStorage();
     await localStorage.clearLocalCache(userId);
-}
+  }
 }
