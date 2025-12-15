@@ -133,7 +133,6 @@ class _CreateNotePageState extends State<CreateNotePage> {
     // 2. Add to UI immediately
     setState(() {
       for (var file in pickedFiles) {
-        print('Uploaded note path: ${file.path}');
         _attachments
             .add(UploadedAttachment(localFile: file, isUploading: true));
       }
@@ -203,7 +202,6 @@ class _CreateNotePageState extends State<CreateNotePage> {
         content: fileContent,
         fileName: fileName,
       );
-      print('Uploaded note path: ${markdownFile.path}');
 
       // 2. Collect IDs of successfully uploaded files
       List<String> attachmentIds = _attachments
