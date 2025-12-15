@@ -261,4 +261,21 @@ class AchievementApi {
       throw Exception('Failed to fetch user progress');
     }
   }
+  Future<List<Map<String, dynamic>>> fetchAchievementStudents(String achievementId) async {
+    final url = '$_apiUrl/$achievementId/students';
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      if (response.statusCode == 200) {
+        List<dynamic> jsonResponse = jsonDecode(response.body);
+        return List<Map<String, dynamic>>.from(jsonResponse);
+      } else {
+        throw Exception('Failed to load students: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching achievement students: $e');
+      throw Exception('Failed to load students: $e');
+    }
+  }
 }

@@ -101,6 +101,7 @@ Route::prefix('users')->group(function () {
 
         // Change '/achievements/{id}' to '/{id}' (This maps to /api/achievements/{id})
         Route::get('/{id}', [AchievementController::class, 'getAchievement']);
+        Route::get('/{id}/students', [AchievementController::class, 'getAchievementStudents']);
     });
 
     // --- Notes Module ---
