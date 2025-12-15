@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Level;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
 use App\Models\level_type;
 use Illuminate\Http\Request;
 use Exception;

@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
 
 class FileApi {
   // Use 10.0.2.2 for Android Emulator, or your machine's IP for real devices.
@@ -12,9 +11,7 @@ class FileApi {
 
   /// 1. IMMEDIATE UPLOAD: Uploads a single file and returns ID + URL
   /// Returns a Map: {'id': 'uuid...', 'url': 'http://.../storage/img.png'}
-  Future<Map<String, dynamic>?> uploadSingleAttachment(
-    PlatformFile file,
-  ) async {
+  Future<Map<String, dynamic>?> uploadSingleAttachment(PlatformFile file) async {
     if (file.path == null) return null;
 
     var uri = Uri.parse('$_baseUrl/files/upload-independent');
@@ -22,16 +19,9 @@ class FileApi {
 
     // --- FIX: Tell the server we want JSON, not HTML ---
     request.headers['Accept'] = 'application/json';
-    // Only add Host header if NOT using a custom URL
-    if (ApiConstants.customBaseUrl.isEmpty)
-      request.headers['Host'] = 'backend_services.test';
 
     request.files.add(
-      await http.MultipartFile.fromPath(
-        'file',
-        file.path!,
-        filename: file.name,
-      ),
+      await http.MultipartFile.fromPath('file', file.path!, filename: file.name),
     );
 
     try {
@@ -54,7 +44,11 @@ class FileApi {
           fullUrl = rawUrl;
         }
 
-        return {'id': json['file_id'], 'url': fullUrl};
+        return {
+          'id': json['file_id'],
+          'url': fullUrl,
+        };
+
       } else {
         // Now you will see the REAL error message here (e.g. "File too large")
         print('FAILED: ${response.body}');
@@ -79,8 +73,6 @@ class FileApi {
 
     // --- FIX: Add header here too for consistency ---
     request.headers['Accept'] = 'application/json';
-    if (ApiConstants.customBaseUrl.isEmpty)
-      request.headers['Host'] = 'backend_services.test';
 
     request.fields['title'] = title;
     request.fields['topic'] = topic;
