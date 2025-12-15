@@ -28,13 +28,19 @@ class _AchievementPageState extends State<AchievementPage> {
     'PHP',
     'Level',
     'Quiz',
-   
   ]; // Added 'All'
   String _selectedTopic = 'All'; // Default to 'All'
   ViewLayout _viewLayout = ViewLayout.grid;
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   // NEW: State for Search Text
   String _searchText = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +98,7 @@ class _AchievementPageState extends State<AchievementPage> {
                 SizedBox(
                   width: 300,
                   child: SearchBar(
+                    controller: _searchController,
                     hintText: "Search titles or descriptions...",
                     // NEW: Update state on submit or change
                     onChanged: (value) {
@@ -105,6 +112,16 @@ class _AchievementPageState extends State<AchievementPage> {
                       });
                     },
                     trailing: <Widget>[
+                      if (_searchText.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchText = '';
+                            });
+                          },
+                        ),
                       IconButton(
                         icon: const Icon(Icons.search),
                         onPressed: () {

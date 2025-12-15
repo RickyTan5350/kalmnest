@@ -57,11 +57,49 @@ class AchievementController extends Controller
             return response()->json(['message' => 'Access Denied: Only staff can view the full achievement list.'], 403);
         }
 
+        $totalStudents = DB::table('users')
+            ->join('roles', 'users.role_id', '=', 'roles.role_id')
+            ->where('roles.role_name', 'Student')
+            ->count();
+
         $achievementBrief = DB::table('achievements')
-                                ->select('achievement_id', 'achievement_name', 'title', 'icon', 'description')
-                                ->get();
+            ->selectRaw('
+                achievements.achievement_id, 
+                achievements.achievement_name, 
+                achievements.title, 
+                achievements.icon, 
+                achievements.description,
+                (SELECT COUNT(*) FROM achievement_user WHERE achievement_user.achievement_id = achievements.achievement_id) as unlocked_count
+            ')
+            ->get();
+
+        // Add total_students to every item
+        foreach ($achievementBrief as $achievement) {
+            $achievement->total_students = $totalStudents;
+        }
 
         return response()->json($achievementBrief);
+    }
+
+    public function getAchievementStudents($id)
+    {
+        if (!$this->isAdminOrTeacher()) {
+            return response()->json(['message' => 'Access Denied.'], 403);
+        }
+
+        $students = DB::table('achievement_user')
+            ->join('users', 'achievement_user.user_id', '=', 'users.user_id')
+            ->where('achievement_user.achievement_id', $id)
+            ->select(
+                'users.user_id',
+                'users.name',
+                'users.email',
+                'achievement_user.created_at as unlocked_at'
+            )
+            ->orderBy('achievement_user.created_at', 'desc')
+            ->get();
+
+        return response()->json($students);
     }
 
     public function getAchievement($id) 
@@ -107,6 +145,20 @@ class AchievementController extends Controller
 
         if (!$achievement) {
             return response()->json(['message' => 'Not found'], 404);
+        }
+
+        if (!$this->isStudent()) {
+             $unlockedCount = DB::table('achievement_user')
+                ->where('achievement_id', $id)
+                ->count();
+
+            $totalStudents = DB::table('users')
+                ->join('roles', 'users.role_id', '=', 'roles.role_id')
+                ->where('roles.role_name', 'Student')
+                ->count();
+
+            $achievement->unlocked_count = $unlockedCount;
+            $achievement->total_students = $totalStudents;
         }
 
         return response()->json($achievement);

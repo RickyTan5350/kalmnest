@@ -1,8 +1,10 @@
 // lib/pages/achievement_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/api/achievement_api.dart'; // Import API
+import 'package:flutter_codelab/api/achievement_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_achievement_students_page.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'admin_edit_achievement_page.dart';
 
 class AdminAchievementDetailPage extends StatefulWidget {
@@ -60,6 +62,55 @@ class _AdminAchievementDetailPageState
     }
   }
 
+  Future<void> _deleteAchievement() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Achievement?'),
+        content: Text(
+          'Are you sure you want to delete "${_displayData.achievementTitle}"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ButtonStyle(
+              foregroundColor: WidgetStateProperty.all(Colors.red),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await _api.deleteAchievements({_displayData.achievementId!});
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Achievement deleted successfully.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop(true); // Return true to indicate change
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting achievement: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   // ... Keep your helper methods (_getIconData, _getColor, _formatDate) here ...
   IconData _getIconData(String? iconValue) {
     try {
@@ -102,9 +153,27 @@ class _AdminAchievementDetailPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Achievement Details'),
+        title: BreadcrumbNavigation(
+          items: [
+            BreadcrumbItem(
+              label: 'Achievements',
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            const BreadcrumbItem(label: 'Details'),
+          ],
+        ),
         backgroundColor: color.withOpacity(0.2),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              if (_displayData.achievementId != null) {
+                setState(() => _isLoading = true);
+                _fetchFullDetails(_displayData.achievementId!);
+              }
+            },
+            tooltip: 'Refresh',
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
 
@@ -136,6 +205,15 @@ class _AdminAchievementDetailPageState
                 _fetchFullDetails(_displayData.achievementId!);
               }
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: () {
+              if (_displayData.achievementId != null) {
+                _deleteAchievement();
+              }
+            },
+            tooltip: 'Delete Achievement',
           ),
         ],
       ),
@@ -176,37 +254,76 @@ class _AdminAchievementDetailPageState
               ),
               const SizedBox(height: 32),
 
-              // Progress
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Students Unlocked',
-                    style: Theme.of(context).textTheme.titleMedium,
+              // Progress (Clickable)
+              InkWell(
+                onTap: () {
+                  if (_displayData.achievementId != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminAchievementStudentsPage(
+                          achievementId: _displayData.achievementId!,
+                          achievementName:
+                              _displayData.achievementTitle ?? 'Achievement',
+                        ),
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(8.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Students Unlocked',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(
+                            (_displayData.unlockedCount != null &&
+                                    _displayData.totalStudents != null)
+                                ? '${_displayData.unlockedCount} / ${_displayData.totalStudents}'
+                                : '${(widget.progress * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Progress Bar
+                      if (_isLoading)
+                        const LinearProgressIndicator()
+                      else
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(
+                            begin: 0.0,
+                            end:
+                                (_displayData.unlockedCount != null &&
+                                    _displayData.totalStudents != null &&
+                                    _displayData.totalStudents! > 0)
+                                ? (_displayData.unlockedCount! /
+                                      _displayData.totalStudents!)
+                                : widget.progress,
+                          ),
+                          duration: const Duration(milliseconds: 1500),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, _) =>
+                              LinearProgressIndicator(
+                                value: value,
+                                minHeight: 10,
+                                borderRadius: BorderRadius.circular(5),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  color,
+                                ),
+                                backgroundColor: color.withOpacity(0.1),
+                              ),
+                        ),
+                    ],
                   ),
-                  Text(
-                    (_displayData.unlockedCount != null &&
-                            _displayData.totalStudents != null)
-                        ? '${_displayData.unlockedCount} / ${_displayData.totalStudents}'
-                        : '${(widget.progress * 100).toStringAsFixed(0)}%',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (_isLoading)
-                const LinearProgressIndicator()
-              else
-                LinearProgressIndicator(
-                  value:
-                      (_displayData.unlockedCount != null &&
-                          _displayData.totalStudents != null &&
-                          _displayData.totalStudents! > 0)
-                      ? (_displayData.unlockedCount! /
-                            _displayData.totalStudents!)
-                      : widget.progress,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
                 ),
+              ),
 
               const SizedBox(height: 32),
 
