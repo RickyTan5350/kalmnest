@@ -561,10 +561,17 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               const SizedBox(height: 4.0),
-              LinearProgressIndicator(
-                value: displayProgress,
-                backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(iconColor),
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.0, end: displayProgress),
+                duration: const Duration(milliseconds: 1500),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, _) => LinearProgressIndicator(
+                  value: value,
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(iconColor),
+                  borderRadius: BorderRadius.circular(4.0),
+                  minHeight: 4.0,
+                ),
               ),
               const SizedBox(height: 2.0),
             ],
