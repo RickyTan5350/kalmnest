@@ -61,6 +61,55 @@ class _AdminAchievementDetailPageState
     }
   }
 
+  Future<void> _deleteAchievement() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Achievement?'),
+        content: Text(
+          'Are you sure you want to delete "${_displayData.achievementTitle}"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ButtonStyle(
+              foregroundColor: WidgetStateProperty.all(Colors.red),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await _api.deleteAchievements({_displayData.achievementId!});
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Achievement deleted successfully.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop(true); // Return true to indicate change
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting achievement: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   // ... Keep your helper methods (_getIconData, _getColor, _formatDate) here ...
   IconData _getIconData(String? iconValue) {
     try {
@@ -137,6 +186,15 @@ class _AdminAchievementDetailPageState
                 _fetchFullDetails(_displayData.achievementId!);
               }
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: () {
+              if (_displayData.achievementId != null) {
+                _deleteAchievement();
+              }
+            },
+            tooltip: 'Delete Achievement',
           ),
         ],
       ),
