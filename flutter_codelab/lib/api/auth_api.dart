@@ -2,11 +2,9 @@ import 'dart:convert';
 import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
-import 'package:flutter_codelab/api/api_constants.dart';
-
-// Ensure this matches your emulator/device URL
-const String _authApiUrl = ApiConstants.baseUrl;
+final String _authApiUrl = ApiConstants.baseUrl;
 
 const _storage = FlutterSecureStorage();
 const String _tokenKey = 'auth_token';
@@ -23,46 +21,62 @@ class AuthApi {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse(loginUrl),
-        headers: <String, String>{
+      print('DEBUG: Sending login request to $loginUrl');
+
+      // Use http.Request instead of http.post to control redirects
+      final client = http.Client();
+      final request = http.Request('POST', Uri.parse(loginUrl))
+        ..followRedirects =
+            false // <--- STOP AUTOMATIC REDIRECTS checking
+        ..headers.addAll({
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
-        },
-        body: body,
-      );
+          // Tell Laravel/Nginx we are using HTTPS to prevent redirect loops
+          'X-Forwarded-Proto': 'https',
+          // Only add Host header if NOT using a custom URL
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
+        })
+        ..body = body;
+
+      final streamedResponse = await client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('DEBUG: Response status: ${response.statusCode}');
+      print('DEBUG: Response headers: ${response.headers}'); // Log ALL headers
+      if (response.isRedirect) {
+        print('DEBUG: Redirect Location: ${response.headers['location']}');
+      }
+      print('DEBUG: Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        try {
-          final data = jsonDecode(response.body);
-          final token = data['token'];
+        final data = jsonDecode(response.body);
+        final token = data['token'];
 
-          // The 'user' object from backend now includes the nested 'role' object
-          // We store this entire structure securely.
-          final userDataJson = jsonEncode(data['user']);
+        final userDataJson = jsonEncode(data['user']);
 
-          await _storage.write(key: _tokenKey, value: token);
-          await _storage.write(key: _userKey, value: userDataJson);
+        await _storage.write(key: _tokenKey, value: token);
+        await _storage.write(key: _userKey, value: userDataJson);
 
-          return data['user'] as Map<String, dynamic>;
-        } catch (e) {
-          print('JSON Decode Error: $e');
-          print('Response Body: ${response.body}');
-          throw Exception('Failed to decode server response. See logs.');
-        }
+        return data['user'] as Map<String, dynamic>;
       } else if (response.statusCode == 422) {
         final errors = jsonDecode(response.body);
-        // Safely extract email error or provide default
         String errorMessage = 'Login failed.';
         if (errors['errors'] != null && errors['errors']['email'] != null) {
           errorMessage = errors['errors']['email'][0];
         }
         throw Exception(errorMessage);
+      } else if (response.statusCode == 301 || response.statusCode == 302) {
+        throw Exception(
+          'Server Error ${response.statusCode}: Redirecting to ${response.headers['location']}',
+        );
       } else {
-        print('Server Error ${response.statusCode}: ${response.body}');
-        throw Exception('Server Error ${response.statusCode}');
+        throw Exception(
+          'Server Error ${response.statusCode}: ${response.body}',
+        );
       }
     } catch (e) {
+      print('DEBUG: Login Error caught: $e');
       rethrow;
     }
   }
@@ -94,6 +108,9 @@ class AuthApi {
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token', // Crucial: Send the token
+            // Only add Host header if NOT using a custom URL
+            if (ApiConstants.customBaseUrl.isEmpty)
+              'Host': 'backend_services.test',
           },
         );
       } catch (e) {

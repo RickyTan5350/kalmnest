@@ -28,8 +28,7 @@ class _AchievementPageState extends State<AchievementPage> {
     'PHP',
     'Level',
     'Quiz',
-   
-  ]; // Added 'All'
+  ]; // Reordered 'All' to front
   String _selectedTopic = 'All'; // Default to 'All'
   ViewLayout _viewLayout = ViewLayout.grid;
 

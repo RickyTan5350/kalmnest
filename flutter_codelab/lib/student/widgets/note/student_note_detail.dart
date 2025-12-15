@@ -4,7 +4,6 @@ import 'package:flutter_codelab/api/note_api.dart';
 // Make sure this import path matches where you created the file above
  
 import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 import 'package:flutter_codelab/student/widgets/note/pdf_service.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -17,10 +16,7 @@ class StudentNoteDetailPage extends StatefulWidget {
     super.key,
     required this.noteId,
     required this.noteTitle,
-    this.topic = '', // Add topic with default empty
   });
-
-  final String topic;
 
   @override
   State<StudentNoteDetailPage> createState() => _StudentNoteDetailPageState();
@@ -233,96 +229,6 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     return HtmlWidget(
       htmlContent,
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 16),
-      customWidgetBuilder: (element) {
-        if (element.localName == 'pre') {
-          final codeText = element.text;
-          // Use innerHtml to preserve highlighting spans, wrapped in pre to preserve whitespace
-          final htmlContent = '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
-          return Stack(
-            children: [
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  // Use HtmlWidget to render the code with highlights
-                  child: HtmlWidget(
-                    htmlContent,
-                    textStyle: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      fontFamily: 'monospace',
-                    ),
-                    // Recursively handle scroll indices inside the code block
-                    customWidgetBuilder: (innerElement) {
-                      if (innerElement.attributes
-                          .containsKey('data-scroll-index')) {
-                        final GlobalKey key = GlobalKey();
-                        _matchKeys.add(key);
-                        return SizedBox(width: 1, height: 1, key: key);
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: (widget.topic == 'HTML' ||
-                        widget.topic == 'CSS' ||
-                        widget.topic == 'JS')
-                    ? InkWell(
-                        onTap: () {
-                          // TODO: Implement Run Code for Student
-                          // For now, this condition matches what was there, or similar logic.
-                          // But student_note_detail.dart doesn't have _openRunPage in the snippet I saw?
-                          // Let's check duplicate logic.
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RunCodePage(initialCode: codeText),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                              color: colorScheme.primary,
-                              borderRadius: BorderRadius.circular(4)),
-                          child: Row(
-                            children: [
-                              Icon(Icons.play_arrow,
-                                  size: 14, color: colorScheme.onPrimary),
-                              const SizedBox(width: 4),
-                              Text('Run',
-                                  style: TextStyle(
-                                      color: colorScheme.onPrimary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          );
-        }
-        if (element.attributes.containsKey('data-scroll-index')) {
-          final GlobalKey key = GlobalKey();
-          _matchKeys.add(key);
-          return SizedBox(width: 1, height: 1, key: key);
-        }
-        return null;
-      },
       customStylesBuilder: (element) {
         if (element.localName == 'table') {
           return {
@@ -337,6 +243,64 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
             'padding': '8px',
             'vertical-align': 'top'
           };
+        }
+        return null;
+      },
+      customWidgetBuilder: (element) {
+        if (element.localName == 'pre') {
+          final codeText = element.text;
+          return Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: colorScheme.outlineVariant),
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Text(codeText,
+                      style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontFamily: 'monospace')),
+                ),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: InkWell(
+                  onTap: () => _openRunPage(codeText),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        borderRadius: BorderRadius.circular(4)),
+                    child: Row(
+                      children: [
+                        Icon(Icons.play_arrow,
+                            size: 14, color: colorScheme.onPrimary),
+                        const SizedBox(width: 4),
+                        Text('Run',
+                            style: TextStyle(
+                                color: colorScheme.onPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        if (element.attributes.containsKey('data-scroll-index')) {
+          final GlobalKey key = GlobalKey();
+          _matchKeys.add(key);
+          return SizedBox(width: 1, height: 1, key: key);
         }
         return null;
       },
@@ -400,14 +364,61 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                         ),
                       ),
                       if (_isSearching)
-                        SearchNote(
-                          controller: _searchController,
-                          focusNode: _searchFocusNode,
-                          matchCount: _currentMatchIndex,
-                          totalMatches: _totalMatches,
-                          onNext: _nextMatch,
-                          onPrev: _prevMatch,
-                          onClose: _toggleSearch,
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          width: screenWidth > 350 ? 350 : screenWidth - 32,
+                          child: Material(
+                            elevation: 6,
+                            shadowColor: Colors.black26,
+                            borderRadius: BorderRadius.circular(8),
+                            color: colorScheme.surfaceContainerHigh,
+                            child: Container(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              child: Row(
+                                children: [
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _searchController,
+                                      focusNode: _searchFocusNode,
+                                      cursorColor: colorScheme.primary,
+                                      style: TextStyle(color: colorScheme.onSurface),
+                                      decoration: InputDecoration(
+                                        hintText: 'Find...',
+                                        hintStyle: TextStyle(
+                                            color: colorScheme.onSurfaceVariant),
+                                        border: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                  if (_searchTerm.isNotEmpty)
+                                    Text(
+                                      _totalMatches > 0
+                                          ? '${_currentMatchIndex + 1}/$_totalMatches'
+                                          : 'No results',
+                                      style: TextStyle(
+                                          color: _totalMatches > 0
+                                              ? colorScheme.onSurfaceVariant
+                                              : colorScheme.error,
+                                          fontSize: 14),
+                                    ),
+                                  IconButton(
+                                      icon: Icon(Icons.arrow_upward, size: 20),
+                                      onPressed: _prevMatch),
+                                  IconButton(
+                                      icon: Icon(Icons.arrow_downward, size: 20),
+                                      onPressed: _nextMatch),
+                                  IconButton(
+                                      icon: Icon(Icons.close, size: 20),
+                                      onPressed: _toggleSearch),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                     ],
                   ),
