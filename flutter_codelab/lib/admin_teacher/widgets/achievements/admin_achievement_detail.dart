@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/api/achievement_api.dart'; // Import API
 import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'admin_achievement_students_page.dart';
 import 'admin_edit_achievement_page.dart';
 
 class AdminAchievementDetailPage extends StatefulWidget {
@@ -176,37 +177,63 @@ class _AdminAchievementDetailPageState
               ),
               const SizedBox(height: 32),
 
-              // Progress
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Students Unlocked',
-                    style: Theme.of(context).textTheme.titleMedium,
+              // Progress (Clickable)
+              InkWell(
+                onTap: () {
+                  if (_displayData.achievementId != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminAchievementStudentsPage(
+                          achievementId: _displayData.achievementId!,
+                          achievementName:
+                              _displayData.achievementTitle ?? 'Achievement',
+                        ),
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(8.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Students Unlocked',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(
+                            (_displayData.unlockedCount != null &&
+                                    _displayData.totalStudents != null)
+                                ? '${_displayData.unlockedCount} / ${_displayData.totalStudents}'
+                                : '${(widget.progress * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Progress Bar
+                      if (_isLoading)
+                        const LinearProgressIndicator()
+                      else
+                        LinearProgressIndicator(
+                          value:
+                              (_displayData.unlockedCount != null &&
+                                  _displayData.totalStudents != null &&
+                                  _displayData.totalStudents! > 0)
+                              ? (_displayData.unlockedCount! /
+                                    _displayData.totalStudents!)
+                              : widget.progress,
+                          backgroundColor: Colors.grey[300],
+                          valueColor: AlwaysStoppedAnimation<Color>(color),
+                        ),
+                    ],
                   ),
-                  Text(
-                    (_displayData.unlockedCount != null &&
-                            _displayData.totalStudents != null)
-                        ? '${_displayData.unlockedCount} / ${_displayData.totalStudents}'
-                        : '${(widget.progress * 100).toStringAsFixed(0)}%',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (_isLoading)
-                const LinearProgressIndicator()
-              else
-                LinearProgressIndicator(
-                  value:
-                      (_displayData.unlockedCount != null &&
-                          _displayData.totalStudents != null &&
-                          _displayData.totalStudents! > 0)
-                      ? (_displayData.unlockedCount! /
-                            _displayData.totalStudents!)
-                      : widget.progress,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
                 ),
+              ),
 
               const SizedBox(height: 32),
 
