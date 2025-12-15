@@ -98,6 +98,11 @@ class NotesController extends Controller
                 ]);
                 
                 $validatedData['file_id'] = $mainFileRecord->file_id;
+
+                // --- GIT SYNC ---
+                // Read the content we just saved to sync it to seed_data
+                $syncedContent = file_get_contents($mdFile->getRealPath());
+                $this->_syncToSeedData($mdPath, $syncedContent, $validatedData['title']);
             }
 
             // 4. Create the Note
@@ -289,6 +294,9 @@ class NotesController extends Controller
             return response()->json(['message' => 'Note not found'], 404);
         }
 
+        // Capture old title for syncing cleanup
+        $oldTitle = $note->title;
+
         try {
             // 1. Update Topic
             $topicName = $request->input('topic');
@@ -322,6 +330,9 @@ class NotesController extends Controller
 
             // 4. Safely write content to disk (Creates if missing, Overwrites if exists)
             Storage::disk('public')->put($fileRecord->file_path, $request->input('content'));
+
+            // --- GIT SYNC ---
+            $this->_syncToSeedData($fileRecord->file_path, $request->input('content'), $request->input('title'), $oldTitle);
 
             $note->save(); 
 
@@ -377,6 +388,46 @@ class NotesController extends Controller
                 'message' => 'Error deleting note',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Helper to sync note content to the seed_data folder for Git commits.
+     * This is primarily for the Development environment.
+     */
+    private function _syncToSeedData($originalPath, $content, $title = null, $oldTitle = null)
+    {
+        $seedDir = database_path('seed_data/notes');
+        
+        // Only run if the directory exists (Dev setup)
+        if (is_dir($seedDir)) {
+             try {
+                 // Determine Filename
+                 if ($title) {
+                     // Sanitize Title: "My Note!" -> "My_Note_"
+                     $safeTitle = preg_replace('/[^A-Za-z0-9_\-\(\)]/', '_', $title);
+                     // Avoid empty filename if title is all special chars
+                     if (empty($safeTitle)) $safeTitle = 'Untitled_' . time();
+                     $filename = $safeTitle . '.md';
+                 } else {
+                     $filename = basename($originalPath);
+                 }
+
+                 $dest = $seedDir . DIRECTORY_SEPARATOR . $filename;
+                 file_put_contents($dest, $content);
+
+                 // Cleanup Old File (Rename handling)
+                 if ($oldTitle && $oldTitle !== $title) {
+                     $safeOldTitle = preg_replace('/[^A-Za-z0-9_\-\(\)]/', '_', $oldTitle);
+                     $oldDest = $seedDir . DIRECTORY_SEPARATOR . $safeOldTitle . '.md';
+                     if (file_exists($oldDest)) {
+                         unlink($oldDest);
+                     }
+                 }
+
+             } catch (\Exception $e) {
+                 // Ignore errors here, as this is a secondary "nice to have" feature
+             }
         }
     }
 }
