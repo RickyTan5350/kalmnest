@@ -1,0 +1,45 @@
+# 3.1.4 Penggunaan Struktur Kawalan dalam Bahasa Penskripan Klien
+
+Topik ini menjelaskan tiga jenis struktur kawalan utama dalam bahasa penskripan klien (JavaScript) yang mengawal aliran atur cara: **Jujukan**, **Pilihan**, dan **Ulangan**.
+
+## 1. Struktur Kawalan Jujukan
+* [cite_start]**Definisi:** Arahan dilaksanakan secara tertib baris demi baris tanpa sebarang syarat atau ulangan [cite: 202-203].
+* [cite_start]**Contoh:** Menerima input "Tahun Lahir" dan mengira "Umur" berdasarkan tahun semasa [cite: 251-254].
+
+
+## 2. Struktur Kawalan Pilihan
+Struktur ini menggunakan pernyataan bersyarat untuk menentukan blok kod yang akan dilaksanakan.
+
+### Jenis Pilihan:
+* [cite_start]**`if`:** Melaksanakan pernyataan hanya jika syarat adalah **BENAR (true)** [cite: 288-289].
+* [cite_start]**`if...else`:** Melaksanakan satu blok jika syarat benar, dan blok alternatif jika syarat palsu [cite: 346-348].
+* **Penggunaan Operator Logikal:**
+    * [cite_start]`&&` (AND): Kedua-dua syarat mesti benar[cite: 392].
+    * [cite_start]`||` (OR): Salah satu syarat mesti benar[cite: 485].
+
+
+## 3. Struktur Kawalan Ulangan
+Struktur ini membolehkan blok kod dilaksanakan berulang kali selagi syarat dipenuhi.
+
+### Jenis Ulangan:
+1.  **Berasaskan Pembilang (`for`):**
+    * Digunakan apabila bilangan ulangan diketahui.
+    * [cite_start]Komponen: Nilai awal, Nilai tamat, dan Nilai kemas kini [cite: 550-556].
+2.  **Berasaskan Syarat (`while` & `do...while`):**
+    * **`while`:** Semak syarat dahulu, kemudian laksanakan blok kod. [cite_start]Jika syarat awal salah, kod tidak dijalankan langsung[cite: 664].
+    * [cite_start]**`do...while`:** Laksanakan blok kod dahulu sekurang-kurangnya sekali, kemudian baru semak syarat [cite: 664-665].
+
+### Kawalan Tambahan dalam Ulangan:
+* [cite_start]**`break`:** Menamatkan terus ulangan[cite: 602].
+* [cite_start]**`continue`:** Melangkau baki kod semasa dan terus ke ulangan seterusnya [cite: 604-605].
+
+
+## 4. Kelebihan Standard Library
+* [cite_start]**Definisi:** Koleksi fungsi sedia ada yang boleh digunakan terus tanpa perlu memprogramkan semula logiknya[cite: 747].
+* **Contoh:**
+    * [cite_start]`math.js`: Fungsi matematik seperti `math.sqrt()` (punca kuasa) dan `math.pow()` (kuasa)[cite: 751].
+    * [cite_start]`date.js`: Fungsi tarikh seperti `date.now()`[cite: 751].
+* [cite_start]**Kelebihan:** Memudahkan pengaturcaraan kerana fungsi kompleks boleh digunakan tanpa perlu mengetahui cara pelaksanaannya secara mendalam [cite: 753-754].
+
+---
+[cite_start]**Aktiviti 9:** Membina atur cara yang menggunakan ulangan dari 1 hingga 10 untuk mengenal pasti dan memaparkan sama ada nombor tersebut adalah **Genap** atau **Ganjil**[cite: 726].
