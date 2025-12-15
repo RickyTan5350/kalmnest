@@ -151,6 +151,10 @@ class ImportNotes extends Command
                 $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . $pathOnly);
                 $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . $filename);
 
+                // Priority 3: 'pictures' subdirectory (Relative to Note Dir and Base Dir)
+                $candidates[] = realpath($noteDir . DIRECTORY_SEPARATOR . 'pictures' . DIRECTORY_SEPARATOR . $filename);
+                $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . 'pictures' . DIRECTORY_SEPARATOR . $filename);
+
                 $foundPath = null;
                 foreach ($candidates as $candidate) {
                     if ($candidate && file_exists($candidate) && is_file($candidate)) {
