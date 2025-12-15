@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_codelab/api/api_constants.dart';
 
 class FileApi {
   // Use 10.0.2.2 for Android Emulator, or your machine's IP for real devices.
-  // backend_services.test works if you have host mapping set up.
-  static final String _domain = ApiConstants.domain;
-  final String _baseUrl = ApiConstants.baseUrl;
+  // kalmnest.test works if you have host mapping set up.
+  static const String _domain = ApiConstants.domain;
+  final String _baseUrl = '$_domain/api';
 
   /// 1. IMMEDIATE UPLOAD: Uploads a single file and returns ID + URL
   /// Returns a Map: {'id': 'uuid...', 'url': 'http://.../storage/img.png'}
@@ -22,9 +22,6 @@ class FileApi {
 
     // --- FIX: Tell the server we want JSON, not HTML ---
     request.headers['Accept'] = 'application/json';
-    // Only add Host header if NOT using a custom URL
-    if (ApiConstants.customBaseUrl.isEmpty)
-      request.headers['Host'] = 'backend_services.test';
 
     request.files.add(
       await http.MultipartFile.fromPath(
@@ -79,8 +76,6 @@ class FileApi {
 
     // --- FIX: Add header here too for consistency ---
     request.headers['Accept'] = 'application/json';
-    if (ApiConstants.customBaseUrl.isEmpty)
-      request.headers['Host'] = 'backend_services.test';
 
     request.fields['title'] = title;
     request.fields['topic'] = topic;

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_codelab/admin_teacher/widgets/game/create_game_page.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/game_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
-import 'package:flutter/foundation.dart';
 
 /// Opens the edit dialog
 Future<void> showEditGamePage({
@@ -75,12 +73,10 @@ class _EditGamePageState extends State<EditGamePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                BackButton(
-                  onPressed: () {
-                    GameAPI.clearFiles();
-                    Navigator.of(context).pop();
-                  },
-                ),
+                BackButton(onPressed: () {
+                  GameAPI.clearFiles();
+                  Navigator.of(context).pop();
+                }),
                 Text(
                   "Edit Level",
                   style: Theme.of(
@@ -118,9 +114,8 @@ class _EditGamePageState extends State<EditGamePage> {
                           )
                           .toList(),
                       onChanged: (newValue) {
-                        if (newValue != null) {
+                        if (newValue != null)
                           setState(() => selectedValue = newValue);
-                        }
                       },
                     ),
                     const SizedBox(width: 16),
@@ -186,16 +181,9 @@ class _EditGamePageState extends State<EditGamePage> {
                   child: SizedBox(
                     height: 1000,
                     width: 1250,
-                    child: InAppWebView(
-                      initialUrlRequest: URLRequest(
-                        url: WebUri(
-                          "${ApiConstants.domain}/unity_build/index.html?role=${widget.userRole}",
-                        ),
-                      ),
-                      initialSettings: InAppWebViewSettings(
-                        javaScriptEnabled: true,
-                        isInspectable: kDebugMode,
-                      ),
+                    child: LaravelWebView(
+                      userRole: widget.userRole,
+                      key: previewKey,
                     ),
                   ),
                 ),
@@ -242,7 +230,6 @@ class _EditGamePageState extends State<EditGamePage> {
 /// WebView preview for Unity build
 class IndexFilePreview extends StatefulWidget {
   final String userRole;
-
   const IndexFilePreview({super.key, required this.userRole});
 
   @override
@@ -250,26 +237,39 @@ class IndexFilePreview extends StatefulWidget {
 }
 
 class _IndexFilePreviewState extends State<IndexFilePreview> {
-  Key _key = UniqueKey();
+  late InAppWebViewController _webViewController;
+
+  void reloadPreview(String userRole) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final url =
+        "https://backend_services.test/unity_build/StreamingAssets/html/index.html";
+
+    _webViewController.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
+  }
 
   @override
   Widget build(BuildContext context) {
     final url =
-        "${ApiConstants.domain}/unity_build/StreamingAssets/html/index.html";
+        "https://backend_services.test/unity_build/StreamingAssets/html/index.html";
 
     return InAppWebView(
-      key: _key,
       initialUrlRequest: URLRequest(url: WebUri(url)),
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,
-        isInspectable: kDebugMode,
+        useShouldOverrideUrlLoading: true,
       ),
+      onWebViewCreated: (controller) {
+        _webViewController = controller;
+      },
+      onLoadStart: (controller, url) {
+        debugPrint("Started loading: $url");
+      },
+      onLoadStop: (controller, url) async {
+        debugPrint("Finished loading: $url");
+      },
+      onLoadError: (controller, url, code, message) {
+        debugPrint("Failed to load $url: $message");
+      },
     );
-  }
-
-  void reloadPreview(String userRole) {
-    setState(() {
-      _key = UniqueKey();
-    });
   }
 }

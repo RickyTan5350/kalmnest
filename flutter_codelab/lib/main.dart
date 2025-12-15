@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // For kDebugMode
-import 'dart:io'; // For HttpOverrides
 import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
 import 'admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
-import 'admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'admin_teacher/widgets/game/create_game_page.dart';
 import 'admin_teacher/widgets/note/admin_create_note_page.dart';
 import 'util.dart';
 import 'theme.dart';
@@ -20,10 +18,6 @@ import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dar
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  if (kDebugMode) {
-    HttpOverrides.global = MyHttpOverrides();
-  }
 
   // Check for stored token and user data
   // Variable name: storedUserJson
@@ -310,14 +304,5 @@ class _FeedState extends State<Feed> {
               },
             ),
     );
-  }
-}
-
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
   }
 }

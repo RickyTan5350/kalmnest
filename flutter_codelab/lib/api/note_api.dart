@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/note_data.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_codelab/api/api_constants.dart';
 
-final String _apiUrl = '${ApiConstants.baseUrl}/notes';
+const String _apiUrl = '${ApiConstants.baseUrl}/notes';
 
 class NoteApi {
   static const String validationErrorCode = '422';
@@ -21,9 +21,6 @@ class NoteApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
-          // Only add Host header if NOT using a custom URL
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
         },
         body: body,
       );
@@ -49,13 +46,7 @@ class NoteApi {
   // --- FETCH ALL NOTES (Brief) ---
   Future<List<NoteBrief>> fetchBriefNote() async {
     try {
-      final response = await http.get(
-        Uri.parse(_apiUrl),
-        headers: {
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
-        },
-      );
+      final response = await http.get(Uri.parse(_apiUrl));
 
       if (response.statusCode == 200) {
         List<dynamic> jsonResponse = jsonDecode(response.body);
@@ -85,9 +76,6 @@ class NoteApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
-          // Only add Host header if NOT using a custom URL
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
         },
       );
 
@@ -113,8 +101,6 @@ class NoteApi {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
         },
       );
 
@@ -136,13 +122,7 @@ class NoteApi {
         '$_apiUrl/search',
       ).replace(queryParameters: {'topic': topic, 'query': query});
 
-      final response = await http.get(
-        uri,
-        headers: {
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
-        },
-      );
+      final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
@@ -178,8 +158,6 @@ class NoteApi {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
         },
         body: jsonEncode({
           'title': title,
@@ -208,13 +186,7 @@ class NoteApi {
     final url = Uri.parse('$_apiUrl/$id');
 
     try {
-      final response = await http.delete(
-        url,
-        headers: {
-          if (ApiConstants.customBaseUrl.isEmpty)
-            'Host': 'backend_services.test',
-        },
-      );
+      final response = await http.delete(url);
       return response.statusCode == 200 || response.statusCode == 204;
     } catch (e) {
       print('Error deleting note: $e');

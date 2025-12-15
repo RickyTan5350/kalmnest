@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.14)
 
 # --- FIX: Suppress developer warnings from third-party plugins ---
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
-
 project(flutter_codelab LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
@@ -12,7 +11,7 @@ set(BINARY_NAME "flutter_codelab")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
-cmake_policy(VERSION 3.14...3.31)
+cmake_policy(VERSION 3.14...3.25)
 
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -50,9 +49,6 @@ function(APPLY_STANDARD_SETTINGS TARGET)
 endfunction()
 
 # Flutter library and tool build rules.
-# Fix for PDFium build error
-set(PDFIUM_VERSION "5200" CACHE STRING "" FORCE)
-
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
