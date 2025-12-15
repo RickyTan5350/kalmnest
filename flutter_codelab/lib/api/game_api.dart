@@ -5,7 +5,7 @@ import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 
 /// CENTRAL API BASE URL
-final String apiBase = ApiConstants.baseUrl;
+const String apiBase = "https://backend_services.test/api";
 
 class ApiResponse {
   final bool success;

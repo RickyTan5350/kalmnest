@@ -63,18 +63,6 @@ class NotesController extends Controller
      */
     public function store(CreateNotesRequest $request)
     {
-        \Illuminate\Support\Facades\Log::info('NotesController@store called');
-        \Illuminate\Support\Facades\Log::info('Has File: ' . ($request->hasFile('file') ? 'Yes' : 'No'));
-        if ($request->hasFile('file')) {
-             \Illuminate\Support\Facades\Log::info('File details:', [
-                 'originalName' => $request->file('file')->getClientOriginalName(),
-                 'mime' => $request->file('file')->getMimeType(),
-                 'size' => $request->file('file')->getSize(),
-             ]);
-        } else {
-             \Illuminate\Support\Facades\Log::warning('No file found in request');
-        }
-
         // 1. Get Admin/Teacher ID
         $adminRoleID = DB::table('roles')->where('role_name', 'Admin')->value('role_id');
         $adminUserID = DB::table('users')->where('role_id', $adminRoleID)->value('user_id');
@@ -103,9 +91,6 @@ class NotesController extends Controller
             if ($request->hasFile('file')) {
                 $mdFile = $request->file('file');
                 $mdPath = $mdFile->store('notes', 'public'); 
-                
-                \Illuminate\Support\Facades\Log::info('Stored File Path: ' . $mdPath);
-                \Illuminate\Support\Facades\Log::info('Storage Root: ' . storage_path('app/public'));
 
                 $mainFileRecord = File::create([
                     'file_path' => $mdPath,

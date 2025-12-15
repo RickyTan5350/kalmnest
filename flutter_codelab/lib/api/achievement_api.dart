@@ -8,7 +8,36 @@ import 'auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 
 //server URL: set your own
-final String _apiUrl = '${ApiConstants.baseUrl}/achievements';
+const String _apiUrl = 'https://backend_services.test/api/achievements';
+
+IconData _getIconData(String iconValue) {  
+  try {
+    final entry = achievementIconOptions.firstWhere(
+          (opt) => opt['value'] == iconValue,
+      orElse: () => {'icon': Icons.help_outline},
+    );
+    return entry['icon'] as IconData;
+  } catch (e) {
+    return Icons.help_outline;
+  }
+}
+
+Color _getColor(String iconValue) {
+  switch (iconValue) {
+    case 'html':
+      return Colors.orange;
+    case 'css':
+      return Colors.green;
+    case 'javascript':
+      return Colors.yellow;
+    case 'php':
+      return Colors.blue;
+    case 'backend':
+      return Colors.deepPurple;
+    default:
+      return Colors.grey;
+  }
+}
 
 class AchievementApi {
   static const String validationErrorCode = '422';
