@@ -205,12 +205,18 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     );
   }
 
+  // Helper to ensure absolute URLs
+  String _processMarkdown(String content) {
+    final domain = ApiConstants.domain;
+    return content.replaceAll('](/storage/', ']($domain/storage/');
+  }
+
   // --- UI WIDGETS ---
   Widget _buildHighlightedHtml(ColorScheme colorScheme) {
     _matchKeys = [];
 
     String htmlContent = md.markdownToHtml(
-      _markdownContent,
+      _processMarkdown(_markdownContent),
       extensionSet: md.ExtensionSet.gitHubFlavored,
     );
 

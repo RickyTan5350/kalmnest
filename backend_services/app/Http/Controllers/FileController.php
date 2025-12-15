@@ -126,7 +126,7 @@ class FileController extends Controller
                 $response['markdown_data'] = [
                     'original_name' => $mdFile->getClientOriginalName(),
                     'stored_name' => $mdName,
-                    'file_url' => Storage::url($mdPath),
+                    'file_url' => url(Storage::url($mdPath)), // Force absolute URL
                     'file_path' => $mdPath, // Internal path for DB saving
                 ];
             }
@@ -147,7 +147,7 @@ class FileController extends Controller
                     // Add to response array
                     $response['attachments_data'][] = [
                         'original_name' => $file->getClientOriginalName(),
-                        'file_url' => Storage::url($path),
+                        'file_url' => url(Storage::url($path)), // Force absolute URL
                         'file_path' => $path,
                     ];
 
@@ -195,7 +195,7 @@ class FileController extends Controller
                 return response()->json([
                     'message' => 'File uploaded successfully',
                     'original_name' => $originalName,
-                    'file_url' => Storage::url($path), 
+                    'file_url' => url(Storage::url($path)), // Force absolute URL
                     'file_path' => $path,
                 ], 200);
 

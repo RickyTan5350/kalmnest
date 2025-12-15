@@ -52,7 +52,8 @@ class NotesController extends Controller
                 return response()->json([
                     'message' => 'File uploaded successfully',
                     'original_name' => $originalName,
-                    'file_url' => Storage::url($path),
+                    'filename' => $safeFileName,
+                    'file_url' => url(Storage::url($path)), // Force absolute URL
                 ], 200);
 
             } catch (\Exception $e) {
