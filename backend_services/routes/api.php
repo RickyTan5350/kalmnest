@@ -22,8 +22,8 @@ Route::post('/user', [UserController::class, 'store']); // Registration
 // These are public so your Flutter app can access them without a token.
 
 Route::get('/notes', [NotesController::class, 'showNotesBrief']);
-Route::get('/notes/search', [NotesController::class, 'search']); 
-Route::post('/notes', [NotesController::class, 'store']);         // <--- This is the active Create Note route
+Route::get('/notes/search', [NotesController::class, 'search']);
+Route::post('/notes/new', [NotesController::class, 'store']);         // <--- This is the active Create Note route
 Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- This is the active Upload route
 
 Route::post('/achievements/new', [AchievementController::class, 'store']);
@@ -57,13 +57,13 @@ Route::post('/logout', [UserController::class, 'logout']);
     // All roles (Admin/Teacher/Student) can view list/search/filter
 Route::prefix('users')->group(function () {
         // List/Search/Filter (GET /api/users)
-        Route::get('/', [UserController::class, 'index']); 
+        Route::get('/', [UserController::class, 'index']);
         // View single profile (GET /api/users/{user})
-        Route::get('/{user}', [UserController::class, 'show']); 
+        Route::get('/{user}', [UserController::class, 'show']);
         // Update profile (PUT /api/users/{user})
-        Route::put('/{user}', [UserController::class, 'update']); 
+        Route::put('/{user}', [UserController::class, 'update']);
         // Delete account (DELETE /api/users/{user})
-        Route::delete('/{user}', [UserController::class, 'destroy']); 
+        Route::delete('/{user}', [UserController::class, 'destroy']);
     });
     // --- Current Logged-in User ---
     Route::get('/user', fn(Request $request) => $request->user());
@@ -104,7 +104,7 @@ Route::prefix('users')->group(function () {
     });
 
     // --- Notes Module ---
-    // REMOVED: The 'notes' group was deleted from here because it was 
+    // REMOVED: The 'notes' group was deleted from here because it was
     // overriding the public routes above and causing the "Unauthenticated" error.
 
     /*
@@ -133,7 +133,7 @@ Route::prefix('users')->group(function () {
 // --- 2. WILDCARD ROUTES (MUST BE AT THE BOTTOM) ---
 // These catch urls like /notes/1, /notes/50, etc.
 
-Route::get('/notes/{id}', [NotesController::class, 'show']); 
+Route::get('/notes/{id}', [NotesController::class, 'show']);
 Route::get('/notes/{id}/content', [NotesController::class, 'getNoteContent']);
 Route::put('/notes/{id}', [NotesController::class, 'update']);
 Route::delete('/notes/{id}', [NotesController::class, 'destroy']);

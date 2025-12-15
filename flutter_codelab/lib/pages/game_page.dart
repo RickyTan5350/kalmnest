@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/play_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/play_game_page.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/game_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/edit_game_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/create_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/edit_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
 
 class GamePage extends StatefulWidget {
   final String userRole; // Current user role
