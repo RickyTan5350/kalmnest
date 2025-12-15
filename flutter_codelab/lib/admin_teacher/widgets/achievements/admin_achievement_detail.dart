@@ -16,10 +16,12 @@ class AdminAchievementDetailPage extends StatefulWidget {
   });
 
   @override
-  State<AdminAchievementDetailPage> createState() => _AdminAchievementDetailPageState();
+  State<AdminAchievementDetailPage> createState() =>
+      _AdminAchievementDetailPageState();
 }
 
-class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage> {
+class _AdminAchievementDetailPageState
+    extends State<AdminAchievementDetailPage> {
   late AchievementData _displayData; // The data currently being shown
   bool _isLoading = true;
   final AchievementApi _api = AchievementApi();
@@ -62,7 +64,7 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
   IconData _getIconData(String? iconValue) {
     try {
       final entry = achievementIconOptions.firstWhere(
-            (opt) => opt['value'] == iconValue,
+        (opt) => opt['value'] == iconValue,
         orElse: () => {'icon': Icons.help_outline},
       );
       return entry['icon'] as IconData;
@@ -73,12 +75,18 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
 
   Color _getColor(String? iconValue) {
     switch (iconValue) {
-      case 'html': return Colors.orange;
-      case 'css': return Colors.green;
-      case 'javascript': return Colors.yellow;
-      case 'php': return Colors.blue;
-      case 'backend': return Colors.deepPurple;
-      default: return Colors.grey;
+      case 'html':
+        return Colors.orange;
+      case 'css':
+        return Colors.green;
+      case 'javascript':
+        return Colors.yellow;
+      case 'php':
+        return Colors.blue;
+      case 'backend':
+        return Colors.deepPurple;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -99,8 +107,8 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-        // In achievement_detail.dart inside the IconButton onPressed:
 
+            // In achievement_detail.dart inside the IconButton onPressed:
             onPressed: () async {
               // 1. Map ALL fields required by the new Edit Form
               final Map<String, dynamic> achievementMap = {
@@ -128,13 +136,12 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
                 _fetchFullDetails(_displayData.achievementId!);
               }
             },
-
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          if(_displayData.achievementId != null) {
+          if (_displayData.achievementId != null) {
             await _fetchFullDetails(_displayData.achievementId!);
           }
         },
@@ -169,20 +176,34 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
               ),
               const SizedBox(height: 32),
 
-              // Progress (Uses the passed-in progress for now)
+              // Progress
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Progress', style: Theme.of(context).textTheme.titleMedium),
-                  Text('${(widget.progress * 100).toStringAsFixed(0)}%'),
+                  Text(
+                    'Students Unlocked',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Text(
+                    (_displayData.unlockedCount != null &&
+                            _displayData.totalStudents != null)
+                        ? '${_displayData.unlockedCount} / ${_displayData.totalStudents}'
+                        : '${(widget.progress * 100).toStringAsFixed(0)}%',
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
               if (_isLoading)
-                const LinearProgressIndicator() // Indeterminate while fetching full data
+                const LinearProgressIndicator()
               else
                 LinearProgressIndicator(
-                  value: widget.progress,
+                  value:
+                      (_displayData.unlockedCount != null &&
+                          _displayData.totalStudents != null &&
+                          _displayData.totalStudents! > 0)
+                      ? (_displayData.unlockedCount! /
+                            _displayData.totalStudents!)
+                      : widget.progress,
                   backgroundColor: Colors.grey[300],
                   valueColor: AlwaysStoppedAnimation<Color>(color),
                 ),
@@ -191,9 +212,12 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
 
               // Info Fields
               _buildSectionTitle(context, 'General Info'),
-              _buildInfoRow(context, 'Internal Name', _displayData.achievementName),
-              _buildInfoRow(context, 'Associated Level', _displayData.levelName ?? 'None'),
-              _buildInfoRow(context, 'Creator', _displayData.creatorName ?? 'Loading...'),
+              _buildInfoRow(context, 'Name', _displayData.achievementName),
+              _buildInfoRow(
+                context,
+                'Creator',
+                _displayData.creatorName ?? 'Loading...',
+              ),
 
               const Divider(height: 30),
 
@@ -206,8 +230,16 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
               const Divider(height: 30),
 
               _buildSectionTitle(context, 'Timestamps'),
-              _buildInfoRow(context, 'Created At', _formatDate(_displayData.createdAt)),
-              _buildInfoRow(context, 'Last Updated', _formatDate(_displayData.updatedAt)),
+              _buildInfoRow(
+                context,
+                'Created At',
+                _formatDate(_displayData.createdAt),
+              ),
+              _buildInfoRow(
+                context,
+                'Last Updated',
+                _formatDate(_displayData.updatedAt),
+              ),
             ],
           ),
         ),

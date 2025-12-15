@@ -12,7 +12,6 @@ import 'admin_achievement_detail.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 // IMPORT THE NEW WRAPPER
 
-
 class AdminViewAchievementsPage extends StatefulWidget {
   final ViewLayout layout;
   final String userId;
@@ -97,7 +96,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
       final GlobalKey key = entry.value;
 
       final RenderBox? renderBox =
-      key.currentContext?.findRenderObject() as RenderBox?;
+          key.currentContext?.findRenderObject() as RenderBox?;
 
       if (renderBox != null) {
         // Convert global finger position to local item position
@@ -135,7 +134,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
       final GlobalKey key = entry.value;
 
       final RenderBox? renderBox =
-      key.currentContext?.findRenderObject() as RenderBox?;
+          key.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox == null) continue;
 
       // Get item's position relative to the Stack (context)
@@ -239,7 +238,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   // --- HELPER FUNCTIONS FOR UI TRANSFORMATION ---
   IconData _getIconData(String? iconValue) {
     final entry = achievementIconOptions.firstWhere(
-          (opt) => opt['value'] == iconValue,
+      (opt) => opt['value'] == iconValue,
       orElse: () => {'icon': Icons.help},
     );
     return entry['icon'] as IconData;
@@ -270,6 +269,8 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         'color': _getColor(iconValue),
         'preview': brief.achievementDescription,
         'progress': 0.0,
+        'unlockedCount': brief.unlockedCount,
+        'totalStudents': brief.totalStudents,
       };
     }).toList();
   }
@@ -285,42 +286,42 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         height: hasSelection ? 60 : 0,
         child: hasSelection
             ? Material(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => setState(() {
-                    _selectedIds.clear();
-                  }),
-                  tooltip: 'Clear selection',
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '${_selectedIds.length} selected',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                if (_isDeleting)
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: CircularProgressIndicator(),
-                  )
-                else
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete_outline,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    onPressed: _deleteSelectedAchievements,
-                    tooltip: 'Delete selected',
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(() {
+                          _selectedIds.clear();
+                        }),
+                        tooltip: 'Clear selection',
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '${_selectedIds.length} selected',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const Spacer(),
+                      if (_isDeleting)
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(),
+                        )
+                      else
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          onPressed: _deleteSelectedAchievements,
+                          tooltip: 'Delete selected',
+                        ),
+                    ],
                   ),
-              ],
-            ),
-          ),
-        )
+                ),
+              )
             : null,
       ),
     );
@@ -357,14 +358,14 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
 
                 final isMatchingSearch =
                     widget.searchText.isEmpty ||
-                        title.contains(widget.searchText) ||
-                        description.contains(widget.searchText);
+                    title.contains(widget.searchText) ||
+                    description.contains(widget.searchText);
 
                 final isMatchingTopic =
                     widget.selectedTopic == null ||
-                        icon.contains(widget.selectedTopic!) ||
-                        (widget.selectedTopic! == 'level' && level.isNotEmpty) ||
-                        (widget.selectedTopic! == 'quiz');
+                    icon.contains(widget.selectedTopic!) ||
+                    (widget.selectedTopic! == 'level' && level.isNotEmpty) ||
+                    (widget.selectedTopic! == 'quiz');
 
                 return isMatchingSearch && isMatchingTopic;
               }).toList();
@@ -462,10 +463,10 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   }
 
   Widget _buildSliverContent(
-      BuildContext context,
-      List<Map<String, dynamic>> achievements,
-      List<AchievementData> originalData,
-      ) {
+    BuildContext context,
+    List<Map<String, dynamic>> achievements,
+    List<AchievementData> originalData,
+  ) {
     if (widget.layout == ViewLayout.grid) {
       // --- GRID VIEW ---
       return GridLayoutView(
@@ -481,16 +482,19 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate((
-              BuildContext context,
-              int index,
-              ) {
+            BuildContext context,
+            int index,
+          ) {
             final item = achievements[index];
             final originalItem = originalData[index];
             final String id = originalItem.achievementId!;
             final bool isSelected = _selectedIds.contains(id);
 
             // FIX: Generate and store GlobalKey for list items
-            final GlobalKey key = _gridItemKeys.putIfAbsent(id, () => GlobalKey());
+            final GlobalKey key = _gridItemKeys.putIfAbsent(
+              id,
+              () => GlobalKey(),
+            );
 
             return _buildAchievementListTile(
               context: context,
@@ -517,7 +521,14 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
     final String title = item['title'];
     final IconData icon = item['icon'];
     final Color iconColor = item['color'];
-    final double progress = item['progress'];
+    final int? unlockedCount = item['unlockedCount'];
+    final int? totalStudents = item['totalStudents'];
+
+    // Calculate progress
+    double displayProgress = 0.0;
+    if (unlockedCount != null && totalStudents != null && totalStudents > 0) {
+      displayProgress = unlockedCount / totalStudents;
+    }
 
     // FIX: Wrap in Container with GlobalKey for selection logic
     return Container(
@@ -543,9 +554,15 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-              const SizedBox(height: 6.0),
+              const SizedBox(height: 4.0),
+              if (unlockedCount != null && totalStudents != null)
+                Text(
+                  '$unlockedCount / $totalStudents Students',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              const SizedBox(height: 4.0),
               LinearProgressIndicator(
-                value: progress,
+                value: displayProgress,
                 backgroundColor: Colors.grey[300],
                 valueColor: AlwaysStoppedAnimation<Color>(iconColor),
               ),
@@ -565,9 +582,8 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AdminAchievementDetailPage(
-                    initialData: originalItem,
-                  ),
+                  builder: (context) =>
+                      AdminAchievementDetailPage(initialData: originalItem),
                 ),
               );
             }
