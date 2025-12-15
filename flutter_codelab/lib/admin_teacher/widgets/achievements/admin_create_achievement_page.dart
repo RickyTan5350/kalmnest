@@ -233,7 +233,7 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
         widget.showSnackBar(
           context,
           'Achievement successfully created!',
-          Theme.of(context).colorScheme.primary,
+          Colors.green,
         );
         Navigator.of(context).pop();
       }
@@ -291,7 +291,7 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
 
       } catch (parseError) {
         // Fallback if parsing fails
-        widget.showSnackBar(context, 'Validation Error: $jsonPart', Theme.of(context).colorScheme.error);
+        widget.showSnackBar(context, 'Validation Error: $jsonPart', Colors.red);
       }
     }
     // --- CASE 3: Database Integrity Error (500) ---
@@ -311,7 +311,7 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
       _formKey.currentState!.validate();
 
       if (_nameError == null && _titleError == null) {
-        widget.showSnackBar(context, 'Database Error: Duplicate entry.', Theme.of(context).colorScheme.error);
+        widget.showSnackBar(context, 'Database Error: Duplicate entry.', Colors.red);
       }
     }
     // --- CASE 4: General Error ---
@@ -319,7 +319,7 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
       widget.showSnackBar(
         context,
         'An error occurred. ${errorString.replaceAll('Exception: ', '')}',
-        Theme.of(context).colorScheme.error,
+        Colors.red,
       );
     }
   }
@@ -544,10 +544,10 @@ class _AdminCreateAchievementDialogState extends State<AdminCreateAchievementDia
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       ),
                       child: _isLoading
-                          ? SizedBox(
+                          ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onPrimary)
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
                       )
                           : const Text('Submit'),
                     ),
