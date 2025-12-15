@@ -129,6 +129,15 @@ class _EditNotePageState extends State<EditNotePage> {
     );
   }
 
+  // Helper to ensure absolute URLs
+  String _processMarkdown(String content) {
+    // Replace relative paths starting with /storage/
+    // Example: ](/storage/...) -> ](https://domain.com/storage/...)
+    // Also handle existing partials if any
+    final domain = ApiConstants.domain;
+    return content.replaceAll('](/storage/', ']($domain/storage/');
+  }
+
   void _insertMarkdownLink(String fileName, String url, bool isImage) {
     final text = _contentController.text;
     final selection = _contentController.selection;
@@ -623,7 +632,7 @@ class _EditNotePageState extends State<EditNotePage> {
                             padding: const EdgeInsets.all(16),
                             child: HtmlWidget(
                               md.markdownToHtml(
-                                _contentController.text,
+                                _processMarkdown(_contentController.text),
                                 extensionSet: md.ExtensionSet.gitHubFlavored,
                               ),
                               baseUrl: Uri.parse(ApiConstants.domain),
