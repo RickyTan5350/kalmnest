@@ -18,8 +18,8 @@ class NotePage extends StatefulWidget {
 }
 
 class _NotePageState extends State<NotePage> {
-  final List<String> _topics = ['All', 'HTML', 'CSS', 'JS', 'PHP'];
-  String _selectedTopic = 'All'; 
+  final List<String> _topics = ['HTML', 'CSS', 'JS', 'PHP'];
+  String _selectedTopic = 'CSS'; 
   String _searchQuery = ''; 
   ViewLayout _viewLayout = ViewLayout.grid; 
 
@@ -80,7 +80,7 @@ class _NotePageState extends State<NotePage> {
                     width: 300,
                     child: SearchBar(
                       focusNode: _searchFocusNode,
-                      hintText: "Search topic or title",
+                      hintText: "Search All... (Ctrl+F)",
                       onChanged: (val) => setState(() => _searchQuery = val),
                       leading: const Icon(Icons.search), // Optional: Adds search icon inside bar like image 2
                       trailing: [
@@ -110,13 +110,13 @@ class _NotePageState extends State<NotePage> {
                   Expanded(
                     child: widget.currentUser.isStudent
                         ? StudentViewPage(
-                            topic: _selectedTopic == 'All' ? '' : _selectedTopic,
+                            topic: _selectedTopic,
                             query: _searchQuery,
                             isGrid: _viewLayout == ViewLayout.grid, 
                           )
                         : AdminViewNotePage(
                             layout: _viewLayout,
-                            topic: _selectedTopic == 'All' ? '' : _selectedTopic, 
+                            topic: _selectedTopic, 
                             query: _searchQuery, 
                           ),
                   ),

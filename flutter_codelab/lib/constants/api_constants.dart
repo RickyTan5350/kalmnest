@@ -6,7 +6,7 @@ class ApiConstants {
   // These are set via --dart-define in launch.json
   static const bool isPhysicalDevice = bool.fromEnvironment('PHYSICAL_DEVICE', defaultValue: false);
   static const bool useHerd = bool.fromEnvironment('USE_HERD', defaultValue: true);
-  static const String localHostIp = String.fromEnvironment('LOCAL_IP', defaultValue: '192.168.0.161'); 
+  static const String localHostIp = String.fromEnvironment('LOCAL_IP', defaultValue: '10.208.110.152'); 
   static const String customBaseUrl = String.fromEnvironment('CUSTOM_BASE_URL'); // For Expose/Ngrok
   // ---------------------
 
