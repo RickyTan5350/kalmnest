@@ -5,25 +5,35 @@ import 'package:flutter/services.dart'; // Required for HapticFeedback
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
-import '../selection_box_painter.dart';
+import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
+import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 import '../grid_layout_view.dart';
 import 'admin_achievement_detail.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
+// IMPORT THE NEW WRAPPER
+
 
 class AdminViewAchievementsPage extends StatefulWidget {
   final ViewLayout layout;
-  final String userId; // <--- 1. Added userId field
-  final void Function(BuildContext context, String message, Color color) showSnackBar;
+  final String userId;
+  final void Function(BuildContext context, String message, Color color)
+  showSnackBar;
+  // Filter Parameters
+  final String searchText;
+  final String? selectedTopic;
 
   const AdminViewAchievementsPage({
     super.key,
     required this.layout,
-    required this.userId, // <--- 2. Added to constructor
+    required this.userId,
     required this.showSnackBar,
+    this.searchText = '',
+    this.selectedTopic,
   });
 
   @override
-  State<AdminViewAchievementsPage> createState() => _AdminViewAchievementsPageState();
+  State<AdminViewAchievementsPage> createState() =>
+      _AdminViewAchievementsPageState();
 }
 
 class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
@@ -36,14 +46,8 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   bool _isDeleting = false;
 
   // --- HYBRID SELECTION VARIABLES ---
-
-  // 1. Shared: Tracks the position of every grid item
   final Map<String, GlobalKey> _gridItemKeys = {};
-
-  // 2. Android/Mobile Logic: Tracks items touched in current drag to prevent flickering
   final Set<String> _dragProcessedIds = {};
-
-  // 3. Desktop/Box Logic: Tracks the blue selection box
   Offset? _dragStart;
   Offset? _dragEnd;
   Set<String> _initialSelection = {};
@@ -61,6 +65,12 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   void initState() {
     super.initState();
     _refreshData();
+  }
+
+  @override
+  void didUpdateWidget(covariant AdminViewAchievementsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If filtering logic was server-side, we would refresh here.
   }
 
   void _refreshData() {
@@ -138,8 +148,9 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
       // Check if Blue Box touches Item Box
       if (selectionBox.overlaps(itemRect)) {
         newSelection.add(id);
-      } else if (!_initialSelection.contains(id)) {
-        // If we shrink the box, unselect items (unless they were selected before drag started)
+      }
+      // FIX: Only remove if it wasn't selected BEFORE the drag started
+      else if (!_initialSelection.contains(id)) {
         newSelection.remove(id);
       }
     }
@@ -151,7 +162,6 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         _selectedIds.clear();
         _selectedIds.addAll(newSelection);
       });
-      // Optional: HapticFeedback.selectionClick();
     }
   }
 
@@ -162,6 +172,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         _dragEnd = null;
       });
     }
+    _dragProcessedIds.clear(); // Clear drag-select buffer
   }
 
   // --- DELETE FUNCTION ---
@@ -328,27 +339,53 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                if (snapshot.error.toString().contains(
-                  "type 'Null' is not a subtype of type 'String'",
-                )) {
-                  return const Center(
-                    child: Text(
-                      "Error: API data mismatch.\nCheck `AchievementData.fromJson`.",
-                    ),
-                  );
-                }
                 return Center(child: Text("Error: ${snapshot.error}"));
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const Center(child: Text("No achievements found."));
               }
 
-              final List<AchievementData> briefs = snapshot.data!;
-              final List<Map<String, dynamic>> uiData = _transformData(briefs);
+              List<AchievementData> originalData = snapshot.data!;
 
-              // --- GESTURE DETECTOR WRAPPING THE SCROLLVIEW ---
-              return GestureDetector(
-                // Start "Selection Mode" on Long Press
+              // --- FILTERING LOGIC ---
+              List<AchievementData> filteredData = originalData.where((item) {
+                final String title = item.achievementTitle?.toLowerCase() ?? '';
+                final String description =
+                    item.achievementDescription?.toLowerCase() ?? '';
+                final String icon = item.icon?.toLowerCase() ?? '';
+                final String level = item.levelName?.toLowerCase() ?? '';
+
+                final isMatchingSearch =
+                    widget.searchText.isEmpty ||
+                        title.contains(widget.searchText) ||
+                        description.contains(widget.searchText);
+
+                final isMatchingTopic =
+                    widget.selectedTopic == null ||
+                        icon.contains(widget.selectedTopic!) ||
+                        (widget.selectedTopic! == 'level' && level.isNotEmpty) ||
+                        (widget.selectedTopic! == 'quiz');
+
+                return isMatchingSearch && isMatchingTopic;
+              }).toList();
+
+              if (filteredData.isEmpty) {
+                return const Center(
+                  child: Text("No achievements match your search or filter."),
+                );
+              }
+
+              final List<Map<String, dynamic>> uiData = _transformData(
+                filteredData,
+              );
+
+              // --- REPLACED Gesture Logic with WRAPPER ---
+              return SelectionGestureWrapper(
+                isDesktop: _isDesktop,
+                selectedIds: _selectedIds,
+                itemKeys: _gridItemKeys,
+
+                // Start "Selection Mode"
                 onLongPressStart: (details) {
                   if (_isDesktop) {
                     // WINDOWS: Prepare box selection
@@ -361,11 +398,11 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                   } else {
                     // MOBILE: Select item under finger
                     _dragProcessedIds.clear();
-                    _handleDragSelect(details.globalPosition); // Uses Global
+                    _handleDragSelect(details.globalPosition);
                   }
                 },
 
-                // Continue selection as finger/mouse moves
+                // Continue selection
                 onLongPressMoveUpdate: (details) {
                   if (_isDesktop) {
                     // WINDOWS: Update box size
@@ -376,12 +413,8 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                   }
                 },
 
-                // Cleanup on release
+                // Cleanup on release (ignoring details)
                 onLongPressEnd: (_) => _endDrag(),
-
-                // HitTestBehavior.translucent lets taps pass through to InkWells
-                // (so single tap navigation still works)
-                behavior: HitTestBehavior.translucent,
 
                 child: Stack(
                   children: [
@@ -396,10 +429,13 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                               16.0,
                               16.0,
                             ),
-                            child: Text("Total: ${uiData.length} achievements"),
+                            child: Text(
+                              "Showing: ${uiData.length} achievements",
+                            ),
                           ),
                         ),
-                        _buildSliverContent(context, uiData, briefs),
+                        // Pass filteredData here
+                        _buildSliverContent(context, uiData, filteredData),
                       ],
                     ),
 
@@ -407,7 +443,6 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                     if (_isDesktop && _dragStart != null && _dragEnd != null)
                       Positioned.fill(
                         child: IgnorePointer(
-                          // IgnorePointer ensures the box doesn't block touches
                           child: CustomPaint(
                             painter: SelectionBoxPainter(
                               start: _dragStart,
@@ -438,12 +473,10 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         originalData: originalData,
         selectedIds: _selectedIds,
         onToggleSelection: _toggleSelection,
-        itemKeys: _gridItemKeys, // <-- PASS THE KEYS HERE
+        itemKeys: _gridItemKeys,
       );
     } else {
       // --- LIST VIEW ---
-      // (Note: List view doesn't support drag-select in this implementation
-      // unless you add keys to list tiles too, but grid is the priority)
       return SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
         sliver: SliverList(
@@ -452,16 +485,20 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
               int index,
               ) {
             final item = achievements[index];
-            final originalItem = originalData[index]; // <-- Get original item
+            final originalItem = originalData[index];
             final String id = originalItem.achievementId!;
             final bool isSelected = _selectedIds.contains(id);
+
+            // FIX: Generate and store GlobalKey for list items
+            final GlobalKey key = _gridItemKeys.putIfAbsent(id, () => GlobalKey());
 
             return _buildAchievementListTile(
               context: context,
               item: item,
-              originalItem: originalItem, // <-- Pass it here
+              originalItem: originalItem,
               isSelected: isSelected,
               onToggle: () => _toggleSelection(id),
+              key: key, // Pass the key
             );
           }, childCount: achievements.length),
         ),
@@ -475,63 +512,68 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
     required bool isSelected,
     required VoidCallback onToggle,
     required AchievementData originalItem,
+    required GlobalKey key, // Receive the key
   }) {
     final String title = item['title'];
     final IconData icon = item['icon'];
     final Color iconColor = item['color'];
     final double progress = item['progress'];
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      elevation: 1.0,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.outline.withOpacity(0.3),
-          width: isSelected ? 2.0 : 1.0,
+    // FIX: Wrap in Container with GlobalKey for selection logic
+    return Container(
+      key: key,
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 4.0),
+        elevation: 1.0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+            width: isSelected ? 2.0 : 1.0,
+          ),
+          borderRadius: BorderRadius.circular(12.0),
         ),
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: iconColor.withOpacity(0.1),
-          child: Icon(icon, color: iconColor),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 6.0),
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(iconColor),
-            ),
-            const SizedBox(height: 2.0),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.more_vert),
-          onPressed: () {
-            // Handle more options tap
-          },
-        ),
-        onTap: () {
-          if (_selectedIds.isNotEmpty) {
-            onToggle();
-          } else {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AdminAchievementDetailPage(
-                  initialData: originalItem, // Pass the partial object here
-                ),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: iconColor.withOpacity(0.1),
+            child: Icon(icon, color: iconColor),
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+              const SizedBox(height: 6.0),
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey[300],
+                valueColor: AlwaysStoppedAnimation<Color>(iconColor),
               ),
-            );
-          }
-        },
-        onLongPress: onToggle,
+              const SizedBox(height: 2.0),
+            ],
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () {
+              // Handle more options tap if needed
+            },
+          ),
+          onTap: () {
+            if (_selectedIds.isNotEmpty) {
+              onToggle();
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AdminAchievementDetailPage(
+                    initialData: originalItem,
+                  ),
+                ),
+              );
+            }
+          },
+          onLongPress: onToggle,
+        ),
       ),
     );
   }

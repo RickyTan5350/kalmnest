@@ -3,9 +3,8 @@ import 'package:flutter_codelab/student/services/local_achievement_storage.dart'
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-// Ensure this matches your emulator/device URL / local dev server
-// For local development with `php artisan serve` use 127.0.0.1:8000
-const String _authApiUrl = 'http://127.0.0.1:8000/api';
+// Ensure this matches your emulator/device URL
+const String _authApiUrl = 'https://backend_services.test/api';
 
 const _storage = FlutterSecureStorage();
 const String _tokenKey = 'auth_token';
@@ -27,7 +26,6 @@ class AuthApi {
         Uri.parse(loginUrl),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
-          'Accept': 'application/json',
         },
         body: body,
       );
@@ -86,7 +84,6 @@ class AuthApi {
           Uri.parse(logoutUrl),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
-            'Accept': 'application/json',
             'Authorization': 'Bearer $token', // Crucial: Send the token
           },
         );
