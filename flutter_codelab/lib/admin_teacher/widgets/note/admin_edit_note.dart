@@ -7,6 +7,7 @@ import 'package:flutter_codelab/api/note_api.dart';
 import 'package:flutter_codelab/api/file_api.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 import 'run_code_page.dart';
 
 // Helper Class (Retained for file management)
@@ -625,6 +626,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                 _contentController.text,
                                 extensionSet: md.ExtensionSet.gitHubFlavored,
                               ),
+                              baseUrl: Uri.parse(ApiConstants.domain),
                               textStyle: TextStyle(
                                 color: colorScheme.onSurface,
                                 fontSize: 15,

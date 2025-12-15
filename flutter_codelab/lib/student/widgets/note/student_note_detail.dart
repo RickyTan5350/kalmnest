@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/api/note_api.dart';
 // Make sure this import path matches where you created the file above
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
@@ -248,6 +249,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
     return HtmlWidget(
       htmlContent,
+      baseUrl: Uri.parse(ApiConstants.domain),
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 16),
       customWidgetBuilder: (element) {
         if (element.localName == 'pre') {
