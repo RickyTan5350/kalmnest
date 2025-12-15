@@ -597,7 +597,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
 
         actions: [
           IconButton(
-            icon: const Icon(Icons.file_upload),
+            icon: Icon(Icons.file_upload, color: colorScheme.primary),
             tooltip: 'Import Markdown',
             onPressed: _isLoading ? null : _handleImportMarkdown,
           ),
