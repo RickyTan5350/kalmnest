@@ -214,7 +214,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         widget.showSnackBar(
           scaffoldContext,
           'Successfully deleted ${_selectedIds.length} achievement(s).',
-          Theme.of(scaffoldContext).colorScheme.primary,
+          Colors.green,
         );
         setState(() {
           _selectedIds.clear();
@@ -224,7 +224,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         widget.showSnackBar(
           scaffoldContext,
           'Error deleting achievements: $e',
-          Theme.of(scaffoldContext).colorScheme.error,
+          Colors.red,
         );
       } finally {
         if (mounted) {
@@ -245,16 +245,29 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
     return entry['icon'] as IconData;
   }
 
+  Color _getColor(String? iconValue) {
+    switch (iconValue) {
+      case 'html':
+        return Colors.orange;
+      case 'css':
+        return Colors.green;
+      case 'javascript':
+        return Colors.yellow;
+      case 'php':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
 
-
-  List<Map<String, dynamic>> _transformData(BuildContext context, List<AchievementData> briefs) {
+  List<Map<String, dynamic>> _transformData(List<AchievementData> briefs) {
     return briefs.map((brief) {
       final iconValue = brief.icon;
       return {
         'id': brief.achievementId,
         'title': brief.achievementTitle ?? 'No Title',
         'icon': _getIconData(iconValue),
-        'color': getAchievementColor(context, iconValue),
+        'color': _getColor(iconValue),
         'preview': brief.achievementDescription,
         'progress': 0.0,
       };
@@ -363,7 +376,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
               }
 
               final List<Map<String, dynamic>> uiData = _transformData(
-                context, filteredData,
+                filteredData,
               );
 
               // --- REPLACED Gesture Logic with WRAPPER ---
@@ -533,7 +546,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
               const SizedBox(height: 6.0),
               LinearProgressIndicator(
                 value: progress,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                backgroundColor: Colors.grey[300],
                 valueColor: AlwaysStoppedAnimation<Color>(iconColor),
               ),
               const SizedBox(height: 2.0),

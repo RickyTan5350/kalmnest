@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
 
 /// CENTRAL API BASE URL
 const String apiBase = "https://backend_services.test/api";
@@ -21,8 +20,6 @@ class GameAPI {
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      // Only add Host header if NOT using a custom URL
-      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'backend_services.test',
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }

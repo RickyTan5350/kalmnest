@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
 
 //server URL: set your own
 const String _apiUrl = 'https://backend_services.test/api/achievements';
@@ -41,25 +40,18 @@ Color _getColor(String iconValue) {
 
 class AchievementApi {
   static const String validationErrorCode = '422';
-  static const String studentAuthFailureMessage =
-      'Students are not allowed to create achievements';
+  static const String studentAuthFailureMessage = 'Students are not allowed to create achievements';
 
-  Future<Map<String, String>> _getAuthHeaders({
-    bool requiresAuth = true,
-  }) async {
+  Future<Map<String, String>> _getAuthHeaders({bool requiresAuth = true}) async {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
-      // Only add Host header if NOT using a custom URL
-      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'backend_services.test',
     };
 
     final token = await AuthApi.getToken();
 
     if (requiresAuth && token == null) {
-      throw Exception(
-        "Authentication required. Please log in to perform this action.",
-      );
+      throw Exception("Authentication required. Please log in to perform this action.");
     }
 
     if (token != null) {
@@ -87,14 +79,11 @@ class AchievementApi {
         // --- CHANGED: Preserve structure by encoding to JSON ---
         final errors = jsonDecode(response.body)['errors'];
         // pass the raw JSON string of errors so the UI can parse it
-        throw Exception(
-          '${AchievementApi.validationErrorCode}:${jsonEncode(errors)}',
-        );
+        throw Exception('${AchievementApi.validationErrorCode}:${jsonEncode(errors)}');
       } else if (response.statusCode == 403 || response.statusCode == 401) {
         final jsonResponse = jsonDecode(response.body);
         final serverMessage = jsonResponse['message'] as String? ?? '';
-        const unauthorizedMessage =
-            'Access Denied: Only Admins or Teachers can create achievements.';
+        const unauthorizedMessage = 'Access Denied: Only Admins or Teachers can create achievements.';
 
         if (serverMessage.contains(unauthorizedMessage)) {
           throw Exception(unauthorizedMessage);
@@ -120,19 +109,13 @@ class AchievementApi {
       if (response.statusCode == 200) {
         List<dynamic> jsonResponse = jsonDecode(response.body);
         final List<AchievementData> achievements = jsonResponse
-            .map(
-              (item) => AchievementData.fromJson(item as Map<String, dynamic>),
-            )
+            .map((item) => AchievementData.fromJson(item as Map<String, dynamic>))
             .toList();
         return achievements;
-      } else if (response.statusCode == 403) {
-        throw Exception(
-          'Access Denied: You do not have permission to view achievements.',
-        );
+      } else if(response.statusCode == 403){
+        throw Exception('Access Denied: You do not have permission to view achievements.');
       } else {
-        throw Exception(
-          'Failed to load achievement data. Status: ${response.statusCode}',
-        );
+        throw Exception('Failed to load achievement data. Status: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Failed to connect to API: $e');
@@ -157,9 +140,7 @@ class AchievementApi {
       } else if (response.statusCode == 422) {
         // --- CHANGED: Preserve structure by encoding to JSON ---
         final errors = jsonDecode(response.body)['errors'];
-        throw Exception(
-          '${AchievementApi.validationErrorCode}:${jsonEncode(errors)}',
-        );
+        throw Exception('${AchievementApi.validationErrorCode}:${jsonEncode(errors)}');
       } else if (response.statusCode == 404) {
         throw Exception('Achievement not found (404).');
       } else {
@@ -190,9 +171,7 @@ class AchievementApi {
       } else if (response.statusCode == 404) {
         throw Exception('No achievements found to delete.');
       } else {
-        throw Exception(
-          'Server Error ${response.statusCode}: ${response.body}',
-        );
+        throw Exception('Server Error ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       print('Network/API Exception: $e');
@@ -215,15 +194,11 @@ class AchievementApi {
         return AchievementData.fromJson(jsonResponse);
       } else if (response.statusCode == 403) {
         // 3. Handle Access Denied (e.g., if a Student tries to view Admin details)
-        throw Exception(
-          'Access Denied: You do not have permission to view this achievement.',
-        );
+        throw Exception('Access Denied: You do not have permission to view this achievement.');
       } else if (response.statusCode == 404) {
         throw Exception('Achievement not found.');
       } else {
-        throw Exception(
-          'Failed to load details. Status: ${response.statusCode}',
-        );
+        throw Exception('Failed to load details. Status: ${response.statusCode}');
       }
     } catch (e) {
       print('Error fetching details: $e');
@@ -236,11 +211,7 @@ class AchievementApi {
     try {
       final headers = await _getAuthHeaders(requiresAuth: true);
       final body = jsonEncode({'achievement_id': achievementId});
-      final response = await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: body,
-      );
+      final response = await http.post(Uri.parse(url), headers: headers, body: body);
       if (response.statusCode != 200) {
         throw Exception('Failed to sync unlock to cloud');
       }
@@ -256,9 +227,7 @@ class AchievementApi {
 
     if (response.statusCode == 200) {
       List<dynamic> jsonResponse = jsonDecode(response.body);
-      return jsonResponse
-          .map((item) => AchievementData.fromJson(item))
-          .toList();
+      return jsonResponse.map((item) => AchievementData.fromJson(item)).toList();
     } else {
       throw Exception('Failed to fetch user progress');
     }

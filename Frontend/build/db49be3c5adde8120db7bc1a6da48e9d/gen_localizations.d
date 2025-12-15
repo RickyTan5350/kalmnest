@@ -1,1 +1,0 @@
- D:\\Y3S1\\flutter-starter-app\\Frontend\\lib\\l10n\\app_localizations_en.dart D:\\Y3S1\\flutter-starter-app\\Frontend\\lib\\l10n\\app_localizations.dart:  D:\\Y3S1\\flutter-starter-app\\Frontend\\l10n.yaml D:\\Y3S1\\flutter-starter-app\\Frontend\\lib\\l10n\\app_en.arb

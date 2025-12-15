@@ -5,37 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Flutter: Emulator (Herd)",
+            "name": "notes_flutter_template",
+            "cwd": "notes_flutter_template",
             "request": "launch",
-            "type": "dart",
-            "program": "lib/main.dart",
-            "cwd": "flutter_codelab",
-            "args": [
-                "--dart-define=PHYSICAL_DEVICE=false",
-                "--dart-define=USE_HERD=true"
-            ]
+            "type": "dart"
         },
         {
-            "name": "Flutter: Physical Device (Artisan)",
+            "name": "notes_flutter_template (profile mode)",
+            "cwd": "notes_flutter_template",
             "request": "launch",
             "type": "dart",
-            "program": "lib/main.dart",
-            "cwd": "flutter_codelab",
-            "args": [
-                "--dart-define=PHYSICAL_DEVICE=true",
-                "--dart-define=USE_HERD=false",
-                "--dart-define=LOCAL_IP=192.168.0.161"
-            ]
+            "flutterMode": "profile"
         },
         {
-            "name": "Flutter: Expose (Public URL)",
+            "name": "notes_flutter_template (release mode)",
+            "cwd": "notes_flutter_template",
             "request": "launch",
             "type": "dart",
-            "program": "lib/main.dart",
-            "cwd": "flutter_codelab",
-            "args": [
-                "--dart-define=CUSTOM_BASE_URL=https://uezjr7ajlf.sharedwithexpose.com"
-            ]
+            "flutterMode": "release"
         }
     ]
 }
