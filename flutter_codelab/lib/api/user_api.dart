@@ -19,7 +19,7 @@ class UserApi {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
       // Only add Host header if NOT using a custom URL
-      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'backend_services.test',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     final token = await AuthApi.getToken();
