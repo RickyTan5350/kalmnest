@@ -71,16 +71,7 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
     }
   }
 
-  Color _getColor(String? iconValue) {
-    switch (iconValue) {
-      case 'html': return Colors.orange;
-      case 'css': return Colors.green;
-      case 'javascript': return Colors.yellow;
-      case 'php': return Colors.blue;
-      case 'backend': return Colors.deepPurple;
-      default: return Colors.grey;
-    }
-  }
+
 
   String _formatDate(DateTime? date) {
     if (date == null) return 'N/A';
@@ -90,7 +81,7 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
   @override
   Widget build(BuildContext context) {
     final IconData icon = _getIconData(_displayData.icon);
-    final Color color = _getColor(_displayData.icon);
+    final Color color = getAchievementColor(context, _displayData.icon);
 
     return Scaffold(
       appBar: AppBar(
@@ -183,7 +174,7 @@ class _AdminAchievementDetailPageState extends State<AdminAchievementDetailPage>
               else
                 LinearProgressIndicator(
                   value: widget.progress,
-                  backgroundColor: Colors.grey[300],
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   valueColor: AlwaysStoppedAnimation<Color>(color),
                 ),
 
