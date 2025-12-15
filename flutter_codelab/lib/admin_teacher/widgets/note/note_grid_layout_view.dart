@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-// Import BOTH detail pages
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_note_detail.dart';
-import 'package:flutter_codelab/student/widgets/note/student_note_detail.dart';
+// REMOVED: Specific imports are no longer needed here. 
+// Navigation logic is now handled by the parent (StudentViewPage or AdminViewNotePage).
 
 class GridLayoutView extends StatelessWidget {
   final List<Map<String, dynamic>> achievements;
@@ -9,6 +8,9 @@ class GridLayoutView extends StatelessWidget {
   final Set<dynamic> selectedIds;
   final void Function(dynamic) onToggleSelection;
   final Map<dynamic, GlobalKey> itemKeys;
+  
+  // 1. ADD: The parameter to accept the tap callback
+  final void Function(dynamic)? onTap; 
 
   const GridLayoutView({
     super.key,
@@ -17,6 +19,8 @@ class GridLayoutView extends StatelessWidget {
     required this.selectedIds,
     required this.onToggleSelection,
     required this.itemKeys,
+    // 2. ADD: Add it to the constructor
+    this.onTap, 
   });
 
   @override
@@ -66,26 +70,13 @@ class GridLayoutView extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
+          // If we are in selection mode, tapping toggles selection
           if (selectedIds.isNotEmpty) {
             onToggleSelection(id);
-          } else {
-            // FIX: Check isStudent to navigate to the correct page
-            if (isStudent) {
-              Navigator.push(context, MaterialPageRoute(
-                builder: (context) => StudentNoteDetailPage(
-                  noteId: id.toString(),
-                  noteTitle: title,
-                ),
-              ));
-            } else {
-              Navigator.push(context, MaterialPageRoute(
-                builder: (context) => AdminNoteDetailPage(
-                  noteId: id.toString(),
-                  noteTitle: title,
-                  isStudent: false, // Required for admin logic
-                ),
-              ));
-            }
+          } 
+          // 3. FIX: Otherwise, call the passed navigation function
+          else if (onTap != null) {
+            onTap!(id);
           }
         },
         onLongPress: () => onToggleSelection(id),
