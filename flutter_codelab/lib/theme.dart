@@ -346,6 +346,16 @@ class MaterialTheme {
      ),
      scaffoldBackgroundColor: colorScheme.surface,
      canvasColor: colorScheme.surface,
+     extensions: [
+       BrandColors(
+         html: const Color(0xFFFF9800), // Orange
+         css: const Color(0xFF4CAF50), // Green
+         javascript: const Color(0xFFFFEB3B), // Yellow
+         php: const Color(0xFF2196F3), // Blue
+         backend: const Color(0xFF673AB7), // DeepPurple
+         other: const Color(0xFF9E9E9E), // Grey
+       ),
+     ],
   );
 
 
@@ -386,4 +396,57 @@ class ColorFamily {
   final Color onColor;
   final Color colorContainer;
   final Color onColorContainer;
+}
+
+@immutable
+class BrandColors extends ThemeExtension<BrandColors> {
+  const BrandColors({
+    required this.html,
+    required this.css,
+    required this.javascript,
+    required this.php,
+    required this.backend,
+    required this.other,
+  });
+
+  final Color html;
+  final Color css;
+  final Color javascript;
+  final Color php;
+  final Color backend;
+  final Color other;
+
+  @override
+  BrandColors copyWith({
+    Color? html,
+    Color? css,
+    Color? javascript,
+    Color? php,
+    Color? backend,
+    Color? other,
+  }) {
+    return BrandColors(
+      html: html ?? this.html,
+      css: css ?? this.css,
+      javascript: javascript ?? this.javascript,
+      php: php ?? this.php,
+      backend: backend ?? this.backend,
+      other: other ?? this.other,
+    );
+  }
+
+  @override
+  BrandColors lerp(ThemeExtension<BrandColors>? other, double t) {
+    if (other is! BrandColors) {
+      return this;
+    }
+    return BrandColors(
+      html: Color.lerp(html, other.html, t)!,
+      css: Color.lerp(css, other.css, t)!,
+      javascript: Color.lerp(javascript, other.javascript, t)!,
+      php: Color.lerp(php, other.php, t)!,
+      backend: Color.lerp(backend, other.backend, t)!,
+      other: Color.lerp(this.other, other.other, t)!,
+    );
+  }
 }
