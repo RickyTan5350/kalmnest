@@ -10,6 +10,8 @@ class AchievementData {
   final String? levelName;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final int? unlockedCount;
+  final int? totalStudents;
 
   AchievementData({
     this.achievementId,
@@ -22,7 +24,9 @@ class AchievementData {
     this.creatorId,
     this.creatorName,
     this.createdAt,
-    this.updatedAt
+    this.updatedAt,
+    this.unlockedCount,
+    this.totalStudents,
   });
 
   factory AchievementData.fromJson(Map<String, dynamic> json) {
@@ -31,7 +35,8 @@ class AchievementData {
       achievementName: json['achievement_name'] as String?,
       achievementDescription: json['description'] as String?,
       achievementTitle: json['title'] as String?,
-      levelId: json['associated_level'] as String? ?? json['level_id'] as String?,
+      levelId:
+          json['associated_level'] as String? ?? json['level_id'] as String?,
       levelName: json['level_name'] as String?,
       icon: json['icon'] as String?,
       creatorId: json['created_by'] as String?,
@@ -42,6 +47,8 @@ class AchievementData {
       updatedAt: json['updated_at'] == null
           ? null
           : DateTime.tryParse(json['updated_at'] as String),
+      unlockedCount: json['unlocked_count'] as int?,
+      totalStudents: json['total_students'] as int?,
     );
   }
 
