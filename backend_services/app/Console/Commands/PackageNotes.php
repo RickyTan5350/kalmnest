@@ -39,6 +39,12 @@ class PackageNotes extends Command
         $this->info("Packaging notes in: $targetPath");
 
         $files = File::files($targetPath);
+        $picturesPath = $targetPath . DIRECTORY_SEPARATOR . 'pictures';
+        
+        if (!File::exists($picturesPath)) {
+            File::makeDirectory($picturesPath, 0755, true);
+        }
+
         $updatedCount = 0;
         $copiedCount = 0;
 
@@ -65,7 +71,7 @@ class PackageNotes extends Command
                 // $this->warn("   No image links found in " . $file->getFilename());
             }
 
-            $newContent = preg_replace_callback($pattern, function ($matches) use ($targetPath, &$copiedCount, &$hasChanges) {
+            $newContent = preg_replace_callback($pattern, function ($matches) use ($targetPath, $picturesPath, &$copiedCount, &$hasChanges) {
                 $altText = $matches[1];
                 $fullUrl = $matches[2];
                 $serverFilename = basename($matches[3]); // The UUID filename on server
@@ -98,17 +104,17 @@ class PackageNotes extends Command
                          $newFilename = $cleanName . '.' . $extension;
                     }
 
-                    // 3. Handle duplicate filenames in the target directory
+                    // 3. Handle duplicate filenames in the target directory (pictures)
                     // If "Image.png" exists, try "Image-1.png", etc.
                     $baseNewName = pathinfo($newFilename, PATHINFO_FILENAME);
                     $counter = 1;
-                    while (File::exists($targetPath . DIRECTORY_SEPARATOR . $newFilename)) {
+                    while (File::exists($picturesPath . DIRECTORY_SEPARATOR . $newFilename)) {
                         // Check if it's the SAME file content (md5 check) to avoid needless renaming?
                         // For simplicity, if it exists, assume we might need a unique name unless we want to overwrite.
                         // But wait, if we run this script multiple times, we want it to be stable.
                         
                         // optimization: if target file exists and has same size/hash, reuse it.
-                        $existingPath = $targetPath . DIRECTORY_SEPARATOR . $newFilename;
+                        $existingPath = $picturesPath . DIRECTORY_SEPARATOR . $newFilename;
                         if (filesize($existingPath) === filesize($sourcePath)) {
                              // Assume same file
                              break;
@@ -119,10 +125,10 @@ class PackageNotes extends Command
                     }
 
                     // 4. Copy the file
-                    $destPath = $targetPath . DIRECTORY_SEPARATOR . $newFilename;
+                    $destPath = $picturesPath . DIRECTORY_SEPARATOR . $newFilename;
                     if (!File::exists($destPath)) {
                         File::copy($sourcePath, $destPath);
-                        $this->line("   - Copied: $serverFilename -> $newFilename");
+                        $this->line("   - Copied: $serverFilename -> pictures/$newFilename");
                         $copiedCount++;
                     }
 
@@ -130,7 +136,7 @@ class PackageNotes extends Command
                     $hasChanges = true;
 
                     // 6. Return relative link with original Alt Text (preserved) but pointing to new filename
-                    return "![$altText]($newFilename)";
+                    return "![$altText](pictures/$newFilename)";
 
                 } else {
                     $this->warn("   - Warning: Source image not found locally: $serverFilename");

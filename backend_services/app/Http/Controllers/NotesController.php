@@ -14,6 +14,8 @@ use Illuminate\Support\Str;
 
 class NotesController extends Controller
 {
+    use \App\Traits\SyncsToSeedData;
+
     /**
      * Get brief details of notes for list view.
      */
@@ -39,10 +41,13 @@ class NotesController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $originalName = $file->getClientOriginalName();
-            $safeFileName = (string) Str::uuid() . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $safeFileName = time() . '_' . $file->getClientOriginalName();
 
             try {
                 $path = $file->storeAs('uploads', $safeFileName, 'public');
+
+                // SYNC TO SEED DATA
+                $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
 
                 return response()->json([
                     'message' => 'File uploaded successfully',
