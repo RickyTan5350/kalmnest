@@ -165,6 +165,16 @@ class _AdminAchievementDetailPageState
         backgroundColor: color.withOpacity(0.2),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              if (_displayData.achievementId != null) {
+                setState(() => _isLoading = true);
+                _fetchFullDetails(_displayData.achievementId!);
+              }
+            },
+            tooltip: 'Refresh',
+          ),
+          IconButton(
             icon: const Icon(Icons.edit),
 
             // In achievement_detail.dart inside the IconButton onPressed:
