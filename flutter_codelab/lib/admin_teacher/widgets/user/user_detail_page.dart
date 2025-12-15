@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/user_api.dart';
 import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'edit_user_dialog.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String userId;
   final String userName; // Passed for the app bar title before loading
+  final List<BreadcrumbItem>? breadcrumbs;
 
-  const UserDetailPage({super.key, required this.userId, required this.userName});
+  const UserDetailPage({
+    super.key,
+    required this.userId,
+    required this.userName,
+    this.breadcrumbs,
+  });
 
   @override
   State<UserDetailPage> createState() => _UserDetailPageState();
@@ -18,25 +25,27 @@ class _UserDetailPageState extends State<UserDetailPage> {
   late Future<UserDetails> _userFuture;
 
   @override
-
   void initState() {
     super.initState();
     _userFuture = _userApi.getUserDetails(widget.userId);
     _fetchUserDetails();
   }
 
-  
   // Helper to get role color (matching your list logic)
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
-      case 'admin': return scheme.error;
-      case 'teacher': return scheme.tertiary;
-      case 'student': return scheme.primary;
-      default: return scheme.secondary;
+      case 'admin':
+        return scheme.error;
+      case 'teacher':
+        return scheme.tertiary;
+      case 'student':
+        return scheme.primary;
+      default:
+        return scheme.secondary;
     }
   }
 
-Future<void> _fetchUserDetails() async {
+  Future<void> _fetchUserDetails() async {
     setState(() {
       _userFuture = _userApi.getUserDetails(widget.userId);
     });
@@ -47,9 +56,9 @@ Future<void> _fetchUserDetails() async {
       context: context,
       initialData: user,
       showSnackBar: (ctx, msg, color) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: color),
-        );
+        ScaffoldMessenger.of(
+          ctx,
+        ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
       },
     );
 
@@ -59,8 +68,7 @@ Future<void> _fetchUserDetails() async {
     }
   }
 
-  
-Future<bool> _confirmDelete() async {
+  Future<bool> _confirmDelete() async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -87,7 +95,7 @@ Future<bool> _confirmDelete() async {
     );
     return confirmed ?? false;
   }
-  
+
   // --- NEW: Deletion Logic ---
   Future<void> _deleteUser() async {
     final bool confirmed = await _confirmDelete();
@@ -95,7 +103,7 @@ Future<bool> _confirmDelete() async {
 
     if (!mounted) return;
     // Capture context before async gap to show SnackBar
-    final BuildContext scaffoldContext = context; 
+    final BuildContext scaffoldContext = context;
 
     try {
       await _userApi.deleteUser(widget.userId);
@@ -110,26 +118,26 @@ Future<bool> _confirmDelete() async {
 
       // Pop the details page and pass 'true' to signal success to the parent list view
       if (mounted) {
-        Navigator.of(context).pop(true); 
+        Navigator.of(context).pop(true);
       }
-
     } catch (e) {
       if (mounted) {
-        final BuildContext scaffoldContext = context; 
+        final BuildContext scaffoldContext = context;
         String cleanError = e.toString().replaceAll('Exception: ', '');
-        
+
         bool isDeniedError = false;
-        const String deniedMessage = 'Access Denied: Only Administrators can delete user accounts.';
+        const String deniedMessage =
+            'Access Denied: Only Administrators can delete user accounts.';
 
         // Explicitly check for the 403 error string and provide a friendly message
         if (cleanError.contains('403:')) {
-            cleanError = deniedMessage;
-            isDeniedError = true;
+          cleanError = deniedMessage;
+          isDeniedError = true;
         }
 
         // Determine the final message: remove the prefix only for the denial error
-        final String snackBarText = isDeniedError 
-            ? cleanError 
+        final String snackBarText = isDeniedError
+            ? cleanError
             : 'Error deleting user: $cleanError';
 
         ScaffoldMessenger.of(scaffoldContext).showSnackBar(
@@ -141,6 +149,7 @@ Future<bool> _confirmDelete() async {
       }
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -148,7 +157,9 @@ Future<bool> _confirmDelete() async {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.userName),
+        title: widget.breadcrumbs != null
+            ? BreadcrumbNavigation(items: widget.breadcrumbs!)
+            : Text(widget.userName),
         centerTitle: true,
         actions: [
           FutureBuilder<UserDetails>(
@@ -158,11 +169,12 @@ Future<bool> _confirmDelete() async {
                 // Edit Button
                 return IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () => _editUser(snapshot.data!), // Pass the loaded user data
+                  onPressed: () =>
+                      _editUser(snapshot.data!), // Pass the loaded user data
                   tooltip: 'Edit User Profile',
                 );
               }
-              return const SizedBox.shrink(); 
+              return const SizedBox.shrink();
             },
           ),
           FutureBuilder<UserDetails>(
@@ -177,7 +189,7 @@ Future<bool> _confirmDelete() async {
                 );
               }
               // Hide while loading or on error
-              return const SizedBox.shrink(); 
+              return const SizedBox.shrink();
             },
           ),
         ],
@@ -195,7 +207,10 @@ Future<bool> _confirmDelete() async {
                   Icon(Icons.error_outline, size: 48, color: colorScheme.error),
                   const SizedBox(height: 16),
                   Text('Error loading profile', style: textTheme.titleMedium),
-                  Text(snapshot.error.toString().replaceAll('Exception: ', ''), style: textTheme.bodySmall),
+                  Text(
+                    snapshot.error.toString().replaceAll('Exception: ', ''),
+                    style: textTheme.bodySmall,
+                  ),
                 ],
               ),
             );
@@ -215,25 +230,42 @@ Future<bool> _confirmDelete() async {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: _getRoleColor(user.roleName, colorScheme),
+                        backgroundColor: _getRoleColor(
+                          user.roleName,
+                          colorScheme,
+                        ),
                         foregroundColor: colorScheme.onPrimary,
                         child: Text(
-                          user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                          style: textTheme.displayMedium?.copyWith(color: colorScheme.onPrimary),
+                          user.name.isNotEmpty
+                              ? user.name[0].toUpperCase()
+                              : '?',
+                          style: textTheme.displayMedium?.copyWith(
+                            color: colorScheme.onPrimary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text(user.name, style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(
+                        user.name,
+                        style: textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: colorScheme.secondaryContainer,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           user.roleName,
-                          style: textTheme.labelLarge?.copyWith(color: colorScheme.onSecondaryContainer),
+                          style: textTheme.labelLarge?.copyWith(
+                            color: colorScheme.onSecondaryContainer,
+                          ),
                         ),
                       ),
                     ],
@@ -245,28 +277,61 @@ Future<bool> _confirmDelete() async {
                 _buildDetailSection(
                   context,
                   title: "User Profile Details", // Combined title
-                  icon: Icons.person_outline, // Generic icon for profile details
+                  icon:
+                      Icons.person_outline, // Generic icon for profile details
                   children: [
                     // Contact Information
-                    _buildInfoRow(context, Icons.email_outlined, "Email", user.email),
-                    _buildInfoRow(context, Icons.phone_outlined, "Phone", user.phoneNo),
-                    _buildInfoRow(context, Icons.location_on_outlined, "Address", user.address),
-                    
+                    _buildInfoRow(
+                      context,
+                      Icons.email_outlined,
+                      "Email",
+                      user.email,
+                    ),
+                    _buildInfoRow(
+                      context,
+                      Icons.phone_outlined,
+                      "Phone",
+                      user.phoneNo,
+                    ),
+                    _buildInfoRow(
+                      context,
+                      Icons.location_on_outlined,
+                      "Address",
+                      user.address,
+                    ),
+
                     // Added a subtle divider to separate the two original logical groups
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.5)),
+                      child: Divider(
+                        height: 1,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withOpacity(0.5),
+                      ),
                     ),
-                    
+
                     // Personal Details
-                    _buildInfoRow(context, Icons.transgender, "Gender", user.gender),
-                    _buildInfoRow(context, Icons.calendar_today, "Joined Date", user.joinedDate.split('T')[0]), // Simple date formatting
                     _buildInfoRow(
-                      context, 
-                      Icons.info_outline, 
-                      "Account Status", 
+                      context,
+                      Icons.transgender,
+                      "Gender",
+                      user.gender,
+                    ),
+                    _buildInfoRow(
+                      context,
+                      Icons.calendar_today,
+                      "Joined Date",
+                      user.joinedDate.split('T')[0],
+                    ), // Simple date formatting
+                    _buildInfoRow(
+                      context,
+                      Icons.info_outline,
+                      "Account Status",
                       user.accountStatus.toUpperCase(),
-                      valueColor: user.accountStatus == 'active' ? Colors.green : colorScheme.error,
+                      valueColor: user.accountStatus == 'active'
+                          ? Colors.green
+                          : colorScheme.error,
                     ),
                   ],
                 ),
@@ -279,7 +344,12 @@ Future<bool> _confirmDelete() async {
     );
   }
 
-  Widget _buildDetailSection(BuildContext context, {required String title, required IconData icon, required List<Widget> children}) {
+  Widget _buildDetailSection(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -295,7 +365,12 @@ Future<bool> _confirmDelete() async {
               children: [
                 Icon(icon, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
-                Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             const Divider(height: 24),
@@ -306,25 +381,42 @@ Future<bool> _confirmDelete() async {
     );
   }
 
-  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value, {Color? valueColor}) {
+  Widget _buildInfoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          Icon(
+            icon,
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.outline)),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  value, 
+                  value,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: valueColor,
-                    fontWeight: valueColor != null ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: valueColor != null
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import '../user/user_detail_page.dart';
 
 class AdminAchievementStudentsPage extends StatefulWidget {
@@ -62,14 +63,20 @@ class _AdminAchievementStudentsPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Unlocked By',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+        title: BreadcrumbNavigation(
+          items: [
+            BreadcrumbItem(
+              label: 'Achievements',
+              onTap: () {
+                // Pop until we are back at the main list
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
             ),
-            Text(widget.achievementName),
+            BreadcrumbItem(
+              label: widget.achievementName,
+              onTap: () => Navigator.of(context).pop(), // Pop back to detail
+            ),
+            const BreadcrumbItem(label: 'Students'),
           ],
         ),
       ),
@@ -162,8 +169,32 @@ class _AdminAchievementStudentsPageState
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          UserDetailPage(userId: userId, userName: name),
+                      builder: (context) => UserDetailPage(
+                        userId: userId,
+                        userName: name,
+                        breadcrumbs: [
+                          BreadcrumbItem(
+                            label: 'Achievements',
+                            onTap: () => Navigator.of(
+                              context,
+                            ).popUntil((route) => route.isFirst),
+                          ),
+                          BreadcrumbItem(
+                            label: widget.achievementName,
+                            // Pop 2 times: UserDetail -> Students -> Detail
+                            onTap: () {
+                              Navigator.of(context).pop(); // pop UserDetail
+                              Navigator.of(context).pop(); // pop Students
+                            },
+                          ),
+                          BreadcrumbItem(
+                            label: 'Students',
+                            // Pop 1 time: UserDetail -> Students
+                            onTap: () => Navigator.of(context).pop(),
+                          ),
+                          BreadcrumbItem(label: name),
+                        ],
+                      ),
                     ),
                   );
                 }

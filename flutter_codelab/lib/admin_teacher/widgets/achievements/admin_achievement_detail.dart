@@ -1,9 +1,10 @@
 // lib/pages/achievement_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/api/achievement_api.dart'; // Import API
+import 'package:flutter_codelab/api/achievement_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_achievement_students_page.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
-import 'admin_achievement_students_page.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'admin_edit_achievement_page.dart';
 
 class AdminAchievementDetailPage extends StatefulWidget {
@@ -152,7 +153,15 @@ class _AdminAchievementDetailPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Achievement Details'),
+        title: BreadcrumbNavigation(
+          items: [
+            BreadcrumbItem(
+              label: 'Achievements',
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            const BreadcrumbItem(label: 'Details'),
+          ],
+        ),
         backgroundColor: color.withOpacity(0.2),
         actions: [
           IconButton(
@@ -277,16 +286,29 @@ class _AdminAchievementDetailPageState
                       if (_isLoading)
                         const LinearProgressIndicator()
                       else
-                        LinearProgressIndicator(
-                          value:
-                              (_displayData.unlockedCount != null &&
-                                  _displayData.totalStudents != null &&
-                                  _displayData.totalStudents! > 0)
-                              ? (_displayData.unlockedCount! /
-                                    _displayData.totalStudents!)
-                              : widget.progress,
-                          backgroundColor: Colors.grey[300],
-                          valueColor: AlwaysStoppedAnimation<Color>(color),
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(
+                            begin: 0.0,
+                            end:
+                                (_displayData.unlockedCount != null &&
+                                    _displayData.totalStudents != null &&
+                                    _displayData.totalStudents! > 0)
+                                ? (_displayData.unlockedCount! /
+                                      _displayData.totalStudents!)
+                                : widget.progress,
+                          ),
+                          duration: const Duration(milliseconds: 1500),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, _) =>
+                              LinearProgressIndicator(
+                                value: value,
+                                minHeight: 10,
+                                borderRadius: BorderRadius.circular(5),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  color,
+                                ),
+                                backgroundColor: color.withOpacity(0.1),
+                              ),
                         ),
                     ],
                   ),
