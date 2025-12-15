@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/api/api_constants.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'auth_api.dart';
 
 //server URL: set your own
-const String _apiUrl = '${ApiConstants.baseUrl}/achievements';
+final String _apiUrl = '${ApiConstants.baseUrl}/achievements';
 
 IconData _getIconData(String iconValue) {
   try {
@@ -261,7 +261,10 @@ class AchievementApi {
       throw Exception('Failed to fetch user progress');
     }
   }
-  Future<List<Map<String, dynamic>>> fetchAchievementStudents(String achievementId) async {
+
+  Future<List<Map<String, dynamic>>> fetchAchievementStudents(
+    String achievementId,
+  ) async {
     final url = '$_apiUrl/$achievementId/students';
     try {
       final headers = await _getAuthHeaders(requiresAuth: true);
