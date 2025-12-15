@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/api/note_api.dart';
 // Make sure this import path matches where you created the file above
- 
+
 import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 import 'package:flutter_codelab/student/widgets/note/pdf_service.dart';
@@ -12,6 +12,7 @@ import 'package:markdown/markdown.dart' as md;
 class StudentNoteDetailPage extends StatefulWidget {
   final String noteId;
   final String noteTitle;
+  final String topic;
 
   const StudentNoteDetailPage({
     super.key,
@@ -20,20 +21,19 @@ class StudentNoteDetailPage extends StatefulWidget {
     this.topic = '', // Add topic with default empty
   });
 
-  final String topic;
-
   @override
   State<StudentNoteDetailPage> createState() => _StudentNoteDetailPageState();
 }
 
 class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   final NoteApi _noteApi = NoteApi();
-  final PdfService _pdfService = PdfService(); // Initialize the new service
+  final PdfService _pdfService = PdfService();
 
   bool _isLoading = true;
   bool _isDownloadingPdf = false;
   String _markdownContent = "";
   late String _currentTitle;
+  late String _currentTopic; // State variable for topic
 
   // --- Search State ---
   bool _isSearching = false;
@@ -50,6 +50,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   void initState() {
     super.initState();
     _currentTitle = widget.noteTitle;
+    _currentTopic = widget.topic; // Initialize with widget's topic
     _searchController.addListener(_onSearchChanged);
     _fetchContent();
   }
@@ -71,6 +72,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
         setState(() {
           _markdownContent = noteData['content'] ?? '';
           _currentTitle = noteData['title'] ?? widget.noteTitle;
+          // Update local topic from API response
+          _currentTopic = noteData['topic'] ?? _currentTopic;
           _isLoading = false;
         });
       }
@@ -87,9 +90,12 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     final colorScheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message,
-            style: TextStyle(
-                color: isError ? colorScheme.onError : colorScheme.onSecondary)),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: isError ? colorScheme.onError : colorScheme.onSecondary,
+          ),
+        ),
         backgroundColor: isError ? colorScheme.error : colorScheme.secondary,
         behavior: SnackBarBehavior.floating,
       ),
@@ -120,7 +126,9 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     int newTotal = 0;
     if (term.isNotEmpty) {
       String htmlContent = md.markdownToHtml(
-          _markdownContent, extensionSet: md.ExtensionSet.gitHubFlavored);
+        _markdownContent,
+        extensionSet: md.ExtensionSet.gitHubFlavored,
+      );
       final pattern = RegExp(
         '(${RegExp.escape(term)})(?![^<]*>)',
         caseSensitive: false,
@@ -157,7 +165,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
   void _scrollToMatch(int index) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (index < _matchKeys.length && _matchKeys[index].currentContext != null) {
+      if (index < _matchKeys.length &&
+          _matchKeys[index].currentContext != null) {
         Scrollable.ensureVisible(
           _matchKeys[index].currentContext!,
           duration: const Duration(milliseconds: 300),
@@ -180,7 +189,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   void _prevMatch() {
     if (_totalMatches > 0) {
       setState(() {
-        _currentMatchIndex = (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
+        _currentMatchIndex =
+            (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
       });
       _scrollToMatch(_currentMatchIndex);
     }
@@ -197,8 +207,10 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   Widget _buildHighlightedHtml(ColorScheme colorScheme) {
     _matchKeys = [];
 
-    String htmlContent = md.markdownToHtml(_markdownContent,
-        extensionSet: md.ExtensionSet.gitHubFlavored);
+    String htmlContent = md.markdownToHtml(
+      _markdownContent,
+      extensionSet: md.ExtensionSet.gitHubFlavored,
+    );
 
     final String activeBg =
         '#${colorScheme.primary.value.toRadixString(16).substring(2)}';
@@ -213,8 +225,11 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
     if (_searchTerm.isNotEmpty) {
       try {
-        final pattern = RegExp('(${RegExp.escape(_searchTerm)})(?![^<]*>)',
-            caseSensitive: false, multiLine: true);
+        final pattern = RegExp(
+          '(${RegExp.escape(_searchTerm)})(?![^<]*>)',
+          caseSensitive: false,
+          multiLine: true,
+        );
         int matchCounter = 0;
         htmlContent = htmlContent.replaceAllMapped(pattern, (match) {
           final bool isActive = matchCounter == _currentMatchIndex;
@@ -237,7 +252,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
         if (element.localName == 'pre') {
           final codeText = element.text;
           // Use innerHtml to preserve highlighting spans, wrapped in pre to preserve whitespace
-          final htmlContent = '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
+          final htmlContent =
+              '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
           return Stack(
             children: [
               Container(
@@ -260,8 +276,9 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                     ),
                     // Recursively handle scroll indices inside the code block
                     customWidgetBuilder: (innerElement) {
-                      if (innerElement.attributes
-                          .containsKey('data-scroll-index')) {
+                      if (innerElement.attributes.containsKey(
+                        'data-scroll-index',
+                      )) {
                         final GlobalKey key = GlobalKey();
                         _matchKeys.add(key);
                         return SizedBox(width: 1, height: 1, key: key);
@@ -274,39 +291,42 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
               Positioned(
                 top: 4,
                 right: 4,
-                child: (widget.topic == 'HTML' ||
-                        widget.topic == 'CSS' ||
-                        widget.topic == 'JS')
+                child:
+                    (_currentTopic == 'HTML' ||
+                        _currentTopic == 'CSS' ||
+                        _currentTopic == 'JS' ||
+                        _currentTopic == 'PHP' ||
+                        _currentTopic == 'General')
                     ? InkWell(
                         onTap: () {
-                          // TODO: Implement Run Code for Student
-                          // For now, this condition matches what was there, or similar logic.
-                          // But student_note_detail.dart doesn't have _openRunPage in the snippet I saw?
-                          // Let's check duplicate logic.
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RunCodePage(initialCode: codeText),
-                            ),
-                          );
+                          // Allow 'Run' for these topics
+                          _openRunPage(codeText);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                              color: colorScheme.primary,
-                              borderRadius: BorderRadius.circular(4)),
+                            color: colorScheme.primary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                           child: Row(
                             children: [
-                              Icon(Icons.play_arrow,
-                                  size: 14, color: colorScheme.onPrimary),
+                              Icon(
+                                Icons.play_arrow,
+                                size: 14,
+                                color: colorScheme.onPrimary,
+                              ),
                               const SizedBox(width: 4),
-                              Text('Run',
-                                  style: TextStyle(
-                                      color: colorScheme.onPrimary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold)),
+                              Text(
+                                'Run',
+                                style: TextStyle(
+                                  color: colorScheme.onPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -328,14 +348,14 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
           return {
             'border-collapse': 'collapse',
             'width': '100%',
-            'margin-bottom': '15px'
+            'margin-bottom': '15px',
           };
         }
         if (element.localName == 'th' || element.localName == 'td') {
           return {
             'border': '1px solid $borderColor',
             'padding': '8px',
-            'vertical-align': 'top'
+            'vertical-align': 'top',
           };
         }
         return null;
@@ -350,8 +370,10 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyF, control: true): _toggleSearch,
-        const SingleActivator(LogicalKeyboardKey.keyF, meta: true): _toggleSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+            _toggleSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+            _toggleSearch,
       },
       child: Focus(
         focusNode: _pageFocusNode,
@@ -363,9 +385,13 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
           child: Scaffold(
             backgroundColor: colorScheme.surface,
             appBar: AppBar(
-              title: Text(_currentTitle,
-                  style: TextStyle(
-                      color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
+              title: Text(
+                _currentTitle,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               backgroundColor: colorScheme.surface,
               iconTheme: IconThemeData(color: colorScheme.onSurface),
               elevation: 0,
@@ -379,18 +405,27 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                     ? Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: colorScheme.primary)))
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      )
                     : IconButton(
                         icon: const Icon(Icons.download),
-                        onPressed: _downloadPdf), // Calls the new function
+                        onPressed: _downloadPdf,
+                      ), // Calls the new function
                 const SizedBox(width: 8),
               ],
             ),
             body: _isLoading
-                ? Center(child: CircularProgressIndicator(color: colorScheme.primary))
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: colorScheme.primary,
+                    ),
+                  )
                 : Stack(
                     children: [
                       Positioned.fill(
