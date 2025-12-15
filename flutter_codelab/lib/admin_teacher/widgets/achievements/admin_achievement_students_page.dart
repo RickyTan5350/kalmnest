@@ -79,6 +79,16 @@ class _AdminAchievementStudentsPageState
             const BreadcrumbItem(label: 'Students'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _fetchStudents();
+            },
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: _buildBody(),
     );

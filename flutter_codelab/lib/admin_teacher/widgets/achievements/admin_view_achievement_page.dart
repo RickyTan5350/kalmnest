@@ -430,8 +430,16 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                               16.0,
                               16.0,
                             ),
-                            child: Text(
-                              "Showing: ${uiData.length} achievements",
+                            child: Row(
+                              children: [
+                                Text("Showing: ${uiData.length} achievements"),
+                                const Spacer(),
+                                IconButton(
+                                  icon: const Icon(Icons.refresh),
+                                  onPressed: _refreshData,
+                                  tooltip: "Refresh List",
+                                ),
+                              ],
                             ),
                           ),
                         ),

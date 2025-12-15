@@ -9,6 +9,7 @@ import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper
 
 // Local Enums
 enum SortType { alphabetical, number }
+
 enum SortOrder { ascending, descending }
 
 class StudentViewPage extends StatefulWidget {
@@ -17,8 +18,8 @@ class StudentViewPage extends StatefulWidget {
   final bool isGrid;
 
   const StudentViewPage({
-    super.key, 
-    required this.topic, 
+    super.key,
+    required this.topic,
     required this.query,
     required this.isGrid,
   });
@@ -57,7 +58,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
         _noteFuture = _api.fetchBriefNote();
       } else {
         _noteFuture = _api.searchNotes(widget.topic, '');
-      } 
+      }
     });
   }
 
@@ -70,7 +71,9 @@ class _StudentViewPageState extends State<StudentViewPage> {
       } else {
         comparison = a.noteId.toString().compareTo(b.noteId.toString());
       }
-      return _currentSortOrder == SortOrder.ascending ? comparison : -comparison;
+      return _currentSortOrder == SortOrder.ascending
+          ? comparison
+          : -comparison;
     });
     return sortedList;
   }
@@ -89,27 +92,41 @@ class _StudentViewPageState extends State<StudentViewPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text("No notes found.", style: TextStyle(color: colorScheme.onSurfaceVariant)));
+            return Center(
+              child: Text(
+                "No notes found.",
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
+              ),
+            );
           }
 
           final List<NoteBrief> rawList = snapshot.data!;
           final filteredList = rawList.where((note) {
-            return note.title.toLowerCase().contains(widget.query.toLowerCase());
+            return note.title.toLowerCase().contains(
+              widget.query.toLowerCase(),
+            );
           }).toList();
 
           if (filteredList.isEmpty) {
-            return Center(child: Text("No results match '${widget.query}'", style: TextStyle(color: colorScheme.onSurfaceVariant)));
+            return Center(
+              child: Text(
+                "No results match '${widget.query}'",
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
+              ),
+            );
           }
 
           final List<NoteBrief> sortedList = _sortNotes(filteredList);
 
           // Prepare map for onTap lookup
-          final Map<dynamic, NoteBrief> noteMap = { for (var note in sortedList) note.noteId: note };
+          final Map<dynamic, NoteBrief> noteMap = {
+            for (var note in sortedList) note.noteId: note,
+          };
 
           // --- MODIFIED: Wrap in SelectionGestureWrapper & use GridLayoutView ---
           return SelectionGestureWrapper(
             // Students don't use selection, but the wrapper is needed for layout consistency
-            isDesktop: false, 
+            isDesktop: false,
             selectedIds: const {},
             itemKeys: _gridItemKeys.map((k, v) => MapEntry(k.toString(), v)),
             onLongPressStart: (_) {}, // No-op for student
@@ -123,32 +140,40 @@ class _StudentViewPageState extends State<StudentViewPage> {
                     child: _buildSortHeader(context, sortedList.length),
                   ),
                 ),
-                
+
                 widget.isGrid
                     ? GridLayoutView(
-                        achievements: sortedList.map((n) => {
-                          'id': n.noteId,
-                          'title': n.title,
-                          'icon': Icons.description_outlined, // Consistent icon
-                          'color': Colors.blue, 
-                          'preview': 'Tap to read...', // Text shown in image
-                        }).toList(),
-                        isStudent: true, // IMPORTANT: Sets specific student interaction
+                        achievements: sortedList
+                            .map(
+                              (n) => {
+                                'id': n.noteId,
+                                'title': n.title,
+                                'icon': Icons
+                                    .description_outlined, // Consistent icon
+                                'color': Colors.blue,
+                                'preview':
+                                    'Tap to read...', // Text shown in image
+                              },
+                            )
+                            .toList(),
+                        isStudent:
+                            true, // IMPORTANT: Sets specific student interaction
                         selectedIds: const {},
-                        onToggleSelection: (_) {}, 
+                        onToggleSelection: (_) {},
                         itemKeys: _gridItemKeys,
                         onTap: (id) {
-                           // Handle navigation here
-                           if (noteMap.containsKey(id)) {
-                             _openNote(context, noteMap[id]!);
-                           }
+                          // Handle navigation here
+                          if (noteMap.containsKey(id)) {
+                            _openNote(context, noteMap[id]!);
+                          }
                         },
                       )
                     : SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
-                            (context, index) => _buildListCard(context, sortedList[index]),
+                            (context, index) =>
+                                _buildListCard(context, sortedList[index]),
                             childCount: sortedList.length,
                           ),
                         ),
@@ -164,7 +189,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
   Widget _buildSortHeader(BuildContext context, int count) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -176,10 +201,10 @@ class _StudentViewPageState extends State<StudentViewPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            "$count Results", 
+            "$count Results",
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface, 
+              color: colorScheme.onSurface,
             ),
           ),
           Row(
@@ -189,34 +214,57 @@ class _StudentViewPageState extends State<StudentViewPage> {
                 underline: const SizedBox(),
                 isDense: true,
                 dropdownColor: colorScheme.surfaceContainer,
-                style: TextStyle(color: colorScheme.onSurface), 
+                style: TextStyle(color: colorScheme.onSurface),
                 onChanged: (SortType? newValue) {
-                  if (newValue != null) setState(() => _currentSortType = newValue);
+                  if (newValue != null)
+                    setState(() => _currentSortType = newValue);
                 },
                 items: const [
-                  DropdownMenuItem(value: SortType.alphabetical, child: Text("Name")),
+                  DropdownMenuItem(
+                    value: SortType.alphabetical,
+                    child: Text("Name"),
+                  ),
                   DropdownMenuItem(value: SortType.number, child: Text("ID")),
                 ],
               ),
-              Container(height: 20, width: 1, margin: const EdgeInsets.symmetric(horizontal: 12), color: colorScheme.outlineVariant),
+              Container(
+                height: 20,
+                width: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: colorScheme.outlineVariant,
+              ),
               InkWell(
-                onTap: () => setState(() => _currentSortOrder = _currentSortOrder == SortOrder.ascending ? SortOrder.descending : SortOrder.ascending),
+                onTap: () => setState(
+                  () => _currentSortOrder =
+                      _currentSortOrder == SortOrder.ascending
+                      ? SortOrder.descending
+                      : SortOrder.ascending,
+                ),
                 child: Row(
                   children: [
                     Icon(
-                      _currentSortOrder == SortOrder.ascending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, 
+                      _currentSortOrder == SortOrder.ascending
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
                       size: 16,
-                      color: colorScheme.onSurface, 
+                      color: colorScheme.onSurface,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      _currentSortOrder == SortOrder.ascending ? "Low-High" : "High-Low",
-                      style: TextStyle(color: colorScheme.onSurface), 
+                      _currentSortOrder == SortOrder.ascending
+                          ? "Low-High"
+                          : "High-Low",
+                      style: TextStyle(color: colorScheme.onSurface),
                     ),
                   ],
                 ),
               ),
             ],
+          ),
+          IconButton(
+            icon: Icon(Icons.refresh, color: colorScheme.onSurface),
+            onPressed: () => _loadData(),
+            tooltip: "Refresh List",
           ),
         ],
       ),
@@ -224,7 +272,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
   }
 
   // NOTE: _buildGridCard was deleted as it is replaced by GridLayoutView
-// inside student_view_page.dart
+  // inside student_view_page.dart
 
   Widget _buildListCard(BuildContext context, NoteBrief note) {
     final theme = Theme.of(context);
@@ -234,12 +282,9 @@ class _StudentViewPageState extends State<StudentViewPage> {
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
       // Match Admin color (Surface) instead of SurfaceContainer
-      color: colorScheme.surface, 
+      color: colorScheme.surface,
       shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: colorScheme.outlineVariant,
-          width: 1,
-        ),
+        side: BorderSide(color: colorScheme.outlineVariant, width: 1),
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: InkWell(
@@ -251,15 +296,19 @@ class _StudentViewPageState extends State<StudentViewPage> {
             children: [
               // 1. The Square Icon Container (Same as Admin)
               Container(
-                width: 48, height: 48,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.description_outlined, color: colorScheme.onPrimaryContainer),
+                child: Icon(
+                  Icons.description_outlined,
+                  color: colorScheme.onPrimaryContainer,
+                ),
               ),
               const SizedBox(width: 16),
-              
+
               // 2. Title and Subtitle
               Expanded(
                 child: Column(
@@ -278,13 +327,13 @@ class _StudentViewPageState extends State<StudentViewPage> {
                     Text(
                       'Tap to read',
                       style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
-              
+
               // 3. The Chevron Arrow (Same as Admin)
               Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
             ],
@@ -295,13 +344,16 @@ class _StudentViewPageState extends State<StudentViewPage> {
   }
 
   void _openNote(BuildContext context, NoteBrief note) {
-    Navigator.push(context, MaterialPageRoute(
-      builder: (context) => StudentNoteDetailPage(
-        noteId: note.noteId, 
-        noteTitle: note.title,
-        topic: widget.topic,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StudentNoteDetailPage(
+          noteId: note.noteId,
+          noteTitle: note.title,
+          topic: widget.topic,
+        ),
       ),
-    ));
+    );
   }
 }
 
@@ -324,7 +376,12 @@ class HighlightText extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     if (query.isEmpty) {
-      return Text(text, style: style, maxLines: 4, overflow: TextOverflow.ellipsis);
+      return Text(
+        text,
+        style: style,
+        maxLines: 4,
+        overflow: TextOverflow.ellipsis,
+      );
     }
 
     final String lowerText = text.toLowerCase();
@@ -344,27 +401,33 @@ class HighlightText extends StatelessWidget {
       }
 
       final String match = text.substring(index, index + query.length);
-      spans.add(TextSpan(
-        text: match,
-        style: highlightStyle ?? 
-            style?.copyWith(
-              backgroundColor: colorScheme.primaryContainer, 
-              color: colorScheme.onPrimaryContainer
-            ) ?? 
-            TextStyle(
-              backgroundColor: colorScheme.primaryContainer, 
-              color: colorScheme.onPrimaryContainer, 
-              fontWeight: FontWeight.bold
-            ),
-      ));
+      spans.add(
+        TextSpan(
+          text: match,
+          style:
+              highlightStyle ??
+              style?.copyWith(
+                backgroundColor: colorScheme.primaryContainer,
+                color: colorScheme.onPrimaryContainer,
+              ) ??
+              TextStyle(
+                backgroundColor: colorScheme.primaryContainer,
+                color: colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+      );
 
       start = index + query.length;
     }
 
     return RichText(
-      text: TextSpan(children: spans, style: style ?? DefaultTextStyle.of(context).style),
+      text: TextSpan(
+        children: spans,
+        style: style ?? DefaultTextStyle.of(context).style,
+      ),
       overflow: TextOverflow.ellipsis,
-      maxLines: 4, 
+      maxLines: 4,
     );
   }
 }
