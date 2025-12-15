@@ -11,6 +11,7 @@ const String _tokenKey = 'auth_token';
 const String _userKey = 'user_data';
 
 class AuthApi {
+
   // 1. LOGIN
   Future<Map<String, dynamic>> login(String email, String password) async {
     final loginUrl = '$_authApiUrl/login';
@@ -52,12 +53,17 @@ class AuthApi {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
+        final data = jsonDecode(response.body);
+        final token = data['token'];
 
         final userDataJson = jsonEncode(data['user']);
 
         await _storage.write(key: _tokenKey, value: token);
         await _storage.write(key: _userKey, value: userDataJson);
+        await _storage.write(key: _tokenKey, value: token);
+        await _storage.write(key: _userKey, value: userDataJson);
 
+        return data['user'] as Map<String, dynamic>;
         return data['user'] as Map<String, dynamic>;
       } else if (response.statusCode == 422) {
         final errors = jsonDecode(response.body);
@@ -126,5 +132,5 @@ class AuthApi {
     // Clear the local achievement cache specific to the user
     final localStorage = LocalAchievementStorage();
     await localStorage.clearLocalCache(userId);
-  }
+}
 }
