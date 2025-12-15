@@ -6,7 +6,8 @@ import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/admin_view_note_page.dart';
 
 // 2. Import Student View but HIDE conflicting enums
-import 'package:flutter_codelab/student/widgets/note/student_view_page.dart' hide ViewLayout, SortType, SortOrder;
+import 'package:flutter_codelab/student/widgets/note/student_view_page.dart'
+    hide ViewLayout, SortType, SortOrder;
 
 class NotePage extends StatefulWidget {
   final UserDetails currentUser;
@@ -19,9 +20,9 @@ class NotePage extends StatefulWidget {
 
 class _NotePageState extends State<NotePage> {
   final List<String> _topics = ['All', 'HTML', 'CSS', 'JS', 'PHP'];
-  String _selectedTopic = 'All'; 
-  String _searchQuery = ''; 
-  ViewLayout _viewLayout = ViewLayout.grid; 
+  String _selectedTopic = 'All';
+  String _searchQuery = '';
+  ViewLayout _viewLayout = ViewLayout.grid;
 
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -39,7 +40,8 @@ class _NotePageState extends State<NotePage> {
   Widget build(BuildContext context) {
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyF, control: true): _activateSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+            _activateSearch,
       },
       child: Focus(
         autofocus: true,
@@ -56,18 +58,26 @@ class _NotePageState extends State<NotePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Notes", style: Theme.of(context).textTheme.headlineMedium),
+                      Text(
+                        "Notes",
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                       Row(
                         children: [
-                          IconButton(icon: const Icon(Icons.search), onPressed: _activateSearch),
-                          const SizedBox(width: 8),
                           SegmentedButton<ViewLayout>(
                             segments: const [
-                              ButtonSegment(value: ViewLayout.list, icon: Icon(Icons.menu)),
-                              ButtonSegment(value: ViewLayout.grid, icon: Icon(Icons.grid_view)),
+                              ButtonSegment(
+                                value: ViewLayout.list,
+                                icon: Icon(Icons.menu),
+                              ),
+                              ButtonSegment(
+                                value: ViewLayout.grid,
+                                icon: Icon(Icons.grid_view),
+                              ),
                             ],
                             selected: {_viewLayout},
-                            onSelectionChanged: (val) => setState(() => _viewLayout = val.first),
+                            onSelectionChanged: (val) =>
+                                setState(() => _viewLayout = val.first),
                           ),
                         ],
                       ),
@@ -82,10 +92,15 @@ class _NotePageState extends State<NotePage> {
                       focusNode: _searchFocusNode,
                       hintText: "Search topic or title",
                       onChanged: (val) => setState(() => _searchQuery = val),
-                      leading: const Icon(Icons.search), // Optional: Adds search icon inside bar like image 2
+                      leading: const Icon(
+                        Icons.search,
+                      ), // Optional: Adds search icon inside bar like image 2
                       trailing: [
                         if (_searchQuery.isNotEmpty)
-                          IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _searchQuery = '')),
+                          IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => setState(() => _searchQuery = ''),
+                          ),
                       ],
                     ),
                   ),
@@ -96,13 +111,18 @@ class _NotePageState extends State<NotePage> {
                     spacing: 10,
                     runSpacing: 10, // Good practice if they wrap to next line
                     alignment: WrapAlignment.start, // Explicitly align start
-                    children: _topics.map((topic) => FilterChip(
-                      label: Text(topic),
-                      selected: _selectedTopic == topic,
-                      onSelected: (selected) {
-                        if (selected) setState(() => _selectedTopic = topic);
-                      },
-                    )).toList(),
+                    children: _topics
+                        .map(
+                          (topic) => FilterChip(
+                            label: Text(topic),
+                            selected: _selectedTopic == topic,
+                            onSelected: (selected) {
+                              if (selected)
+                                setState(() => _selectedTopic = topic);
+                            },
+                          ),
+                        )
+                        .toList(),
                   ),
                   const SizedBox(height: 16),
 
@@ -110,14 +130,18 @@ class _NotePageState extends State<NotePage> {
                   Expanded(
                     child: widget.currentUser.isStudent
                         ? StudentViewPage(
-                            topic: _selectedTopic == 'All' ? '' : _selectedTopic,
+                            topic: _selectedTopic == 'All'
+                                ? ''
+                                : _selectedTopic,
                             query: _searchQuery,
-                            isGrid: _viewLayout == ViewLayout.grid, 
+                            isGrid: _viewLayout == ViewLayout.grid,
                           )
                         : AdminViewNotePage(
                             layout: _viewLayout,
-                            topic: _selectedTopic == 'All' ? '' : _selectedTopic, 
-                            query: _searchQuery, 
+                            topic: _selectedTopic == 'All'
+                                ? ''
+                                : _selectedTopic,
+                            query: _searchQuery,
                           ),
                   ),
                 ],
