@@ -12,7 +12,7 @@ Future<String?> saveFileLocally() async {
   // 1. Let user pick a file
   FilePickerResult? result = await FilePicker.platform.pickFiles(
     type: FileType.custom,
-    allowedExtensions: ['mp3', 'mp4', 'm4a', 'mov'], // Your allowed types
+   allowedExtensions: ['mp3', 'mp4', 'm4a', 'mov', 'gif', 'jpg', 'png'],
   );
 
   if (result != null && result.files.single.path != null) {

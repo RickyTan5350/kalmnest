@@ -5,21 +5,21 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "flutter_codelab",
-            "cwd": "flutter_codelab",
+            "name": "notes_flutter_template",
+            "cwd": "notes_flutter_template",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "flutter_codelab (profile mode)",
-            "cwd": "flutter_codelab",
+            "name": "notes_flutter_template (profile mode)",
+            "cwd": "notes_flutter_template",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "flutter_codelab (release mode)",
-            "cwd": "flutter_codelab",
+            "name": "notes_flutter_template (release mode)",
+            "cwd": "notes_flutter_template",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

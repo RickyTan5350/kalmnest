@@ -43,33 +43,19 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text.trim(),
       );
 
-      // 2. Retrieve the stored token from secure storage
-      final token = await AuthApi.getToken();
-
-      // 3. Map the returned JSON user data (which includes user details)
-      //    to the UserDetails model and attach the token
+      // 2. Map the returned JSON user data (which includes user details)
+      //    to the UserDetails model.
       final UserDetails loggedInUser = UserDetails.fromJson(userData);
-      final UserDetails loggedInUserWithToken = UserDetails(
-        id: loggedInUser.id,
-        name: loggedInUser.name,
-        email: loggedInUser.email,
-        phoneNo: loggedInUser.phoneNo,
-        address: loggedInUser.address,
-        gender: loggedInUser.gender,
-        accountStatus: loggedInUser.accountStatus,
-        roleName: loggedInUser.roleName,
-        joinedDate: loggedInUser.joinedDate,
-        token: token ?? '',
-      );
 
-      // 4. On successful login, navigate to the main application feed
+      // 3. On successful login, navigate to the main application feed
       if (mounted) {
         // Use pushReplacement to remove the Login page from the navigation stack
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             // NOTE: The Feed widget expects a 'User' type.
-            // We now pass the UserDetails object with the token included.
-            builder: (context) => Feed(currentUser: loggedInUserWithToken),
+            // We must now pass the UserDetails object instead.
+            // You will need to ensure your main.dart 'Feed' widget accepts UserDetails.
+            builder: (context) => Feed(currentUser: loggedInUser),
           ),
         );
       }
