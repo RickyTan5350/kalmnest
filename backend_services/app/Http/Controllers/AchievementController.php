@@ -34,6 +34,18 @@ class AchievementController extends Controller
         return $userRoleName === 'Admin' || $userRoleName === 'Teacher';
     }
 
+    private function isTeacher()
+    {
+        if (!Auth::check()) return false;
+
+        $userRoleName = DB::table('users')
+                            ->join('roles', 'users.role_id', '=', 'roles.role_id')
+                            ->where('users.user_id', Auth::id())
+                            ->value('roles.role_name');
+
+        return $userRoleName === 'Teacher';
+    }
+
     private function isStudent()
     {
         if (!Auth::check()) return false;
@@ -57,21 +69,64 @@ class AchievementController extends Controller
             return response()->json(['message' => 'Access Denied: Only staff can view the full achievement list.'], 403);
         }
 
-        $totalStudents = DB::table('users')
-            ->join('roles', 'users.role_id', '=', 'roles.role_id')
-            ->where('roles.role_name', 'Student')
-            ->count();
+        $userId = Auth::id();
+        $isTeacher = $this->isTeacher();
 
-        $achievementBrief = DB::table('achievements')
+        $teacherStudentIds = [];
+        if ($isTeacher) {
+            // Get all students enrolled in classes taught by this teacher
+            $teacherStudentIds = DB::table('class_student')
+                ->join('classes', 'classes.class_id', '=', 'class_student.class_id')
+                ->where('classes.teacher_id', $userId)
+                ->pluck('class_student.student_id')
+                ->unique()
+                ->toArray();
+        }
+
+        // Calculate Total Students based on role
+        if ($isTeacher) {
+            $totalStudents = count($teacherStudentIds);
+        } else {
+            // Admin sees all students
+            $totalStudents = DB::table('users')
+                ->join('roles', 'users.role_id', '=', 'roles.role_id')
+                ->where('roles.role_name', 'Student')
+                ->count();
+        }
+
+        // Build the query
+        $query = DB::table('achievements')
             ->selectRaw('
                 achievements.achievement_id, 
                 achievements.achievement_name, 
                 achievements.title, 
                 achievements.icon, 
-                achievements.description,
-                (SELECT COUNT(*) FROM achievement_user WHERE achievement_user.achievement_id = achievements.achievement_id) as unlocked_count
-            ')
-            ->get();
+                achievements.description
+            ');
+
+        // Add unlocked_count subquery based on role
+        if ($isTeacher) {
+            if (empty($teacherStudentIds)) {
+                $query->selectRaw('0 as unlocked_count');
+            } else {
+                // Ensure IDs are properly quoted for the raw SQL
+                $idsString = "'" . implode("','", $teacherStudentIds) . "'";
+                $query->selectRaw("
+                    (SELECT COUNT(*) FROM achievement_user 
+                     WHERE achievement_user.achievement_id = achievements.achievement_id
+                     AND achievement_user.user_id IN ($idsString)
+                    ) as unlocked_count
+                ");
+            }
+        } else {
+            $query->selectRaw('
+                (SELECT COUNT(*) FROM achievement_user 
+                 WHERE achievement_user.achievement_id = achievements.achievement_id
+                ) as unlocked_count
+            ');
+        }
+
+        $achievementBrief = $query->get();
 
         // Add total_students to every item
         foreach ($achievementBrief as $achievement) {
@@ -87,7 +142,7 @@ class AchievementController extends Controller
             return response()->json(['message' => 'Access Denied.'], 403);
         }
 
-        $students = DB::table('achievement_user')
+        $query = DB::table('achievement_user')
             ->join('users', 'achievement_user.user_id', '=', 'users.user_id')
             ->where('achievement_user.achievement_id', $id)
             ->select(
@@ -96,8 +151,26 @@ class AchievementController extends Controller
                 'users.email',
                 'achievement_user.created_at as unlocked_at'
             )
-            ->orderBy('achievement_user.created_at', 'desc')
-            ->get();
+            ->orderBy('achievement_user.created_at', 'desc');
+
+        // Filter for Teachers
+        if ($this->isTeacher()) {
+            $teacherId = Auth::id();
+            $teacherStudentIds = DB::table('class_student')
+                ->join('classes', 'classes.class_id', '=', 'class_student.class_id')
+                ->where('classes.teacher_id', $teacherId)
+                ->pluck('class_student.student_id')
+                ->unique()
+                ->toArray();
+            
+            if (empty($teacherStudentIds)) {
+                return response()->json([]);
+            }
+
+            $query->whereIn('users.user_id', $teacherStudentIds);
+        }
+
+        $students = $query->get();
 
         return response()->json($students);
     }
@@ -148,14 +221,35 @@ class AchievementController extends Controller
         }
 
         if (!$this->isStudent()) {
-             $unlockedCount = DB::table('achievement_user')
-                ->where('achievement_id', $id)
-                ->count();
+             $unlockedCountQuery = DB::table('achievement_user')
+                ->where('achievement_id', $id);
 
-            $totalStudents = DB::table('users')
+             $totalStudentsQuery = DB::table('users')
                 ->join('roles', 'users.role_id', '=', 'roles.role_id')
-                ->where('roles.role_name', 'Student')
-                ->count();
+                ->where('roles.role_name', 'Student');
+
+            if ($this->isTeacher()) {
+                $teacherId = Auth::id();
+                $teacherStudentIds = DB::table('class_student')
+                    ->join('classes', 'classes.class_id', '=', 'class_student.class_id')
+                    ->where('classes.teacher_id', $teacherId)
+                    ->pluck('class_student.student_id')
+                    ->unique()
+                    ->toArray();
+                
+                // If teacher has no students, counts are 0
+                if (empty($teacherStudentIds)) {
+                    $unlockedCount = 0;
+                    $totalStudents = 0;
+                } else {
+                    $unlockedCount = $unlockedCountQuery->whereIn('user_id', $teacherStudentIds)->count();
+                    $totalStudents = count($teacherStudentIds);
+                }
+            } else {
+                // Admin
+                $unlockedCount = $unlockedCountQuery->count();
+                $totalStudents = $totalStudentsQuery->count();
+            }
 
             $achievement->unlocked_count = $unlockedCount;
             $achievement->total_students = $totalStudents;

@@ -24,6 +24,7 @@
         "google_fonts",
         "htmltopdfwidgets",
         "http",
+        "intl",
         "json_rpc_2",
         "markdown",
         "markdown_widget",
@@ -55,6 +56,15 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "intl",
+      "version": "0.20.2",
+      "dependencies": [
+        "clock",
+        "meta",
+        "path"
       ]
     },
     {
@@ -454,7 +464,7 @@
     },
     {
       "name": "unified_analytics",
-      "version": "8.0.10",
+      "version": "8.0.5",
       "dependencies": [
         "clock",
         "convert",
