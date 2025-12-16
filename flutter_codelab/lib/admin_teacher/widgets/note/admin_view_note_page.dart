@@ -13,10 +13,6 @@ import 'package:flutter_codelab/theme.dart'; // Import BrandColors
 import 'package:flutter_codelab/enums/sort_enums.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 
-// enum ViewLayout { list, grid } // Keeping ViewLayout if it's not shared yet, wait, ViewLayout is in admin_view_note_page OR imported?
-// User file line 14: enum ViewLayout { list, grid } defined locally. I will keep it.
-// Removing SortType and SortOrder.
-
 class AdminViewNotePage extends StatefulWidget {
   final ViewLayout layout;
   final String topic;
