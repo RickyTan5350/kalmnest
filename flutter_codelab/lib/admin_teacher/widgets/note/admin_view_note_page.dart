@@ -508,6 +508,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                 'id': n.noteId,
                 'title': n.title,
                 'topic': n.topic,
+                'updatedAt': n.updatedAt.toString().substring(0, 16),
                 'preview': 'Tap to edit...',
               },
             )
@@ -671,6 +672,14 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                       'Tap to edit',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Updated: ${item.updatedAt.toString().substring(0, 16)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.outline,
+                        fontSize: 10,
                       ),
                     ),
                   ],
