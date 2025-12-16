@@ -501,17 +501,16 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       final noteMap = {for (var n in notes) n.noteId: n};
 
       return NoteGridLayout(
-        notes: notes 
-        .map(
-          (n) => {
-            'id': n.noteId,
-            'title': n.title,
-            'icon': Icons.article_outlined,
-            'color': Colors.blue,
-            'preview': 'Tap to edit...',
-          },
-        )
-      .toList(),
+        notes: notes
+            .map(
+              (n) => {
+                'id': n.noteId,
+                'title': n.title,
+                'topic': n.topic,
+                'preview': 'Tap to edit...',
+              },
+            )
+            .toList(),
         isStudent: false,
         selectedIds: _selectedIds,
         onToggleSelection: _toggleSelection,
