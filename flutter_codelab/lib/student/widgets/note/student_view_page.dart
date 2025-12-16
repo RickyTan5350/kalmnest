@@ -270,15 +270,11 @@ class StudentViewPageState extends State<StudentViewPage> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              // 1. The Square Icon Container (Same as Admin)
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: topicColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(topicIcon, color: topicColor),
+              // 1. The Circle Icon (Same as Admin)
+              CircleAvatar(
+                backgroundColor: topicColor.withOpacity(0.1),
+                foregroundColor: topicColor,
+                child: Icon(topicIcon),
               ),
               const SizedBox(width: 16),
 
