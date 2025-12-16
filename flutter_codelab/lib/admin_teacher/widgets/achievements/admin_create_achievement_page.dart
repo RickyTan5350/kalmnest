@@ -10,11 +10,21 @@ void showCreateAchievementDialog({
   required BuildContext context,
   required void Function(BuildContext context, String message, Color color)
   showSnackBar,
+  String? initialName,
+  String? initialIcon,
+  String? initialLevelId,
+  String? initialLevelName,
 }) {
   showDialog(
     context: context,
     builder: (BuildContext dialogContext) {
-      return AdminCreateAchievementDialog(showSnackBar: showSnackBar);
+      return AdminCreateAchievementDialog(
+        showSnackBar: showSnackBar,
+        initialName: initialName,
+        initialIcon: initialIcon,
+        initialLevelId: initialLevelId,
+        initialLevelName: initialLevelName,
+      );
     },
   );
 }
@@ -22,8 +32,19 @@ void showCreateAchievementDialog({
 class AdminCreateAchievementDialog extends StatefulWidget {
   final void Function(BuildContext context, String message, Color color)
   showSnackBar;
+  final String? initialName;
+  final String? initialIcon;
+  final String? initialLevelId;
+  final String? initialLevelName;
 
-  const AdminCreateAchievementDialog({super.key, required this.showSnackBar});
+  const AdminCreateAchievementDialog({
+    super.key,
+    required this.showSnackBar,
+    this.initialName,
+    this.initialIcon,
+    this.initialLevelId,
+    this.initialLevelName,
+  });
 
   @override
   State<AdminCreateAchievementDialog> createState() =>
@@ -75,6 +96,19 @@ class _AdminCreateAchievementDialogState
     _fetchExistingAchievements();
     _fetchLevels();
 
+    if (widget.initialName != null) {
+      _achievementNameController.text = widget.initialName!;
+    }
+    if (widget.initialIcon != null) {
+      _selectedIcon = widget.initialIcon;
+    }
+    if (widget.initialLevelId != null) {
+      _selectedLevel = widget.initialLevelId;
+      if (widget.initialLevelName != null) {
+        _levelDisplayController.text = widget.initialLevelName!;
+      }
+    }
+
     // Clear errors when the user starts typing
     _achievementNameController.addListener(() {
       if (_nameError != null) setState(() => _nameError = null);
@@ -90,6 +124,16 @@ class _AdminCreateAchievementDialogState
       if (mounted) {
         setState(() {
           _levels = levels;
+          // If we have an initial level ID but no name, try to find it in the fetched options
+          if (_selectedLevel != null && _levelDisplayController.text.isEmpty) {
+            final match = levels.firstWhere(
+              (l) => l.levelId == _selectedLevel,
+              orElse: () => LevelModel(levelId: '', levelName: ''),
+            );
+            if (match.levelId?.isNotEmpty ?? false) {
+              _levelDisplayController.text = match.levelName ?? '';
+            }
+          }
         });
       }
     } catch (e) {
