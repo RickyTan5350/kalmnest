@@ -52,6 +52,7 @@ class FeedbackData {
   final String teacherId;
   final String topic;
   final String feedback;
+  final String? createdAt;
 
   FeedbackData({
     required this.feedbackId,
@@ -61,5 +62,6 @@ class FeedbackData {
     required this.teacherId,
     required this.topic,
     required this.feedback,
+    this.createdAt,
   });
 }

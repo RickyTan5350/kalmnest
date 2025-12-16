@@ -4,6 +4,7 @@ use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\NotesController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\LevelController;
+use App\Http\Controllers\FeedbackController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
@@ -141,3 +142,13 @@ Route::delete('/notes/{id}', [NotesController::class, 'destroy']);
 Route::post('/save-data/{dataType}/{type}', [LevelController::class, 'saveData']);
 Route::get('/get-data/{dataType}/{type}', [LevelController::class, 'getData']);
 Route::post('/save-index/{type}', [LevelController::class, 'saveToIndexFile']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/feedback', [FeedbackController::class, 'index']);
+    Route::post('/feedback', [FeedbackController::class, 'store']);
+    Route::put('/feedback/{id}', [FeedbackController::class, 'update']);
+    Route::delete('/feedback/{id}', [FeedbackController::class, 'destroy']);
+
+    // Get feedback received by a specific student (requires auth)
+    Route::get('/feedback/student/{studentId}', [FeedbackController::class, 'getStudentFeedback']);
+});
