@@ -31,8 +31,9 @@ class NotesController extends Controller
     public function showNotesBrief()
     {
         $notesBrief = DB::table('notes')
-            ->select('*')
-            ->orderBy('created_at', 'desc')
+            ->leftJoin('topics', 'notes.topic_id', '=', 'topics.topic_id')
+            ->select('notes.note_id', 'notes.title', 'topics.topic_name')
+            ->orderBy('notes.created_at', 'desc')
             ->get();
 
         return response()->json($notesBrief);

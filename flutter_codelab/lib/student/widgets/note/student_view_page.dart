@@ -148,9 +148,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
                               (n) => {
                                 'id': n.noteId,
                                 'title': n.title,
-                                'icon': Icons
-                                    .description_outlined, // Consistent icon
-                                'color': Colors.blue,
+                                'topic': n.topic,
                                 'preview':
                                     'Tap to read...', // Text shown in image
                               },
