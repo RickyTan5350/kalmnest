@@ -150,8 +150,11 @@ class _StudentViewPageState extends State<StudentViewPage> {
                                 'id': n.noteId,
                                 'title': n.title,
                                 'topic': n.topic,
-                                'preview':
-                                    'Tap to read...', // Text shown in image
+                                'updatedAt': n.updatedAt.toString().substring(
+                                  0,
+                                  16,
+                                ),
+                                 
                               },
                             )
                             .toList(),
@@ -352,10 +355,13 @@ class _StudentViewPageState extends State<StudentViewPage> {
                       ),
                     ),
                     const SizedBox(height: 4),
+                   
+                    const SizedBox(height: 4),
                     Text(
-                      'Tap to read',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                      'Updated: ${note.updatedAt.toString().substring(0, 16)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.outline,
+                        fontSize: 10,
                       ),
                     ),
                   ],
