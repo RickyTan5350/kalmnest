@@ -266,6 +266,7 @@ public function destroy(User $user, DeleteUserRequest $request)
         }
 
         // 3. Get the authenticated user
+        /** @var User $user */
         $user = Auth::user();
         $user->load('role');
 
@@ -293,5 +294,108 @@ public function destroy(User $user, DeleteUserRequest $request)
         ], 200);
     }
 
-    
+    /**
+     * Get all teachers for class management dropdowns
+     */
+    public function getTeachers(): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            Log::warning('getTeachers called without authentication');
+            return response()->json([
+                'message' => 'Unauthenticated.',
+                'data' => []
+            ], 401);
+        }
+
+        try {
+            Log::info('Fetching teachers', [
+                'user_id' => $user->user_id,
+                'user_role' => $user->role?->role_name ?? 'null'
+            ]);
+
+            $teachers = User::whereHas('role', function ($query) {
+                $query->whereRaw('LOWER(role_name) = ?', ['teacher']);
+            })
+            ->select('user_id', 'name', 'email', 'account_status')
+            ->orderBy('name')
+            ->get();
+
+            Log::info('Teachers fetched successfully', [
+                'count' => $teachers->count(),
+                'teacher_ids' => $teachers->pluck('user_id')->toArray()
+            ]);
+
+            return response()->json([
+                'message' => 'Teachers retrieved successfully',
+                'data' => $teachers
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching teachers', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return 200 with empty data instead of 500 to prevent frontend errors
+            return response()->json([
+                'message' => 'Failed to fetch teachers',
+                'error' => $e->getMessage(),
+                'data' => []
+            ], 200);
+        }
+    }
+
+    /**
+     * Get all students for class management dropdowns
+     * Returns ALL students regardless of enrollment status in any class
+     * This allows admins to see all students when creating/editing classes
+     */
+    public function getStudents(): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            Log::warning('getStudents called without authentication');
+            return response()->json([
+                'message' => 'Unauthenticated.',
+                'data' => []
+            ], 401);
+        }
+
+        try {
+            Log::info('Fetching students', [
+                'user_id' => $user->user_id,
+                'user_role' => $user->role?->role_name ?? 'null'
+            ]);
+
+            // Get ALL students (both enrolled and not enrolled in any class)
+            $students = User::whereHas('role', function ($query) {
+                $query->whereRaw('LOWER(role_name) = ?', ['student']);
+            })
+            ->select('user_id', 'name', 'email', 'account_status')
+            ->orderBy('name')
+            ->get();
+
+            Log::info('Students fetched successfully', [
+                'count' => $students->count(),
+                'student_ids' => $students->pluck('user_id')->toArray()
+            ]);
+
+            return response()->json([
+                'message' => 'Students retrieved successfully',
+                'data' => $students
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching students', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return 200 with empty data instead of 500 to prevent frontend errors
+            return response()->json([
+                'message' => 'Failed to fetch students',
+                'error' => $e->getMessage(),
+                'data' => []
+            ], 200);
+        }
+    }
 }

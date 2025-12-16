@@ -4,6 +4,7 @@ use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\NotesController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\LevelController;
+use App\Http\Controllers\ClassController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
@@ -58,6 +59,9 @@ Route::post('/logout', [UserController::class, 'logout']);
 Route::prefix('users')->group(function () {
         // List/Search/Filter (GET /api/users)
         Route::get('/', [UserController::class, 'index']); 
+        // User lists for class management (MUST be before /{user} route to avoid route model binding conflict)
+        Route::get('/teachers', [UserController::class, 'getTeachers']); // Get all teachers
+        Route::get('/students', [UserController::class, 'getStudents']); // Get all students
         // View single profile (GET /api/users/{user})
         Route::get('/{user}', [UserController::class, 'show']); 
         // Update profile (PUT /api/users/{user})
@@ -79,6 +83,18 @@ Route::prefix('users')->group(function () {
             'role_name' => $user->role?->role_name ?? 'N/A',
         ]);
     });
+ // --- Classes Module ---
+    Route::prefix('classes')->group(function () {
+        Route::get('/', [ClassController::class, 'index']); // List classes (role-based)
+        Route::post('/', [ClassController::class, 'store']); // Create class (admin only)
+        Route::get('/{id}', [ClassController::class, 'show']); // Get class details
+        Route::put('/{id}', [ClassController::class, 'update']); // Update class (admin only)
+        Route::delete('/{id}', [ClassController::class, 'destroy']); // Delete class (admin only)
+    });
+    
+    // Class statistics
+    Route::get('/classes-count', [ClassController::class, 'getCount']); // Get class count
+    Route::get('/classes-stats', [ClassController::class, 'getStats']); // Get class stats
 
     /*
     |--------------------------------------------------------------------------
