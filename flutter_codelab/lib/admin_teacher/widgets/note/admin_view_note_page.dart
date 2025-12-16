@@ -3,13 +3,13 @@ import 'package:flutter_codelab/api/note_api.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 // FIX: Imported Admin Detail Page
 import 'package:flutter_codelab/admin_teacher/widgets/note/admin_note_detail.dart';
-
+import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart'; // Adjust path as needed
 // Import Shared Grid (Adjust path if needed)
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
 import 'package:flutter/services.dart'; // For HapticFeedback
 
-import 'note_grid_layout_view.dart';
+import 'note_grid_layout.dart';
 
 enum ViewLayout { list, grid }
 
@@ -500,18 +500,18 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       // 1. Create a map for fast lookup (Optimization)
       final noteMap = {for (var n in notes) n.noteId: n};
 
-      return GridLayoutView(
-        achievements: notes
-            .map(
-              (n) => {
-                'id': n.noteId,
-                'title': n.title,
-                'icon': Icons.article_outlined,
-                'color': Colors.blue,
-                'preview': 'Tap to edit...',
-              },
-            )
-            .toList(),
+      return NoteGridLayout(
+        notes: notes 
+        .map(
+          (n) => {
+            'id': n.noteId,
+            'title': n.title,
+            'icon': Icons.article_outlined,
+            'color': Colors.blue,
+            'preview': 'Tap to edit...',
+          },
+        )
+      .toList(),
         isStudent: false,
         selectedIds: _selectedIds,
         onToggleSelection: _toggleSelection,
