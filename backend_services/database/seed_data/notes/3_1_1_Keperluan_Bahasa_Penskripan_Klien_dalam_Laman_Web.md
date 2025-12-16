@@ -113,7 +113,7 @@ Reka bentuk web dibangunkan berteraskan konsep pelanggan dan pelayan .
 * **Pelayan (Server):** Bertindak memproses permintaan dan menghantar laman web yang diminta oleh klien .
 * **Pangkalan Data (Database):** Komponen untuk menyimpan data .
 
-![Konsep Aplikasi PelangganPelayan (ClientServer).png](9bd8cb8e-efda-4b76-8e9c-21855b4f0b57_1765793740.png)
+![Konsep Aplikasi PelangganPelayan (ClientServer).png](http://backend_services.test/storage/uploads/26ecae3d-406c-40a7-a8e8-9e04bd1cf8d7_1764500113.png)
 
 
 ---
@@ -129,7 +129,7 @@ Jadual berikut menunjukkan perbezaan antara kedua-dua jenis laman web :
 | **Contoh** | Laman web info korporat. | Laman web dengan kalendar aktiviti yang berubah. |
 
 
-![Pelaksanaan penskripan klien dan penskripan pelayan.png](7c2ffdf8-4dee-43bd-9062-13929ea00ee7_1765793740.png)
+![Pelaksanaan penskripan klien dan penskripan pelayan.png](http://backend_services.test/storage/uploads/60fdeed8-7804-40a8-acef-c4a776e2059e_1764500113.png)
 
 ---
 
