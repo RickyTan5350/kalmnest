@@ -575,18 +575,7 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              if (_isSelectionMode)
-                Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: Icon(
-                    isSelected
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    color: isSelected
-                        ? colorScheme.primary
-                        : colorScheme.outline,
-                  ),
-                ),
+              // Checkbox removed as per request to rely on background selection only
               CircleAvatar(
                 backgroundColor: topicColor.withOpacity(0.1),
                 foregroundColor: topicColor,
