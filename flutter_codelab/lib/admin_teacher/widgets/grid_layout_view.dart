@@ -1,22 +1,43 @@
-// lib/widgets/grid_layout_view.dart
+// lib/widgets/grid_view_layout.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'achievements/admin_achievement_detail.dart'; // Ensure this imports the updated file
 
-class GridLayoutView extends StatelessWidget {
-  final List<Map<String, dynamic>> achievements;
-  final List<AchievementData> originalData; // <-- This holds the full data
-  final Set<String> selectedIds;
-  final void Function(String) onToggleSelection;
-  final Map<String, GlobalKey> itemKeys;
+// 1. UPDATE: Add new modules to the Enum
+enum GridModule { achievement, note, games, support, user }
 
-  const GridLayoutView({
+typedef GridItemBuilder = Widget Function(
+  BuildContext context,
+  Map<String, dynamic> item,
+  dynamic id,
+  GlobalKey key,
+);
+
+class GridViewLayout extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+  final Set<dynamic> selectedIds;
+  final void Function(dynamic) onToggleSelection;
+  final Map<dynamic, GlobalKey> itemKeys;
+  final GridModule module;
+  final GridItemBuilder itemBuilder;
+  final void Function(dynamic)? onTap;
+
+  // 2. NEW: Add parameters for customization
+  final double childAspectRatio; // To adjust card height/width ratio
+  final String? idKey; // To specify which key to use for ID (e.g. 'gameId')
+  final bool enableSelection; // To explicit enable/disable long-press selection
+
+  const GridViewLayout({
     super.key,
-    required this.achievements,
-    required this.originalData,
+    required this.items,
     required this.selectedIds,
     required this.onToggleSelection,
     required this.itemKeys,
+    required this.module,
+    required this.itemBuilder,
+    this.onTap,
+    // Defaults ensure backward compatibility
+    this.childAspectRatio = 0.9, 
+    this.idKey,
+    this.enableSelection = false, 
   });
 
   @override
@@ -24,47 +45,51 @@ class GridLayoutView extends StatelessWidget {
     return SliverPadding(
       padding: const EdgeInsets.all(8.0),
       sliver: SliverGrid.builder(
-        itemCount: achievements.length,
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        itemCount: items.length,
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 250.0,
           mainAxisSpacing: 12.0,
           crossAxisSpacing: 12.0,
-          childAspectRatio: 0.9,
+          // 3. USE: The passed aspect ratio (Games might need 1.5, Users 0.8, etc.)
+          childAspectRatio: childAspectRatio,
         ),
         itemBuilder: (context, index) {
-          final item = achievements[index]; // UI data (Map)
-          final originalItem = originalData[index]; // Full data (Object)
+          final item = items[index];
 
-          final String id = originalItem.achievementId!;
-          final bool isSelected = selectedIds.contains(id);
+          // 4. LOGIC: specific ID lookup or default to 'id'
+          // If idKey is provided, use it. 
+          // Otherwise, stick to 'achievementId' for achievements, and 'id' for everything else.
+          final String keyToUse = idKey ?? 
+              (module == GridModule.achievement ? 'achievementId' : 'id');
+              
+          final dynamic id = item[keyToUse];
+
+          if (id == null) {
+            return const SizedBox.shrink();
+          }
+
           final GlobalKey key = itemKeys.putIfAbsent(id, () => GlobalKey());
 
           return Container(
             key: key,
-            child: _buildAchievementCard(
-              context,
-              item,
-              originalItem: originalItem, // <-- Pass the full object
-              isSelected: isSelected,
-              onToggle: () => onToggleSelection(id),
-            ),
+            child: _buildItemContainer(context, item, id, key),
           );
         },
       ),
     );
   }
 
-  Widget _buildAchievementCard(
+  Widget _buildItemContainer(
     BuildContext context,
-    Map<String, dynamic> item, {
-    required AchievementData originalItem, // <-- Receive full object
-    required bool isSelected,
-    required VoidCallback onToggle,
-  }) {
-    final String title = item['title'];
-    final IconData icon = item['icon'];
-    final Color color = item['color'];
-    final String? preview = item['preview'];
+    Map<String, dynamic> item,
+    dynamic id,
+    GlobalKey key,
+  ) {
+    final bool isSelected = selectedIds.contains(id);
+
+    // 5. LOGIC: Determine if selection is allowed
+    // Allowed if explicitly enabled OR if it's the 'note' module (backward compatibility)
+    final bool canSelect = enableSelection || module == GridModule.note;
 
     return Card(
       elevation: 1.0,
@@ -81,118 +106,14 @@ class GridLayoutView extends StatelessWidget {
       child: InkWell(
         onTap: () {
           if (selectedIds.isNotEmpty) {
-            onToggle();
-          } else {
-            // Navigate passing the FULL DATA object
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AdminAchievementDetailPage(
-                  initialData: originalItem, // Pass the partial object here
-                ),
-              ),
-            );
+            onToggleSelection(id);
+          } else if (onTap != null) {
+            onTap!(id);
           }
         },
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: Icon(icon, color: color.withOpacity(0.1)),
-                ),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12.0, 12.0, 4.0, 8.0),
-                  child: Row(
-                    children: [
-                      Icon(icon, color: color, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const Icon(Icons.more_vert, size: 20, color: Colors.grey),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: Text(
-                      preview ?? '',
-                      style: Theme.of(context).textTheme.bodySmall,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 4,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (item['unlockedCount'] != null &&
-                                item['totalStudents'] != null)
-                              Text(
-                                '${item['unlockedCount']} / ${item['totalStudents']} Students',
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (item['unlockedCount'] != null &&
-                          item['totalStudents'] != null &&
-                          item['totalStudents'] > 0)
-                        SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween<double>(
-                              begin: 0.0,
-                              end:
-                                  (item['unlockedCount'] as int) /
-                                  (item['totalStudents'] as int),
-                            ),
-                            duration: const Duration(milliseconds: 1500),
-                            curve: Curves.easeOutCubic,
-                            builder: (context, value, _) =>
-                                CircularProgressIndicator(
-                                  value: value,
-                                  strokeWidth: 3,
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.surfaceContainerHighest,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    color,
-                                  ),
-                                ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+        // 6. USE: The unified selection logic
+        onLongPress: canSelect ? () => onToggleSelection(id) : null,
+        child: itemBuilder(context, item, id, key),
       ),
     );
   }

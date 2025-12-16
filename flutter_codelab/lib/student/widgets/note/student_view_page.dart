@@ -4,7 +4,7 @@ import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:flutter_codelab/student/widgets/note/student_note_detail.dart';
 
 // --- NEW IMPORTS: Reuse Admin/Teacher Widgets for consistency ---
-import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout_view.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 
 // Local Enums
@@ -142,8 +142,8 @@ class _StudentViewPageState extends State<StudentViewPage> {
                 ),
 
                 widget.isGrid
-                    ? GridLayoutView(
-                        achievements: sortedList
+                    ? NoteGridLayout(
+                        notes: sortedList
                             .map(
                               (n) => {
                                 'id': n.noteId,
