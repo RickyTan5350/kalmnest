@@ -95,7 +95,7 @@ class NoteGridLayout extends StatelessWidget {
                       title,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                      maxLines: 5,
                     ),
                   ),
                 ],
@@ -107,14 +107,7 @@ class NoteGridLayout extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      preview ?? 'Tap to view note content...',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 4,
-                    ),
+              
                     const Spacer(),
                     if (item['updatedAt'] != null)
                       Padding(
