@@ -34,7 +34,7 @@
             "program": "lib/main.dart",
             "cwd": "flutter_codelab",
             "args": [
-                "--dart-define=CUSTOM_BASE_URL=https://pmdgnzcotw.sharedwithexpose.com"
+                "--dart-define=CUSTOM_BASE_URL=https://6k9bljmahe.sharedwithexpose.com"
             ]
         },
         {

@@ -6,7 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 
 // Ensure this matches your emulator/device URL
-final String _authApiUrl = ApiConstants.baseUrl;
+String get _authApiUrl => ApiConstants.baseUrl;
 
 const _storage = FlutterSecureStorage();
 const String _tokenKey = 'auth_token';

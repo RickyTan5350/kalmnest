@@ -5,8 +5,11 @@ import 'package:flutter_codelab/models/user_data.dart';
 // 1. Import Admin View normally
 import 'package:flutter_codelab/admin_teacher/widgets/note/admin_view_note_page.dart';
 
-// 2. Import Student View but HIDE conflicting enums
-import 'package:flutter_codelab/student/widgets/note/student_view_page.dart' hide ViewLayout, SortType, SortOrder;
+// 2. Import Student View
+import 'package:flutter_codelab/student/widgets/note/student_view_page.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
+import 'package:flutter_codelab/constants/view_layout.dart'; // Shared ViewLayout
+import 'package:flutter_codelab/services/layout_preferences.dart'; // Layout Persistence
 
 class NotePage extends StatefulWidget {
   final UserDetails currentUser;
@@ -19,11 +22,33 @@ class NotePage extends StatefulWidget {
 
 class _NotePageState extends State<NotePage> {
   final List<String> _topics = ['All', 'HTML', 'CSS', 'JS', 'PHP'];
-  String _selectedTopic = 'All'; 
-  String _searchQuery = ''; 
-  ViewLayout _viewLayout = ViewLayout.grid; 
+  String _selectedTopic = 'All';
+  String _searchQuery = '';
+  ViewLayout _viewLayout = ViewLayout.grid;
+  SortType _sortType = SortType.alphabetical;
+  SortOrder _sortOrder = SortOrder.ascending;
 
   final FocusNode _searchFocusNode = FocusNode();
+
+  final GlobalKey<StudentViewPageState> _studentKey =
+      GlobalKey<StudentViewPageState>();
+  final GlobalKey<AdminViewNotePageState> _adminKey =
+      GlobalKey<AdminViewNotePageState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLayoutPreference();
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    if (mounted) {
+      setState(() {
+        _viewLayout = savedLayout;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -35,11 +60,20 @@ class _NotePageState extends State<NotePage> {
     _searchFocusNode.requestFocus();
   }
 
+  Future<void> _handleRefresh() async {
+    if (widget.currentUser.isStudent) {
+      _studentKey.currentState?.refreshData();
+    } else {
+      _adminKey.currentState?.refreshData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyF, control: true): _activateSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+            _activateSearch,
       },
       child: Focus(
         autofocus: true,
@@ -56,18 +90,32 @@ class _NotePageState extends State<NotePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Notes", style: Theme.of(context).textTheme.headlineMedium),
+                      Text(
+                        "Notes",
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                       Row(
                         children: [
-                          IconButton(icon: const Icon(Icons.search), onPressed: _activateSearch),
-                          const SizedBox(width: 8),
                           SegmentedButton<ViewLayout>(
                             segments: const [
-                              ButtonSegment(value: ViewLayout.list, icon: Icon(Icons.menu)),
-                              ButtonSegment(value: ViewLayout.grid, icon: Icon(Icons.grid_view)),
+                              ButtonSegment(
+                                value: ViewLayout.list,
+                                icon: Icon(Icons.menu),
+                              ),
+                              ButtonSegment(
+                                value: ViewLayout.grid,
+                                icon: Icon(Icons.grid_view),
+                              ),
                             ],
                             selected: {_viewLayout},
-                            onSelectionChanged: (val) => setState(() => _viewLayout = val.first),
+                            onSelectionChanged: (val) {
+                              final newLayout = val.first;
+                              setState(() => _viewLayout = newLayout);
+                              LayoutPreferences.saveLayout(
+                                'global_layout',
+                                newLayout,
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -81,28 +129,113 @@ class _NotePageState extends State<NotePage> {
                     child: SearchBar(
                       focusNode: _searchFocusNode,
                       hintText: "Search topic or title",
+                      padding: const WidgetStatePropertyAll<EdgeInsets>(
+                        EdgeInsets.symmetric(horizontal: 16.0),
+                      ),
                       onChanged: (val) => setState(() => _searchQuery = val),
-                      leading: const Icon(Icons.search), // Optional: Adds search icon inside bar like image 2
+                      leading: const Icon(
+                        Icons.search,
+                      ), // Optional: Adds search icon inside bar like image 2
                       trailing: [
                         if (_searchQuery.isNotEmpty)
-                          IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _searchQuery = '')),
+                          IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => setState(() => _searchQuery = ''),
+                          ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
 
                   // --- Filter Chips (Left Aligned) ---
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10, // Good practice if they wrap to next line
-                    alignment: WrapAlignment.start, // Explicitly align start
-                    children: _topics.map((topic) => FilterChip(
-                      label: Text(topic),
-                      selected: _selectedTopic == topic,
-                      onSelected: (selected) {
-                        if (selected) setState(() => _selectedTopic = topic);
-                      },
-                    )).toList(),
+                  // --- Filter Chips (Left Aligned) + Filter Icon (Right Aligned) ---
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          alignment: WrapAlignment.start,
+                          children: _topics
+                              .map(
+                                (topic) => FilterChip(
+                                  label: Text(topic),
+                                  selected: _selectedTopic == topic,
+                                  onSelected: (selected) {
+                                    if (selected)
+                                      setState(() => _selectedTopic = topic);
+                                  },
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Filter Icon (Sort)
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.filter_list),
+                        tooltip: 'Sort Options',
+                        onSelected: (value) {
+                          setState(() {
+                            if (value == 'Name') {
+                              _sortType = SortType.alphabetical;
+                            } else if (value == 'Date') {
+                              _sortType = SortType.updated;
+                            } else if (value == 'Ascending') {
+                              _sortOrder = SortOrder.ascending;
+                            } else if (value == 'Descending') {
+                              _sortOrder = SortOrder.descending;
+                            }
+                          });
+                        },
+                        itemBuilder: (BuildContext context) =>
+                            <PopupMenuEntry<String>>[
+                              const PopupMenuItem<String>(
+                                enabled: false,
+                                child: Text(
+                                  'Sort By',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Name',
+                                checked: _sortType == SortType.alphabetical,
+                                child: const Text('Name'),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Date',
+                                checked: _sortType == SortType.updated,
+                                child: const Text('Date'),
+                              ),
+                              const PopupMenuDivider(),
+                              const PopupMenuItem<String>(
+                                enabled: false,
+                                child: Text(
+                                  'Order',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Ascending',
+                                checked: _sortOrder == SortOrder.ascending,
+                                child: const Text('Ascending'),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Descending',
+                                checked: _sortOrder == SortOrder.descending,
+                                child: const Text('Descending'),
+                              ),
+                            ],
+                      ),
+                      const SizedBox(width: 4),
+                      // Refresh Icon (Right of Sort)
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _handleRefresh,
+                        tooltip: "Refresh List",
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -110,14 +243,24 @@ class _NotePageState extends State<NotePage> {
                   Expanded(
                     child: widget.currentUser.isStudent
                         ? StudentViewPage(
-                            topic: _selectedTopic == 'All' ? '' : _selectedTopic,
+                            key: _studentKey,
+                            topic: _selectedTopic == 'All'
+                                ? ''
+                                : _selectedTopic,
                             query: _searchQuery,
-                            isGrid: _viewLayout == ViewLayout.grid, 
+                            isGrid: _viewLayout == ViewLayout.grid,
+                            sortType: _sortType,
+                            sortOrder: _sortOrder,
                           )
                         : AdminViewNotePage(
+                            key: _adminKey,
                             layout: _viewLayout,
-                            topic: _selectedTopic == 'All' ? '' : _selectedTopic, 
-                            query: _searchQuery, 
+                            topic: _selectedTopic == 'All'
+                                ? ''
+                                : _selectedTopic,
+                            query: _searchQuery,
+                            sortType: _sortType,
+                            sortOrder: _sortOrder,
                           ),
                   ),
                 ],

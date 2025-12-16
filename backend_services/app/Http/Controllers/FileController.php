@@ -8,6 +8,17 @@ use Illuminate\Support\Str;
 use Exception;
 class FileController extends Controller
 {
+    use \App\Traits\SyncsToSeedData;
+
+    private function getEncodedUrl($path)
+    {
+        // Encode path segments to ensure spaces become %20, etc.
+        $parts = explode('/', $path);
+        $encodedParts = array_map('rawurlencode', $parts);
+        $encodedPath = implode('/', $encodedParts);
+        return url(Storage::url($encodedPath));
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -57,10 +68,13 @@ class FileController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $extension = $file->getClientOriginalExtension();
-            $safeFileName = (string) \Illuminate\Support\Str::uuid() . '_' . time() . '.' . $extension;
+            $safeFileName = time() . '_' . $file->getClientOriginalName();
             
             try {
                 $path = $file->storeAs('uploads', $safeFileName, 'public');
+
+                // SYNC TO SEED DATA
+                $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
 
                 // Create DB entry with NULL note_id initially
                 $fileRecord = \App\Models\File::create([
@@ -72,7 +86,7 @@ class FileController extends Controller
                 return response()->json([
                     'message' => 'File uploaded',
                     'file_id' => $fileRecord->file_id, 
-                    'file_url' => \Illuminate\Support\Facades\Storage::url($path),
+                    'file_url' => $this->getEncodedUrl($path),
                 ], 200);
 
             } catch (\Exception $e) {
@@ -115,10 +129,13 @@ class FileController extends Controller
                 // Store in a specific 'notes' folder
                 $mdPath = $mdFile->storeAs('notes', $mdName, 'public');
 
+                // SYNC NOTE TO SEED DATA (Root notes folder)
+                $this->syncFileToSeedData(storage_path('app/public/' . $mdPath), $mdName);
+
                 $response['markdown_data'] = [
                     'original_name' => $mdFile->getClientOriginalName(),
                     'stored_name' => $mdName,
-                    'file_url' => Storage::url($mdPath),
+                    'file_url' => $this->getEncodedUrl($mdPath), // Force absolute encoded URL
                     'file_path' => $mdPath, // Internal path for DB saving
                 ];
             }
@@ -128,15 +145,18 @@ class FileController extends Controller
                 foreach ($request->file('attachments') as $file) {
                     // Generate unique name
                     $extension = $file->getClientOriginalExtension();
-                    $safeFileName = (string) Str::uuid() . '_' . time() . '.' . $extension;
+                    $safeFileName = time() . '_' . $file->getClientOriginalName();
 
                     // Store in 'uploads' folder
                     $path = $file->storeAs('uploads', $safeFileName, 'public');
 
+                    // SYNC ATTACHMENT TO SEED DATA
+                    $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
+
                     // Add to response array
                     $response['attachments_data'][] = [
                         'original_name' => $file->getClientOriginalName(),
-                        'file_url' => Storage::url($path),
+                        'file_url' => $this->getEncodedUrl($path), // Force absolute encoded URL
                         'file_path' => $path,
                     ];
 
@@ -173,14 +193,18 @@ class FileController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $originalName = $file->getClientOriginalName();
-            $safeFileName = (string) Str::uuid() . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $safeFileName = time() . '_' . $file->getClientOriginalName();
 
             try {
                 $path = $file->storeAs('uploads', $safeFileName, 'public');
+
+                // SYNC TO SEED DATA
+                $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
+
                 return response()->json([
                     'message' => 'File uploaded successfully',
                     'original_name' => $originalName,
-                    'file_url' => Storage::url($path), 
+                    'file_url' => $this->getEncodedUrl($path), // Force absolute encoded URL
                     'file_path' => $path,
                 ], 200);
 

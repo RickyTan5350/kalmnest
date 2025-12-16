@@ -5,13 +5,14 @@ import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 
 /// CENTRAL API BASE URL
-final String apiBase = ApiConstants.baseUrl;
+String get apiBase => ApiConstants.baseUrl;
 
 class ApiResponse {
   final bool success;
   final String message;
+  final Map<String, dynamic>? data;
 
-  ApiResponse({required this.success, required this.message});
+  ApiResponse({required this.success, required this.message, this.data});
 }
 
 class GameAPI {
@@ -124,7 +125,11 @@ class GameAPI {
           final String message =
               jsonData['message'] ?? "Level created successfully";
 
-          return ApiResponse(success: success, message: message);
+          return ApiResponse(
+            success: success,
+            message: message,
+            data: jsonData,
+          );
         } catch (e) {
           // If response is not JSON, still consider it success
           return ApiResponse(

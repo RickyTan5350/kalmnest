@@ -335,32 +335,29 @@ class MaterialTheme {
     return theme(darkHighContrastScheme());
   }
 
-
   ThemeData theme(ColorScheme colorScheme) => ThemeData(
-     useMaterial3: true,
-     brightness: colorScheme.brightness,
-     colorScheme: colorScheme,
-     textTheme: textTheme.apply(
-       bodyColor: colorScheme.onSurface,
-       displayColor: colorScheme.onSurface,
-     ),
-     scaffoldBackgroundColor: colorScheme.surface,
-     canvasColor: colorScheme.surface,
-     extensions: [
-       BrandColors(
-         html: const Color(0xFFFF9800), // Orange
-         css: const Color(0xFF4CAF50), // Green
-         javascript: const Color(0xFFFFEB3B), // Yellow
-         php: const Color(0xFF2196F3), // Blue
-         backend: const Color(0xFF673AB7), // DeepPurple
-         other: const Color(0xFF9E9E9E), // Grey
-       ),
-     ],
+    useMaterial3: true,
+    brightness: colorScheme.brightness,
+    colorScheme: colorScheme,
+    textTheme: textTheme.apply(
+      bodyColor: colorScheme.onSurface,
+      displayColor: colorScheme.onSurface,
+    ),
+    scaffoldBackgroundColor: colorScheme.surface,
+    canvasColor: colorScheme.surface,
+    extensions: [
+      BrandColors(
+        html: const Color(0xFFFF9800), // Orange
+        css: const Color(0xFF4CAF50), // Green
+        javascript: const Color(0xFFFFEB3B), // Yellow
+        php: const Color(0xFF2196F3), // Blue
+        backend: const Color(0xFF673AB7), // DeepPurple
+        other: const Color(0xFF9E9E9E), // Grey
+      ),
+    ],
   );
 
-
-  List<ExtendedColor> get extendedColors => [
-  ];
+  List<ExtendedColor> get extendedColors => [];
 }
 
 class ExtendedColor {

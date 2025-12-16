@@ -32,6 +32,13 @@ class TopicSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'topic_id' => (string) Str::uuid7(),
+                'topic_name' => 'PHP',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            
         ]);
     }
 }

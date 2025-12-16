@@ -27,43 +27,22 @@ class NotesSeeder extends Seeder
             return;
         }
 
-        DB::table('notes')->insert([
-            // Note 1: HTML
-            [
-                'note_id' => (string) Str::uuid7(),
-                'title' => 'HTML Structure Basics',
-                // FIX: Set file_id to null as you do not want to seed files
-                'file_id' => null, 
-                'visibility' => true,
-                'topic_id' => $topicIds['HTML'],
-                'created_by' => $adminId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            // Note 2: CSS
-            [
-                'note_id' => (string) Str::uuid7(),
-                'title' => 'CSS Flexbox Layout Guide',
-                // FIX: Corrected key from 'file_path' to 'file_id' AND set value to null
-                'file_id' => null,
-                'visibility' => true,
-                'topic_id' => $topicIds['CSS'],
-                'created_by' => $adminId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            // Note 3: JS
-            [
-                'note_id' => (string) Str::uuid7(),
-                'title' => 'JavaScript Async/Await Tutorial',
-                // FIX: Corrected key from 'file_path' to 'file_id' AND set value to null
-                'file_id' => null, 
-                'visibility' => false,
-                'topic_id' => $topicIds['JS'],
-                'created_by' => $adminId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        // 1. Define the path for the seed data (committed notes)
+        $seedDataPath = database_path('seed_data/notes');
+
+        if (is_dir($seedDataPath)) {
+            $this->command->info("Seeding notes from: $seedDataPath");
+            
+            // Call the existing Artisan command to import notes
+            // Syntax: notes:import {path} {--user_id=} {--topic=}
+            $this->command->call('notes:import', [
+                'path' => $seedDataPath,
+                '--user_id' => $adminId ?? 1, // Fallback to ID 1 if admin not found
+                '--topic' => 'General', // Default topic, file structure can override this if logic expands
+            ]);
+        } else {
+            $this->command->warn("No seed data found at $seedDataPath. Skipping note import.");
+            $this->command->warn("To sync notes, create this folder and add your .md files there.");
+        }
     }
 }

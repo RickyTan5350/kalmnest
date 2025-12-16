@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_codelab/api/game_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
 
 /// ===============================================================
 /// Platform helper (SAFE for Web)
@@ -117,12 +118,21 @@ class _CreateGamePageState extends State<CreateGamePage> {
                           return;
                         }
 
-                        Navigator.pop(context);
+                        // Call API first (keep dialog open to show loading if we wanted, but current flow pops first?
+                        // Existing code popped first. We should probably keep it open until success?
+                        // But to duplicate existing behavior:
+                        // Actually, let's keep it open, show loading?
+                        // The user request says "when the user submits... show an extra dialog".
+                        // Let's stick to: Call API -> If success -> Pop Game Dialog -> Ask about Achievement.
 
                         final response = await GameAPI.createLevel(
                           levelName: levelName,
                           levelTypeName: selectedValue,
                         );
+
+                        if (!mounted) return;
+
+                        Navigator.pop(context); // Close Create Game Dialog
 
                         widget.showSnackBar(
                           widget.parentContext,
@@ -132,7 +142,73 @@ class _CreateGamePageState extends State<CreateGamePage> {
                           response.success ? Colors.green : Colors.red,
                         );
 
-                        previewKey.currentState?.reloadPreview(widget.userRole);
+                        if (response.success) {
+                          // Extract data
+                          final data = response.data;
+                          // Check for different possible JSON structures
+                          // 1. { "level": { "level_id": "...", "level_name": "..." } }
+                          // 2. { "level_id": "...", "level_name": "..." }
+                          // 3. { "data": { ... } }
+
+                          String? newLevelId;
+                          String? newLevelName;
+
+                          if (data != null) {
+                            print(
+                              "Game Creation Response Data: $data",
+                            ); // Debug log
+                            try {
+                              if (data.containsKey('level') &&
+                                  data['level'] is Map) {
+                                final lvl = data['level'];
+                                newLevelId = lvl['level_id']?.toString();
+                                newLevelName = lvl['level_name']?.toString();
+                              } else if (data.containsKey('level_id')) {
+                                newLevelId = data['level_id']?.toString();
+                                newLevelName = data['level_name']?.toString();
+                              }
+                            } catch (e) {
+                              print("Error parsing game data: $e");
+                            }
+                          }
+
+                          // Ask to create achievement
+                          // Use parentContext because this context is popped
+                          showDialog(
+                            context: widget.parentContext,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text("Create Linked Achievement?"),
+                              content: const Text(
+                                "Do you want to create an achievement linked to this new level?",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text("No"),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    // Map selectedValue (HTML, CSS...) to icon string
+                                    // e.g. "HTML" -> "html"
+                                    final iconStr = selectedValue.toLowerCase();
+
+                                    showCreateAchievementDialog(
+                                      context: widget.parentContext,
+                                      showSnackBar: widget.showSnackBar,
+                                      initialName: newLevelName ?? levelName,
+                                      initialIcon: iconStr,
+                                      initialLevelId: newLevelId,
+                                      initialLevelName:
+                                          newLevelName ?? levelName,
+                                    );
+                                  },
+                                  child: const Text("Yes"),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
                       },
                       child: const Text("Create Level"),
                     ),

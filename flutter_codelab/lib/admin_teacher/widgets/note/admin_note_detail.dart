@@ -579,6 +579,29 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
                 else ...[
                   // --- ADMIN VIEW: EDIT/DELETE ---
                   IconButton(
+                    icon: Icon(
+                      _currentVisibility
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: _currentVisibility
+                          ? colorScheme.primary
+                          : colorScheme.outline,
+                    ),
+                    tooltip: _currentVisibility ? 'Public' : 'Private',
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            _currentVisibility
+                                ? 'This note is Public'
+                                : 'This note is Private',
+                          ),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.edit),
                     tooltip: 'Edit Note',
                     onPressed: () => _navigateToEdit(),
