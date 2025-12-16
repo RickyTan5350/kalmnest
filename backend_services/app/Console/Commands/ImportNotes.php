@@ -57,14 +57,21 @@ class ImportNotes extends Command
             }
         }
         
-        // Get or Create Topic
-        $topic = Topic::firstOrCreate(
-            ['topic_name' => $topicName],
-            ['topic_id' => Str::uuid()] // Assuming Topic has UUID primary key or handles it
-        );
-        // Check if Topic works with UUIDs or int. Migration 2025_11_10_061433_create_topics_table.php would confirm.
-        // Usually safer to check instance.
-        $topicId = $topic->topic_id;
+        // Handle Topic: Check if input is UUID (from Seeder) or Name (from CLI)
+        if (Str::isUuid($topicName)) {
+            $topicId = $topicName;
+            // Optional: Verify it exists
+            if (!DB::table('topics')->where('topic_id', $topicId)->exists()) {
+                 $this->warn("Warning: Topic UUID provided ($topicId) does not exist in DB.");
+            }
+        } else {
+            // It's a name, find or create
+             $topic = Topic::firstOrCreate(
+                ['topic_name' => $topicName],
+                ['topic_id' => Str::uuid()] 
+            );
+            $topicId = $topic->topic_id;
+        }
 
         $this->info("Starting import from directory: $path");
         $this->info("Assigning to User ID: $userId");
@@ -111,8 +118,6 @@ class ImportNotes extends Command
         $attachmentFileIds = [];
 
         // Regex to find images: ![alt](path)
-        // Updated to handle filenames with parentheses like "image (1).png"
-        // matches '![...](...)' where the content inside () can contain matched (...) groups
         $pattern = '/!\[(.*?)\]\(((?:[^()]|\([^()]*\))+)\)/';
 
         $newContent = preg_replace_callback(
@@ -120,10 +125,9 @@ class ImportNotes extends Command
             function ($matches) use ($baseDir, $noteDir, &$attachmentFileIds) {
                 $altText = $matches[1];
                 $link = $matches[2];
-                $originalLink = $link;
+                $originalLink = $link; // Keep original for warning message
 
                 // 1. Cleaner path handling
-                // Check both raw (for "image+name.png") and decoded (for "image%20name.png") versions
                 $rawLink = trim($link, '"\'');
                 $decodedLink = urldecode($rawLink);
                 
@@ -157,10 +161,7 @@ class ImportNotes extends Command
 
                 $foundPath = null;
                 foreach ($candidates as $candidate) {
-                    $exists = file_exists($candidate) && is_file($candidate);
-                    // $this->line("   Checking: " . ($candidate ?: 'null') . " [" . ($exists ? 'FOUND' : 'MISSING') . "]");
-                    
-                    if ($candidate && $exists) {
+                    if ($candidate && file_exists($candidate) && is_file($candidate)) {
                         $foundPath = $candidate;
                         break;
                     }
@@ -168,7 +169,6 @@ class ImportNotes extends Command
 
                 if ($foundPath) {
                     // Import the attachment
-                    // $this->line("   Found attachment at: $foundPath");
                     $fileRecord = $this->importFile($foundPath, 'uploads');
                     
                     if ($fileRecord) {
@@ -178,12 +178,13 @@ class ImportNotes extends Command
                         $parts = explode('/', $fileRecord->file_path);
                         $encodedParts = array_map('rawurlencode', $parts);
                         $encodedPath = implode('/', $encodedParts);
-                        $newUrl = url(Storage::url($encodedPath)); // Force absolute encoded URL
+                        $newUrl = url(Storage::url($encodedPath)); 
                         
                         return "![$altText]($newUrl)";
                     }
                 } else {
-                    $this->warn("   Warning: Attachment not found locally: $cleanLink (Looked in $noteDir)");
+                    // FIXED: Replaced $cleanLink (undefined) with $originalLink
+                    $this->warn("   Warning: Attachment not found locally: $originalLink (Looked in $noteDir)");
                 }
                 
                 return $matches[0]; // Return original if fail
@@ -192,7 +193,6 @@ class ImportNotes extends Command
         );
 
         // 2. Save the Main Note Content File
-        // We save the MODIFIED content with the new links.
         $newNoteDataName = (string) Str::uuid() . '_' . time() . '.md';
         $storagePath = 'notes/' . $newNoteDataName;
         
@@ -214,8 +214,6 @@ class ImportNotes extends Command
             ]);
 
             // 4. Attach Files (Pivot)
-            // Need to verify if 'attachments' relation exists in Notes model.
-            // Based on NotesController line 110: $note->attachments()->attach($ids);
             if (!empty($attachmentFileIds)) {
                 $note->attachments()->attach($attachmentFileIds);
                 $this->info("   - Imported and linked " . count($attachmentFileIds) . " attachments.");
@@ -234,18 +232,14 @@ class ImportNotes extends Command
             $extension = pathinfo($path, PATHINFO_EXTENSION);
             if (!$extension) $extension = 'bin';
 
-            // Generate unique filename on server (Match FileController logic)
             $filename = basename($path);
             $newFileName = time() . '_' . $filename;
             $destinationPath = $folder . '/' . $newFileName;
             
-            // Read content
             $content = file_get_contents($path);
             
-            // Write to storage
             Storage::disk('public')->put($destinationPath, $content);
             
-            // Create DB record
             return File::create([
                 'file_path' => $destinationPath,
                 'type' => $extension,
