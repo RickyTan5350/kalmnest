@@ -5,6 +5,10 @@ import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/admin_note_detail.dart';
 
 // Import Shared Grid (Adjust path if needed)
+import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
+import 'package:flutter/services.dart'; // For HapticFeedback
+
 import 'note_grid_layout_view.dart';
 
 enum ViewLayout { list, grid }
@@ -35,6 +39,18 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
   SortOrder _currentSortOrder = SortOrder.ascending;
   bool _isSelectionMode = false;
   final Set<dynamic> _selectedIds = {}; 
+  
+  // High-performance selection State
+  final Map<dynamic, GlobalKey> _gridItemKeys = {};
+  final Set<dynamic> _dragProcessedIds = {};
+  Offset? _dragStart;
+  Offset? _dragEnd;
+  Set<dynamic> _initialSelection = {};
+
+  bool get _isDesktop {
+    final p = Theme.of(context).platform;
+    return p == TargetPlatform.windows || p == TargetPlatform.linux || p == TargetPlatform.macOS;
+  } 
 
   @override
   void initState() {
@@ -101,7 +117,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
     );
 
     if (confirm == true) {
-      // await _api.deleteNotes(_selectedIds.toList()); 
+      await _api.deleteNotes(_selectedIds.toList()); 
       setState(() {
         _loadData(); 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -110,6 +126,76 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
         _exitSelectionMode();
       });
     }
+  }
+
+  // --- HYBRID SELECTION LOGIC ---
+
+  void _handleDragSelect(Offset position) {
+    if (!_isSelectionMode) {
+      setState(() => _isSelectionMode = true);
+    }
+    for (final entry in _gridItemKeys.entries) {
+      final dynamic id = entry.key;
+      final GlobalKey key = entry.value;
+
+      final RenderBox? renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        final localPosition = renderBox.globalToLocal(position);
+        if (renderBox.size.contains(localPosition)) {
+          if (!_dragProcessedIds.contains(id)) {
+            _toggleSelection(id);
+            _dragProcessedIds.add(id);
+            HapticFeedback.selectionClick();
+          }
+        }
+      }
+    }
+  }
+
+  void _handleBoxSelect(Offset currentPosition) {
+    setState(() {
+      _dragEnd = currentPosition;
+      if (!_isSelectionMode) _isSelectionMode = true;
+    });
+
+    if (_dragStart == null) return;
+
+    final Rect selectionBox = Rect.fromPoints(_dragStart!, _dragEnd!);
+    final Set<dynamic> newSelection = Set.from(_initialSelection);
+
+    for (final entry in _gridItemKeys.entries) {
+      final dynamic id = entry.key;
+      final GlobalKey key = entry.value;
+
+      final RenderBox? renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox == null) continue;
+
+      final Offset itemPosition = renderBox.localToGlobal(Offset.zero, ancestor: context.findRenderObject());
+      final Rect itemRect = itemPosition & renderBox.size;
+
+      if (selectionBox.overlaps(itemRect)) {
+        newSelection.add(id);
+      } else if (!_initialSelection.contains(id)) {
+        newSelection.remove(id);
+      }
+    }
+
+    if (_selectedIds.length != newSelection.length || !_selectedIds.containsAll(newSelection)) {
+      setState(() {
+        _selectedIds.clear();
+        _selectedIds.addAll(newSelection);
+      });
+    }
+  }
+
+  void _endDrag() {
+    if (_isDesktop) {
+      setState(() {
+        _dragStart = null;
+        _dragEnd = null;
+      });
+    }
+    _dragProcessedIds.clear();
   }
 
   List<NoteBrief> _sortNotes(List<NoteBrief> notes) {
@@ -171,21 +257,71 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
             final List<NoteBrief> rawList = snapshot.data!;
             final List<NoteBrief> sortedList = _sortNotes(rawList);
 
-            return CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _isSelectionMode
-                          ? _buildSelectionHeader(context, sortedList.length)
-                          : _buildSortHeader(context, sortedList.length),
-                    ),
+            return SelectionGestureWrapper(
+              isDesktop: _isDesktop,
+              selectedIds: _selectedIds.map((e) => e.toString()).toSet(), // Conv to set string if needed, or update wrapper to generic? 
+              // Wrapper expects Set<String>. NoteBrief ID might be int. 
+              // Let's check wrapper definition. Wrapper: final Set<String> selectedIds;
+              // So I must cast or convert. 'NoteBrief' id is likely int. 
+              // Correction: specific admin_view_note handles dynamic, but wrapper expects String? 
+              // checking wrapper file: "final Set<String> selectedIds;"
+              // So I better convert to String for the wrapper, or update the wrapper. 
+              // Updating the wrapper is risky if used elsewhere. Converting here is safer.
+              itemKeys: _gridItemKeys.map((k, v) => MapEntry(k.toString(), v)),
+              
+              onLongPressStart: (details) {
+                if (_isDesktop) {
+                  _initialSelection = Set.from(_selectedIds);
+                  setState(() {
+                    _dragStart = details.localPosition;
+                    _dragEnd = details.localPosition;
+                  });
+                  _handleBoxSelect(details.localPosition);
+                } else {
+                  _dragProcessedIds.clear();
+                  _handleDragSelect(details.globalPosition);
+                }
+              },
+              onLongPressMoveUpdate: (details) {
+                if (_isDesktop) {
+                  _handleBoxSelect(details.localPosition);
+                } else {
+                  _handleDragSelect(details.globalPosition);
+                }
+              },
+              onLongPressEnd: (_) => _endDrag(),
+              
+              child: Stack(
+                children: [
+                  CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: _isSelectionMode
+                                ? _buildSelectionHeader(context, sortedList.length)
+                                : _buildSortHeader(context, sortedList.length),
+                          ),
+                        ),
+                      ),
+                      _buildSliverContent(context, sortedList),
+                    ],
                   ),
-                ),
-                _buildSliverContent(context, sortedList),
-              ],
+                  if (_isDesktop && _dragStart != null && _dragEnd != null)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: CustomPaint(
+                          painter: SelectionBoxPainter(
+                            start: _dragStart,
+                            end: _dragEnd,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         ),
@@ -285,7 +421,10 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
           'color': Colors.blue,
           'preview': 'Tap to edit...',
         }).toList(),
-        isStudent: false, // Explicitly Admin
+        isStudent: false, 
+        selectedIds: _selectedIds,
+        onToggleSelection: _toggleSelection,
+        itemKeys: _gridItemKeys,
       );
     } else {
       return SliverPadding(
@@ -293,7 +432,12 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate(
             (BuildContext context, int index) {
-              return _buildSelectableListTile(context, notes[index]);
+              final note = notes[index];
+              final GlobalKey key = _gridItemKeys.putIfAbsent(note.noteId, () => GlobalKey());
+              return Container(
+                key: key,
+                child: _buildSelectableListTile(context, note),
+              );
             },
             childCount: notes.length,
           ),

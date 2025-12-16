@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/note_data.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
-const String _apiUrl = 'https://backend_services.test/api/notes';
+final String _apiUrl = '${ApiConstants.baseUrl}/notes';
 
 class NoteApi {
   static const String validationErrorCode = '422';
@@ -14,12 +15,15 @@ class NoteApi {
     final body = jsonEncode(data.toJson());
     try {
       print('Sending POST request to: $_apiUrl');
-      
+
       final response = await http.post(
-        Uri.parse(_apiUrl), 
+        Uri.parse('$_apiUrl/new'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
+          // Only add Host header if NOT using a custom URL
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
         },
         body: body,
       );
@@ -27,11 +31,14 @@ class NoteApi {
       if (response.statusCode == 201 || response.statusCode == 200) {
         return;
       } else if (response.statusCode == 422) {
-        final errors = jsonDecode(response.body)['errors'] as Map<String, dynamic>;
+        final errors =
+            jsonDecode(response.body)['errors'] as Map<String, dynamic>;
         String errorMessage = errors.values.expand((e) => e as List).join('\n');
         throw Exception('${NoteApi.validationErrorCode}:$errorMessage');
       } else {
-        throw Exception('Server Error ${response.statusCode}: ${response.body}');
+        throw Exception(
+          'Server Error ${response.statusCode}: ${response.body}',
+        );
       }
     } catch (e) {
       print('Network/API Exception: $e');
@@ -42,7 +49,13 @@ class NoteApi {
   // --- FETCH ALL NOTES (Brief) ---
   Future<List<NoteBrief>> fetchBriefNote() async {
     try {
-      final response = await http.get(Uri.parse(_apiUrl));
+      final response = await http.get(
+        Uri.parse(_apiUrl),
+        headers: {
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
+        },
+      );
 
       if (response.statusCode == 200) {
         List<dynamic> jsonResponse = jsonDecode(response.body);
@@ -53,7 +66,9 @@ class NoteApi {
 
         return note;
       } else {
-        throw Exception('Failed to load achievement data. Status: ${response.statusCode}');
+        throw Exception(
+          'Failed to load achievement data. Status: ${response.statusCode}',
+        );
       }
     } catch (e) {
       throw Exception('Failed to connect to API: $e');
@@ -66,16 +81,19 @@ class NoteApi {
 
     try {
       final response = await http.get(
-        url, 
+        url,
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
+          // Only add Host header if NOT using a custom URL
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
         },
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['content'] ?? ''; 
+        return data['content'] ?? '';
       } else {
         throw Exception('Failed to load note content: ${response.statusCode}');
       }
@@ -95,6 +113,8 @@ class NoteApi {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
         },
       );
 
@@ -112,12 +132,17 @@ class NoteApi {
   // --- SEARCH NOTES ---
   Future<List<NoteBrief>> searchNotes(String topic, String query) async {
     try {
-      final uri = Uri.parse('$_apiUrl/search').replace(queryParameters: {
-        'topic': topic,
-        'query': query,
-      });
+      final uri = Uri.parse(
+        '$_apiUrl/search',
+      ).replace(queryParameters: {'topic': topic, 'query': query});
 
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
+        },
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
@@ -127,7 +152,9 @@ class NoteApi {
             .map((item) => NoteBrief.fromJson(item as Map<String, dynamic>))
             .toList();
       } else {
-        throw Exception('Failed to search notes. Status: ${response.statusCode}');
+        throw Exception(
+          'Failed to search notes. Status: ${response.statusCode}',
+        );
       }
     } catch (e) {
       throw Exception('Search API Error: $e');
@@ -137,26 +164,30 @@ class NoteApi {
   // --- UPDATE NOTE (FIXED) ---
   // Now accepts Topic and Visibility to fix the "Too many positional arguments" error
   Future<bool> updateNote(
-    String id, 
-    String title, 
-    String content, 
-    String topic,        // <--- Added
-    bool visibility      // <--- Added
+    String id,
+    String title,
+    String content,
+    String topic, // <--- Added
+    bool visibility, // <--- Added
   ) async {
-    final url = Uri.parse('$_apiUrl/$id'); 
-    
+    final url = Uri.parse('$_apiUrl/$id');
+
     try {
       final response = await http.put(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
         },
         body: jsonEncode({
           'title': title,
           'content': content,
-          'topic': topic,                   // Send new topic
-          'visibility': visibility ? 1 : 0, // Convert bool to integer for backend
+          'topic': topic, // Send new topic
+          'visibility': visibility
+              ? 1
+              : 0, // Convert bool to integer for backend
         }),
       );
 
@@ -175,13 +206,27 @@ class NoteApi {
   // --- DELETE NOTE ---
   Future<bool> deleteNote(String id) async {
     final url = Uri.parse('$_apiUrl/$id');
-    
+
     try {
-      final response = await http.delete(url);
+      final response = await http.delete(
+        url,
+        headers: {
+          if (ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'backend_services.test',
+        },
+      );
       return response.statusCode == 200 || response.statusCode == 204;
     } catch (e) {
       print('Error deleting note: $e');
       return false;
+    }
+  }
+
+  // --- DELETE MULTIPLE NOTES ---
+  Future<void> deleteNotes(List<dynamic> ids) async {
+    // Iterate and delete individually since no batch endpoint is known
+    for (final id in ids) {
+      await deleteNote(id.toString());
     }
   }
 }

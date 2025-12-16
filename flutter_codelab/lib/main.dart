@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
-import 'admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
-import 'admin_teacher/widgets/game/create_game_page.dart';
-import 'admin_teacher/widgets/note/admin_create_note_page.dart';
-import 'util.dart';
-import 'theme.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'models/data.dart' as data;
-import 'models/models.dart';
-import 'pages/pages.dart';
-import 'package:flutter_codelab/admin_teacher//widgets/achievements/admin_create_achievement_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.dart';
+
+import 'package:flutter_codelab/util.dart';
+import 'package:flutter_codelab/theme.dart';
+
+import 'package:flutter_codelab/models/data.dart' as data;
+import 'package:flutter_codelab/models/models.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+
+import 'package:flutter_codelab/pages/pages.dart';
 import 'package:flutter_codelab/pages/login_page.dart';
 import 'models/user_data.dart';
-import 'api/auth_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dart'; // NEW IMPORT
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_create_class_page.dart';
-import 'package:flutter_codelab/pages/class_page.dart' show classPageGlobalKey;
+import 'package:flutter_codelab/api/auth_api.dart';
+
+import 'package:flutter_codelab/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
+
+import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/create_account_form.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/create_note_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/feedback/edit_feedback.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/create_game_page.dart';
+
+import 'package:flutter_codelab/student/widgets/feedback/student_view_feedback_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -241,7 +249,24 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-
+      case 6: // This is the index for 'Feedback Page'
+        if (widget.currentUser.isStudent) {
+          _showSnackBar(
+            context,
+            'You do not have access to create feedback',
+            Theme.of(context).colorScheme.error,
+          );
+        } else {
+          showCreateFeedbackDialog(
+            context: context,
+            showSnackBar: _showSnackBar,
+            onFeedbackAdded: (feedback) {
+              // Optionally do something after feedback is added
+            },
+            authToken: widget.currentUser.token ?? '',
+          );
+        }
+        break;
       default:
         print("No 'add' action for index $selectedIndex");
     }
@@ -269,6 +294,10 @@ class _FeedState extends State<Feed> {
         currentUser: widget.currentUser,
       ), // Index 4
       const AiChatPage(), // Index 5
+      FeedbackPage(
+        authToken: widget.currentUser.token,
+        currentUser: widget.currentUser,
+      ), // Index 6
     ];
     // --- END OF FIX ---
 

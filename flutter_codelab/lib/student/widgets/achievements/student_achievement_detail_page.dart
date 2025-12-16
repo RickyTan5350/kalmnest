@@ -77,16 +77,7 @@ class _StudentAchievementDetailPageState extends State<StudentAchievementDetailP
     }
   }
 
-  Color _getColor(String? iconValue) {
-    switch (iconValue) {
-      case 'html': return Colors.orange;
-      case 'css': return Colors.green;
-      case 'javascript': return Colors.yellow;
-      case 'php': return Colors.blue;
-      case 'backend': return Colors.deepPurple;
-      default: return Colors.grey;
-    }
-  }
+
 
   String _formatDate(DateTime? date) {
     if (date == null) return 'N/A';
@@ -96,7 +87,7 @@ class _StudentAchievementDetailPageState extends State<StudentAchievementDetailP
   @override
   Widget build(BuildContext context) {
     final IconData icon = _getIconData(_displayData.icon);
-    final Color color = _getColor(_displayData.icon);
+    final Color color = getAchievementColor(context, _displayData.icon);
 
     // Determine the date to display: use passed-in obtainedAt first, then use createdAt as fallback
     final DateTime? displayDate = widget.obtainedAt ?? _displayData.createdAt;

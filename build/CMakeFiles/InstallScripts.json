@@ -1,0 +1,11 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/Y3S1/flutter-starter-app/build/cmake_install.cmake",
+		"D:/Y3S1/flutter-starter-app/build/flutter/cmake_install.cmake",
+		"D:/Y3S1/flutter-starter-app/build/runner/cmake_install.cmake",
+		"D:/Y3S1/flutter-starter-app/build/plugins/flutter_secure_storage_windows/cmake_install.cmake",
+		"D:/Y3S1/flutter-starter-app/build/plugins/url_launcher_windows/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
