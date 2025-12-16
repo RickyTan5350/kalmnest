@@ -183,7 +183,7 @@ class ImportNotes extends Command
                         return "![$altText]($newUrl)";
                     }
                 } else {
-                    $this->warn("   Warning: Attachment not found locally: $cleanLink (Looked in $noteDir)");
+                    $this->warn("   Warning: Attachment not found locally: $rawLink (Looked in $noteDir)");
                 }
                 
                 return $matches[0]; // Return original if fail
