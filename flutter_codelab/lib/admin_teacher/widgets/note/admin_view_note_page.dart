@@ -10,24 +10,27 @@ import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dar
 import 'package:flutter/services.dart'; // For HapticFeedback
 import 'package:flutter_codelab/theme.dart'; // Import BrandColors
 
-import 'note_grid_layout.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
 
-enum ViewLayout { list, grid }
-
-enum SortType { alphabetical, number }
-
-enum SortOrder { ascending, descending }
+// enum ViewLayout { list, grid } // Keeping ViewLayout if it's not shared yet, wait, ViewLayout is in admin_view_note_page OR imported?
+// User file line 14: enum ViewLayout { list, grid } defined locally. I will keep it.
+// Removing SortType and SortOrder.
 
 class AdminViewNotePage extends StatefulWidget {
   final ViewLayout layout;
   final String topic;
   final String query;
+  final SortType sortType;
+  final SortOrder sortOrder;
 
   const AdminViewNotePage({
     super.key,
     required this.layout,
     required this.topic,
     required this.query,
+    required this.sortType,
+    required this.sortOrder,
   });
 
   @override
@@ -38,8 +41,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
   late Future<List<NoteBrief>> _noteFuture;
   final NoteApi _api = NoteApi();
 
-  SortType _currentSortType = SortType.alphabetical;
-  SortOrder _currentSortOrder = SortOrder.ascending;
+  // Removed local sort state
   bool _isSelectionMode = false;
   final Set<dynamic> _selectedIds = {};
 
@@ -224,14 +226,12 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
     List<NoteBrief> sortedList = List.from(notes);
     sortedList.sort((a, b) {
       int comparison;
-      if (_currentSortType == SortType.alphabetical) {
+      if (widget.sortType == SortType.alphabetical) {
         comparison = a.title.toLowerCase().compareTo(b.title.toLowerCase());
       } else {
         comparison = a.noteId.compareTo(b.noteId);
       }
-      return _currentSortOrder == SortOrder.ascending
-          ? comparison
-          : -comparison;
+      return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
     });
     return sortedList;
   }
@@ -396,56 +396,6 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
-          ),
-          Row(
-            children: [
-              DropdownButton<SortType>(
-                value: _currentSortType,
-                underline: const SizedBox(),
-                isDense: true,
-                onChanged: (SortType? newValue) {
-                  if (newValue != null)
-                    setState(() => _currentSortType = newValue);
-                },
-                items: const [
-                  DropdownMenuItem(
-                    value: SortType.alphabetical,
-                    child: Text("Name"),
-                  ),
-                  DropdownMenuItem(value: SortType.number, child: Text("ID")),
-                ],
-              ),
-              Container(
-                height: 20,
-                width: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: colorScheme.outlineVariant,
-              ),
-              InkWell(
-                onTap: () => setState(
-                  () => _currentSortOrder =
-                      _currentSortOrder == SortOrder.ascending
-                      ? SortOrder.descending
-                      : SortOrder.ascending,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _currentSortOrder == SortOrder.ascending
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _currentSortOrder == SortOrder.ascending
-                          ? "Low-High"
-                          : "High-Low",
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
           IconButton(
             icon: Icon(Icons.refresh, color: colorScheme.primary),
