@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/note_api.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:flutter_codelab/student/widgets/note/student_note_detail.dart';
+import 'package:flutter_codelab/theme.dart'; // BrandColors
 
 // --- NEW IMPORTS: Reuse Admin/Teacher Widgets for consistency ---
 import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart';
@@ -276,6 +277,38 @@ class _StudentViewPageState extends State<StudentViewPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Resolve Brand Colors
+    final brandColors = Theme.of(context).extension<BrandColors>();
+    Color topicColor;
+    IconData topicIcon;
+
+    switch (note.topic.toLowerCase()) {
+      case 'html':
+        topicColor = brandColors?.html ?? Colors.orange;
+        topicIcon = Icons.html;
+        break;
+      case 'css':
+        topicColor = brandColors?.css ?? Colors.blue;
+        topicIcon = Icons.css;
+        break;
+      case 'js':
+      case 'javascript':
+        topicColor = brandColors?.javascript ?? Colors.yellow;
+        topicIcon = Icons.javascript;
+        break;
+      case 'php':
+        topicColor = brandColors?.php ?? Colors.indigo;
+        topicIcon = Icons.php;
+        break;
+      case 'backend':
+        topicColor = brandColors?.backend ?? Colors.purple;
+        topicIcon = Icons.storage;
+        break;
+      default:
+        topicColor = brandColors?.other ?? Colors.grey;
+        topicIcon = Icons.folder_open;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
@@ -297,13 +330,10 @@ class _StudentViewPageState extends State<StudentViewPage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
+                  color: topicColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.description_outlined,
-                  color: colorScheme.onPrimaryContainer,
-                ),
+                child: Icon(topicIcon, color: topicColor),
               ),
               const SizedBox(width: 16),
 

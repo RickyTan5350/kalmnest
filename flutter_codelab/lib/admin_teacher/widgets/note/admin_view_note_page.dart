@@ -8,6 +8,7 @@ import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
 import 'package:flutter/services.dart'; // For HapticFeedback
+import 'package:flutter_codelab/theme.dart'; // Import BrandColors
 
 import 'note_grid_layout.dart';
 
@@ -562,6 +563,38 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
     final colorScheme = theme.colorScheme;
     final bool isSelected = _selectedIds.contains(item.noteId);
 
+    // Resolve Brand Colors
+    final brandColors = Theme.of(context).extension<BrandColors>();
+    Color topicColor;
+    IconData topicIcon;
+
+    switch (item.topic.toLowerCase()) {
+      case 'html':
+        topicColor = brandColors?.html ?? Colors.orange;
+        topicIcon = Icons.html;
+        break;
+      case 'css':
+        topicColor = brandColors?.css ?? Colors.blue;
+        topicIcon = Icons.css;
+        break;
+      case 'js':
+      case 'javascript':
+        topicColor = brandColors?.javascript ?? Colors.yellow;
+        topicIcon = Icons.javascript;
+        break;
+      case 'php':
+        topicColor = brandColors?.php ?? Colors.indigo;
+        topicIcon = Icons.php;
+        break;
+      case 'backend':
+        topicColor = brandColors?.backend ?? Colors.purple;
+        topicIcon = Icons.storage;
+        break;
+      default:
+        topicColor = brandColors?.other ?? Colors.grey;
+        topicIcon = Icons.folder_open;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
@@ -616,13 +649,10 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
+                  color: topicColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.description_outlined,
-                  color: colorScheme.onPrimaryContainer,
-                ),
+                child: Icon(topicIcon, color: topicColor),
               ),
               const SizedBox(width: 16),
               Expanded(
