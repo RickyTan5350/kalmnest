@@ -87,7 +87,7 @@ class StudentViewPageState extends State<StudentViewPage> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor:colorScheme.surfaceContainerLow,
       body: FutureBuilder<List<NoteBrief>>(
         future: _noteFuture,
         builder: (context, snapshot) {
@@ -199,18 +199,17 @@ class StudentViewPageState extends State<StudentViewPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            "$count Results",
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
+          SizedBox(
+            height: 40,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text("$count Results", style: theme.textTheme.titleMedium),
             ),
           ),
         ],
@@ -261,7 +260,7 @@ class StudentViewPageState extends State<StudentViewPage> {
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
       // Match Admin color (Surface) instead of SurfaceContainer
-      color: colorScheme.surface,
+     
       shape: RoundedRectangleBorder(
         side: BorderSide(color: colorScheme.outlineVariant, width: 1),
         borderRadius: BorderRadius.circular(12.0),
