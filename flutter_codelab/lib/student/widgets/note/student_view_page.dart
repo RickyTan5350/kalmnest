@@ -9,20 +9,22 @@ import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 
 // Local Enums
-enum SortType { alphabetical, number }
-
-enum SortOrder { ascending, descending }
+import 'package:flutter_codelab/enums/sort_enums.dart';
 
 class StudentViewPage extends StatefulWidget {
   final String topic;
   final String query;
   final bool isGrid;
+  final SortType sortType;
+  final SortOrder sortOrder;
 
   const StudentViewPage({
     super.key,
     required this.topic,
     required this.query,
     required this.isGrid,
+    required this.sortType,
+    required this.sortOrder,
   });
 
   @override
@@ -32,9 +34,6 @@ class StudentViewPage extends StatefulWidget {
 class _StudentViewPageState extends State<StudentViewPage> {
   late Future<List<NoteBrief>> _noteFuture;
   final NoteApi _api = NoteApi();
-
-  SortType _currentSortType = SortType.alphabetical;
-  SortOrder _currentSortOrder = SortOrder.ascending;
 
   // --- NEW: Keys required by GridLayoutView ---
   final Map<dynamic, GlobalKey> _gridItemKeys = {};
@@ -48,7 +47,9 @@ class _StudentViewPageState extends State<StudentViewPage> {
   @override
   void didUpdateWidget(StudentViewPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.topic != widget.topic) {
+    if (oldWidget.topic != widget.topic ||
+        oldWidget.sortType != widget.sortType ||
+        oldWidget.sortOrder != widget.sortOrder) {
       _loadData();
     }
   }
@@ -67,14 +68,12 @@ class _StudentViewPageState extends State<StudentViewPage> {
     List<NoteBrief> sortedList = List.from(notes);
     sortedList.sort((a, b) {
       int comparison;
-      if (_currentSortType == SortType.alphabetical) {
+      if (widget.sortType == SortType.alphabetical) {
         comparison = a.title.toLowerCase().compareTo(b.title.toLowerCase());
       } else {
         comparison = a.noteId.toString().compareTo(b.noteId.toString());
       }
-      return _currentSortOrder == SortOrder.ascending
-          ? comparison
-          : -comparison;
+      return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
     });
     return sortedList;
   }
@@ -154,7 +153,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
                                   0,
                                   16,
                                 ),
-                                 
+                                // Removed unused preview
                               },
                             )
                             .toList(),
@@ -208,60 +207,6 @@ class _StudentViewPageState extends State<StudentViewPage> {
               fontWeight: FontWeight.bold,
               color: colorScheme.onSurface,
             ),
-          ),
-          Row(
-            children: [
-              DropdownButton<SortType>(
-                value: _currentSortType,
-                underline: const SizedBox(),
-                isDense: true,
-                dropdownColor: colorScheme.surfaceContainer,
-                style: TextStyle(color: colorScheme.onSurface),
-                onChanged: (SortType? newValue) {
-                  if (newValue != null)
-                    setState(() => _currentSortType = newValue);
-                },
-                items: const [
-                  DropdownMenuItem(
-                    value: SortType.alphabetical,
-                    child: Text("Name"),
-                  ),
-                  DropdownMenuItem(value: SortType.number, child: Text("ID")),
-                ],
-              ),
-              Container(
-                height: 20,
-                width: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: colorScheme.outlineVariant,
-              ),
-              InkWell(
-                onTap: () => setState(
-                  () => _currentSortOrder =
-                      _currentSortOrder == SortOrder.ascending
-                      ? SortOrder.descending
-                      : SortOrder.ascending,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _currentSortOrder == SortOrder.ascending
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded,
-                      size: 16,
-                      color: colorScheme.onSurface,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _currentSortOrder == SortOrder.ascending
-                          ? "Low-High"
-                          : "High-Low",
-                      style: TextStyle(color: colorScheme.onSurface),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
           IconButton(
             icon: Icon(Icons.refresh, color: colorScheme.onSurface),
@@ -355,7 +300,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                   
+
                     const SizedBox(height: 4),
                     Text(
                       'Updated: ${note.updatedAt.toString().substring(0, 16)}',

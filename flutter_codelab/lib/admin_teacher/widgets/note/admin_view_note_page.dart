@@ -10,24 +10,23 @@ import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dar
 import 'package:flutter/services.dart'; // For HapticFeedback
 import 'package:flutter_codelab/theme.dart'; // Import BrandColors
 
-import 'note_grid_layout.dart';
-
-enum ViewLayout { list, grid }
-
-enum SortType { alphabetical, number }
-
-enum SortOrder { ascending, descending }
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/enums/view_layout.dart';
 
 class AdminViewNotePage extends StatefulWidget {
   final ViewLayout layout;
   final String topic;
   final String query;
+  final SortType sortType;
+  final SortOrder sortOrder;
 
   const AdminViewNotePage({
     super.key,
     required this.layout,
     required this.topic,
     required this.query,
+    required this.sortType,
+    required this.sortOrder,
   });
 
   @override
@@ -38,8 +37,6 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
   late Future<List<NoteBrief>> _noteFuture;
   final NoteApi _api = NoteApi();
 
-  SortType _currentSortType = SortType.alphabetical;
-  SortOrder _currentSortOrder = SortOrder.ascending;
   bool _isSelectionMode = false;
   final Set<dynamic> _selectedIds = {};
 
@@ -224,17 +221,17 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
     List<NoteBrief> sortedList = List.from(notes);
     sortedList.sort((a, b) {
       int comparison;
-      if (_currentSortType == SortType.alphabetical) {
+      if (widget.sortType == SortType.alphabetical) {
         comparison = a.title.toLowerCase().compareTo(b.title.toLowerCase());
       } else {
         comparison = a.noteId.compareTo(b.noteId);
       }
-      return _currentSortOrder == SortOrder.ascending
-          ? comparison
-          : -comparison;
+      return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
     });
     return sortedList;
   }
+
+  // --- HEADER WIDGETS ---
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +276,6 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                     const SizedBox(height: 10),
                     Text(
                       "No notes found.",
-                      // FIX: 'textTheme' was undefined. Used 'theme.textTheme'.
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -294,16 +290,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
 
             return SelectionGestureWrapper(
               isDesktop: _isDesktop,
-              selectedIds: _selectedIds
-                  .map((e) => e.toString())
-                  .toSet(), // Conv to set string if needed, or update wrapper to generic?
-              // Wrapper expects Set<String>. NoteBrief ID might be int.
-              // Let's check wrapper definition. Wrapper: final Set<String> selectedIds;
-              // So I must cast or convert. 'NoteBrief' id is likely int.
-              // Correction: specific admin_view_note handles dynamic, but wrapper expects String?
-              // checking wrapper file: "final Set<String> selectedIds;"
-              // So I better convert to String for the wrapper, or update the wrapper.
-              // Updating the wrapper is risky if used elsewhere. Converting here is safer.
+              selectedIds: _selectedIds.map((e) => e.toString()).toSet(),
               itemKeys: _gridItemKeys.map((k, v) => MapEntry(k.toString(), v)),
 
               onLongPressStart: (details) {
@@ -374,8 +361,54 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
     );
   }
 
-  // --- HEADER WIDGETS ---
+  Widget _buildSelectionHeader(BuildContext context, int count) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
+    return Container(
+      key: const ValueKey("SelectionHeader"),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            "${_selectedIds.length} Selected",
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSecondaryContainer,
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: colorScheme.onSecondaryContainer,
+                ),
+                onPressed: _deleteSelectedNotes,
+                tooltip: "Delete Selected",
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.close,
+                  color: colorScheme.onSecondaryContainer,
+                ),
+                onPressed: _exitSelectionMode,
+                tooltip: "Cancel",
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Header without Sort Controls
   Widget _buildSortHeader(BuildContext context, int count) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -397,95 +430,10 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          Row(
-            children: [
-              DropdownButton<SortType>(
-                value: _currentSortType,
-                underline: const SizedBox(),
-                isDense: true,
-                onChanged: (SortType? newValue) {
-                  if (newValue != null)
-                    setState(() => _currentSortType = newValue);
-                },
-                items: const [
-                  DropdownMenuItem(
-                    value: SortType.alphabetical,
-                    child: Text("Name"),
-                  ),
-                  DropdownMenuItem(value: SortType.number, child: Text("ID")),
-                ],
-              ),
-              Container(
-                height: 20,
-                width: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: colorScheme.outlineVariant,
-              ),
-              InkWell(
-                onTap: () => setState(
-                  () => _currentSortOrder =
-                      _currentSortOrder == SortOrder.ascending
-                      ? SortOrder.descending
-                      : SortOrder.ascending,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _currentSortOrder == SortOrder.ascending
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _currentSortOrder == SortOrder.ascending
-                          ? "Low-High"
-                          : "High-Low",
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
           IconButton(
             icon: Icon(Icons.refresh, color: colorScheme.primary),
             onPressed: () => _loadData(),
             tooltip: "Refresh List",
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectionHeader(BuildContext context, int totalCount) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      key: const ValueKey("SelectionHeader"),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _exitSelectionMode,
-              ),
-              Text(
-                "${_selectedIds.length} Selected",
-                style: theme.textTheme.titleMedium,
-              ),
-            ],
-          ),
-          IconButton(
-            icon: Icon(Icons.delete_outline, color: colorScheme.error),
-            onPressed: _deleteSelectedNotes,
           ),
         ],
       ),
