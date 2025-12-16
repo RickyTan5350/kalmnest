@@ -6,7 +6,8 @@ import 'package:flutter_codelab/constants/achievement_constants.dart';
 Future<void> showEditAchievementDialog({
   required BuildContext context,
   required Map<String, dynamic> achievement, // Data to pre-fill
-  required void Function(BuildContext context, String message, Color color) showSnackBar,
+  required void Function(BuildContext context, String message, Color color)
+  showSnackBar,
 }) {
   return showDialog(
     context: context,
@@ -21,7 +22,8 @@ Future<void> showEditAchievementDialog({
 
 class EditAchievementDialog extends StatefulWidget {
   final Map<String, dynamic> achievement;
-  final void Function(BuildContext context, String message, Color color) showSnackBar;
+  final void Function(BuildContext context, String message, Color color)
+  showSnackBar;
 
   const EditAchievementDialog({
     super.key,
@@ -60,9 +62,15 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     super.initState();
     // --- PRE-LOAD DATA ---
     // We map the keys passed from the detail page to the controllers
-    _achievementNameController = TextEditingController(text: widget.achievement['achievement_name']);
-    _achievementTitleController = TextEditingController(text: widget.achievement['title']);
-    _achievementDescriptionController = TextEditingController(text: widget.achievement['description']);
+    _achievementNameController = TextEditingController(
+      text: widget.achievement['achievement_name'],
+    );
+    _achievementTitleController = TextEditingController(
+      text: widget.achievement['title'],
+    );
+    _achievementDescriptionController = TextEditingController(
+      text: widget.achievement['description'],
+    );
 
     // Pre-select dropdowns (ensure value exists in options to avoid crash)
     _selectedIcon = widget.achievement['icon'];
@@ -127,7 +135,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
       achievementName: _achievementNameController.text,
       achievementTitle: _achievementTitleController.text,
       achievementDescription: _achievementDescriptionController.text,
-      level: _selectedLevel,
+      levelName: _selectedLevel,
       icon: _selectedIcon,
     );
 
@@ -138,7 +146,11 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
       await _achievementApi.updateAchievement(id, updatedData);
 
       if (mounted) {
-        widget.showSnackBar(context, 'Changes saved successfully!', Colors.green);
+        widget.showSnackBar(
+          context,
+          'Changes saved successfully!',
+          Colors.green,
+        );
         Navigator.of(context).pop(true); // Return true to trigger refresh
       }
     } catch (e) {
@@ -186,7 +198,8 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                     icon: Icons.emoji_events,
                     colorScheme: colorScheme,
                   ),
-                  validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'Please enter a name' : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -199,7 +212,8 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                     icon: Icons.title,
                     colorScheme: colorScheme,
                   ),
-                  validator: (value) => value!.isEmpty ? 'Please enter a title' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'Please enter a title' : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -213,7 +227,8 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                     colorScheme: colorScheme,
                   ),
                   maxLines: 3,
-                  validator: (value) => value!.isEmpty ? 'Please enter a description' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'Please enter a description' : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -243,7 +258,8 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                     );
                   }).toList(),
                   onChanged: (val) => setState(() => _selectedIcon = val),
-                  validator: (val) => val == null ? 'Please select an icon' : null,
+                  validator: (val) =>
+                      val == null ? 'Please select an icon' : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -291,13 +307,13 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                           : const Text('Save Changes'),
                     ),
                   ],

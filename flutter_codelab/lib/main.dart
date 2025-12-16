@@ -23,7 +23,7 @@ import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.d
 import 'package:flutter_codelab/admin_teacher/widgets/feedback/edit_feedback.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/game/create_game_page.dart';
-
+import 'package:flutter_codelab/admin_teacher/widgets/class/admin_create_class_page.dart';
 import 'package:flutter_codelab/student/widgets/feedback/student_view_feedback_page.dart';
 
 void main() async {
