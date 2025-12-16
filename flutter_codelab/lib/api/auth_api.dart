@@ -3,10 +3,10 @@ import 'package:flutter_codelab/student/services/local_achievement_storage.dart'
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:flutter_codelab/api/api_constants.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 // Ensure this matches your emulator/device URL
-const String _authApiUrl = ApiConstants.baseUrl;
+String get _authApiUrl => ApiConstants.baseUrl;
 
 const _storage = FlutterSecureStorage();
 const String _tokenKey = 'auth_token';

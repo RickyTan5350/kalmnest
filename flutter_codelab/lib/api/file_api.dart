@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_codelab/api/api_constants.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 class FileApi {
   // Use 10.0.2.2 for Android Emulator, or your machine's IP for real devices.
   // kalmnest.test works if you have host mapping set up.
-  static const String _domain = ApiConstants.domain;
+  static String get _domain => ApiConstants.domain;
   final String _baseUrl = '$_domain/api';
 
   /// 1. IMMEDIATE UPLOAD: Uploads a single file and returns ID + URL
