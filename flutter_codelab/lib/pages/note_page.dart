@@ -5,9 +5,10 @@ import 'package:flutter_codelab/models/user_data.dart';
 // 1. Import Admin View normally
 import 'package:flutter_codelab/admin_teacher/widgets/note/admin_view_note_page.dart';
 
-// 2. Import Student View but HIDE conflicting enums
-import 'package:flutter_codelab/student/widgets/note/student_view_page.dart'
-    hide ViewLayout, SortType, SortOrder;
+// 2. Import Student View
+import 'package:flutter_codelab/student/widgets/note/student_view_page.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
+import 'package:flutter_codelab/constants/view_layout.dart'; // Shared ViewLayout
 
 class NotePage extends StatefulWidget {
   final UserDetails currentUser;
@@ -23,6 +24,8 @@ class _NotePageState extends State<NotePage> {
   String _selectedTopic = 'All';
   String _searchQuery = '';
   ViewLayout _viewLayout = ViewLayout.grid;
+  SortType _sortType = SortType.alphabetical;
+  SortOrder _sortOrder = SortOrder.ascending;
 
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -107,22 +110,87 @@ class _NotePageState extends State<NotePage> {
                   const SizedBox(height: 16),
 
                   // --- Filter Chips (Left Aligned) ---
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10, // Good practice if they wrap to next line
-                    alignment: WrapAlignment.start, // Explicitly align start
-                    children: _topics
-                        .map(
-                          (topic) => FilterChip(
-                            label: Text(topic),
-                            selected: _selectedTopic == topic,
-                            onSelected: (selected) {
-                              if (selected)
-                                setState(() => _selectedTopic = topic);
-                            },
-                          ),
-                        )
-                        .toList(),
+                  // --- Filter Chips (Left Aligned) + Filter Icon (Right Aligned) ---
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          alignment: WrapAlignment.start,
+                          children: _topics
+                              .map(
+                                (topic) => FilterChip(
+                                  label: Text(topic),
+                                  selected: _selectedTopic == topic,
+                                  onSelected: (selected) {
+                                    if (selected)
+                                      setState(() => _selectedTopic = topic);
+                                  },
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Filter Icon at the end of the Row
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.filter_list),
+                        tooltip: 'Sort Options',
+                        onSelected: (value) {
+                          setState(() {
+                            if (value == 'Name') {
+                              _sortType = SortType.alphabetical;
+                            } else if (value == 'ID') {
+                              _sortType = SortType.number;
+                            } else if (value == 'Ascending') {
+                              _sortOrder = SortOrder.ascending;
+                            } else if (value == 'Descending') {
+                              _sortOrder = SortOrder.descending;
+                            }
+                          });
+                        },
+                        itemBuilder: (BuildContext context) =>
+                            <PopupMenuEntry<String>>[
+                              const PopupMenuItem<String>(
+                                enabled: false,
+                                child: Text(
+                                  'Sort By',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Name',
+                                checked: _sortType == SortType.alphabetical,
+                                child: const Text('Name'),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'ID',
+                                checked: _sortType == SortType.number,
+                                child: const Text('ID'),
+                              ),
+                              const PopupMenuDivider(),
+                              const PopupMenuItem<String>(
+                                enabled: false,
+                                child: Text(
+                                  'Order',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Ascending',
+                                checked: _sortOrder == SortOrder.ascending,
+                                child: const Text('Ascending'),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Descending',
+                                checked: _sortOrder == SortOrder.descending,
+                                child: const Text('Descending'),
+                              ),
+                            ],
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -135,6 +203,8 @@ class _NotePageState extends State<NotePage> {
                                 : _selectedTopic,
                             query: _searchQuery,
                             isGrid: _viewLayout == ViewLayout.grid,
+                            sortType: _sortType,
+                            sortOrder: _sortOrder,
                           )
                         : AdminViewNotePage(
                             layout: _viewLayout,
@@ -142,6 +212,8 @@ class _NotePageState extends State<NotePage> {
                                 ? ''
                                 : _selectedTopic,
                             query: _searchQuery,
+                            sortType: _sortType,
+                            sortOrder: _sortOrder,
                           ),
                   ),
                 ],

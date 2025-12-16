@@ -3,30 +3,30 @@ import 'package:flutter_codelab/api/note_api.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 // FIX: Imported Admin Detail Page
 import 'package:flutter_codelab/admin_teacher/widgets/note/admin_note_detail.dart';
-
+import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart'; // Adjust path as needed
 // Import Shared Grid (Adjust path if needed)
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
 import 'package:flutter/services.dart'; // For HapticFeedback
+import 'package:flutter_codelab/theme.dart'; // Import BrandColors
 
-import 'note_grid_layout_view.dart';
-
-enum ViewLayout { list, grid }
-
-enum SortType { alphabetical, number }
-
-enum SortOrder { ascending, descending }
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
 
 class AdminViewNotePage extends StatefulWidget {
   final ViewLayout layout;
   final String topic;
   final String query;
+  final SortType sortType;
+  final SortOrder sortOrder;
 
   const AdminViewNotePage({
     super.key,
     required this.layout,
     required this.topic,
     required this.query,
+    required this.sortType,
+    required this.sortOrder,
   });
 
   @override
@@ -37,8 +37,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
   late Future<List<NoteBrief>> _noteFuture;
   final NoteApi _api = NoteApi();
 
-  SortType _currentSortType = SortType.alphabetical;
-  SortOrder _currentSortOrder = SortOrder.ascending;
+  // Removed local sort state
   bool _isSelectionMode = false;
   final Set<dynamic> _selectedIds = {};
 
@@ -223,14 +222,12 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
     List<NoteBrief> sortedList = List.from(notes);
     sortedList.sort((a, b) {
       int comparison;
-      if (_currentSortType == SortType.alphabetical) {
+      if (widget.sortType == SortType.alphabetical) {
         comparison = a.title.toLowerCase().compareTo(b.title.toLowerCase());
       } else {
         comparison = a.noteId.compareTo(b.noteId);
       }
-      return _currentSortOrder == SortOrder.ascending
-          ? comparison
-          : -comparison;
+      return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
     });
     return sortedList;
   }
@@ -396,56 +393,6 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          Row(
-            children: [
-              DropdownButton<SortType>(
-                value: _currentSortType,
-                underline: const SizedBox(),
-                isDense: true,
-                onChanged: (SortType? newValue) {
-                  if (newValue != null)
-                    setState(() => _currentSortType = newValue);
-                },
-                items: const [
-                  DropdownMenuItem(
-                    value: SortType.alphabetical,
-                    child: Text("Name"),
-                  ),
-                  DropdownMenuItem(value: SortType.number, child: Text("ID")),
-                ],
-              ),
-              Container(
-                height: 20,
-                width: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: colorScheme.outlineVariant,
-              ),
-              InkWell(
-                onTap: () => setState(
-                  () => _currentSortOrder =
-                      _currentSortOrder == SortOrder.ascending
-                      ? SortOrder.descending
-                      : SortOrder.ascending,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _currentSortOrder == SortOrder.ascending
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _currentSortOrder == SortOrder.ascending
-                          ? "Low-High"
-                          : "High-Low",
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
           IconButton(
             icon: Icon(Icons.refresh, color: colorScheme.primary),
             onPressed: () => _loadData(),
@@ -500,14 +447,14 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       // 1. Create a map for fast lookup (Optimization)
       final noteMap = {for (var n in notes) n.noteId: n};
 
-      return GridLayoutView(
-        achievements: notes
+      return NoteGridLayout(
+        notes: notes
             .map(
               (n) => {
                 'id': n.noteId,
                 'title': n.title,
-                'icon': Icons.article_outlined,
-                'color': Colors.blue,
+                'topic': n.topic,
+                'updatedAt': n.updatedAt.toString().substring(0, 16),
                 'preview': 'Tap to edit...',
               },
             )
@@ -563,6 +510,38 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
     final colorScheme = theme.colorScheme;
     final bool isSelected = _selectedIds.contains(item.noteId);
 
+    // Resolve Brand Colors
+    final brandColors = Theme.of(context).extension<BrandColors>();
+    Color topicColor;
+    IconData topicIcon;
+
+    switch (item.topic.toLowerCase()) {
+      case 'html':
+        topicColor = brandColors?.html ?? Colors.orange;
+        topicIcon = Icons.html;
+        break;
+      case 'css':
+        topicColor = brandColors?.css ?? Colors.blue;
+        topicIcon = Icons.css;
+        break;
+      case 'js':
+      case 'javascript':
+        topicColor = brandColors?.javascript ?? Colors.yellow;
+        topicIcon = Icons.javascript;
+        break;
+      case 'php':
+        topicColor = brandColors?.php ?? Colors.indigo;
+        topicIcon = Icons.php;
+        break;
+      case 'backend':
+        topicColor = brandColors?.backend ?? Colors.purple;
+        topicIcon = Icons.storage;
+        break;
+      default:
+        topicColor = brandColors?.other ?? Colors.grey;
+        topicIcon = Icons.folder_open;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
@@ -617,13 +596,10 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
+                  color: topicColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.description_outlined,
-                  color: colorScheme.onPrimaryContainer,
-                ),
+                child: Icon(topicIcon, color: topicColor),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -642,6 +618,14 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                       'Tap to edit',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Updated: ${item.updatedAt.toString().substring(0, 16)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.outline,
+                        fontSize: 10,
                       ),
                     ),
                   ],
