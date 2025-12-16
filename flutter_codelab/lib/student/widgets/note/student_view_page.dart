@@ -105,6 +105,9 @@ class StudentViewPageState extends State<StudentViewPage> {
 
           final List<NoteBrief> rawList = snapshot.data!;
           final filteredList = rawList.where((note) {
+            // Filter out private notes
+            if (!note.visibility) return false;
+
             return note.title.toLowerCase().contains(
               widget.query.toLowerCase(),
             );
