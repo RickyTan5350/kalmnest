@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/note_data.dart';
-import 'package:flutter_codelab/api/api_constants.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
-const String _apiUrl = '${ApiConstants.baseUrl}/notes';
+String get _apiUrl => '${ApiConstants.baseUrl}/notes';
 
 class NoteApi {
   static const String validationErrorCode = '422';
