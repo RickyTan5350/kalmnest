@@ -2,10 +2,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 class ClassApi {
   // Replace with your PC's local IP
-  static const String base = 'https://backend_services.test/api';
+  static String get base => ApiConstants.baseUrl;
 
   // Helper function to get headers with authentication
   static Future<Map<String, String>> _getAuthHeaders({
@@ -68,12 +69,14 @@ class ClassApi {
         String errorMessage = 'Validation failed.';
         if (errors['class_name'] != null && errors['class_name'].isNotEmpty) {
           errorMessage = errors['class_name'][0];
-        } else if (errors['student_ids'] != null && errors['student_ids'].isNotEmpty) {
+        } else if (errors['student_ids'] != null &&
+            errors['student_ids'].isNotEmpty) {
           errorMessage = errors['student_ids'][0];
         } else if (errors.isNotEmpty) {
           // Get first error from any field
           final firstErrorKey = errors.keys.first;
-          if (errors[firstErrorKey] != null && errors[firstErrorKey].isNotEmpty) {
+          if (errors[firstErrorKey] != null &&
+              errors[firstErrorKey].isNotEmpty) {
             errorMessage = errors[firstErrorKey][0];
           }
         } else if (decoded['message'] != null) {
@@ -162,12 +165,14 @@ class ClassApi {
         String errorMessage = 'Validation failed.';
         if (errors['class_name'] != null && errors['class_name'].isNotEmpty) {
           errorMessage = errors['class_name'][0];
-        } else if (errors['student_ids'] != null && errors['student_ids'].isNotEmpty) {
+        } else if (errors['student_ids'] != null &&
+            errors['student_ids'].isNotEmpty) {
           errorMessage = errors['student_ids'][0];
         } else if (errors.isNotEmpty) {
           // Get first error from any field
           final firstErrorKey = errors.keys.first;
-          if (errors[firstErrorKey] != null && errors[firstErrorKey].isNotEmpty) {
+          if (errors[firstErrorKey] != null &&
+              errors[firstErrorKey].isNotEmpty) {
             errorMessage = errors[firstErrorKey][0];
           }
         } else if (decoded['message'] != null) {
@@ -264,7 +269,7 @@ class ClassApi {
       final res = await http.get(uri, headers: headers);
 
       print('Fetch teachers - Status: ${res.statusCode}');
-      
+
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
         final teachers = List<Map<String, dynamic>>.from(decoded['data'] ?? []);
@@ -290,7 +295,7 @@ class ClassApi {
       final res = await http.get(uri, headers: headers);
 
       print('Fetch students - Status: ${res.statusCode}');
-      
+
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
         final students = List<Map<String, dynamic>>.from(decoded['data'] ?? []);
