@@ -8,11 +8,15 @@ import 'admin_teacher/widgets/note/admin_create_note_page.dart';
 import 'util.dart';
 import 'theme.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'models/data.dart' as data;
-import 'models/models.dart';
-import 'pages/pages.dart';
-import 'package:flutter_codelab/admin_teacher//widgets/achievements/admin_create_achievement_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.dart';
+
+import 'package:flutter_codelab/util.dart';
+import 'package:flutter_codelab/theme.dart';
+
+import 'package:flutter_codelab/models/data.dart' as data;
+import 'package:flutter_codelab/models/models.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+
+import 'package:flutter_codelab/pages/pages.dart';
 import 'package:flutter_codelab/pages/login_page.dart';
 import 'models/user_data.dart';
 import 'api/auth_api.dart';
@@ -161,6 +165,24 @@ class _FeedState extends State<Feed> {
     }
   }
 
+  Future<void> _showCreateClassDialog() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CreateClassScreen()),
+    );
+
+    // If class was created successfully, reload the class list
+    if (result == true) {
+      // Use GlobalKey to access ClassPage's reload method (similar to feedback callback)
+      classPageGlobalKey.currentState?.reloadClassList();
+      _showSnackBar(
+        context,
+        'Class created successfully!',
+        Theme.of(context).colorScheme.primary,
+      );
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -209,6 +231,18 @@ class _FeedState extends State<Feed> {
         }
         break;
 
+      case 3: // This is the index for 'ClassPage'
+        if (widget.currentUser.isAdmin) {
+          _showCreateClassDialog();
+        } else {
+          _showSnackBar(
+            context,
+            'You do not have access to this function',
+            Theme.of(context).colorScheme.error,
+          );
+        }
+        break;
+
       case 4: // This is the index for 'AchievementPage'
         if (widget.currentUser.isStudent) {
           _showSnackBar(
@@ -223,7 +257,24 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-
+      case 6: // This is the index for 'Feedback Page'
+        if (widget.currentUser.isStudent) {
+          _showSnackBar(
+            context,
+            'You do not have access to create feedback',
+            Theme.of(context).colorScheme.error,
+          );
+        } else {
+          showCreateFeedbackDialog(
+            context: context,
+            showSnackBar: _showSnackBar,
+            onFeedbackAdded: (feedback) {
+              // Optionally do something after feedback is added
+            },
+            authToken: widget.currentUser.token ?? '',
+          );
+        }
+        break;
       default:
         print("No 'add' action for index $selectedIndex");
     }
@@ -242,12 +293,19 @@ class _FeedState extends State<Feed> {
       const UserPage(), // Index 0
       GamePage(userRole: widget.currentUser.roleName), // Index 1
       NotePage(currentUser: widget.currentUser),
-      const ClassPage(), //utter Index 3
+      ClassPage(
+        key: classPageGlobalKey,
+        currentUser: widget.currentUser,
+      ), //utter Index 3
       AchievementPage(
         showSnackBar: _showSnackBar,
         currentUser: widget.currentUser,
       ), // Index 4
       const AiChatPage(), // Index 5
+      FeedbackPage(
+        authToken: widget.currentUser.token,
+        currentUser: widget.currentUser,
+      ), // Index 6
     ];
     // --- END OF FIX ---
 
