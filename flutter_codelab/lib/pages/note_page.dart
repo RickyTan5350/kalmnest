@@ -107,6 +107,9 @@ class _NotePageState extends State<NotePage> {
                     child: SearchBar(
                       focusNode: _searchFocusNode,
                       hintText: "Search topic or title",
+                      padding: const WidgetStatePropertyAll<EdgeInsets>(
+              EdgeInsets.symmetric(horizontal: 16.0),
+            ),
                       onChanged: (val) => setState(() => _searchQuery = val),
                       leading: const Icon(
                         Icons.search,
