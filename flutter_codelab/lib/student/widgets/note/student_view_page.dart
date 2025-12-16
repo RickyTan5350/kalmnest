@@ -30,10 +30,10 @@ class StudentViewPage extends StatefulWidget {
   });
 
   @override
-  State<StudentViewPage> createState() => _StudentViewPageState();
+  State<StudentViewPage> createState() => StudentViewPageState();
 }
 
-class _StudentViewPageState extends State<StudentViewPage> {
+class StudentViewPageState extends State<StudentViewPage> {
   late Future<List<NoteBrief>> _noteFuture;
   final NoteApi _api = NoteApi();
 
@@ -45,18 +45,18 @@ class _StudentViewPageState extends State<StudentViewPage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    refreshData();
   }
 
   @override
   void didUpdateWidget(StudentViewPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.topic != widget.topic) {
-      _loadData();
+    if (oldWidget.topic != widget.topic || oldWidget.query != widget.query) {
+      refreshData();
     }
   }
 
-  void _loadData() {
+  void refreshData() {
     setState(() {
       if (widget.topic.isEmpty) {
         _noteFuture = _api.fetchBriefNote();
@@ -73,7 +73,8 @@ class _StudentViewPageState extends State<StudentViewPage> {
       if (widget.sortType == SortType.alphabetical) {
         comparison = a.title.toLowerCase().compareTo(b.title.toLowerCase());
       } else {
-        comparison = a.noteId.toString().compareTo(b.noteId.toString());
+        // SortType.updated
+        comparison = a.updatedAt.compareTo(b.updatedAt);
       }
       return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
     });
@@ -209,11 +210,6 @@ class _StudentViewPageState extends State<StudentViewPage> {
               color: colorScheme.onSurface,
             ),
           ),
-          IconButton(
-            icon: Icon(Icons.refresh, color: colorScheme.onSurface),
-            onPressed: () => _loadData(),
-            tooltip: "Refresh List",
-          ),
         ],
       ),
     );
@@ -291,7 +287,6 @@ class _StudentViewPageState extends State<StudentViewPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Keep HighlightText so search still works visually
                     HighlightText(
                       text: note.title,
                       query: widget.query,

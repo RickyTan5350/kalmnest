@@ -29,6 +29,11 @@ class _NotePageState extends State<NotePage> {
 
   final FocusNode _searchFocusNode = FocusNode();
 
+  final GlobalKey<StudentViewPageState> _studentKey =
+      GlobalKey<StudentViewPageState>();
+  final GlobalKey<AdminViewNotePageState> _adminKey =
+      GlobalKey<AdminViewNotePageState>();
+
   @override
   void dispose() {
     _searchFocusNode.dispose();
@@ -37,6 +42,14 @@ class _NotePageState extends State<NotePage> {
 
   void _activateSearch() {
     _searchFocusNode.requestFocus();
+  }
+
+  Future<void> _handleRefresh() async {
+    if (widget.currentUser.isStudent) {
+      _studentKey.currentState?.refreshData();
+    } else {
+      _adminKey.currentState?.refreshData();
+    }
   }
 
   @override
@@ -134,7 +147,7 @@ class _NotePageState extends State<NotePage> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Filter Icon at the end of the Row
+                      // Filter Icon (Sort)
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.filter_list),
                         tooltip: 'Sort Options',
@@ -142,8 +155,8 @@ class _NotePageState extends State<NotePage> {
                           setState(() {
                             if (value == 'Name') {
                               _sortType = SortType.alphabetical;
-                            } else if (value == 'ID') {
-                              _sortType = SortType.number;
+                            } else if (value == 'Date') {
+                              _sortType = SortType.updated;
                             } else if (value == 'Ascending') {
                               _sortOrder = SortOrder.ascending;
                             } else if (value == 'Descending') {
@@ -166,9 +179,9 @@ class _NotePageState extends State<NotePage> {
                                 child: const Text('Name'),
                               ),
                               CheckedPopupMenuItem<String>(
-                                value: 'ID',
-                                checked: _sortType == SortType.number,
-                                child: const Text('ID'),
+                                value: 'Date',
+                                checked: _sortType == SortType.updated,
+                                child: const Text('Date'),
                               ),
                               const PopupMenuDivider(),
                               const PopupMenuItem<String>(
@@ -190,6 +203,13 @@ class _NotePageState extends State<NotePage> {
                               ),
                             ],
                       ),
+                      const SizedBox(width: 4),
+                      // Refresh Icon (Right of Sort)
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _handleRefresh,
+                        tooltip: "Refresh List",
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -198,6 +218,7 @@ class _NotePageState extends State<NotePage> {
                   Expanded(
                     child: widget.currentUser.isStudent
                         ? StudentViewPage(
+                            key: _studentKey,
                             topic: _selectedTopic == 'All'
                                 ? ''
                                 : _selectedTopic,
@@ -207,6 +228,7 @@ class _NotePageState extends State<NotePage> {
                             sortOrder: _sortOrder,
                           )
                         : AdminViewNotePage(
+                            key: _adminKey,
                             layout: _viewLayout,
                             topic: _selectedTopic == 'All'
                                 ? ''
