@@ -1,14 +1,21 @@
 // lib/widgets/quiz_list_section.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/quiz.dart';
+import 'package:flutter_codelab/student/widgets/class/student_view_quiz_page.dart';
 
 class QuizListSection extends StatelessWidget {
   final List<Quiz> quizzes;
   final String roleName; // add role
+  final String classId;
+  final String className;
+  final String classDescription;
   const QuizListSection({
     Key? key,
     required this.quizzes,
     required this.roleName,
+    required this.classId,
+    required this.className,
+    required this.classDescription,
   }) : super(key: key);
 
   @override
@@ -66,7 +73,16 @@ class QuizListSection extends StatelessWidget {
                 Row(
                   children: [
                     OutlinedButton(
-                      onPressed: () => debugPrint('View All Quizzes'),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => StudentViewQuizPage(
+                              classId: classId,
+                              roleName: roleName,
+                            ),
+                          ),
+                        );
+                      },
                       child: const Text('View All Quizzes'),
                     ),
                     if (roleName.toLowerCase() == 'teacher') ...[
@@ -112,7 +128,16 @@ class QuizListSection extends StatelessWidget {
                       ? Colors.green.withOpacity(0.12)
                       : Colors.grey.withOpacity(0.12),
                 ),
-                onTap: () => debugPrint('Open ${q.title}'),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StudentViewQuizPage(
+                        classId: classId,
+                        roleName: roleName,
+                      ),
+                    ),
+                  );
+                },
               );
             }).toList(),
           ],

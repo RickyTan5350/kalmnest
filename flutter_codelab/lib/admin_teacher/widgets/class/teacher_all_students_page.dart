@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
 
 /// Teacher view: All students in a class with search, pagination, and compact cards.
 class TeacherAllStudentsPage extends StatefulWidget {
@@ -163,6 +164,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: cs.surface,
       body: _loading
@@ -172,9 +174,9 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(cs),
+                  _buildHeader(cs, textTheme),
                   const SizedBox(height: 24),
-                  _buildStatisticsSection(cs),
+                  _buildStatisticsSection(cs, textTheme),
                   const SizedBox(height: 24),
                   _buildSearchSection(cs),
                   const SizedBox(height: 24),
@@ -190,36 +192,42 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
   }
 
   /* ---------------- HEADER ---------------- */
-  Widget _buildHeader(ColorScheme cs) {
+  Widget _buildHeader(ColorScheme cs, TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextButton.icon(
           onPressed: () => Navigator.pop(context),
           icon: Icon(Icons.arrow_back, color: cs.primary),
-          label: Text('Back to Class', style: TextStyle(color: cs.primary)),
+          label: Text(
+            'Back to Class',
+            style: textTheme.bodyMedium?.copyWith(color: cs.primary),
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           'All Students',
-          style: TextStyle(
-            fontSize: 28,
+          style: textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: cs.onSurface,
           ),
         ),
-        Text(widget.className, style: TextStyle(color: cs.onSurfaceVariant)),
+        Text(
+          widget.className,
+          style: textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+        ),
       ],
     );
   }
 
   /* ---------------- STATS ---------------- */
-  Widget _buildStatisticsSection(ColorScheme cs) {
+  Widget _buildStatisticsSection(ColorScheme cs, TextTheme textTheme) {
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
             cs,
+            textTheme,
             'Total Students',
             '$_totalStudents',
             Icons.people,
@@ -229,6 +237,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         Expanded(
           child: _buildStatCard(
             cs,
+            textTheme,
             'Average Score',
             _averageScore.toStringAsFixed(0),
             Icons.trending_up,
@@ -238,6 +247,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         Expanded(
           child: _buildStatCard(
             cs,
+            textTheme,
             'Quizzes Completed',
             '${_quizzesCompleted.toStringAsFixed(0)}%',
             Icons.quiz,
@@ -249,6 +259,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
 
   Widget _buildStatCard(
     ColorScheme cs,
+    TextTheme textTheme,
     String label,
     String value,
     IconData icon,
@@ -267,13 +278,15 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 24,
+            style: textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: cs.onSurface,
             ),
           ),
-          Text(label, style: TextStyle(color: cs.onSurfaceVariant)),
+          Text(
+            label,
+            style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -335,6 +348,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     Map<String, dynamic> student,
     int index,
   ) {
+    final textTheme = Theme.of(context).textTheme;
     final name = student['name'] ?? 'Unknown';
     final email = student['email'] ?? '';
     final phone = student['phone_no'] ?? '+1 234 567 8901';
@@ -342,154 +356,182 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     final score = 70 + (student.hashCode % 30); // mock until real data
     final progress = 70 + (student.hashCode % 30); // mock until real data
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: _getAvatarColor(index).withOpacity(0.18),
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        // Try common key names for the student's user id
+        final dynamic rawId =
+            student['id'] ?? student['user_id'] ?? student['student_id'];
+        if (rawId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cannot open student profile: missing student id.'),
+            ),
+          );
+          return;
+        }
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => UserDetailPage(
+              userId: rawId.toString(),
+              userName: name.toString(),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outlineVariant, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: _getAvatarColor(index).withOpacity(0.18),
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: cs.onSurfaceVariant,
-                  size: 18,
-                ),
-                onPressed: () {},
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            email,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            phone,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 10),
-          Divider(color: cs.outlineVariant, thickness: 0.6, height: 1),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Avg Score',
-                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        score.toStringAsFixed(0),
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: cs.onSurface,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.trending_up,
-                        size: 14,
-                        color: Colors.green.shade400,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Quizzes',
-                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '15/18',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                       color: cs.onSurface,
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Course Progress',
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 6),
-          LinearProgressIndicator(
-            value: progress / 100,
-            minHeight: 4,
-            backgroundColor: cs.outlineVariant,
-            valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ],
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: cs.onSurfaceVariant,
+                    size: 18,
+                  ),
+                  onPressed: () {},
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              email,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              phone,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 10),
+            Divider(color: cs.outlineVariant, thickness: 0.6, height: 1),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Avg Score',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          score.toStringAsFixed(0),
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.trending_up,
+                          size: 14,
+                          color: Colors.green.shade400,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quizzes',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '15/18',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Course Progress',
+              style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 6),
+            LinearProgressIndicator(
+              value: progress / 100,
+              minHeight: 4,
+              backgroundColor: cs.outlineVariant,
+              valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   /* ---------------- EMPTY ---------------- */
   Widget _buildEmptyState(ColorScheme cs) {
+    final textTheme = Theme.of(context).textTheme;
     return Center(
       child: Text(
         'No students found',
-        style: TextStyle(fontSize: 18, color: cs.onSurfaceVariant),
+        style: textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
       ),
     );
   }
 
   /* ---------------- PAGINATION ---------------- */
   Widget _buildPagination(ColorScheme cs) {
+    final textTheme = Theme.of(context).textTheme;
     final startIndex = (_currentPage - 1) * _perPage + 1;
     final endIndex = (_currentPage * _perPage) > _filteredStudents.length
         ? _filteredStudents.length
@@ -499,7 +541,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
       children: [
         Text(
           'Showing $startIndex to $endIndex of ${_filteredStudents.length} entries',
-          style: TextStyle(color: cs.onSurfaceVariant),
+          style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
         ),
         Row(
           children: [
@@ -560,6 +602,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
   }) {
     final bg = active ? cs.primary : cs.surfaceContainerHighest;
     final fg = active ? cs.onPrimary : cs.onSurface;
+    final textTheme = Theme.of(context).textTheme;
     return TextButton(
       onPressed: enabled ? onPressed : null,
       style: TextButton.styleFrom(
@@ -576,7 +619,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: textTheme.bodySmall?.copyWith(
           color: enabled ? fg : cs.onSurfaceVariant.withOpacity(0.7),
           fontWeight: active ? FontWeight.bold : FontWeight.w500,
         ),
