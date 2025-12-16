@@ -32,7 +32,7 @@ class NotesController extends Controller
     {
         $notesBrief = DB::table('notes')
             ->leftJoin('topics', 'notes.topic_id', '=', 'topics.topic_id')
-            ->select('notes.note_id', 'notes.title', 'topics.topic_name')
+            ->select('notes.note_id', 'notes.title', 'notes.updated_at', 'topics.topic_name')
             ->orderBy('notes.created_at', 'desc')
             ->get();
 
