@@ -14,14 +14,26 @@ use Illuminate\Support\Str;
 
 class NotesController extends Controller
 {
+    use \App\Traits\SyncsToSeedData;
+
+    private function getEncodedUrl($path)
+    {
+        $parts = explode('/', $path);
+        $encodedParts = array_map('rawurlencode', $parts);
+        $encodedPath = implode('/', $encodedParts);
+        return url(Storage::url($encodedPath));
+    }
+
+
     /**
      * Get brief details of notes for list view.
      */
     public function showNotesBrief()
     {
         $notesBrief = DB::table('notes')
-            ->select('*')
-            ->orderBy('created_at', 'desc')
+            ->leftJoin('topics', 'notes.topic_id', '=', 'topics.topic_id')
+            ->select('notes.note_id', 'notes.title', 'notes.updated_at', 'notes.visibility', 'topics.topic_name')
+            ->orderBy('notes.created_at', 'desc')
             ->get();
 
         return response()->json($notesBrief);
@@ -39,15 +51,19 @@ class NotesController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $originalName = $file->getClientOriginalName();
-            $safeFileName = (string) Str::uuid() . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $safeFileName = time() . '_' . $file->getClientOriginalName();
 
             try {
                 $path = $file->storeAs('uploads', $safeFileName, 'public');
 
+                // SYNC TO SEED DATA
+                $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
+
                 return response()->json([
                     'message' => 'File uploaded successfully',
                     'original_name' => $originalName,
-                    'file_url' => Storage::url($path),
+                    'filename' => $safeFileName,
+                    'file_url' => $this->getEncodedUrl($path), // Force absolute encoded URL
                 ], 200);
 
             } catch (\Exception $e) {
@@ -98,6 +114,11 @@ class NotesController extends Controller
                 ]);
                 
                 $validatedData['file_id'] = $mainFileRecord->file_id;
+
+                // --- GIT SYNC ---
+                // Read the content we just saved to sync it to seed_data
+                $syncedContent = file_get_contents($mdFile->getRealPath());
+                $this->_syncToSeedData($mdPath, $syncedContent, $validatedData['title']);
             }
 
             // 4. Create the Note
@@ -289,6 +310,9 @@ class NotesController extends Controller
             return response()->json(['message' => 'Note not found'], 404);
         }
 
+        // Capture old title for syncing cleanup
+        $oldTitle = $note->title;
+
         try {
             // 1. Update Topic
             $topicName = $request->input('topic');
@@ -322,6 +346,9 @@ class NotesController extends Controller
 
             // 4. Safely write content to disk (Creates if missing, Overwrites if exists)
             Storage::disk('public')->put($fileRecord->file_path, $request->input('content'));
+
+            // --- GIT SYNC ---
+            $this->_syncToSeedData($fileRecord->file_path, $request->input('content'), $request->input('title'), $oldTitle);
 
             $note->save(); 
 
@@ -377,6 +404,46 @@ class NotesController extends Controller
                 'message' => 'Error deleting note',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Helper to sync note content to the seed_data folder for Git commits.
+     * This is primarily for the Development environment.
+     */
+    private function _syncToSeedData($originalPath, $content, $title = null, $oldTitle = null)
+    {
+        $seedDir = database_path('seed_data/notes');
+        
+        // Only run if the directory exists (Dev setup)
+        if (is_dir($seedDir)) {
+             try {
+                 // Determine Filename
+                 if ($title) {
+                     // Sanitize Title: "My Note!" -> "My_Note_"
+                     $safeTitle = preg_replace('/[^A-Za-z0-9_\-\(\)]/', '_', $title);
+                     // Avoid empty filename if title is all special chars
+                     if (empty($safeTitle)) $safeTitle = 'Untitled_' . time();
+                     $filename = $safeTitle . '.md';
+                 } else {
+                     $filename = basename($originalPath);
+                 }
+
+                 $dest = $seedDir . DIRECTORY_SEPARATOR . $filename;
+                 file_put_contents($dest, $content);
+
+                 // Cleanup Old File (Rename handling)
+                 if ($oldTitle && $oldTitle !== $title) {
+                     $safeOldTitle = preg_replace('/[^A-Za-z0-9_\-\(\)]/', '_', $oldTitle);
+                     $oldDest = $seedDir . DIRECTORY_SEPARATOR . $safeOldTitle . '.md';
+                     if (file_exists($oldDest)) {
+                         unlink($oldDest);
+                     }
+                 }
+
+             } catch (\Exception $e) {
+                 // Ignore errors here, as this is a secondary "nice to have" feature
+             }
         }
     }
 }

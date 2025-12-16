@@ -16,10 +16,18 @@ import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.d
 import 'package:flutter_codelab/pages/login_page.dart';
 import 'models/user_data.dart';
 import 'api/auth_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dart'; // NEW IMPORT
+import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  print('--- CONFIGURATION DEBUG ---');
+  print('ApiConstants.customBaseUrl: ${ApiConstants.customBaseUrl}');
+  print('ApiConstants.baseUrl: ${ApiConstants.baseUrl}');
+  print('ApiConstants.domain: ${ApiConstants.domain}');
+  print('kDebugMode: $kDebugMode');
+  print('---------------------------');
 
   if (kDebugMode) {
     HttpOverrides.global = MyHttpOverrides();
@@ -62,7 +70,6 @@ class MainApp extends StatelessWidget {
       darkTheme: theme.dark(),
       themeMode: ThemeMode.system,
       home: homeWidget, // Use the determined home widget
-      
     );
   }
 }
@@ -166,10 +173,10 @@ class _FeedState extends State<Feed> {
     switch (selectedIndex) {
       case 0: // This is the index for 'UserPage' (Index 0)
         // CHECK if the current user is a Student OR a Teacher
-        if (widget.currentUser.isStudent || widget.currentUser.isTeacher) { 
+        if (widget.currentUser.isStudent || widget.currentUser.isTeacher) {
           _showSnackBar(
             context,
-            'You do not have permission to create user accounts.', 
+            'You do not have permission to create user accounts.',
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -180,7 +187,7 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-        
+
       case 1:
         showCreateGamePage(
           context: context,
@@ -189,7 +196,7 @@ class _FeedState extends State<Feed> {
               widget.currentUser.roleName, // <-- pass the current user role
         );
       case 2:
-       if (widget.currentUser.isStudent) {
+        if (widget.currentUser.isStudent) {
           // 2. BLOCK: Show error message
           _showSnackBar(
             context,
@@ -198,14 +205,9 @@ class _FeedState extends State<Feed> {
           );
         } else {
           // 3. ALLOW: Open dialog if Admin
-          showCreateNotesDialog(
-            context: context,
-            showSnackBar: _showSnackBar,
-          );
+          showCreateNotesDialog(context: context, showSnackBar: _showSnackBar);
         }
         break;
-
-        
 
       case 4: // This is the index for 'AchievementPage'
         if (widget.currentUser.isStudent) {
@@ -239,9 +241,7 @@ class _FeedState extends State<Feed> {
     final List<Widget> pages = [
       const UserPage(), // Index 0
       GamePage(userRole: widget.currentUser.roleName), // Index 1
-      NotePage(
-        currentUser: widget.currentUser,
-      ),
+      NotePage(currentUser: widget.currentUser),
       const ClassPage(), //utter Index 3
       AchievementPage(
         showSnackBar: _showSnackBar,

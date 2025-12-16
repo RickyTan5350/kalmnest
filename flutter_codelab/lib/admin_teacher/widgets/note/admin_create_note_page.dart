@@ -9,7 +9,6 @@ import 'package:flutter_codelab/models/note_data.dart';
 
 import 'package:flutter_codelab/api/file_api.dart';
 
-
 // --- NEW IMPORTS FOR HTML RENDERING ---
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
@@ -34,7 +33,7 @@ class UploadedAttachment {
 void showCreateNotesDialog({
   required BuildContext context,
   required void Function(BuildContext context, String message, Color color)
-      showSnackBar,
+  showSnackBar,
 }) {
   showDialog(
     context: context,
@@ -46,7 +45,7 @@ void showCreateNotesDialog({
 
 class CreateNotePage extends StatefulWidget {
   final void Function(BuildContext context, String message, Color color)
-      showSnackBar;
+  showSnackBar;
 
   const CreateNotePage({super.key, required this.showSnackBar});
 
@@ -68,7 +67,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
   bool _isLoading = false;
   List<UploadedAttachment> _attachments = [];
 
-  final List<String> _topic = ['HTML', 'CSS', 'JS', 'PHP'];
+  final List<String> _topic = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
 
   @override
   void initState() {
@@ -133,8 +132,9 @@ class _CreateNotePageState extends State<CreateNotePage> {
     // 2. Add to UI immediately
     setState(() {
       for (var file in pickedFiles) {
-        _attachments
-            .add(UploadedAttachment(localFile: file, isUploading: true));
+        _attachments.add(
+          UploadedAttachment(localFile: file, isUploading: true),
+        );
       }
     });
 
@@ -142,8 +142,9 @@ class _CreateNotePageState extends State<CreateNotePage> {
     for (int i = 0; i < _attachments.length; i++) {
       if (_attachments[i].isUploading && _attachments[i].serverFileId == null) {
         // Call API
-        Map<String, dynamic>? result =
-            await _fileApi.uploadSingleAttachment(_attachments[i].localFile);
+        Map<String, dynamic>? result = await _fileApi.uploadSingleAttachment(
+          _attachments[i].localFile,
+        );
 
         if (!mounted) return;
 
@@ -163,8 +164,11 @@ class _CreateNotePageState extends State<CreateNotePage> {
               isUploading: false,
               isFailed: true,
             );
-            widget.showSnackBar(context,
-                'Failed to upload ${_attachments[i].localFile.name}', Colors.red);
+            widget.showSnackBar(
+              context,
+              'Failed to upload ${_attachments[i].localFile.name}',
+              Colors.red,
+            );
           }
         });
       }
@@ -177,6 +181,174 @@ class _CreateNotePageState extends State<CreateNotePage> {
     });
   }
 
+  // --- IMPORT MARKDOWN LOGIC ---
+  Future<void> _handleImportMarkdown() async {
+    // 1. Pick MD or TXT File
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['md', 'txt'],
+    );
+
+    if (result == null || result.files.isEmpty) return;
+
+    final pickedFile = result.files.single;
+    if (pickedFile.path == null) return;
+
+    setState(() => _isLoading = true);
+    widget.showSnackBar(context, 'Importing note...', Colors.blue);
+
+    try {
+      final file = File(pickedFile.path!);
+      final content = await file.readAsString();
+      final baseDir = file.parent.path;
+
+      // 2. Set Title (Filename without extension)
+      final title = pickedFile.name.replaceAll(
+        RegExp(r'\.(md|txt)$', caseSensitive: false),
+        '',
+      );
+      _noteTitleController.text = title;
+
+      // 3. Parse Attachments
+      // Robust Regex to match ![alt](path) handling one level of nested parentheses
+      // e.g. matches "image (1).png" inside ![alt](image (1).png)
+      // Dart's RegExp engine (standard JS-like) supports non-capturing groups
+      final imageRegex = RegExp(r'!\[(.*?)\]\(((?:[^()]|\([^()]*\))+)\)');
+
+      String updatedContent = content;
+      final matches = imageRegex.allMatches(content);
+
+      // Find all UNIQUE paths first
+      Set<String> uniquePaths = {};
+      for (final match in matches) {
+        final path = match.group(2);
+        if (path != null && !path.trim().startsWith('http')) {
+          uniquePaths.add(path);
+        }
+      }
+
+      int uploadedCount = 0;
+
+      for (String relativePath in uniquePaths) {
+        // Clean the path: strip quotes, whitespace
+        String cleanPath = relativePath.trim();
+        if ((cleanPath.startsWith('"') && cleanPath.endsWith('"')) ||
+            (cleanPath.startsWith("'") && cleanPath.endsWith("'"))) {
+          cleanPath = cleanPath.substring(1, cleanPath.length - 1);
+        }
+
+        // Possible candidates for the local file
+        List<String> candidates = [];
+
+        // 1. Exact relative path (decoded)
+        String decoded = Uri.decodeFull(cleanPath);
+        candidates.add(decoded);
+
+        // 2. Windows-style path (backslashes)
+        if (Platform.isWindows) {
+          candidates.add(decoded.replaceAll('/', '\\'));
+        }
+
+        // 3. Just the filename (Flat import)
+        String filename = decoded.split('/').last.split('\\').last;
+        candidates.add(filename);
+
+        File? localFile;
+
+        // Try finding the file
+        for (final candidate in candidates) {
+          final attemptPath = '$baseDir${Platform.pathSeparator}$candidate';
+          final f = File(attemptPath);
+          if (await f.exists()) {
+            localFile = f;
+            break;
+          }
+        }
+
+        if (localFile == null) {
+          // 4. Recursive Fallback (Aggressive Search)
+          // If we still haven't found it, search the entire base directory for the filename.
+          try {
+            final parentDir = Directory(baseDir);
+            if (await parentDir.exists()) {
+              await for (var entity in parentDir.list(
+                recursive: true,
+                followLinks: false,
+              )) {
+                if (entity is File) {
+                  String name = entity.path.split(Platform.pathSeparator).last;
+                  if (name.toLowerCase() == filename.toLowerCase()) {
+                    localFile = entity;
+                    debugPrint("Found recursively: ${entity.path}");
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            debugPrint("Recursive search error: $e");
+          }
+        }
+
+        if (localFile != null) {
+          // Upload it
+          // Create PlatformFile for the API
+          final pFile = PlatformFile(
+            name: localFile.path.split(Platform.pathSeparator).last,
+            path: localFile.path,
+            size: await localFile.length(),
+          );
+
+          // Trigger Upload
+          Map<String, dynamic>? res = await _fileApi.uploadSingleAttachment(
+            pFile,
+          );
+
+          if (res != null && res['url'] != null) {
+            final serverUrl = res['url'];
+            final serverId = res['id'];
+
+            // Replace in Markdown
+            // We use replaceAll to replace ALL occurrences of this specific relative path
+            // This is safe enough for "image.png" -> "http://.../uuid.png"
+            updatedContent = updatedContent.replaceAll(relativePath, serverUrl);
+
+            // Add to attachments list for UI
+            setState(() {
+              _attachments.add(
+                UploadedAttachment(
+                  localFile: pFile,
+                  serverFileId: serverId,
+                  publicUrl: serverUrl,
+                  isUploading: false,
+                ),
+              );
+            });
+            uploadedCount++;
+          }
+        } else {
+          debugPrint(
+            "Skipping: Could not find local file for '$cleanPath' in '$baseDir'",
+          );
+        }
+      }
+
+      // 4. Update Content
+      _noteMarkdownController.text = updatedContent;
+
+      widget.showSnackBar(
+        context,
+        'Imported "$title" with $uploadedCount images.',
+        Colors.green,
+      );
+    } catch (e) {
+      debugPrint("Import Error: $e");
+      widget.showSnackBar(context, 'Import failed: $e', Colors.red);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   // --- SUBMIT FORM LOGIC ---
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
@@ -184,7 +356,10 @@ class _CreateNotePageState extends State<CreateNotePage> {
     // Block submit if files are still uploading
     if (_attachments.any((a) => a.isUploading)) {
       widget.showSnackBar(
-          context, 'Please wait for files to finish uploading.', Colors.orange);
+        context,
+        'Please wait for files to finish uploading.',
+        Colors.orange,
+      );
       return;
     }
 
@@ -220,7 +395,10 @@ class _CreateNotePageState extends State<CreateNotePage> {
 
       if (success && mounted) {
         widget.showSnackBar(
-            context, 'Note created successfully!', Colors.green);
+          context,
+          'Note created successfully!',
+          Colors.green,
+        );
         Navigator.of(context).pop();
       } else if (mounted) {
         widget.showSnackBar(context, 'Failed to create note.', Colors.red);
@@ -257,8 +435,14 @@ class _CreateNotePageState extends State<CreateNotePage> {
           itemBuilder: (context, index) {
             final item = _attachments[index];
             final file = item.localFile;
-            final isImage = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif']
-                .contains(file.extension?.toLowerCase());
+            final isImage = [
+              'jpg',
+              'jpeg',
+              'png',
+              'webp',
+              'bmp',
+              'gif',
+            ].contains(file.extension?.toLowerCase());
 
             return Container(
               decoration: BoxDecoration(
@@ -266,13 +450,16 @@ class _CreateNotePageState extends State<CreateNotePage> {
                 color: colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: item.isFailed
-                        ? colorScheme.error
-                        : colorScheme.outlineVariant),
+                  color: item.isFailed
+                      ? colorScheme.error
+                      : colorScheme.outlineVariant,
+                ),
               ),
               child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 leading: Container(
                   width: 40,
                   height: 40,
@@ -283,8 +470,10 @@ class _CreateNotePageState extends State<CreateNotePage> {
                   clipBehavior: Clip.hardEdge,
                   child: isImage && file.path != null
                       ? Image.file(File(file.path!), fit: BoxFit.cover)
-                      : Icon(Icons.insert_drive_file,
-                          color: colorScheme.primary),
+                      : Icon(
+                          Icons.insert_drive_file,
+                          color: colorScheme.primary,
+                        ),
                 ),
                 title: Text(
                   file.name,
@@ -303,15 +492,21 @@ class _CreateNotePageState extends State<CreateNotePage> {
                         ),
                       )
                     : item.isFailed
-                        ? Text('Upload Failed',
-                            style: TextStyle(
-                                color: colorScheme.error, fontSize: 12))
-                        : SelectableText(
-                            item.publicUrl ?? 'Ready to insert',
-                            style: TextStyle(
-                                color: colorScheme.primary, fontSize: 12),
-                            maxLines: 1,
-                          ),
+                    ? Text(
+                        'Upload Failed',
+                        style: TextStyle(
+                          color: colorScheme.error,
+                          fontSize: 12,
+                        ),
+                      )
+                    : SelectableText(
+                        item.publicUrl ?? 'Ready to insert',
+                        style: TextStyle(
+                          color: colorScheme.primary,
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                      ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -324,9 +519,15 @@ class _CreateNotePageState extends State<CreateNotePage> {
                         tooltip: 'Insert into text',
                         onPressed: () {
                           _insertMarkdownLink(
-                              file.name, item.publicUrl!, isImage);
+                            file.name,
+                            item.publicUrl!,
+                            isImage,
+                          );
                           widget.showSnackBar(
-                              context, 'Link inserted!', Colors.green);
+                            context,
+                            'Link inserted!',
+                            Colors.green,
+                          );
                         },
                       ),
                     IconButton(
@@ -383,26 +584,38 @@ class _CreateNotePageState extends State<CreateNotePage> {
       // Let the theme handle the background color (light vs dark)
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: Text('New Note',
-            style: TextStyle(
-                color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
+        title: Text(
+          'New Note',
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: colorScheme.surface,
         elevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
+
+        actions: [
+          IconButton(
+            icon: Icon(Icons.file_upload, color: colorScheme.primary),
+            tooltip: 'Import Markdown',
+            onPressed: _isLoading ? null : _handleImportMarkdown,
+          ),
+          IconButton(
+            icon: _isLoading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colorScheme.primary,
+                    ),
+                  )
+                : Icon(Icons.check, color: colorScheme.primary),
+            onPressed: _isLoading ? null : _submitForm,
+          ),
+        ],
       ),
-      floatingActionButton: _isLoading
-          ? FloatingActionButton(
-              onPressed: null,
-              backgroundColor: colorScheme.secondary.withOpacity(0.5),
-              child: const CircularProgressIndicator(color: Colors.white),
-            )
-          : FloatingActionButton.extended(
-              onPressed: _submitForm,
-              label: const Text('Save Note'),
-              icon: const Icon(Icons.save),
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
-            ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
@@ -425,8 +638,12 @@ class _CreateNotePageState extends State<CreateNotePage> {
                       colorScheme: colorScheme,
                     ),
                     items: _topic
-                        .map((value) =>
-                            DropdownMenuItem(value: value, child: Text(value)))
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(value),
+                          ),
+                        )
                         .toList(),
                     onChanged: (value) =>
                         setState(() => _selectedTopic = value),
@@ -484,11 +701,12 @@ class _CreateNotePageState extends State<CreateNotePage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Live Preview',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(color: colorScheme.onSurfaceVariant)),
+                      Text(
+                        'Live Preview',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                       const SizedBox(height: 8),
 
                       // Preview Box
@@ -512,7 +730,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                             if (element.localName == 'h1') {
                               return {
                                 'margin-bottom': '10px',
-                                'font-weight': 'bold'
+                                'font-weight': 'bold',
                               };
                             }
                             return null;
@@ -525,25 +743,29 @@ class _CreateNotePageState extends State<CreateNotePage> {
 
                   // 7. Visibility Switch
                   SwitchListTile(
-                    title: Text('Visibility',
-                        style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                    subtitle: Text(_noteVisibility ? 'Public' : 'Private',
-                        style: TextStyle(
-                            color: colorScheme.onSurfaceVariant
-                                .withOpacity(0.6))),
+                    title: Text(
+                      'Visibility',
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                    subtitle: Text(
+                      _noteVisibility ? 'Public' : 'Private',
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                      ),
+                    ),
                     value: _noteVisibility,
                     onChanged: (bool value) =>
                         setState(() => _noteVisibility = value),
                     secondary: Icon(
-                        _noteVisibility
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                        color: colorScheme.onSurfaceVariant),
+                      _noteVisibility ? Icons.visibility : Icons.visibility_off,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     activeColor: colorScheme.primary,
                     // Use surfaceContainer for the tile background
                     tileColor: colorScheme.surfaceContainer,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   const SizedBox(height: 80),
                 ],

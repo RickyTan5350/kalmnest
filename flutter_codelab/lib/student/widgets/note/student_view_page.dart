@@ -2,38 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/note_api.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:flutter_codelab/student/widgets/note/student_note_detail.dart';
+import 'package:flutter_codelab/theme.dart'; // BrandColors
 
 // --- NEW IMPORTS: Reuse Admin/Teacher Widgets for consistency ---
-import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout_view.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 
-// Local Enums
-enum SortType { alphabetical, number }
+import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
+// Removed unused ViewLayout import
 
-enum SortOrder { ascending, descending }
+// Removing local SortType and SortOrder enums
 
 class StudentViewPage extends StatefulWidget {
   final String topic;
   final String query;
   final bool isGrid;
+  final SortType sortType;
+  final SortOrder sortOrder;
 
   const StudentViewPage({
     super.key,
     required this.topic,
     required this.query,
     required this.isGrid,
+    required this.sortType,
+    required this.sortOrder,
   });
 
   @override
-  State<StudentViewPage> createState() => _StudentViewPageState();
+  State<StudentViewPage> createState() => StudentViewPageState();
 }
 
-class _StudentViewPageState extends State<StudentViewPage> {
+class StudentViewPageState extends State<StudentViewPage> {
   late Future<List<NoteBrief>> _noteFuture;
   final NoteApi _api = NoteApi();
 
-  SortType _currentSortType = SortType.alphabetical;
-  SortOrder _currentSortOrder = SortOrder.ascending;
+  // Removed local sort state variables
 
   // --- NEW: Keys required by GridLayoutView ---
   final Map<dynamic, GlobalKey> _gridItemKeys = {};
@@ -41,18 +45,18 @@ class _StudentViewPageState extends State<StudentViewPage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    refreshData();
   }
 
   @override
   void didUpdateWidget(StudentViewPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.topic != widget.topic) {
-      _loadData();
+    if (oldWidget.topic != widget.topic || oldWidget.query != widget.query) {
+      refreshData();
     }
   }
 
-  void _loadData() {
+  void refreshData() {
     setState(() {
       if (widget.topic.isEmpty) {
         _noteFuture = _api.fetchBriefNote();
@@ -66,14 +70,13 @@ class _StudentViewPageState extends State<StudentViewPage> {
     List<NoteBrief> sortedList = List.from(notes);
     sortedList.sort((a, b) {
       int comparison;
-      if (_currentSortType == SortType.alphabetical) {
+      if (widget.sortType == SortType.alphabetical) {
         comparison = a.title.toLowerCase().compareTo(b.title.toLowerCase());
       } else {
-        comparison = a.noteId.toString().compareTo(b.noteId.toString());
+        // SortType.updated
+        comparison = a.updatedAt.compareTo(b.updatedAt);
       }
-      return _currentSortOrder == SortOrder.ascending
-          ? comparison
-          : -comparison;
+      return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
     });
     return sortedList;
   }
@@ -84,7 +87,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor:colorScheme.surfaceContainerLow,
       body: FutureBuilder<List<NoteBrief>>(
         future: _noteFuture,
         builder: (context, snapshot) {
@@ -102,6 +105,9 @@ class _StudentViewPageState extends State<StudentViewPage> {
 
           final List<NoteBrief> rawList = snapshot.data!;
           final filteredList = rawList.where((note) {
+            // Filter out private notes
+            if (!note.visibility) return false;
+
             return note.title.toLowerCase().contains(
               widget.query.toLowerCase(),
             );
@@ -142,17 +148,17 @@ class _StudentViewPageState extends State<StudentViewPage> {
                 ),
 
                 widget.isGrid
-                    ? GridLayoutView(
-                        achievements: sortedList
+                    ? NoteGridLayout(
+                        notes: sortedList
                             .map(
                               (n) => {
                                 'id': n.noteId,
                                 'title': n.title,
-                                'icon': Icons
-                                    .description_outlined, // Consistent icon
-                                'color': Colors.blue,
-                                'preview':
-                                    'Tap to read...', // Text shown in image
+                                'topic': n.topic,
+                                'updatedAt': n.updatedAt.toString().substring(
+                                  0,
+                                  16,
+                                ),
                               },
                             )
                             .toList(),
@@ -193,78 +199,18 @@ class _StudentViewPageState extends State<StudentViewPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            "$count Results",
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
+          SizedBox(
+            height: 40,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text("$count Results", style: theme.textTheme.titleMedium),
             ),
-          ),
-          Row(
-            children: [
-              DropdownButton<SortType>(
-                value: _currentSortType,
-                underline: const SizedBox(),
-                isDense: true,
-                dropdownColor: colorScheme.surfaceContainer,
-                style: TextStyle(color: colorScheme.onSurface),
-                onChanged: (SortType? newValue) {
-                  if (newValue != null)
-                    setState(() => _currentSortType = newValue);
-                },
-                items: const [
-                  DropdownMenuItem(
-                    value: SortType.alphabetical,
-                    child: Text("Name"),
-                  ),
-                  DropdownMenuItem(value: SortType.number, child: Text("ID")),
-                ],
-              ),
-              Container(
-                height: 20,
-                width: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: colorScheme.outlineVariant,
-              ),
-              InkWell(
-                onTap: () => setState(
-                  () => _currentSortOrder =
-                      _currentSortOrder == SortOrder.ascending
-                      ? SortOrder.descending
-                      : SortOrder.ascending,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _currentSortOrder == SortOrder.ascending
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded,
-                      size: 16,
-                      color: colorScheme.onSurface,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _currentSortOrder == SortOrder.ascending
-                          ? "Low-High"
-                          : "High-Low",
-                      style: TextStyle(color: colorScheme.onSurface),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: Icon(Icons.refresh, color: colorScheme.onSurface),
-            onPressed: () => _loadData(),
-            tooltip: "Refresh List",
           ),
         ],
       ),
@@ -278,11 +224,43 @@ class _StudentViewPageState extends State<StudentViewPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Resolve Brand Colors
+    final brandColors = Theme.of(context).extension<BrandColors>();
+    Color topicColor;
+    IconData topicIcon;
+
+    switch (note.topic.toLowerCase()) {
+      case 'html':
+        topicColor = brandColors?.html ?? Colors.orange;
+        topicIcon = Icons.html;
+        break;
+      case 'css':
+        topicColor = brandColors?.css ?? Colors.blue;
+        topicIcon = Icons.css;
+        break;
+      case 'js':
+      case 'javascript':
+        topicColor = brandColors?.javascript ?? Colors.yellow;
+        topicIcon = Icons.javascript;
+        break;
+      case 'php':
+        topicColor = brandColors?.php ?? Colors.indigo;
+        topicIcon = Icons.php;
+        break;
+      case 'backend':
+        topicColor = brandColors?.backend ?? Colors.purple;
+        topicIcon = Icons.storage;
+        break;
+      default:
+        topicColor = brandColors?.other ?? Colors.grey;
+        topicIcon = Icons.folder_open;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
       // Match Admin color (Surface) instead of SurfaceContainer
-      color: colorScheme.surface,
+     
       shape: RoundedRectangleBorder(
         side: BorderSide(color: colorScheme.outlineVariant, width: 1),
         borderRadius: BorderRadius.circular(12.0),
@@ -294,18 +272,11 @@ class _StudentViewPageState extends State<StudentViewPage> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              // 1. The Square Icon Container (Same as Admin)
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.description_outlined,
-                  color: colorScheme.onPrimaryContainer,
-                ),
+              // 1. The Circle Icon (Same as Admin)
+              CircleAvatar(
+                backgroundColor: topicColor.withOpacity(0.1),
+                foregroundColor: topicColor,
+                child: Icon(topicIcon),
               ),
               const SizedBox(width: 16),
 
@@ -314,7 +285,6 @@ class _StudentViewPageState extends State<StudentViewPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Keep HighlightText so search still works visually
                     HighlightText(
                       text: note.title,
                       query: widget.query,
@@ -324,10 +294,13 @@ class _StudentViewPageState extends State<StudentViewPage> {
                       ),
                     ),
                     const SizedBox(height: 4),
+
+                    const SizedBox(height: 4),
                     Text(
-                      'Tap to read',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                      'Updated: ${note.updatedAt.toString().substring(0, 16)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.outline,
+                        fontSize: 10,
                       ),
                     ),
                   ],

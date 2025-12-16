@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/api/note_api.dart';
 // Make sure this import path matches where you created the file above
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
@@ -12,6 +13,7 @@ import 'package:markdown/markdown.dart' as md;
 class StudentNoteDetailPage extends StatefulWidget {
   final String noteId;
   final String noteTitle;
+  final String topic;
 
   const StudentNoteDetailPage({
     super.key,
@@ -20,20 +22,19 @@ class StudentNoteDetailPage extends StatefulWidget {
     this.topic = '', // Add topic with default empty
   });
 
-  final String topic;
-
   @override
   State<StudentNoteDetailPage> createState() => _StudentNoteDetailPageState();
 }
 
 class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   final NoteApi _noteApi = NoteApi();
-  final PdfService _pdfService = PdfService(); // Initialize the new service
+  final PdfService _pdfService = PdfService();
 
   bool _isLoading = true;
   bool _isDownloadingPdf = false;
   String _markdownContent = "";
   late String _currentTitle;
+  late String _currentTopic; // State variable for topic
 
   // --- Search State ---
   bool _isSearching = false;
@@ -50,6 +51,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   void initState() {
     super.initState();
     _currentTitle = widget.noteTitle;
+    _currentTopic = widget.topic; // Initialize with widget's topic
     _searchController.addListener(_onSearchChanged);
     _fetchContent();
   }
@@ -68,9 +70,26 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     try {
       final noteData = await _noteApi.getNote(widget.noteId);
       if (mounted) {
+        // VISIBILITY CHECK
+        final vis = noteData['visibility'];
+        bool isVisible = true;
+        if (vis is int) isVisible = vis == 1;
+        if (vis is bool) isVisible = vis;
+
+        if (!isVisible) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            Navigator.pop(context);
+            _showSnackBar('This note is private.', isError: true);
+          }
+          return;
+        }
+
         setState(() {
           _markdownContent = noteData['content'] ?? '';
           _currentTitle = noteData['title'] ?? widget.noteTitle;
+          // Update local topic from API response
+          _currentTopic = noteData['topic'] ?? _currentTopic;
           _isLoading = false;
         });
       }
@@ -93,6 +112,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
             color: isError ? colorScheme.onError : colorScheme.onSecondary,
           ),
         ),
+
         backgroundColor: isError ? colorScheme.error : colorScheme.secondary,
         behavior: SnackBarBehavior.floating,
       ),
@@ -200,12 +220,18 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     );
   }
 
+  // Helper to ensure absolute URLs
+  String _processMarkdown(String content) {
+    final domain = ApiConstants.domain;
+    return content.replaceAll('](/storage/', ']($domain/storage/');
+  }
+
   // --- UI WIDGETS ---
   Widget _buildHighlightedHtml(ColorScheme colorScheme) {
     _matchKeys = [];
 
     String htmlContent = md.markdownToHtml(
-      _markdownContent,
+      _processMarkdown(_markdownContent),
       extensionSet: md.ExtensionSet.gitHubFlavored,
     );
 
@@ -244,6 +270,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
     return HtmlWidget(
       htmlContent,
+      baseUrl: Uri.parse(ApiConstants.domain),
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 16),
       customWidgetBuilder: (element) {
         if (element.localName == 'pre') {
@@ -289,32 +316,27 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                 top: 4,
                 right: 4,
                 child:
-                    (widget.topic == 'HTML' ||
-                        widget.topic == 'CSS' ||
-                        widget.topic == 'JS')
+                    (_currentTopic == 'HTML' ||
+                        _currentTopic == 'CSS' ||
+                        _currentTopic == 'JS' ||
+                        _currentTopic == 'PHP' ||
+                        _currentTopic == 'General')
                     ? InkWell(
                         onTap: () {
-                          // TODO: Implement Run Code for Student
-                          // For now, this condition matches what was there, or similar logic.
-                          // But student_note_detail.dart doesn't have _openRunPage in the snippet I saw?
-                          // Let's check duplicate logic.
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RunCodePage(initialCode: codeText),
-                            ),
-                          );
+                          // Allow 'Run' for these topics
+                          _openRunPage(codeText);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
                           ),
+
                           decoration: BoxDecoration(
                             color: colorScheme.primary,
                             borderRadius: BorderRadius.circular(4),
                           ),
+
                           child: Row(
                             children: [
                               Icon(
@@ -322,6 +344,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                                 size: 14,
                                 color: colorScheme.onPrimary,
                               ),
+
                               const SizedBox(width: 4),
                               Text(
                                 'Run',
@@ -396,6 +419,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+
               backgroundColor: colorScheme.surface,
               iconTheme: IconThemeData(color: colorScheme.onSurface),
               elevation: 0,

@@ -1,0 +1,63 @@
+
+   FAIL  Tests\Feature\FileUploadNameTest
+  Γ¿» independΓÇª 0.22s  
+  Γ¿» batch upΓÇª 0.02s  
+  Γ¿» upload fΓÇª 0.02s  
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ  
+   FAILED  Tests\Feature\FileUploadNameTest > independent file upload uses original name  QueryException   
+  SQLSTATE[HY000]: General error: 1 no such table: users (Connection: sqlite, SQL: insert into "users" ("name", "email", "email_verified_at", "password", "remember_token", "user_id", "updated_at", "created_at") values (Alexane Little, bvon@example.net, 2025-12-15 20:34:23, $2y$04$UxaBC47GFn9AcW3LnLd/tel5JSqGPfTMeJhrqQgv15xdy7w78TjPm, 7k486UPJy4, 019b2201-385d-7260-8b76-4966cffeaf4d, 2025-12-15 20:34:23, 2025-12-15 20:34:23))
+
+  at vendor\laravel\framework\src\Illuminate\Database\Connection.php:564
+    560Γûò             if ($this->pretending()) {
+    561Γûò                 return true;
+    562Γûò             }
+    563Γûò 
+  Γ₧£ 564Γûò             $statement = $this->getPdo()->prepare($query);
+    565Γûò 
+    566Γûò             $this->bindValues($statement, $this->prepareBindings($bindings));
+    567Γûò 
+    568Γûò             $this->recordsHaveBeenModified();
+
+  1   vendor\laravel\framework\src\Illuminate\Database\Connection.php:564
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:811
+
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ  
+   FAILED  Tests\Feature\FileUploadNameTest > batch upload uses original name  QueryException   
+  SQLSTATE[HY000]: General error: 1 no such table: users (Connection: sqlite, SQL: insert into "users" ("name", "email", "email_verified_at", "password", "remember_token", "user_id", "updated_at", "created_at") values (Virgie Hessel, lesch.dovie@example.org, 2025-12-15 20:34:24, $2y$04$UxaBC47GFn9AcW3LnLd/tel5JSqGPfTMeJhrqQgv15xdy7w78TjPm, 5uB2JkDBc7, 019b2201-388b-734a-864b-681258aba465, 2025-12-15 20:34:24, 2025-12-15 20:34:24))
+
+  at vendor\laravel\framework\src\Illuminate\Database\Connection.php:564
+    560Γûò             if ($this->pretending()) {
+    561Γûò                 return true;
+    562Γûò             }
+    563Γûò 
+  Γ₧£ 564Γûò             $statement = $this->getPdo()->prepare($query);
+    565Γûò 
+    566Γûò             $this->bindValues($statement, $this->prepareBindings($bindings));
+    567Γûò 
+    568Γûò             $this->recordsHaveBeenModified();
+
+  1   vendor\laravel\framework\src\Illuminate\Database\Connection.php:564
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:811
+
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ  
+   FAILED  Tests\Feature\FileUploadNameTest > upload file notes controller uses original name  QueryException   
+  SQLSTATE[HY000]: General error: 1 no such table: users (Connection: sqlite, SQL: insert into "users" ("name", "email", "email_verified_at", "password", "remember_token", "user_id", "updated_at", "created_at") values (Mr. Ike Murphy PhD, alyson.hudson@example.org, 2025-12-15 20:34:24, $2y$04$UxaBC47GFn9AcW3LnLd/tel5JSqGPfTMeJhrqQgv15xdy7w78TjPm, apuVkOWQbB, 019b2201-389c-73f3-aef2-e3b45299efbd, 2025-12-15 20:34:24, 2025-12-15 20:34:24))
+
+  at vendor\laravel\framework\src\Illuminate\Database\Connection.php:564
+    560Γûò             if ($this->pretending()) {
+    561Γûò                 return true;
+    562Γûò             }
+    563Γûò 
+  Γ₧£ 564Γûò             $statement = $this->getPdo()->prepare($query);
+    565Γûò 
+    566Γûò             $this->bindValues($statement, $this->prepareBindings($bindings));
+    567Γûò 
+    568Γûò             $this->recordsHaveBeenModified();
+
+  1   vendor\laravel\framework\src\Illuminate\Database\Connection.php:564
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:811
+
+
+  Tests:    3 failed (0 assertions)
+  Duration: 0.40s
+

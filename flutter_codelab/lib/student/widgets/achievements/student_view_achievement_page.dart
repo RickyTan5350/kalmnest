@@ -4,6 +4,7 @@ import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
 import 'package:flutter_codelab/student/widgets/achievements/student_achievement_detail_page.dart';
 
 class StudentViewAchievementsPage extends StatefulWidget {
@@ -13,6 +14,8 @@ class StudentViewAchievementsPage extends StatefulWidget {
   showSnackBar;
   final String searchText;
   final String? selectedTopic;
+  final SortType sortType;
+  final SortOrder sortOrder;
 
   const StudentViewAchievementsPage({
     super.key,
@@ -21,14 +24,16 @@ class StudentViewAchievementsPage extends StatefulWidget {
     required this.showSnackBar,
     this.searchText = '',
     this.selectedTopic,
+    this.sortType = SortType.alphabetical,
+    this.sortOrder = SortOrder.ascending,
   });
 
   @override
   State<StudentViewAchievementsPage> createState() =>
-      _StudentViewAchievementsPageState();
+      StudentViewAchievementsPageState();
 }
 
-class _StudentViewAchievementsPageState
+class StudentViewAchievementsPageState
     extends State<StudentViewAchievementsPage> {
   Future<List<AchievementData>>? _myAchievements;
   bool _isOffline = false;
@@ -39,27 +44,8 @@ class _StudentViewAchievementsPageState
     _loadData();
   }
 
-  IconData _getIconData(String? iconValue) {
-    final entry = achievementIconOptions.firstWhere(
-      (opt) => opt['value'] == iconValue,
-      orElse: () => {'icon': Icons.help_outline},
-    );
-    return entry['icon'] as IconData;
-  }
-
-  Color _getColor(String? iconValue) {
-    switch (iconValue) {
-      case 'html':
-        return Colors.orange;
-      case 'css':
-        return Colors.green;
-      case 'javascript':
-        return Colors.yellow;
-      case 'php':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
+  void refreshData() {
+    _loadData();
   }
 
   List<Map<String, dynamic>> _transformData(List<AchievementData> briefs) {
@@ -68,8 +54,8 @@ class _StudentViewAchievementsPageState
       return {
         'id': brief.achievementId,
         'title': brief.achievementTitle ?? 'No Title',
-        'icon': _getIconData(iconValue),
-        'color': _getColor(iconValue),
+        'icon': getAchievementIcon(iconValue),
+        'color': getAchievementColor(context, iconValue),
         'preview': brief.achievementDescription,
       };
     }).toList();
@@ -270,26 +256,19 @@ class _StudentViewAchievementsPageState
 
           List<AchievementData> originalData = snapshot.data!;
 
-          List<AchievementData> filteredData = originalData.where((item) {
-            final String title = item.achievementTitle?.toLowerCase() ?? '';
-            final String description =
-                item.achievementDescription?.toLowerCase() ?? '';
-            final String icon = item.icon?.toLowerCase() ?? '';
-            final String level = item.levelName?.toLowerCase() ?? '';
+          // --- FILTERING LOGIC ---
+          List<AchievementData> filteredData = filterAchievements(
+            achievements: originalData,
+            searchText: widget.searchText,
+            selectedTopic: widget.selectedTopic,
+          );
 
-            final isMatchingSearch =
-                widget.searchText.isEmpty ||
-                title.contains(widget.searchText) ||
-                description.contains(widget.searchText);
-
-            final isMatchingTopic =
-                widget.selectedTopic == null ||
-                icon.contains(widget.selectedTopic!) ||
-                (widget.selectedTopic! == 'level' && level.isNotEmpty) ||
-                (widget.selectedTopic! == 'quiz');
-
-            return isMatchingSearch && isMatchingTopic;
-          }).toList();
+          // --- SORTING LOGIC ---
+          filteredData = sortAchievements(
+            achievements: filteredData,
+            sortType: widget.sortType,
+            sortOrder: widget.sortOrder,
+          );
 
           if (filteredData.isEmpty) {
             return Column(
@@ -323,18 +302,34 @@ class _StudentViewAchievementsPageState
                           16.0,
                           16.0,
                         ),
-                        child: Row(
-                          children: [
-                            Text(
-                              "Showing ${uiData.length} unlocked achievements",
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.refresh),
-                              onPressed: _loadData,
-                              tooltip: "Refresh List",
-                            ),
-                          ],
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              SizedBox(
+                                height: 40,
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    "${uiData.length} Unlocked Achievements",
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
