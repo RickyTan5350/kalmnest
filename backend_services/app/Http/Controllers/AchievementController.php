@@ -81,6 +81,10 @@ class AchievementController extends Controller
                 ->pluck('class_student.student_id')
                 ->unique()
                 ->toArray();
+            
+            Log::info("DEBUG_ACHIEVEMENT: Teacher ID: $userId");
+            Log::info("DEBUG_ACHIEVEMENT: Students found: " . count($teacherStudentIds));
+            Log::info("DEBUG_ACHIEVEMENT: Student IDs: " . json_encode($teacherStudentIds));
         }
 
         // Calculate Total Students based on role
@@ -111,6 +115,8 @@ class AchievementController extends Controller
             } else {
                 // Ensure IDs are properly quoted for the raw SQL
                 $idsString = "'" . implode("','", $teacherStudentIds) . "'";
+                Log::info("DEBUG_ACHIEVEMENT: ID Query String: $idsString");
+                
                 $query->selectRaw("
                     (SELECT COUNT(*) FROM achievement_user 
                      WHERE achievement_user.achievement_id = achievements.achievement_id
