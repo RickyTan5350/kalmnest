@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/api/api_constants.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 /// CENTRAL API BASE URL
-const String apiBase = ApiConstants.baseUrl;
+String get apiBase => ApiConstants.baseUrl;
 
 class ApiResponse {
   final bool success;

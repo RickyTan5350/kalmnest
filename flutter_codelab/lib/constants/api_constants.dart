@@ -14,7 +14,7 @@ class ApiConstants {
   );
   static const String localHostIp = String.fromEnvironment(
     'LOCAL_IP',
-    defaultValue: '10.208.110.152',
+    defaultValue: '192.168.1.242',
   );
   static const String customBaseUrl = String.fromEnvironment(
     'CUSTOM_BASE_URL',
