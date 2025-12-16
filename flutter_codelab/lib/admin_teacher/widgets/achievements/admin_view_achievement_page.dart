@@ -10,6 +10,7 @@ import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dar
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 import 'admin_achievement_detail.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
 // IMPORT THE NEW WRAPPER
 
 class AdminViewAchievementsPage extends StatefulWidget {
@@ -20,6 +21,8 @@ class AdminViewAchievementsPage extends StatefulWidget {
   // Filter Parameters
   final String searchText;
   final String? selectedTopic;
+  final SortType sortType;
+  final SortOrder sortOrder;
 
   const AdminViewAchievementsPage({
     super.key,
@@ -28,14 +31,16 @@ class AdminViewAchievementsPage extends StatefulWidget {
     required this.showSnackBar,
     this.searchText = '',
     this.selectedTopic,
+    this.sortType = SortType.alphabetical,
+    this.sortOrder = SortOrder.ascending,
   });
 
   @override
   State<AdminViewAchievementsPage> createState() =>
-      _AdminViewAchievementsPageState();
+      AdminViewAchievementsPageState();
 }
 
-class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
+class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   // --- API State ---
   late Future<List<AchievementData>> _achievementsFuture;
   final AchievementApi _api = AchievementApi();
@@ -70,6 +75,10 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   void didUpdateWidget(covariant AdminViewAchievementsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     // If filtering logic was server-side, we would refresh here.
+  }
+
+  void refreshData() {
+    _refreshData();
   }
 
   void _refreshData() {
@@ -236,28 +245,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   }
 
   // --- HELPER FUNCTIONS FOR UI TRANSFORMATION ---
-  IconData _getIconData(String? iconValue) {
-    final entry = achievementIconOptions.firstWhere(
-      (opt) => opt['value'] == iconValue,
-      orElse: () => {'icon': Icons.help},
-    );
-    return entry['icon'] as IconData;
-  }
-
-  Color _getColor(String? iconValue) {
-    switch (iconValue) {
-      case 'html':
-        return Colors.orange;
-      case 'css':
-        return Colors.green;
-      case 'javascript':
-        return Colors.yellow;
-      case 'php':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
+  // Local _getIconData and _getColor removed. using shared constants.
 
   List<Map<String, dynamic>> _transformData(List<AchievementData> briefs) {
     return briefs.map((brief) {
@@ -265,8 +253,8 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
       return {
         'achievementId': brief.achievementId,
         'title': brief.achievementTitle ?? 'No Title',
-        'icon': _getIconData(iconValue),
-        'color': _getColor(iconValue),
+        'icon': getAchievementIcon(iconValue),
+        'color': getAchievementColor(context, iconValue),
         'preview': brief.achievementDescription,
         'progress': 0.0,
         'unlockedCount': brief.unlockedCount,
@@ -276,53 +264,69 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   }
 
   // --- CONTEXTUAL MENU BAR ---
-  Widget _buildSelectionMenuBar() {
-    final bool hasSelection = _selectedIds.isNotEmpty;
+  // --- HEADER WIDGETS ---
+  Widget _buildSortHeader(BuildContext context, int count) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      key: const ValueKey("SortHeader"),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            height: 40,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text("$count Results", style: theme.textTheme.titleMedium),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-      child: SizedBox(
-        height: hasSelection ? 60 : 0,
-        child: hasSelection
-            ? Material(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => setState(() {
-                          _selectedIds.clear();
-                        }),
-                        tooltip: 'Clear selection',
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '${_selectedIds.length} selected',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const Spacer(),
-                      if (_isDeleting)
-                        const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(),
-                        )
-                      else
-                        IconButton(
-                          icon: Icon(
-                            Icons.delete_outline,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          onPressed: _deleteSelectedAchievements,
-                          tooltip: 'Delete selected',
-                        ),
-                    ],
-                  ),
-                ),
-              )
-            : null,
+  Widget _buildSelectionHeader(BuildContext context, int totalCount) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      key: const ValueKey("SelectionHeader"),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => _selectedIds.clear()),
+              ),
+              Text(
+                "${_selectedIds.length} Selected",
+                style: theme.textTheme.titleMedium,
+              ),
+            ],
+          ),
+          if (_isDeleting)
+            const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: colorScheme.error),
+              onPressed: _deleteSelectedAchievements,
+            ),
+        ],
       ),
     );
   }
@@ -331,7 +335,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildSelectionMenuBar(),
+        // _buildSelectionMenuBar() removed
         Expanded(
           child: FutureBuilder<List<AchievementData>>(
             future: _achievementsFuture,
@@ -349,26 +353,18 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
               List<AchievementData> originalData = snapshot.data!;
 
               // --- FILTERING LOGIC ---
-              List<AchievementData> filteredData = originalData.where((item) {
-                final String title = item.achievementTitle?.toLowerCase() ?? '';
-                final String description =
-                    item.achievementDescription?.toLowerCase() ?? '';
-                final String icon = item.icon?.toLowerCase() ?? '';
-                final String level = item.levelName?.toLowerCase() ?? '';
+              List<AchievementData> filteredData = filterAchievements(
+                achievements: originalData,
+                searchText: widget.searchText,
+                selectedTopic: widget.selectedTopic,
+              );
 
-                final isMatchingSearch =
-                    widget.searchText.isEmpty ||
-                    title.contains(widget.searchText) ||
-                    description.contains(widget.searchText);
-
-                final isMatchingTopic =
-                    widget.selectedTopic == null ||
-                    icon.contains(widget.selectedTopic!) ||
-                    (widget.selectedTopic! == 'level' && level.isNotEmpty) ||
-                    (widget.selectedTopic! == 'quiz');
-
-                return isMatchingSearch && isMatchingTopic;
-              }).toList();
+              // --- SORTING LOGIC ---
+              filteredData = sortAchievements(
+                achievements: filteredData,
+                sortType: widget.sortType,
+                sortOrder: widget.sortOrder,
+              );
 
               if (filteredData.isEmpty) {
                 return const Center(
@@ -430,16 +426,14 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                               16.0,
                               16.0,
                             ),
-                            child: Row(
-                              children: [
-                                Text("Showing: ${uiData.length} achievements"),
-                                const Spacer(),
-                                IconButton(
-                                  icon: const Icon(Icons.refresh),
-                                  onPressed: _refreshData,
-                                  tooltip: "Refresh List",
-                                ),
-                              ],
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: _selectedIds.isNotEmpty
+                                  ? _buildSelectionHeader(
+                                      context,
+                                      uiData.length,
+                                    )
+                                  : _buildSortHeader(context, uiData.length),
                             ),
                           ),
                         ),

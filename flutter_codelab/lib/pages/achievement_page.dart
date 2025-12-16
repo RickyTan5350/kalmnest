@@ -3,6 +3,7 @@ import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_view_achievement_page.dart';
 import 'package:flutter_codelab/student/widgets/achievements/student_view_achievement_page.dart';
 import 'package:flutter_codelab/constants/view_layout.dart' show ViewLayout;
+import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
 
 class AchievementPage extends StatefulWidget {
   final void Function(BuildContext context, String message, Color color)
@@ -31,6 +32,13 @@ class _AchievementPageState extends State<AchievementPage> {
   ]; // Added 'All'
   String _selectedTopic = 'All'; // Default to 'All'
   ViewLayout _viewLayout = ViewLayout.grid;
+  SortType _sortType = SortType.alphabetical;
+  SortOrder _sortOrder = SortOrder.ascending;
+
+  final GlobalKey<StudentViewAchievementsPageState> _studentKey =
+      GlobalKey<StudentViewAchievementsPageState>();
+  final GlobalKey<AdminViewAchievementsPageState> _adminKey =
+      GlobalKey<AdminViewAchievementsPageState>();
 
   @override
   void dispose() {
@@ -41,6 +49,14 @@ class _AchievementPageState extends State<AchievementPage> {
   // NEW: State for Search Text
   String _searchText = '';
   final TextEditingController _searchController = TextEditingController();
+
+  Future<void> _handleRefresh() async {
+    if (widget.currentUser.isStudent) {
+      _studentKey.currentState?.refreshData();
+    } else {
+      _adminKey.currentState?.refreshData();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,27 +148,99 @@ class _AchievementPageState extends State<AchievementPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Wrap(
-                  spacing: 10.0,
-                  runSpacing: 10.0,
-                  children: _topics.map((topic) {
-                    final isSelected = _selectedTopic == topic;
-                    return FilterChip(
-                      label: Text(
-                        topic,
-                        style: TextStyle(
-                          color: isSelected ? colors.primary : colors.onSurface,
-                        ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 10.0,
+                        runSpacing: 10.0,
+                        children: _topics.map((topic) {
+                          final isSelected = _selectedTopic == topic;
+                          return FilterChip(
+                            label: Text(
+                              topic,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? colors.primary
+                                    : colors.onSurface,
+                              ),
+                            ),
+                            selected: isSelected,
+                            onSelected: (bool selected) {
+                              setState(() {
+                                _selectedTopic = selected ? topic : 'All';
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
-                      selected: isSelected,
-                      onSelected: (bool selected) {
+                    ),
+                    const SizedBox(width: 8),
+                    // Filter Icon (Sort)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.filter_list),
+                      tooltip: 'Sort Options',
+                      onSelected: (value) {
                         setState(() {
-                          // NEW: Handle selection/deselection
-                          _selectedTopic = selected ? topic : 'All';
+                          if (value == 'Name') {
+                            _sortType = SortType.alphabetical;
+                          } else if (value == 'Date') {
+                            _sortType = SortType.updated;
+                          } else if (value == 'Ascending') {
+                            _sortOrder = SortOrder.ascending;
+                          } else if (value == 'Descending') {
+                            _sortOrder = SortOrder.descending;
+                          }
                         });
                       },
-                    );
-                  }).toList(),
+                      itemBuilder: (BuildContext context) =>
+                          <PopupMenuEntry<String>>[
+                            const PopupMenuItem<String>(
+                              enabled: false,
+                              child: Text(
+                                'Sort By',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Name',
+                              checked: _sortType == SortType.alphabetical,
+                              child: const Text('Name'),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Date',
+                              checked: _sortType == SortType.updated,
+                              child: const Text('Date'),
+                            ),
+                            const PopupMenuDivider(),
+                            const PopupMenuItem<String>(
+                              enabled: false,
+                              child: Text(
+                                'Order',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Ascending',
+                              checked: _sortOrder == SortOrder.ascending,
+                              child: const Text('Ascending'),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Descending',
+                              checked: _sortOrder == SortOrder.descending,
+                              child: const Text('Descending'),
+                            ),
+                          ],
+                    ),
+                    const SizedBox(width: 4),
+                    // Refresh Icon
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _handleRefresh,
+                      tooltip: "Refresh List",
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
@@ -170,6 +258,9 @@ class _AchievementPageState extends State<AchievementPage> {
                           selectedTopic: _selectedTopic == 'All'
                               ? null
                               : _selectedTopic.toLowerCase(),
+                          key: _studentKey,
+                          sortType: _sortType,
+                          sortOrder: _sortOrder,
                         )
                       : AdminViewAchievementsPage(
                           // Load Admin View
@@ -181,6 +272,9 @@ class _AchievementPageState extends State<AchievementPage> {
                           selectedTopic: _selectedTopic == 'All'
                               ? null
                               : _selectedTopic.toLowerCase(),
+                          key: _adminKey,
+                          sortType: _sortType,
+                          sortOrder: _sortOrder,
                         ),
                 ),
               ],
