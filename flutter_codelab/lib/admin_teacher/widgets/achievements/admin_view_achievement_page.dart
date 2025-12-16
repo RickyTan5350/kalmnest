@@ -2,12 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Required for HapticFeedback
+import 'package:flutter_codelab/admin_teacher/widgets/achievements/achievement_grid_layout.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
-import '../grid_layout_view.dart';
 import 'admin_achievement_detail.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 // IMPORT THE NEW WRAPPER
@@ -263,7 +263,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
     return briefs.map((brief) {
       final iconValue = brief.icon;
       return {
-        'id': brief.achievementId,
+        'achievementId': brief.achievementId,
         'title': brief.achievementTitle ?? 'No Title',
         'icon': _getIconData(iconValue),
         'color': _getColor(iconValue),
@@ -477,7 +477,7 @@ class _AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   ) {
     if (widget.layout == ViewLayout.grid) {
       // --- GRID VIEW ---
-      return GridLayoutView(
+      return AchievementGridLayout(
         achievements: achievements,
         originalData: originalData,
         selectedIds: _selectedIds,

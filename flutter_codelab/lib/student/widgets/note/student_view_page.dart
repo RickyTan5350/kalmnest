@@ -2,26 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/note_api.dart';
 import 'package:flutter_codelab/models/note_brief.dart';
 import 'package:flutter_codelab/student/widgets/note/student_note_detail.dart';
+import 'package:flutter_codelab/theme.dart'; // BrandColors
 
 // --- NEW IMPORTS: Reuse Admin/Teacher Widgets for consistency ---
-import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout_view.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 
-// Local Enums
-enum SortType { alphabetical, number }
+import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
+// Removed unused ViewLayout import
 
-enum SortOrder { ascending, descending }
+// Removing local SortType and SortOrder enums
 
 class StudentViewPage extends StatefulWidget {
   final String topic;
   final String query;
   final bool isGrid;
+  final SortType sortType;
+  final SortOrder sortOrder;
 
   const StudentViewPage({
     super.key,
     required this.topic,
     required this.query,
     required this.isGrid,
+    required this.sortType,
+    required this.sortOrder,
   });
 
   @override
@@ -32,8 +37,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
   late Future<List<NoteBrief>> _noteFuture;
   final NoteApi _api = NoteApi();
 
-  SortType _currentSortType = SortType.alphabetical;
-  SortOrder _currentSortOrder = SortOrder.ascending;
+  // Removed local sort state variables
 
   // --- NEW: Keys required by GridLayoutView ---
   final Map<dynamic, GlobalKey> _gridItemKeys = {};
@@ -66,14 +70,12 @@ class _StudentViewPageState extends State<StudentViewPage> {
     List<NoteBrief> sortedList = List.from(notes);
     sortedList.sort((a, b) {
       int comparison;
-      if (_currentSortType == SortType.alphabetical) {
+      if (widget.sortType == SortType.alphabetical) {
         comparison = a.title.toLowerCase().compareTo(b.title.toLowerCase());
       } else {
         comparison = a.noteId.toString().compareTo(b.noteId.toString());
       }
-      return _currentSortOrder == SortOrder.ascending
-          ? comparison
-          : -comparison;
+      return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
     });
     return sortedList;
   }
@@ -142,17 +144,17 @@ class _StudentViewPageState extends State<StudentViewPage> {
                 ),
 
                 widget.isGrid
-                    ? GridLayoutView(
-                        achievements: sortedList
+                    ? NoteGridLayout(
+                        notes: sortedList
                             .map(
                               (n) => {
                                 'id': n.noteId,
                                 'title': n.title,
-                                'icon': Icons
-                                    .description_outlined, // Consistent icon
-                                'color': Colors.blue,
-                                'preview':
-                                    'Tap to read...', // Text shown in image
+                                'topic': n.topic,
+                                'updatedAt': n.updatedAt.toString().substring(
+                                  0,
+                                  16,
+                                ),
                               },
                             )
                             .toList(),
@@ -207,60 +209,6 @@ class _StudentViewPageState extends State<StudentViewPage> {
               color: colorScheme.onSurface,
             ),
           ),
-          Row(
-            children: [
-              DropdownButton<SortType>(
-                value: _currentSortType,
-                underline: const SizedBox(),
-                isDense: true,
-                dropdownColor: colorScheme.surfaceContainer,
-                style: TextStyle(color: colorScheme.onSurface),
-                onChanged: (SortType? newValue) {
-                  if (newValue != null)
-                    setState(() => _currentSortType = newValue);
-                },
-                items: const [
-                  DropdownMenuItem(
-                    value: SortType.alphabetical,
-                    child: Text("Name"),
-                  ),
-                  DropdownMenuItem(value: SortType.number, child: Text("ID")),
-                ],
-              ),
-              Container(
-                height: 20,
-                width: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: colorScheme.outlineVariant,
-              ),
-              InkWell(
-                onTap: () => setState(
-                  () => _currentSortOrder =
-                      _currentSortOrder == SortOrder.ascending
-                      ? SortOrder.descending
-                      : SortOrder.ascending,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _currentSortOrder == SortOrder.ascending
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded,
-                      size: 16,
-                      color: colorScheme.onSurface,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _currentSortOrder == SortOrder.ascending
-                          ? "Low-High"
-                          : "High-Low",
-                      style: TextStyle(color: colorScheme.onSurface),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
           IconButton(
             icon: Icon(Icons.refresh, color: colorScheme.onSurface),
             onPressed: () => _loadData(),
@@ -277,6 +225,38 @@ class _StudentViewPageState extends State<StudentViewPage> {
   Widget _buildListCard(BuildContext context, NoteBrief note) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    // Resolve Brand Colors
+    final brandColors = Theme.of(context).extension<BrandColors>();
+    Color topicColor;
+    IconData topicIcon;
+
+    switch (note.topic.toLowerCase()) {
+      case 'html':
+        topicColor = brandColors?.html ?? Colors.orange;
+        topicIcon = Icons.html;
+        break;
+      case 'css':
+        topicColor = brandColors?.css ?? Colors.blue;
+        topicIcon = Icons.css;
+        break;
+      case 'js':
+      case 'javascript':
+        topicColor = brandColors?.javascript ?? Colors.yellow;
+        topicIcon = Icons.javascript;
+        break;
+      case 'php':
+        topicColor = brandColors?.php ?? Colors.indigo;
+        topicIcon = Icons.php;
+        break;
+      case 'backend':
+        topicColor = brandColors?.backend ?? Colors.purple;
+        topicIcon = Icons.storage;
+        break;
+      default:
+        topicColor = brandColors?.other ?? Colors.grey;
+        topicIcon = Icons.folder_open;
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
@@ -299,13 +279,10 @@ class _StudentViewPageState extends State<StudentViewPage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
+                  color: topicColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.description_outlined,
-                  color: colorScheme.onPrimaryContainer,
-                ),
+                child: Icon(topicIcon, color: topicColor),
               ),
               const SizedBox(width: 16),
 
@@ -324,10 +301,13 @@ class _StudentViewPageState extends State<StudentViewPage> {
                       ),
                     ),
                     const SizedBox(height: 4),
+
+                    const SizedBox(height: 4),
                     Text(
-                      'Tap to read',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                      'Updated: ${note.updatedAt.toString().substring(0, 16)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.outline,
+                        fontSize: 10,
                       ),
                     ),
                   ],
