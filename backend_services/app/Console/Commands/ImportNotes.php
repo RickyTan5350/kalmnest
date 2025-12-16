@@ -123,41 +123,44 @@ class ImportNotes extends Command
                 $originalLink = $link;
 
                 // 1. Cleaner path handling
-                // Decode URL to parse spaces/special chars
-                $cleanLink = urldecode($link);
-                // Strip quotes if present (common in some export formats)
-                $cleanLink = trim($cleanLink, '"\'');
-
-                // 2. Determine potential local paths
-                $candidates = [];
+                // Check both raw (for "image+name.png") and decoded (for "image%20name.png") versions
+                $rawLink = trim($link, '"\'');
+                $decodedLink = urldecode($rawLink);
                 
-                // Priority 0: Is it already a valid absolute path?
-                // Windows paths like "C:\..." or Unix "/"
-                if (file_exists($cleanLink) && is_file($cleanLink)) {
-                     $candidates[] = realpath($cleanLink);
+                $versionsToCheck = array_unique([$decodedLink, $rawLink]);
+                $candidates = [];
+
+                foreach ($versionsToCheck as $checkLink) {
+                    // Priority 0: Is it already a valid absolute path?
+                    if (file_exists($checkLink) && is_file($checkLink)) {
+                         $candidates[] = realpath($checkLink);
+                    }
+
+                    $pathOnly = parse_url($checkLink, PHP_URL_PATH);
+                    $pathOnly = $pathOnly ? ltrim($pathOnly, '/\\') : $checkLink;
+                    $filename = basename($checkLink);
+
+                    // Priority 1: Relative to the NOTE FILE itself
+                    $candidates[] = realpath($noteDir . DIRECTORY_SEPARATOR . $checkLink);
+                    $candidates[] = realpath($noteDir . DIRECTORY_SEPARATOR . $pathOnly);
+                    $candidates[] = realpath($noteDir . DIRECTORY_SEPARATOR . $filename);
+
+                    // Priority 2: Relative to the Base Import Dir
+                    $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . $checkLink);
+                    $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . $pathOnly);
+                    $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . $filename);
+
+                    // Priority 3: 'pictures' subdirectory
+                    $candidates[] = realpath($noteDir . DIRECTORY_SEPARATOR . 'pictures' . DIRECTORY_SEPARATOR . $filename);
+                    $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . 'pictures' . DIRECTORY_SEPARATOR . $filename);
                 }
-
-                $pathOnly = parse_url($cleanLink, PHP_URL_PATH);
-                $pathOnly = $pathOnly ? ltrim($pathOnly, '/\\') : $cleanLink;
-                $filename = basename($cleanLink);
-
-                // Priority 1: Relative to the NOTE FILE itself (e.g. "3.1.1 pic/image.png")
-                $candidates[] = realpath($noteDir . DIRECTORY_SEPARATOR . $cleanLink); // Try full relative path
-                $candidates[] = realpath($noteDir . DIRECTORY_SEPARATOR . $pathOnly);
-                $candidates[] = realpath($noteDir . DIRECTORY_SEPARATOR . $filename); // Try flat
-
-                // Priority 2: Relative to the Base Import Dir
-                $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . $cleanLink);
-                $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . $pathOnly);
-                $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . $filename);
-
-                // Priority 3: 'pictures' subdirectory (Relative to Note Dir and Base Dir)
-                $candidates[] = realpath($noteDir . DIRECTORY_SEPARATOR . 'pictures' . DIRECTORY_SEPARATOR . $filename);
-                $candidates[] = realpath($baseDir . DIRECTORY_SEPARATOR . 'pictures' . DIRECTORY_SEPARATOR . $filename);
 
                 $foundPath = null;
                 foreach ($candidates as $candidate) {
-                    if ($candidate && file_exists($candidate) && is_file($candidate)) {
+                    $exists = file_exists($candidate) && is_file($candidate);
+                    // $this->line("   Checking: " . ($candidate ?: 'null') . " [" . ($exists ? 'FOUND' : 'MISSING') . "]");
+                    
+                    if ($candidate && $exists) {
                         $foundPath = $candidate;
                         break;
                     }
@@ -165,11 +168,18 @@ class ImportNotes extends Command
 
                 if ($foundPath) {
                     // Import the attachment
+                    // $this->line("   Found attachment at: $foundPath");
                     $fileRecord = $this->importFile($foundPath, 'uploads');
                     
                     if ($fileRecord) {
                         $attachmentFileIds[] = $fileRecord->file_id;
-                        $newUrl = Storage::url($fileRecord->file_path);
+                        
+                        // Encode path segments for URL
+                        $parts = explode('/', $fileRecord->file_path);
+                        $encodedParts = array_map('rawurlencode', $parts);
+                        $encodedPath = implode('/', $encodedParts);
+                        $newUrl = url(Storage::url($encodedPath)); // Force absolute encoded URL
+                        
                         return "![$altText]($newUrl)";
                     }
                 } else {
@@ -224,8 +234,9 @@ class ImportNotes extends Command
             $extension = pathinfo($path, PATHINFO_EXTENSION);
             if (!$extension) $extension = 'bin';
 
-            // Generate unique filename on server
-            $newFileName = (string) Str::uuid() . '.' . $extension;
+            // Generate unique filename on server (Match FileController logic)
+            $filename = basename($path);
+            $newFileName = time() . '_' . $filename;
             $destinationPath = $folder . '/' . $newFileName;
             
             // Read content

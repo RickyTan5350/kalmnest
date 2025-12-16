@@ -16,6 +16,15 @@ class NotesController extends Controller
 {
     use \App\Traits\SyncsToSeedData;
 
+    private function getEncodedUrl($path)
+    {
+        $parts = explode('/', $path);
+        $encodedParts = array_map('rawurlencode', $parts);
+        $encodedPath = implode('/', $encodedParts);
+        return url(Storage::url($encodedPath));
+    }
+
+
     /**
      * Get brief details of notes for list view.
      */
@@ -53,7 +62,7 @@ class NotesController extends Controller
                     'message' => 'File uploaded successfully',
                     'original_name' => $originalName,
                     'filename' => $safeFileName,
-                    'file_url' => url(Storage::url($path)), // Force absolute URL
+                    'file_url' => $this->getEncodedUrl($path), // Force absolute encoded URL
                 ], 200);
 
             } catch (\Exception $e) {
