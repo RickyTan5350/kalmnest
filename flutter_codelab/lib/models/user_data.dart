@@ -78,6 +78,7 @@ class UserDetails {
   final String accountStatus;
   final String roleName;
   final String joinedDate;
+  final String token;
 
   UserDetails({
     required this.id,
@@ -89,6 +90,7 @@ class UserDetails {
     required this.accountStatus,
     required this.roleName,
     required this.joinedDate,
+    this.token = '',
   });
 
   factory UserDetails.fromJson(Map<String, dynamic> json) {
@@ -107,10 +109,47 @@ class UserDetails {
           : 'N/A',
 
       joinedDate: json['created_at'] ?? '',
+      token: '',
     );
   }
+
+  // Convenience getter to return a role object-like interface for compatibility
+  UserRole? get role => UserRole(roleName: roleName);
 
   bool get isStudent => roleName.trim().toLowerCase() == 'student';
   bool get isAdmin => roleName.trim().toLowerCase() == 'admin';
   bool get isTeacher => roleName.trim().toLowerCase() == 'teacher';
+
+  // Copy with method to create a new instance with optional field updates
+  UserDetails copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? phoneNo,
+    String? address,
+    String? gender,
+    String? accountStatus,
+    String? roleName,
+    String? joinedDate,
+    String? token,
+  }) {
+    return UserDetails(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phoneNo: phoneNo ?? this.phoneNo,
+      address: address ?? this.address,
+      gender: gender ?? this.gender,
+      accountStatus: accountStatus ?? this.accountStatus,
+      roleName: roleName ?? this.roleName,
+      joinedDate: joinedDate ?? this.joinedDate,
+      token: token ?? this.token,
+    );
+  }
+}
+
+// Simple role class for compatibility with FeedbackPage
+class UserRole {
+  final String roleName;
+  UserRole({required this.roleName});
 }
