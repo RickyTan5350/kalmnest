@@ -4,6 +4,7 @@ import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_view_ac
 import 'package:flutter_codelab/student/widgets/achievements/student_view_achievement_page.dart';
 import 'package:flutter_codelab/constants/view_layout.dart' show ViewLayout;
 import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
+import 'package:flutter_codelab/services/layout_preferences.dart'; // Layout Persistence
 
 class AchievementPage extends StatefulWidget {
   final void Function(BuildContext context, String message, Color color)
@@ -39,6 +40,21 @@ class _AchievementPageState extends State<AchievementPage> {
       GlobalKey<StudentViewAchievementsPageState>();
   final GlobalKey<AdminViewAchievementsPageState> _adminKey =
       GlobalKey<AdminViewAchievementsPageState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLayoutPreference();
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    if (mounted) {
+      setState(() {
+        _viewLayout = savedLayout;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -100,9 +116,12 @@ class _AchievementPageState extends State<AchievementPage> {
                       ],
                       selected: <ViewLayout>{_viewLayout},
                       onSelectionChanged: (Set<ViewLayout> newSelection) {
-                        setState(() {
-                          _viewLayout = newSelection.first;
-                        });
+                        final newLayout = newSelection.first;
+                        setState(() => _viewLayout = newLayout);
+                        LayoutPreferences.saveLayout(
+                          'global_layout',
+                          newLayout,
+                        );
                       },
                     ),
                   ],

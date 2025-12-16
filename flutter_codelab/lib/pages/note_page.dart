@@ -9,6 +9,7 @@ import 'package:flutter_codelab/admin_teacher/widgets/note/admin_view_note_page.
 import 'package:flutter_codelab/student/widgets/note/student_view_page.dart';
 import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
 import 'package:flutter_codelab/constants/view_layout.dart'; // Shared ViewLayout
+import 'package:flutter_codelab/services/layout_preferences.dart'; // Layout Persistence
 
 class NotePage extends StatefulWidget {
   final UserDetails currentUser;
@@ -33,6 +34,21 @@ class _NotePageState extends State<NotePage> {
       GlobalKey<StudentViewPageState>();
   final GlobalKey<AdminViewNotePageState> _adminKey =
       GlobalKey<AdminViewNotePageState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLayoutPreference();
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    if (mounted) {
+      setState(() {
+        _viewLayout = savedLayout;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -92,8 +108,14 @@ class _NotePageState extends State<NotePage> {
                               ),
                             ],
                             selected: {_viewLayout},
-                            onSelectionChanged: (val) =>
-                                setState(() => _viewLayout = val.first),
+                            onSelectionChanged: (val) {
+                              final newLayout = val.first;
+                              setState(() => _viewLayout = newLayout);
+                              LayoutPreferences.saveLayout(
+                                'global_layout',
+                                newLayout,
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -108,8 +130,8 @@ class _NotePageState extends State<NotePage> {
                       focusNode: _searchFocusNode,
                       hintText: "Search topic or title",
                       padding: const WidgetStatePropertyAll<EdgeInsets>(
-              EdgeInsets.symmetric(horizontal: 16.0),
-            ),
+                        EdgeInsets.symmetric(horizontal: 16.0),
+                      ),
                       onChanged: (val) => setState(() => _searchQuery = val),
                       leading: const Icon(
                         Icons.search,
