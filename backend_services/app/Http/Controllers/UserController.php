@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Http\Requests\RegisterRequest;
-use Illuminate\Http\Request; 
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,7 +21,7 @@ class UserController extends Controller
      */
 
     // ==========================================
-    // AUTHENTICATION HELPERS 
+    // AUTHENTICATION HELPERS
     // ==========================================
 private function isAdmin()
     {
@@ -108,7 +108,7 @@ private function isAdmin()
 
         // 1. Get the validated data
         $validatedData = $request->validated();
-        
+
         // 2. Find the role_id based on the submitted role_name
         $roleName = $validatedData['role_name'];
         $role = DB::table('roles')
@@ -119,13 +119,13 @@ private function isAdmin()
         if (!$role) {
             return response()->json([
                 'message' => "The role '$roleName' is not valid.",
-            ], 422); 
+            ], 422);
         }
 
         // 3. Replace 'role_name' with 'role_id'
         unset($validatedData['role_name']);
         $validatedData['role_id'] = $role->role_id;
-        
+
         // Set default status
         $validatedData['account_status'] = 'active';
 
@@ -151,13 +151,13 @@ private function isAdmin()
                 ],
                 'token' => $token,
             ], 201);
-            
+
         } catch (\Exception $e) {
-            Log::error('USER_CREATE_FAILED: ' . $e->getMessage()); 
+            Log::error('USER_CREATE_FAILED: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to create user due to a server error.',
                 'error' => $e->getMessage()
-            ], 500); 
+            ], 500);
         }
     }
 
@@ -184,7 +184,7 @@ public function update(UpdateUserRequest $request, User $user)
     {
         // 1. Get the validated data
         $validatedData = $request->validated();
-        
+
         // 2. Handle Role Name to Role ID conversion
         if (isset($validatedData['role_name'])) {
             $roleName = $validatedData['role_name'];
@@ -197,11 +197,11 @@ public function update(UpdateUserRequest $request, User $user)
                 unset($validatedData['role_name']);
                 $validatedData['role_id'] = $role->role_id;
             } else {
-                // This case should be caught by the 'exists' rule in UpdateUserRequest, 
+                // This case should be caught by the 'exists' rule in UpdateUserRequest,
                 // but we keep a defensive check.
                 return response()->json([
                     'message' => "The role '$roleName' is not valid.",
-                ], 422); 
+                ], 422);
             }
         }
 
@@ -214,26 +214,26 @@ public function update(UpdateUserRequest $request, User $user)
             return response()->json([
                 'message' => 'User profile updated successfully.',
                 // Reload 'role' in case role_id was changed
-                'user' => $user->load('role'), 
+                'user' => $user->load('role'),
             ], 200);
-            
+
         } catch (\Exception $e) {
-            Log::error('USER_UPDATE_FAILED: ' . $e->getMessage()); 
+            Log::error('USER_UPDATE_FAILED: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to update user due to a server error.',
                 'error' => $e->getMessage()
-            ], 500); 
+            ], 500);
         }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-public function destroy(User $user, DeleteUserRequest $request) 
+public function destroy(User $user, DeleteUserRequest $request)
     {
-        // Authorization (Admin only & no self-deletion) is handled entirely 
+        // Authorization (Admin only & no self-deletion) is handled entirely
         // by the DeleteUserRequest Form Request validation that runs before this code.
-        
+
         // Revoke all Sanctum tokens associated with this user for a clean delete.
         $user->tokens()->delete();
 
@@ -293,5 +293,5 @@ public function destroy(User $user, DeleteUserRequest $request)
         ], 200);
     }
 
-    
+
 }
