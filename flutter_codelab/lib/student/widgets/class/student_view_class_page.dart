@@ -4,6 +4,7 @@ import 'package:flutter_codelab/student/widgets/class/student_class_statistics_s
 import 'package:flutter_codelab/student/widgets/class/student_preview_teacher_row.dart';
 import 'package:flutter_codelab/student/widgets/class/student_quiz_list_section.dart';
 import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
 
 class ClassDetailPage extends StatefulWidget {
   final String classId;
@@ -133,19 +134,68 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                             ),
                             const SizedBox(height: 20),
 
-                            // For students, show teacher preview
-                            TeacherPreviewRow(
-                              teacherName:
-                                  classData?['teacher']?['name'] ??
-                                  'No teacher assigned',
-                              teacherDescription:
-                                  classData?['teacher']?['email'] ?? '',
+                            // For students, show teacher preview and allow tap to open teacher profile
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                final teacher = classData?['teacher'];
+                                if (teacher == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'No teacher assigned to this class.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                // Try common key names for the teacher's user id
+                                final dynamic rawId =
+                                    teacher['id'] ??
+                                    teacher['user_id'] ??
+                                    teacher['teacher_id'];
+                                if (rawId == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Cannot open teacher profile: missing teacher id.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                final teacherId = rawId.toString();
+                                final teacherName =
+                                    (teacher['name'] ?? 'Teacher').toString();
+
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => UserDetailPage(
+                                      userId: teacherId,
+                                      userName: teacherName,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: TeacherPreviewRow(
+                                teacherName:
+                                    classData?['teacher']?['name'] ??
+                                    'No teacher assigned',
+                                teacherDescription:
+                                    classData?['teacher']?['email'] ?? '',
+                              ),
                             ),
 
                             const SizedBox(height: 20),
                             QuizListSection(
                               quizzes: _quizzes,
                               roleName: widget.roleName, // pass role here
+                              classId: widget.classId,
+                              className: classData?['class_name'] ?? 'No Name',
+                              classDescription:
+                                  classData?['description'] ?? 'No description',
                             ),
 
                             const SizedBox(height: 20),

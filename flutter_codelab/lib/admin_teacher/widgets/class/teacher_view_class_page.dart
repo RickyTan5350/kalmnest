@@ -158,10 +158,13 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => TeacherAllStudentsPage(
-                                        classId: widget.classId,
-                                        className: classData?['class_name'] ?? 'Class',
-                                      ),
+                                      builder: (context) =>
+                                          TeacherAllStudentsPage(
+                                            classId: widget.classId,
+                                            className:
+                                                classData?['class_name'] ??
+                                                'Class',
+                                          ),
                                     ),
                                   );
                                 },
@@ -179,6 +182,10 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                             QuizListSection(
                               quizzes: _quizzes,
                               roleName: widget.roleName, // pass role here
+                              classId: widget.classId,
+                              className: classData?['class_name'] ?? 'No Name',
+                              classDescription:
+                                  classData?['description'] ?? 'No description',
                             ),
 
                             const SizedBox(height: 20),
