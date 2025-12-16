@@ -588,14 +588,10 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                         : colorScheme.outline,
                   ),
                 ),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: topicColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(topicIcon, color: topicColor),
+              CircleAvatar(
+                backgroundColor: topicColor.withOpacity(0.1),
+                foregroundColor: topicColor,
+                child: Icon(topicIcon),
               ),
               const SizedBox(width: 16),
               Expanded(
