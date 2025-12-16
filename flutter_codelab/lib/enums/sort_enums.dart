@@ -1,3 +1,3 @@
-enum SortType { alphabetical, number }
+enum SortType { alphabetical, updated }
 
 enum SortOrder { ascending, descending }

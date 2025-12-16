@@ -30,10 +30,10 @@ class AdminViewNotePage extends StatefulWidget {
   });
 
   @override
-  State<AdminViewNotePage> createState() => _AdminViewNotePageState();
+  State<AdminViewNotePage> createState() => AdminViewNotePageState();
 }
 
-class _AdminViewNotePageState extends State<AdminViewNotePage> {
+class AdminViewNotePageState extends State<AdminViewNotePage> {
   late Future<List<NoteBrief>> _noteFuture;
   final NoteApi _api = NoteApi();
 
@@ -58,18 +58,19 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    refreshData();
   }
 
   @override
   void didUpdateWidget(AdminViewNotePage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Reload if query or topic changes
     if (oldWidget.topic != widget.topic || oldWidget.query != widget.query) {
-      _loadData();
+      refreshData();
     }
   }
 
-  void _loadData() {
+  void refreshData() {
     setState(() {
       if (widget.topic.isEmpty && widget.query.isEmpty) {
         _noteFuture = _api.fetchBriefNote();
@@ -132,13 +133,13 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
 
     if (confirm == true) {
       await _api.deleteNotes(_selectedIds.toList());
-      setState(() {
-        _loadData();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("${_selectedIds.length} notes deleted")),
-        );
-        _exitSelectionMode();
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("${_selectedIds.length} notes deleted")),
+      ); // Show message while deleting
+
+      refreshData(); // Reload list
+      // Exit selection mode after deletion
+      _exitSelectionMode();
     }
   }
 
@@ -225,7 +226,8 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
       if (widget.sortType == SortType.alphabetical) {
         comparison = a.title.toLowerCase().compareTo(b.title.toLowerCase());
       } else {
-        comparison = a.noteId.compareTo(b.noteId);
+        // SortType.updated
+        comparison = a.updatedAt.compareTo(b.updatedAt);
       }
       return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
     });
@@ -393,11 +395,6 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          IconButton(
-            icon: Icon(Icons.refresh, color: colorScheme.primary),
-            onPressed: () => _loadData(),
-            tooltip: "Refresh List",
-          ),
         ],
       ),
     );
@@ -455,7 +452,6 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                 'title': n.title,
                 'topic': n.topic,
                 'updatedAt': n.updatedAt.toString().substring(0, 16),
-                'preview': 'Tap to edit...',
               },
             )
             .toList(),
@@ -614,12 +610,7 @@ class _AdminViewNotePageState extends State<AdminViewNotePage> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      'Tap to edit',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+
                     const SizedBox(height: 4),
                     Text(
                       'Updated: ${item.updatedAt.toString().substring(0, 16)}',
