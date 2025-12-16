@@ -28,7 +28,6 @@ class PackageNotes extends Command
      */
     public function handle()
     {
-        // Default to the standard seed data path if not provided
         $targetPath = $this->argument('path') ?? database_path('seed_data/notes');
 
         if (!File::isDirectory($targetPath)) {
@@ -36,15 +35,11 @@ class PackageNotes extends Command
             return 1;
         }
 
-        $this->info("Packaging notes in: $targetPath");
+        $this->info("Packaging notes recursively in: $targetPath");
 
-        $files = File::files($targetPath);
-        $picturesPath = $targetPath . DIRECTORY_SEPARATOR . 'pictures';
+        // FIX 1: Use allFiles() instead of files() to scan subfolders (HTML, CSS, etc.)
+        $files = File::allFiles($targetPath);
         
-        if (!File::exists($picturesPath)) {
-            File::makeDirectory($picturesPath, 0755, true);
-        }
-
         $updatedCount = 0;
         $copiedCount = 0;
 
@@ -53,78 +48,50 @@ class PackageNotes extends Command
                 continue;
             }
 
-            $content = File::get($file->getPathname());
-            $originalContent = $content;
-            $hasChanges = false;
+            // FIX 2: Define 'pictures' folder relative to the CURRENT note's folder
+            $noteDir = $file->getPath(); 
+            $picturesPath = $noteDir . DIRECTORY_SEPARATOR . 'pictures';
 
-            // Regex to find images: ![alt](url)
-            // Look for URLs containing /storage/uploads/
-            // Group 1: Alt Text
-            // Group 2: Full URL
-            // Group 3: Filename (everything after the last / in the URL)
-            $pattern = '/!\[(.*?)\]\(((?:https?:\/\/[^\/]+|)?.*?\/storage\/uploads\/([^\)]+))\)/';
-            
-            // Debug check for matches
-            if (preg_match_all($pattern, $content, $debugMatches)) {
-                $this->info("   Found " . count($debugMatches[0]) . " image links in " . $file->getFilename());
-            } else {
-                // $this->warn("   No image links found in " . $file->getFilename());
+            if (!File::exists($picturesPath)) {
+                File::makeDirectory($picturesPath, 0755, true);
             }
 
-            $newContent = preg_replace_callback($pattern, function ($matches) use ($targetPath, $picturesPath, &$copiedCount, &$hasChanges) {
-                $altText = $matches[1];
-                $fullUrl = $matches[2];
-                $serverFilename = basename($matches[3]); // The UUID filename on server
-                $serverFilename = urldecode($serverFilename);
+            $content = File::get($file->getPathname());
+            $hasChanges = false;
 
-                // 1. Locate the source file in local storage
+            // Regex matches your specific URL format
+            $pattern = '/!\[(.*?)\]\(((?:https?:\/\/[^\/]+|)?.*?\/storage\/uploads\/([^\)]+))\)/';
+            
+            $newContent = preg_replace_callback($pattern, function ($matches) use ($picturesPath, &$copiedCount, &$hasChanges) {
+                $altText = $matches[1];
+                // $fullUrl = $matches[2]; // Unused
+                $serverFilename = basename($matches[3]); 
+                $serverFilename = urldecode($serverFilename); // Fixes %20 to space
+
                 $sourcePath = storage_path('app/public/uploads/' . $serverFilename);
 
                 if (File::exists($sourcePath)) {
-                    // 2. Determine the new human-readable filename from Alt Text
-                    // If Alt Text looks like a filename (has extension), use it.
-                    // Otherwise, use Alt Text + extension from server filename.
-                    
+                    // Logic to clean filename
                     $extension = pathinfo($serverFilename, PATHINFO_EXTENSION);
-                    $cleanName = Str::slug(pathinfo($altText, PATHINFO_FILENAME)); // Slugify the name part
+                    $cleanName = Str::slug(pathinfo($altText, PATHINFO_FILENAME)); 
+                    if (empty($cleanName)) $cleanName = pathinfo($serverFilename, PATHINFO_FILENAME);
                     
-                    // If alt text was empty or failed slugify, fallback to part of UUID
-                    if (empty($cleanName)) {
-                        $cleanName = pathinfo($serverFilename, PATHINFO_FILENAME);
-                    }
+                    $newFilename = $cleanName . '.' . $extension;
 
-                    // Construct new filename
-                    // Check if altText actually had an extension
-                    $altExtension = pathinfo($altText, PATHINFO_EXTENSION);
-                    if ($altExtension && strtolower($altExtension) === strtolower($extension)) {
-                         // Alt text was "Image.png", use it directly (but sanitized)
-                         $newFilename = $cleanName . '.' . $extension;
-                    } else {
-                         // Alt text was "My Image", append extension
-                         $newFilename = $cleanName . '.' . $extension;
-                    }
-
-                    // 3. Handle duplicate filenames in the target directory (pictures)
-                    // If "Image.png" exists, try "Image-1.png", etc.
+                    // Handle Duplicates
                     $baseNewName = pathinfo($newFilename, PATHINFO_FILENAME);
                     $counter = 1;
                     while (File::exists($picturesPath . DIRECTORY_SEPARATOR . $newFilename)) {
-                        // Check if it's the SAME file content (md5 check) to avoid needless renaming?
-                        // For simplicity, if it exists, assume we might need a unique name unless we want to overwrite.
-                        // But wait, if we run this script multiple times, we want it to be stable.
-                        
-                        // optimization: if target file exists and has same size/hash, reuse it.
+                        // Optimization: Check if it's actually the same file
                         $existingPath = $picturesPath . DIRECTORY_SEPARATOR . $newFilename;
                         if (filesize($existingPath) === filesize($sourcePath)) {
-                             // Assume same file
-                             break;
+                             break; // Same file, reuse it
                         }
-
                         $newFilename = $baseNewName . '-' . $counter . '.' . $extension;
                         $counter++;
                     }
 
-                    // 4. Copy the file
+                    // Copy file
                     $destPath = $picturesPath . DIRECTORY_SEPARATOR . $newFilename;
                     if (!File::exists($destPath)) {
                         File::copy($sourcePath, $destPath);
@@ -132,10 +99,8 @@ class PackageNotes extends Command
                         $copiedCount++;
                     }
 
-                    // 5. Mark changes
                     $hasChanges = true;
-
-                    // 6. Return relative link with original Alt Text (preserved) but pointing to new filename
+                    // FIX 3: Return relative link that works inside subfolders
                     return "![$altText](pictures/$newFilename)";
 
                 } else {
@@ -156,5 +121,4 @@ class PackageNotes extends Command
         $this->info(" - Notes updated: $updatedCount");
 
         return 0;
-    }
-}
+    }}
