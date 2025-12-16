@@ -15,6 +15,8 @@ import 'package:flutter_codelab/pages/login_page.dart';
 import 'models/user_data.dart';
 import 'api/auth_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dart'; // NEW IMPORT
+import 'package:flutter_codelab/admin_teacher/widgets/class/admin_create_class_page.dart';
+import 'package:flutter_codelab/pages/class_page.dart' show classPageGlobalKey;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,7 +58,6 @@ class MainApp extends StatelessWidget {
       darkTheme: theme.dark(),
       themeMode: ThemeMode.system,
       home: homeWidget, // Use the determined home widget
-      
     );
   }
 }
@@ -148,6 +149,24 @@ class _FeedState extends State<Feed> {
     }
   }
 
+  Future<void> _showCreateClassDialog() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CreateClassScreen()),
+    );
+
+    // If class was created successfully, reload the class list
+    if (result == true) {
+      // Use GlobalKey to access ClassPage's reload method (similar to feedback callback)
+      classPageGlobalKey.currentState?.reloadClassList();
+      _showSnackBar(
+        context,
+        'Class created successfully!',
+        Theme.of(context).colorScheme.primary,
+      );
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -160,10 +179,10 @@ class _FeedState extends State<Feed> {
     switch (selectedIndex) {
       case 0: // This is the index for 'UserPage' (Index 0)
         // CHECK if the current user is a Student OR a Teacher
-        if (widget.currentUser.isStudent || widget.currentUser.isTeacher) { 
+        if (widget.currentUser.isStudent || widget.currentUser.isTeacher) {
           _showSnackBar(
             context,
-            'You do not have permission to create user accounts.', 
+            'You do not have permission to create user accounts.',
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -174,7 +193,7 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-        
+
       case 1:
         showCreateGamePage(
           context: context,
@@ -183,7 +202,7 @@ class _FeedState extends State<Feed> {
               widget.currentUser.roleName, // <-- pass the current user role
         );
       case 2:
-       if (widget.currentUser.isStudent) {
+        if (widget.currentUser.isStudent) {
           // 2. BLOCK: Show error message
           _showSnackBar(
             context,
@@ -192,14 +211,21 @@ class _FeedState extends State<Feed> {
           );
         } else {
           // 3. ALLOW: Open dialog if Admin
-          showCreateNotesDialog(
-            context: context,
-            showSnackBar: _showSnackBar,
-          );
+          showCreateNotesDialog(context: context, showSnackBar: _showSnackBar);
         }
         break;
 
-        
+      case 3: // This is the index for 'ClassPage'
+        if (widget.currentUser.isAdmin) {
+          _showCreateClassDialog();
+        } else {
+          _showSnackBar(
+            context,
+            'You do not have access to this function',
+            Theme.of(context).colorScheme.error,
+          );
+        }
+        break;
 
       case 4: // This is the index for 'AchievementPage'
         if (widget.currentUser.isStudent) {
@@ -233,10 +259,11 @@ class _FeedState extends State<Feed> {
     final List<Widget> pages = [
       const UserPage(), // Index 0
       GamePage(userRole: widget.currentUser.roleName), // Index 1
-      NotePage(
+      NotePage(currentUser: widget.currentUser),
+      ClassPage(
+        key: classPageGlobalKey,
         currentUser: widget.currentUser,
-      ),
-      const ClassPage(), //utter Index 3
+      ), //utter Index 3
       AchievementPage(
         showSnackBar: _showSnackBar,
         currentUser: widget.currentUser,
