@@ -70,6 +70,21 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     try {
       final noteData = await _noteApi.getNote(widget.noteId);
       if (mounted) {
+        // VISIBILITY CHECK
+        final vis = noteData['visibility'];
+        bool isVisible = true;
+        if (vis is int) isVisible = vis == 1;
+        if (vis is bool) isVisible = vis;
+
+        if (!isVisible) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            Navigator.pop(context);
+            _showSnackBar('This note is private.', isError: true);
+          }
+          return;
+        }
+
         setState(() {
           _markdownContent = noteData['content'] ?? '';
           _currentTitle = noteData['title'] ?? widget.noteTitle;
