@@ -248,6 +248,7 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
         return true;
       },
       child: Scaffold(
+        backgroundColor: colorScheme.surfaceContainerLow,
         body: FutureBuilder<List<NoteBrief>>(
           future: _noteFuture,
           builder: (context, snapshot) {
@@ -389,10 +390,12 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            "$count Results",
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+          // Match the height of IconButton (40) from SelectionHeader
+          SizedBox(
+            height: 40,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text("$count Results", style: theme.textTheme.titleMedium),
             ),
           ),
         ],
@@ -529,10 +532,7 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
         topicColor = brandColors?.php ?? Colors.indigo;
         topicIcon = Icons.php;
         break;
-      case 'backend':
-        topicColor = brandColors?.backend ?? Colors.purple;
-        topicIcon = Icons.storage;
-        break;
+
       default:
         topicColor = brandColors?.other ?? Colors.grey;
         topicIcon = Icons.folder_open;
