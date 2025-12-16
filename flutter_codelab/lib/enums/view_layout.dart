@@ -1,1 +1,0 @@
-enum ViewLayout { list, grid }
