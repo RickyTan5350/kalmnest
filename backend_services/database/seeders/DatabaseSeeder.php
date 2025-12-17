@@ -20,8 +20,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             LevelTypeSeeder::class,
             LevelSeeder::class,
-            AchievementSeeder::class,
             TopicSeeder::class,
+            AchievementSeeder::class,
             NotesSeeder::class,
             AchievementUserSeeder::class
         ]);
