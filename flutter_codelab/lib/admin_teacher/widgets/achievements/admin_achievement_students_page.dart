@@ -122,95 +122,136 @@ class _AdminAchievementStudentsPageState
       );
     }
 
+    // Group students by Class Name
+    final Map<String, List<Map<String, dynamic>>> groupedStudents = {};
+
+    for (var student in _students) {
+      final className = student['class_name'] as String? ?? 'Other / No Class';
+      if (!groupedStudents.containsKey(className)) {
+        groupedStudents[className] = [];
+      }
+      groupedStudents[className]!.add(student);
+    }
+
+    // Sort Class Names (Optional: "Other" at the end?)
+    final sortedKeys = groupedStudents.keys.toList()..sort();
+
     return ListView.builder(
       padding: const EdgeInsets.all(8.0),
-      itemCount: _students.length,
-      itemBuilder: (context, index) {
-        final student = _students[index];
-        final name = student['name'] ?? 'Unknown';
-        final email = student['email'] ?? 'No Email';
-        final userId = student['user_id'];
-        final unlockedAt = student['unlocked_at'];
+      itemCount: sortedKeys.length,
+      itemBuilder: (context, sectionIndex) {
+        final className = sortedKeys[sectionIndex];
+        final studentsInClass = groupedStudents[className]!;
 
-        return Container(
-          child: Card(
-            margin: const EdgeInsets.symmetric(vertical: 4.0),
-            elevation: 1.0,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                width: 1.0,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Section Header
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 8.0,
+                horizontal: 4.0,
               ),
-              borderRadius: BorderRadius.circular(12.0),
+              child: Text(
+                className,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
             ),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                foregroundColor: Theme.of(
-                  context,
-                ).colorScheme.onPrimaryContainer,
-                child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
-              ),
-              title: Text(
-                name,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-              subtitle: Text(email),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Unlocked',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+            // List of Students in this Class
+            ...studentsInClass.map((student) {
+              final name = student['name'] ?? 'Unknown';
+              final email = student['email'] ?? 'No Email';
+              final userId = student['user_id'];
+              final unlockedAt = student['unlocked_at'];
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 4.0),
+                elevation: 1.0,
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withOpacity(0.3),
+                    width: 1.0,
                   ),
-                  Text(
-                    _formatDate(unlockedAt),
-                    style: Theme.of(context).textTheme.bodySmall,
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
+                    foregroundColor: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer,
+                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
                   ),
-                ],
-              ),
-              onTap: () {
-                if (userId != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserDetailPage(
-                        userId: userId,
-                        userName: name,
-                        breadcrumbs: [
-                          BreadcrumbItem(
-                            label: 'Achievements',
-                            onTap: () => Navigator.of(
-                              context,
-                            ).popUntil((route) => route.isFirst),
-                          ),
-                          BreadcrumbItem(
-                            label: widget.achievementName,
-                            // Pop 2 times: UserDetail -> Students -> Detail
-                            onTap: () {
-                              Navigator.of(context).pop(); // pop UserDetail
-                              Navigator.of(context).pop(); // pop Students
-                            },
-                          ),
-                          BreadcrumbItem(
-                            label: 'Students',
-                            // Pop 1 time: UserDetail -> Students
-                            onTap: () => Navigator.of(context).pop(),
-                          ),
-                          BreadcrumbItem(label: name),
-                        ],
+                  title: Text(
+                    name,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Text(email),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Unlocked',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
+                      Text(
+                        _formatDate(unlockedAt),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    if (userId != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserDetailPage(
+                            userId: userId,
+                            userName: name,
+                            breadcrumbs: [
+                              BreadcrumbItem(
+                                label: 'Achievements',
+                                onTap: () => Navigator.of(
+                                  context,
+                                ).popUntil((route) => route.isFirst),
+                              ),
+                              BreadcrumbItem(
+                                label: widget.achievementName,
+                                // Pop 2 times: UserDetail -> Students -> Detail
+                                onTap: () {
+                                  Navigator.of(context).pop(); // pop UserDetail
+                                  Navigator.of(context).pop(); // pop Students
+                                },
+                              ),
+                              BreadcrumbItem(
+                                label: 'Students',
+                                // Pop 1 time: UserDetail -> Students
+                                onTap: () => Navigator.of(context).pop(),
+                              ),
+                              BreadcrumbItem(label: name),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              );
+            }),
+            const SizedBox(height: 12.0), // Spacing after group
+          ],
         );
       },
     );

@@ -24,7 +24,8 @@ class DatabaseSeeder extends Seeder
             AchievementSeeder::class,
             TopicSeeder::class,
             NotesSeeder::class,
-            AchievementUserSeeder::class
+            AchievementUserSeeder::class,
+            TeacherProgressVerificationSeeder::class,
         ]);
     }
 }
