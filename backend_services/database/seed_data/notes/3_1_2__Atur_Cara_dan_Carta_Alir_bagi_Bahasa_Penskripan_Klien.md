@@ -12,7 +12,7 @@ Terdapat dua jenis isihan utama yang dibincangkan iaitu isihan buih (*bubble sor
     * Tukar kedudukan jika perlu (contoh: unsur pertama > unsur kedua untuk turutan menaik).
 * **Kegunaan:** Sesuai untuk tujuan pembelajaran atau apabila bilangan unsur adalah kecil.
 
-![BubbleSort_Avg_case.gif]("C:\notef5bab3\3.1\3.1.2\3.1.2 pic\BubbleSort_Avg_case.gif")
+![BubbleSort_Avg_case.gif](https://kalmnest.test/storage/uploads/1765931714_BubbleSort_Avg_case.gif)
 
 ```
 <html>
@@ -44,7 +44,7 @@ Terdapat dua jenis isihan utama yang dibincangkan iaitu isihan buih (*bubble sor
     * Tukar kedudukan jika turutan salah.
 * **Kegunaan:** Sesuai digunakan sekiranya bilangan unsur adalah kecil (contoh: menyusun pelajar mengikut ketinggian).
 
-![SelectionSort_Avg_case.gif]("C:\notef5bab3\3.1\3.1.2\3.1.2 pic\SelectionSort_Avg_case.gif")
+![SelectionSort_Avg_case.gif](https://kalmnest.test/storage/uploads/1765931714_SelectionSort_Avg_case.gif)
 ```
 <html>
 <body>
@@ -83,7 +83,7 @@ Terdapat dua jenis isihan utama yang dibincangkan iaitu isihan buih (*bubble sor
     3. Adakah unsur tengah **lebih besar** daripada unsur dicari? (Pergi ke sebelah kiri)
 
 
-![binary search.gif](""C:\notef5bab3\3.1\3.1.2\3.1.2 pic\binary search.gif"")
+![binary search.gif](https://kalmnest.test/storage/uploads/1765931714_binary%20search.gif)
 ```
 <html>
 <body>
@@ -220,7 +220,7 @@ Terdapat dua jenis isihan utama yang dibincangkan iaitu isihan buih (*bubble sor
     * **Dequeue:** Membuang data lama (terawal) dalam queue.
 
 
-![queue.gif](""C:\notef5bab3\3.1\3.1.2\3.1.2 pic\queue.gif"")
+![queue.gif](https://kalmnest.test/storage/uploads/1765931714_queue.gif)
 
 ### Implementasi dalam JavaScript
 Menggunakan fungsi tatasusunan (array):
