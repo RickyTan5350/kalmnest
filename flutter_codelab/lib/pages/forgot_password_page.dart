@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/auth_api.dart'; // Ensure correct import
-import 'package:flutter_codelab/pages/reset_password_page.dart'; // Will create next
+import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/pages/reset_password_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -24,9 +24,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       await _authApi.forgotPassword(_emailController.text.trim());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reset code sent! Check your email.')),
+          const SnackBar(
+            content: Text('Reset code sent! Check your email.'),
+            backgroundColor: Colors.green,
+          ),
         );
-        // Navigate to Reset Password Page
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -38,7 +40,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -48,44 +53,128 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Forgot Password')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Enter your email address to receive a password reset code.',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email),
-                  border: OutlineInputBorder(),
+      appBar: AppBar(
+        title: const Text('Account Recovery'),
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Card(
+              elevation:
+                  4.0, // Match achievement card elevation (slightly higher for focus)
+              shape: RoundedRectangleBorder(
+                side: BorderSide(
+                  color: colorScheme.outline.withOpacity(0.3),
+                  width: 1.0,
                 ),
-                validator: (value) => (value == null || !value.contains('@'))
-                    ? 'Valid email required'
-                    : null,
+                borderRadius: BorderRadius.circular(16.0), // Rounded corners
               ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _isLoading ? null : _submit,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Send Reset Code'),
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // --- HEADER ICON ---
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.lock_reset,
+                            size: 48,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      Text(
+                        'Forgot Password?',
+                        style: textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Enter your email address to receive a 6-digit verification code.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+
+                      // --- INPUT FIELD ---
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: 'Email Address',
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.outline.withOpacity(0.5),
+                            ),
+                          ),
+                        ),
+                        validator: (value) =>
+                            (value == null || !value.contains('@'))
+                            ? 'Valid email required'
+                            : null,
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- BUTTON ---
+                      FilledButton(
+                        onPressed: _isLoading ? null : _submit,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: colorScheme.onPrimary,
+                                ),
+                              )
+                            : const Text(
+                                'Send Reset Code',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
+            ),
           ),
         ),
       ),
