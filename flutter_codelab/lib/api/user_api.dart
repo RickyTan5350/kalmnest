@@ -3,6 +3,7 @@ import 'package:flutter_codelab/models/user_data.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:http_parser/http_parser.dart';
 
 class UserApi {
   // Existing base URL for single user operations
@@ -229,6 +230,63 @@ class UserApi {
       }
     } catch (e) {
       throw Exception('Network Error: $e');
+    }
+  }
+
+  Future<void> importUsers({
+    required String fileName,
+    String? filePath,
+    List<int>? fileBytes,
+  }) async {
+    final token = await AuthApi.getToken();
+    final url = Uri.parse('$_listUrl/import');
+
+    var request = http.MultipartRequest('POST', url)
+      ..headers.addAll({
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
+
+    // Attach the Excel file
+    if (fileBytes != null) {
+      // WEB: Use fromBytes
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file', // MUST match the 'file' key in Laravel validation
+          fileBytes,
+          filename: fileName,
+          contentType: MediaType(
+            'application',
+            'vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ),
+        ),
+      );
+    } else if (filePath != null) {
+      // MOBILE/DESKTOP: Use fromPath
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          filename: fileName,
+          contentType: MediaType(
+            'application',
+            'vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ),
+        ),
+      );
+    } else {
+      throw Exception("No file data provided for import.");
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      String msg = 'Failed to import user list.';
+      try {
+        msg = jsonDecode(response.body)['message'] ?? msg;
+      } catch (_) {}
+      throw Exception(msg);
     }
   }
 }

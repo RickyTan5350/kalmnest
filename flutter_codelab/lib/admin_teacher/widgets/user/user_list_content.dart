@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_codelab/api/user_api.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'user_detail_page.dart';
@@ -62,6 +65,52 @@ class _UserListContentState extends State<UserListContent> {
     }
   }
 
+  Future<void> _importUsers() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+      );
+
+      if (result != null) {
+        setState(() {
+          _isLoading = true;
+          _errorMessage = null;
+        });
+
+        Uint8List? fileBytes = result.files.single.bytes;
+        String? filePath = result.files.single.path;
+        String fileName = result.files.single.name;
+
+        await _userApi.importUsers(
+          fileName: fileName,
+          fileBytes: fileBytes,
+          filePath: filePath,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Users imported successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _fetchUsers(); // Refresh the list
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Import failed: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -112,6 +161,11 @@ class _UserListContentState extends State<UserListContent> {
                 icon: const Icon(Icons.refresh),
                 onPressed: _fetchUsers,
                 tooltip: 'Refresh',
+              ),
+              IconButton(
+                icon: const Icon(Icons.upload_file),
+                onPressed: _importUsers,
+                tooltip: 'Import Users (Excel)',
               ),
               IconButton(
                 icon: Icon(Icons.arrow_forward, color: colorScheme.primary),

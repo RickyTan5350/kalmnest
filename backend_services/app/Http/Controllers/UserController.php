@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\DeleteUserRequest;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\UsersImport;
 class UserController extends Controller
 {
     /**
@@ -293,5 +295,43 @@ public function destroy(User $user, DeleteUserRequest $request)
         ], 200);
     }
 
-    
+
+    public function import(Request $request)
+    {
+        try {
+            $request->validate([
+                'file' => 'required|file|mimes:xlsx,xls,csv',
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+        }
+        
+        // Ensure the file exists
+        if (!$request->hasFile('file')) {
+            return response()->json(['message' => 'No file uploaded'], 400);
+        }
+
+        // Perform the import
+        try {
+            Excel::import(new UsersImport, $request->file('file'));
+            
+            return response()->json([
+                'message' => 'User list imported successfully.'
+            ], 200);
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+             $failures = $e->failures();
+             $errors = [];
+             foreach ($failures as $failure) {
+                 $errors[] = 'Row ' . $failure->row() . ': ' . implode(', ', $failure->errors());
+             }
+             return response()->json(['message' => 'Import Validation Failed', 'errors' => $errors], 422);
+        } catch (\Exception $e) {
+            // Log the detailed error
+            \Illuminate\Support\Facades\Log::error("User Import Failed: " . $e->getMessage());
+            return response()->json([
+                'message' => 'File import failed. Please check the file format and structure.',
+            ], 500);
+        }
+    }
 }

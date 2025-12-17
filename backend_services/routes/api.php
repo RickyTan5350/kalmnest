@@ -68,6 +68,7 @@ Route::prefix('users')->group(function () {
         Route::put('/{user}', [UserController::class, 'update']); 
         // Delete account (DELETE /api/users/{user})
         Route::delete('/{user}', [UserController::class, 'destroy']); 
+        Route::post('/import', [UserController::class, 'import']);
     });
     // --- Current Logged-in User ---
     Route::get('/user', fn(Request $request) => $request->user());
