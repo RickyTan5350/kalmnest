@@ -109,6 +109,16 @@ class NotesSeeder extends Seeder
 
         // 4. CREATE NOTE RECORD IN DB
         $title = pathinfo($filename, PATHINFO_FILENAME);
+
+        // Check if note already exists to prevent duplicates
+        $existingNote = Notes::where('title', $title)
+            ->where('topic_id', $topicId)
+            ->first();
+
+        if ($existingNote) {
+            $this->command->warn("   -> Skipped: $title (Already exists)");
+            return;
+        }
         
         Notes::create([
             'title' => $title,
