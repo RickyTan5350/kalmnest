@@ -7,134 +7,117 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Models\Notes; 
+use App\Models\Notes;
 use App\Models\File as FileModel;
 
 class NotesSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        // 1. Setup: Get Admin ID and Topics
-        // Adjust 'admin@example.com' to your actual admin email if needed
-        $adminId = DB::table('users')->where('email', 'admin@example.com')->value('user_id') 
-                   ?? DB::table('users')->value('user_id'); // Fallback to first user
+        // 1. Get Admin ID (Query by Email)
+        // We fetch the user_id for 'admin@example.com' to assign as the creator
+        $adminUserId = DB::table('users')
+            ->where('email', 'admin@example.com')
+            ->value('user_id');
 
-        $topics = DB::table('topics')->pluck('topic_id', 'topic_name'); // e.g. ['HTML' => 'uuid', 'CSS' => 'uuid']
+        // Fallback safety: If admin doesn't exist, default to 1
+        if (!$adminUserId) {
+            $this->command->warn("User 'admin@example.com' not found. Defaulting created_by to 1.");
+            $adminUserId = 1;
+        }
 
-        if (!$adminId || $topics->isEmpty()) {
-            $this->command->warn("SKIPPING: Admin user or Topics not found. Did you run 'php artisan db:seed' (main seeder) first?");
+        // 2. Define Source Path (Seed Data)
+        $seedPath = database_path('seed_data/notes');
+
+        if (!File::exists($seedPath)) {
+            $this->command->error("Seed path not found: $seedPath");
             return;
         }
 
-        // 2. Define Source Path
-        $baseSeedPath = database_path('seed_data/notes');
-        $this->command->info("🚀 Starting Import from: $baseSeedPath");
+        // 3. Define Destination Path (Public Storage)
+        $storageFolder = 'notes'; 
+        Storage::disk('public')->makeDirectory($storageFolder);
 
-        // 3. Loop through each Topic Folder (HTML, CSS, JS, PHP)
-        foreach ($topics as $topicName => $topicId) {
-            $topicFolderPath = "$baseSeedPath/$topicName";
+        // Get all Topic folders (HTML, CSS, etc.)
+        $topicDirectories = File::directories($seedPath);
 
-            if (File::exists($topicFolderPath)) {
-                $this->command->info("   📂 Scanning Topic: $topicName");
-                
-                // Get all .md files in this folder
-                $files = File::files($topicFolderPath);
+        foreach ($topicDirectories as $topicDir) {
+            $topicName = basename($topicDir);
+            $this->command->info("Processing Topic: $topicName");
 
-                foreach ($files as $file) {
-                    if ($file->getExtension() === 'md') {
-                        $this->processAndSeedNote($file, $topicId, $adminId, $topicFolderPath);
-                    }
-                }
+            // Query or Create Topic using Eloquent to handle UUIDs automatically
+            $topic = \App\Models\Topic::firstOrCreate(['topic_name' => $topicName]);
+            $topicId = $topic->topic_id;
+
+            // Scan for Markdown files in this topic
+            $files = File::files($topicDir);
+
+            foreach ($files as $file) {
+                if ($file->getExtension() !== 'md') continue;
+
+                // Pass the $adminUserId to the processing function
+                $this->processNoteFile($file, $topicId, $topicName, $storageFolder, $adminUserId);
             }
         }
     }
 
     /**
-     * Reads the MD file, finds local images, uploads them, updates links, and saves to DB.
+     * Process a single Markdown file: Move images, Rewrite links, Save to DB.
      */
-    private function processAndSeedNote($file, $topicId, $userId, $currentFolder)
+    private function processNoteFile($file, $topicId, $topicName, $storageFolder, $adminUserId)
     {
         $filename = $file->getFilename();
-        $title = pathinfo($filename, PATHINFO_FILENAME); // e.g., "3.1.1"
         $originalContent = File::get($file->getPathname());
+        $sourceDir = $file->getPath(); 
         
-        $attachmentIds = [];
-
-        // ---------------------------------------------------------
-        // MAGIC STEP: Find and Replace Images
-        // Regex finds: ![Alt Text](Link)
-        // ---------------------------------------------------------
-        $processedContent = preg_replace_callback('/!\[(.*?)\]\((.*?)\)/', function ($matches) use ($currentFolder, &$attachmentIds) {
+        // 1. IMAGE PROCESSING LOGIC
+        $processedContent = preg_replace_callback('/!\[(.*?)\]\((.*?)\)/', function ($matches) use ($sourceDir, $storageFolder) {
             $altText = $matches[1];
-            $originalLink = trim($matches[2], ' "\''); // Remove quotes if user added them by mistake
+            $linkPath = $matches[2];
 
-            // We only care if the link points to the local "pictures" folder
-            // e.g. "pictures/my-image.png"
-            if (Str::startsWith($originalLink, 'pictures/')) {
-                
-                $imageFilename = basename($originalLink);
-                // Look for the image in: .../notes/HTML/pictures/image.png
-                $localImagePath = $currentFolder . '/pictures/' . $imageFilename;
-
-                if (File::exists($localImagePath)) {
-                    // 1. Generate a unique name for Storage
-                    $newStorageName = 'uploads/' . time() . '_' . Str::random(5) . '_' . $imageFilename;
-                    
-                    // 2. Copy image from Seed folder to Public Storage
-                    Storage::disk('public')->put($newStorageName, File::get($localImagePath));
-
-                    // 3. Create a File Record in Database
-                    $fileRecord = FileModel::create([
-                        'file_path' => $newStorageName,
-                        'type' => pathinfo($imageFilename, PATHINFO_EXTENSION),
-                    ]);
-                    $attachmentIds[] = $fileRecord->file_id;
-
-                    // 4. Generate the PUBLIC URL (http://127.0.0.1:8000/storage/uploads/...)
-                    // This relies on your APP_URL in .env being correct!
-                    $publicUrl = url(Storage::url($newStorageName));
-
-                    // 5. Replace the link in the Markdown
-                    return "![$altText]($publicUrl)";
-                } else {
-                    $this->command->warn("      ⚠️  Image missing: $originalLink");
-                }
-            }
+            $linkPath = trim($linkPath, '"\'');
+            $linkPath = str_replace('\\', '/', $linkPath);
+            $imageName = basename($linkPath);
             
-            // If it's an external link or not found, leave it alone
-            return $matches[0];
+            $sourceImagePath = $sourceDir . '/pictures/' . $imageName;
 
+            if (File::exists($sourceImagePath)) {
+                $newFilename = time() . '_' . pathinfo($imageName, PATHINFO_FILENAME) . '.' . pathinfo($imageName, PATHINFO_EXTENSION);
+                
+                Storage::disk('public')->putFileAs($storageFolder, new \Illuminate\Http\File($sourceImagePath), $newFilename);
+
+                $encodedFilename = rawurlencode($newFilename);
+                $publicUrl = "https://kalmnest.test/storage/$storageFolder/$encodedFilename";
+                return "![$altText]($publicUrl)";
+            } else {
+                return $matches[0];
+            }
         }, $originalContent);
 
+        // 2. SAVE THE MARKDOWN FILE TO STORAGE
+        $mdStorageName = Str::uuid7() . '.md';
+        Storage::disk('public')->put("$storageFolder/$mdStorageName", $processedContent);
 
-        // ---------------------------------------------------------
-        // SAVE TO DATABASE
-        // ---------------------------------------------------------
-        
-        // 1. Save the processed Markdown file (with new links) to Storage
-        $mdStoragePath = 'notes/' . Str::uuid() . '.md';
-        Storage::disk('public')->put($mdStoragePath, $processedContent);
-
-        // 2. Create File Record for the MD file itself
-        $mainFileRecord = FileModel::create([
-            'file_path' => $mdStoragePath,
-            'type' => 'md',
+        // 3. CREATE FILE RECORD IN DB
+        $fileRecord = FileModel::create([
+            'file_path' => "$storageFolder/$mdStorageName",
+            'type' => 'md'
         ]);
 
-        // 3. Create the Note Record
-        $note = Notes::create([
+        // 4. CREATE NOTE RECORD IN DB
+        $title = pathinfo($filename, PATHINFO_FILENAME);
+        
+        Notes::create([
             'title' => $title,
             'topic_id' => $topicId,
-            'file_id' => $mainFileRecord->file_id, // Link to the MD file
-            'created_by' => $userId,
+            'file_id' => $fileRecord->file_id,
             'visibility' => true,
+            'created_by' => $adminUserId, // Uses the ID queried by email
         ]);
 
-        // 4. Attach the images to the note (Pivot table)
-        if (!empty($attachmentIds)) {
-            $note->attachments()->attach($attachmentIds);
-        }
-
-        $this->command->info("      ✅ Imported: $title (with " . count($attachmentIds) . " images)");
+        $this->command->info("   -> Imported: $title (Created by User ID: $adminUserId)");
     }
 }
