@@ -116,4 +116,60 @@ class AuthApi {
     final localStorage = LocalAchievementStorage();
     await localStorage.clearLocalCache(userId);
   }
+
+  // 5. FORGOT PASSWORD
+  Future<void> forgotPassword(String email) async {
+    final url = '$_authApiUrl/forgot-password';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json; charset=UTF-8'},
+      body: jsonEncode({'email': email}),
+    );
+    if (response.statusCode != 200) {
+      // Decode error message if possible
+      String msg = 'Failed to send reset code';
+      try {
+        msg = jsonDecode(response.body)['message'];
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  // 6. RESET PASSWORD
+  Future<void> resetPassword(String email, String code, String password) async {
+    final url = '$_authApiUrl/reset-password';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Accept': 'application/json', // Crucial for Laravel validation errors
+      },
+      body: jsonEncode({
+        'email': email,
+        'code': code,
+        'password': password,
+        'password_confirmation': password,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      String msg = 'Failed to reset password';
+      try {
+        final body = jsonDecode(response.body);
+        // Handle standard Laravel Error format
+        if (body['message'] != null) {
+          msg = body['message'];
+        }
+        // Handle Validation Errors key
+        if (body['errors'] != null) {
+          final errors = body['errors'] as Map<String, dynamic>;
+          if (errors.isNotEmpty) {
+            // Just grab the first error from the first field
+            msg = errors.values.first[0];
+          }
+        }
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
 }

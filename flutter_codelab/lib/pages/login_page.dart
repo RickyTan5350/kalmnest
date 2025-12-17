@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/models/user_data.dart'; // Using the UserDetails class from here
 import 'package:flutter_codelab/main.dart'; // Import the Feed structure
+import 'package:flutter_codelab/pages/forgot_password_page.dart';
 
 // Define a new page for the login screen
 class LoginPage extends StatefulWidget {
@@ -203,13 +204,17 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 20),
 
-                  // 4. Forgot Password/Sign Up Link (Material 3: TextButton)
+                  // 4. Forgot Password Link
                   TextButton(
                     onPressed: () {
-                      // TODO: Implement navigation to registration page
-                      print('Navigate to Registration');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordPage(),
+                        ),
+                      );
                     },
-                    child: const Text('Don\'t have an account? Sign Up'),
+                    child: const Text('Forgot Password?'),
                   ),
                 ],
               ),
