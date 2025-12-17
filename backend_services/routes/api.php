@@ -18,6 +18,10 @@ use App\Http\Requests\DeleteUserRequest;
 Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/user', [UserController::class, 'store']); // Registration
 
+// Password Reset
+Route::post('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'sendResetCode']);
+Route::post('/reset-password', [\App\Http\Controllers\PasswordResetController::class, 'resetPassword']);
+
 // --- 1. SPECIFIC ROUTES (MUST BE AT THE TOP) ---
 // These are public so your Flutter app can access them without a token.
 
