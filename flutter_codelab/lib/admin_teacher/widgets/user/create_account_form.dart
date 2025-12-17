@@ -6,25 +6,26 @@ import 'package:flutter_codelab/models/user_data.dart';
 void showCreateUserAccountDialog({
   required BuildContext context,
   required void Function(BuildContext context, String message, Color color)
-      showSnackBar,
+  showSnackBar,
 }) {
   showDialog(
     context: context,
     builder: (BuildContext dialogContext) {
       // Use AlertDialog for a floating modal design, matching the achievement dialog
-      return CreateUserAccountDialog(showSnackBar: showSnackBar); 
+      return CreateUserAccountDialog(showSnackBar: showSnackBar);
     },
   );
 }
 
 class CreateUserAccountDialog extends StatefulWidget {
   final void Function(BuildContext context, String message, Color color)
-      showSnackBar;
+  showSnackBar;
 
   const CreateUserAccountDialog({super.key, required this.showSnackBar});
 
   @override
-  State<CreateUserAccountDialog> createState() => _CreateUserAccountDialogState();
+  State<CreateUserAccountDialog> createState() =>
+      _CreateUserAccountDialogState();
 }
 
 class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
@@ -37,7 +38,8 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
   final TextEditingController _phoneNoController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _passwordConfirmationController = TextEditingController(); // <--- ADDED: Controller for password confirmation
+  final TextEditingController _passwordConfirmationController =
+      TextEditingController(); // <--- ADDED: Controller for password confirmation
 
   // Variables
   String? _selectedGender;
@@ -66,19 +68,28 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
 
     // Additionally check if password and confirmation match if they are both filled
     if (_passwordController.text != _passwordConfirmationController.text) {
-        widget.showSnackBar(context, 'Error: Password and confirmation must match.', Colors.red);
-        return;
+      widget.showSnackBar(
+        context,
+        'Error: Password and confirmation must match.',
+        Colors.red,
+      );
+      return;
     }
 
-
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
 
     // --- UPDATED: Pass passwordConfirmation and roleName ---
     final data = UserData(
       email: _emailController.text,
       name: _nameController.text,
-      phone_no: _phoneNoController.text.isNotEmpty ? _phoneNoController.text : null,
-      address: _addressController.text.isNotEmpty ? _addressController.text : null,
+      phone_no: _phoneNoController.text.isNotEmpty
+          ? _phoneNoController.text
+          : null,
+      address: _addressController.text.isNotEmpty
+          ? _addressController.text
+          : null,
       gender: _selectedGender,
       password: _passwordController.text,
       passwordConfirmation: _passwordConfirmationController.text, // <--- ADDED
@@ -90,30 +101,56 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
       await _userApi.createUser(data);
 
       if (mounted) {
-        widget.showSnackBar(context, 'User account successfully created!', Colors.green);
+        widget.showSnackBar(
+          context,
+          'User account successfully created!',
+          Colors.green,
+        );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        final errorColor = Theme.of(context).colorScheme.error; // Standardize color
+        final errorColor = Theme.of(
+          context,
+        ).colorScheme.error; // Standardize color
         String errorString = e.toString();
 
-        if (errorString.startsWith('Exception: ${UserApi.validationErrorCode}:')) {
+        if (errorString.startsWith(
+          'Exception: ${UserApi.validationErrorCode}:',
+        )) {
           // Extracts the formatted validation message from the 422 error body
-          final message = errorString.substring('Exception: ${UserApi.validationErrorCode}:'.length);
-          widget.showSnackBar(context, 'Validation Error:\n$message', errorColor); 
+          final message = errorString.substring(
+            'Exception: ${UserApi.validationErrorCode}:'.length,
+          );
+          widget.showSnackBar(
+            context,
+            'Validation Error:\n$message',
+            errorColor,
+          );
         } else if (errorString.startsWith('Exception: Network Error:')) {
           // Handles connection refused, incorrect URL, etc.
-          final message = errorString.substring('Exception: Network Error:'.length);
-          widget.showSnackBar(context, 'Network Error: Check API URL and server status.', errorColor); 
+          final message = errorString.substring(
+            'Exception: Network Error:'.length,
+          );
+          widget.showSnackBar(
+            context,
+            'Network Error: Check API URL and server status.',
+            errorColor,
+          );
         } else {
           // Generic or unexpected server error
-          widget.showSnackBar(context, 'An unknown error occurred: ${errorString.replaceAll('Exception: ', '')}', errorColor); 
+          widget.showSnackBar(
+            context,
+            'An unknown error occurred: ${errorString.replaceAll('Exception: ', '')}',
+            errorColor,
+          );
         }
       }
-    }finally {
+    } finally {
       if (mounted) {
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -161,7 +198,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
       contentPadding: const EdgeInsets.all(24.0),
       // Use SizedBox to constrain the width of the dialog, matching the achievement dialog
       content: SizedBox(
-        width: 360, 
+        width: 360,
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -183,11 +220,14 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _emailController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Email', icon: Icons.email, colorScheme: colorScheme,
+                    labelText: 'Email',
+                    icon: Icons.email,
+                    colorScheme: colorScheme,
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter an email';
+                    if (value == null || value.isEmpty)
+                      return 'Please enter an email';
                     return null;
                   },
                 ),
@@ -198,10 +238,13 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _nameController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Name', icon: Icons.person, colorScheme: colorScheme,
+                    labelText: 'Name',
+                    icon: Icons.person,
+                    colorScheme: colorScheme,
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter a name';
+                    if (value == null || value.isEmpty)
+                      return 'Please enter a name';
                     return null;
                   },
                 ),
@@ -212,39 +255,48 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Password', icon: Icons.lock, colorScheme: colorScheme,
+                    labelText: 'Password',
+                    icon: Icons.lock,
+                    colorScheme: colorScheme,
                   ),
                   obscureText: true,
                   validator: (value) {
-                    if (value == null || value.isEmpty || value.length < 8) return 'Password must be at least 8 characters';
+                    if (value == null || value.isEmpty || value.length < 8)
+                      return 'Password must be at least 8 characters';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // --- ADDED: Password Confirmation Field ---
                 TextFormField(
                   controller: _passwordConfirmationController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Confirm Password', icon: Icons.lock_open, colorScheme: colorScheme,
+                    labelText: 'Confirm Password',
+                    icon: Icons.lock_open,
+                    colorScheme: colorScheme,
                   ),
                   obscureText: true,
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please confirm your password';
-                    if (value != _passwordController.text) return 'Passwords do not match';
+                    if (value == null || value.isEmpty)
+                      return 'Please confirm your password';
+                    if (value != _passwordController.text)
+                      return 'Passwords do not match';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
                 // --- END ADDED ---
-                
+
                 // Phone Number
                 TextFormField(
                   controller: _phoneNoController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Phone No (Optional)', icon: Icons.phone, colorScheme: colorScheme,
+                    labelText: 'Phone No (Optional)',
+                    icon: Icons.phone,
+                    colorScheme: colorScheme,
                   ),
                   keyboardType: TextInputType.phone,
                 ),
@@ -255,7 +307,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _addressController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Address (Optional)', icon: Icons.location_on, colorScheme: colorScheme,
+                    labelText: 'Address (Optional)',
+                    icon: Icons.location_on,
+                    colorScheme: colorScheme,
                   ),
                   maxLines: 2,
                 ),
@@ -268,15 +322,34 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Gender (Optional)', icon: Icons.people, colorScheme: colorScheme,
+                    labelText: 'Gender (Optional)',
+                    icon: Icons.people,
+                    colorScheme: colorScheme,
                   ),
-                  items: _genders
-                      .map((value) => DropdownMenuItem(value: value, child: Text(value)))
-                      .toList(),
+                  items: _genders.map((value) {
+                    IconData icon;
+                    if (value.toLowerCase() == 'male') {
+                      icon = Icons.male;
+                    } else if (value.toLowerCase() == 'female') {
+                      icon = Icons.female;
+                    } else {
+                      icon = Icons.person_outline;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(icon, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Text(value),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (value) => setState(() => _selectedGender = value),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Role Dropdown
                 DropdownButtonFormField<String>(
                   initialValue: _selectedRole,
@@ -284,19 +357,44 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Role', icon: Icons.badge, colorScheme: colorScheme,
+                    labelText: 'Role',
+                    icon: Icons.badge,
+                    colorScheme: colorScheme,
                   ),
-                  items: _roles
-                      .map((value) => DropdownMenuItem(value: value, child: Text(value)))
-                      .toList(),
+                  items: _roles.map((value) {
+                    IconData icon;
+                    switch (value.toLowerCase()) {
+                      case 'admin':
+                        icon = Icons.admin_panel_settings;
+                        break;
+                      case 'teacher':
+                        icon = Icons.school;
+                        break;
+                      case 'student':
+                      default:
+                        icon = Icons.person;
+                        break;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(icon, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Text(value),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (value) => setState(() => _selectedRole = value),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please select a role';
+                    if (value == null || value.isEmpty)
+                      return 'Please select a role';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Account Status Toggle
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -305,7 +403,10 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     children: [
                       Text(
                         'Account Status:',
-                        style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontSize: 16,
+                        ),
                       ),
                       Switch(
                         value: _accountStatus,
@@ -339,7 +440,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     ElevatedButton(
                       onPressed: _isLoading ? null : _submitForm,
                       // The button style matches the one used in create_achievement_page.dart
-                      style: ElevatedButton.styleFrom( 
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: colorScheme.primary,
                         foregroundColor: colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
@@ -350,13 +451,15 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                           vertical: 12,
                         ),
                       ),
-                      child: _isLoading 
+                      child: _isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text('Create User'),
