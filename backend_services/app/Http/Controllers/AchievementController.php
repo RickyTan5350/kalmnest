@@ -150,30 +150,24 @@ class AchievementController extends Controller
 
         $query = DB::table('achievement_user')
             ->join('users', 'achievement_user.user_id', '=', 'users.user_id')
+            ->leftJoin('class_student', 'users.user_id', '=', 'class_student.student_id')
+            ->leftJoin('classes', 'class_student.class_id', '=', 'classes.class_id')
             ->where('achievement_user.achievement_id', $id)
             ->select(
                 'users.user_id',
                 'users.name',
                 'users.email',
-                'achievement_user.created_at as unlocked_at'
+                'achievement_user.created_at as unlocked_at',
+                'classes.class_name'
             )
+            ->orderBy('classes.class_name', 'desc') // Group by class first
             ->orderBy('achievement_user.created_at', 'desc');
 
         // Filter for Teachers
         if ($this->isTeacher()) {
             $teacherId = Auth::id();
-            $teacherStudentIds = DB::table('class_student')
-                ->join('classes', 'classes.class_id', '=', 'class_student.class_id')
-                ->where('classes.teacher_id', $teacherId)
-                ->pluck('class_student.student_id')
-                ->unique()
-                ->toArray();
-            
-            if (empty($teacherStudentIds)) {
-                return response()->json([]);
-            }
-
-            $query->whereIn('users.user_id', $teacherStudentIds);
+            // Only show students in classes taught by this teacher
+            $query->where('classes.teacher_id', $teacherId);
         }
 
         $students = $query->get();
