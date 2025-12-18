@@ -91,11 +91,17 @@ Route::prefix('users')->group(function () {
         Route::get('/{id}', [ClassController::class, 'show']); // Get class details
         Route::put('/{id}', [ClassController::class, 'update']); // Update class (admin only)
         Route::delete('/{id}', [ClassController::class, 'destroy']); // Delete class (admin only)
+        
+        // Quiz (Level) management for classes
+        Route::get('/{id}/quizzes', [ClassController::class, 'getQuizzes']); // Get quizzes for a class
+        Route::post('/{id}/quizzes', [ClassController::class, 'assignQuiz']); // Assign existing quiz to class
+        Route::delete('/{classId}/quizzes/{levelId}', [ClassController::class, 'removeQuiz']); // Remove quiz from class
     });
     
     // Class statistics
     Route::get('/classes-count', [ClassController::class, 'getCount']); // Get class count
     Route::get('/classes-stats', [ClassController::class, 'getStats']); // Get class stats
+    Route::get('/classes/{id}/quizzes/count', [ClassController::class, 'getQuizCount']); // Get quiz count for a class
 
     /*
     |--------------------------------------------------------------------------

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/quiz.dart';
 import 'package:flutter_codelab/student/widgets/class/student_class_statistics_section.dart';
 import 'package:flutter_codelab/student/widgets/class/student_preview_teacher_row.dart';
 import 'package:flutter_codelab/student/widgets/class/student_quiz_list_section.dart';
@@ -23,6 +22,7 @@ class ClassDetailPage extends StatefulWidget {
 class _ClassDetailPageState extends State<ClassDetailPage> {
   bool loading = true;
   Map<String, dynamic>? classData;
+  int _quizCount = 0;
 
   @override
   void initState() {
@@ -34,35 +34,15 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
     if (!mounted) return;
     setState(() => loading = true);
     final data = await ClassApi.fetchClassById(widget.classId);
+    final quizCount = await ClassApi.getClassQuizCount(widget.classId);
     if (mounted) {
       setState(() {
         classData = data;
+        _quizCount = quizCount;
         loading = false;
       });
     }
   }
-
-  // Sample data for demo
-  List<Quiz> get _quizzes => [
-    Quiz(
-      title: 'Derivatives and Integrals',
-      questions: 15,
-      assignedDate: DateTime(2025, 11, 20),
-      status: QuizStatus.published,
-    ),
-    Quiz(
-      title: 'Probability Theory Basics',
-      questions: 20,
-      assignedDate: DateTime(2025, 11, 18),
-      status: QuizStatus.published,
-    ),
-    Quiz(
-      title: 'Linear Algebra Review',
-      questions: 12,
-      assignedDate: DateTime(2025, 11, 25),
-      status: QuizStatus.draft,
-    ),
-  ];
 
   String formatDate(DateTime? date, {DateTime? fallback}) {
     final d = date ?? fallback ?? DateTime.now();
@@ -130,7 +110,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                               totalStudents: classData?['students'] != null
                                   ? (classData!['students'] as List).length
                                   : 0,
-                              totalQuizzes: 0,
+                              totalQuizzes: _quizCount,
                             ),
                             const SizedBox(height: 20),
 
@@ -190,8 +170,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
 
                             const SizedBox(height: 20),
                             QuizListSection(
-                              quizzes: _quizzes,
-                              roleName: widget.roleName, // pass role here
+                              roleName: widget.roleName,
                               classId: widget.classId,
                               className: classData?['class_name'] ?? 'No Name',
                               classDescription:
@@ -233,12 +212,16 @@ class _ClassHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.08),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: cs.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: cs.outlineVariant, width: 1),
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -255,14 +238,17 @@ class _ClassHeader extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -277,18 +263,23 @@ class _ClassHeader extends StatelessWidget {
                   children: [
                     Text(
                       'Created by ',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     Text(
                       createdBy,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'at ${formatDate(createdAt)}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -297,18 +288,23 @@ class _ClassHeader extends StatelessWidget {
                   children: [
                     Text(
                       'Updated by ',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     Text(
                       updatedBy,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'at ${formatDate(lastUpdatedAt)}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),

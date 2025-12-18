@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassModel;
 use App\Models\User;
+use App\Models\Level;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -491,6 +492,264 @@ class ClassController extends Controller
             'total_assigned_teachers' => $assignedTeachers,
             'total_enrolled_students' => $enrolledStudents,
         ]);
+    }
+
+    /**
+     * Get quiz count for a specific class
+     */
+    public function getQuizCount(string $id): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+        $class = ClassModel::find($id);
+        if (!$class) {
+            return response()->json([
+                'message' => 'Class not found'
+            ], 404);
+        }
+
+        // Access control: Verify user has permission to view this class's quizzes
+        if ($roleName === 'teacher') {
+            if ($class->teacher_id !== $user->user_id) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+        } elseif ($roleName === 'student') {
+            $isEnrolled = $class->students()->where('users.user_id', $user->user_id)->exists();
+            if (!$isEnrolled) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+        }
+
+        $quizCount = DB::table('class_levels')
+            ->where('class_id', $id)
+            ->count();
+
+        return response()->json([
+            'total_quizzes' => $quizCount
+        ]);
+    }
+
+    /**
+     * Get all quizzes (levels) assigned to a class
+     * Access Control:
+     * - Admin: Can see quizzes for any class
+     * - Teacher: Can only see quizzes for classes they teach
+     * - Student: Can only see quizzes for classes they're enrolled in
+     */
+    public function getQuizzes(string $id): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+        $class = ClassModel::find($id);
+        if (!$class) {
+            return response()->json([
+                'message' => 'Class not found'
+            ], 404);
+        }
+
+        // Access control: Verify user has permission to view this class's quizzes
+        if ($roleName === 'teacher') {
+            // Teacher can only see quizzes for classes they teach
+            if ($class->teacher_id !== $user->user_id) {
+                return response()->json([
+                    'message' => 'Unauthorized. You can only view quizzes for classes you teach.'
+                ], 403);
+            }
+        } elseif ($roleName === 'student') {
+            // Student can only see quizzes for classes they're enrolled in
+            $isEnrolled = $class->students()->where('users.user_id', $user->user_id)->exists();
+            if (!$isEnrolled) {
+                return response()->json([
+                    'message' => 'Unauthorized. You can only view quizzes for classes you are enrolled in.'
+                ], 403);
+            }
+        }
+        // Admin can see quizzes for any class (no check needed)
+
+        // Get levels assigned to this class via pivot table
+        $quizzes = DB::table('class_levels')
+            ->join('levels', 'class_levels.level_id', '=', 'levels.level_id')
+            ->leftJoin('level_types', 'levels.level_type_id', '=', 'level_types.level_type_id')
+            ->where('class_levels.class_id', $id)
+            ->select(
+                'levels.level_id',
+                'levels.level_name',
+                'levels.created_at',
+                'levels.updated_at',
+                'level_types.level_type_id',
+                'level_types.level_type_name'
+            )
+            ->orderBy('levels.created_at', 'desc')
+            ->get()
+            ->map(function ($quiz) {
+                return [
+                    'level_id' => $quiz->level_id,
+                    'level_name' => $quiz->level_name,
+                    'level_type' => $quiz->level_type_id ? [
+                        'level_type_id' => $quiz->level_type_id,
+                        'level_type_name' => $quiz->level_type_name,
+                    ] : null,
+                    'created_at' => $quiz->created_at,
+                    'updated_at' => $quiz->updated_at,
+                ];
+            });
+
+        return response()->json([
+            'data' => $quizzes
+        ]);
+    }
+
+    /**
+     * Assign a quiz (level) to a class
+     */
+    public function assignQuiz(Request $request, string $id): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+        // Only teachers and admins can assign quizzes
+        if ($roleName !== 'teacher' && $roleName !== 'admin') {
+            return response()->json([
+                'message' => 'Unauthorized. Only teachers and admins can assign quizzes.'
+            ], 403);
+        }
+
+        $class = ClassModel::find($id);
+        if (!$class) {
+            return response()->json([
+                'message' => 'Class not found'
+            ], 404);
+        }
+
+        // Check if teacher owns this class
+        if ($roleName === 'teacher' && $class->teacher_id !== $user->user_id) {
+            return response()->json([
+                'message' => 'Unauthorized. You can only assign quizzes to your own classes.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'level_id' => 'required|string|exists:levels,level_id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Check if already assigned
+        $exists = DB::table('class_levels')
+            ->where('class_id', $id)
+            ->where('level_id', $request->level_id)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'Quiz is already assigned to this class'
+            ], 422);
+        }
+
+        try {
+            DB::table('class_levels')->insert([
+                'class_level_id' => (string) Str::uuid(),
+                'class_id' => $id,
+                'level_id' => $request->level_id,
+                'is_private' => false, // Default to false (all quizzes are public)
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return response()->json([
+                'message' => 'Quiz assigned successfully'
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to assign quiz',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Remove a quiz (level) from a class
+     */
+    public function removeQuiz(string $classId, string $levelId): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+        // Only teachers and admins can remove quizzes
+        if ($roleName !== 'teacher' && $roleName !== 'admin') {
+            return response()->json([
+                'message' => 'Unauthorized. Only teachers and admins can remove quizzes.'
+            ], 403);
+        }
+
+        $class = ClassModel::find($classId);
+        if (!$class) {
+            return response()->json([
+                'message' => 'Class not found'
+            ], 404);
+        }
+
+        // Check if teacher owns this class
+        if ($roleName === 'teacher' && $class->teacher_id !== $user->user_id) {
+            return response()->json([
+                'message' => 'Unauthorized. You can only remove quizzes from your own classes.'
+            ], 403);
+        }
+
+        $deleted = DB::table('class_levels')
+            ->where('class_id', $classId)
+            ->where('level_id', $levelId)
+            ->delete();
+
+        if ($deleted) {
+            return response()->json([
+                'message' => 'Quiz removed successfully'
+            ]);
+        } else {
+            return response()->json([
+                'message' => 'Quiz not found in this class'
+            ], 404);
+        }
     }
 }
 

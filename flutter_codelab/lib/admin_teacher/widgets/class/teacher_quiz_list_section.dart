@@ -1,17 +1,17 @@
 // lib/widgets/quiz_list_section.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/quiz.dart';
+import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_quiz_page.dart';
+import 'package:intl/intl.dart';
 
-class QuizListSection extends StatelessWidget {
-  final List<Quiz> quizzes;
-  final String roleName; // add role
+class QuizListSection extends StatefulWidget {
+  final String roleName;
   final String classId;
   final String className;
   final String classDescription;
+
   const QuizListSection({
     Key? key,
-    required this.quizzes,
     required this.roleName,
     required this.classId,
     required this.className,
@@ -19,34 +19,60 @@ class QuizListSection extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    String formatDate(DateTime date) {
-      const months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-      return "${months[date.month - 1]} ${date.day}, ${date.year}";
-    }
+  State<QuizListSection> createState() => _QuizListSectionState();
+}
 
-    // Filter quizzes for student
-    final visibleQuizzes = roleName.toLowerCase() == 'student'
-        ? quizzes.where((q) => q.status == QuizStatus.published).toList()
-        : quizzes;
+class _QuizListSectionState extends State<QuizListSection> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _quizzes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchQuizzes();
+  }
+
+  Future<void> _fetchQuizzes() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+
+    try {
+      final quizzes = await ClassApi.getClassQuizzes(widget.classId);
+      if (!mounted) return;
+      setState(() {
+        _quizzes = quizzes;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      debugPrint('Error fetching quizzes: $e');
+    }
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return 'Unknown';
+    try {
+      final dateTime = DateTime.parse(date.toString());
+      return DateFormat('MMM d, yyyy').format(dateTime);
+    } catch (e) {
+      return 'Unknown';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: cs.outlineVariant, width: 1),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -59,14 +85,17 @@ class QuizListSection extends StatelessWidget {
                   children: [
                     Text(
                       'Quizzes',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Manage quizzes',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      '${_quizzes.length} quiz${_quizzes.length != 1 ? 'es' : ''} available',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -74,72 +103,165 @@ class QuizListSection extends StatelessWidget {
                   children: [
                     OutlinedButton(
                       onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => TeacherViewQuizPage(
-                              classId: classId,
-                              roleName: roleName,
-                            ),
-                          ),
-                        );
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) => TeacherViewQuizPage(
+                                  classId: widget.classId,
+                                  roleName: widget.roleName,
+                                ),
+                              ),
+                            )
+                            .then((_) {
+                              // Refresh quizzes when returning from quiz page
+                              _fetchQuizzes();
+                            });
                       },
                       child: const Text('View All Quizzes'),
                     ),
-                    if (roleName.toLowerCase() == 'teacher') ...[
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () => debugPrint('Create Quiz'),
-                        child: const Text('Create Quiz'),
-                      ),
-                    ],
                   ],
                 ),
               ],
             ),
             const SizedBox(height: 12),
 
-            // List quizzes
-            ...visibleQuizzes.map((q) {
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 6,
-                  horizontal: 4,
+            // Loading state
+            if (_loading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
                 ),
-                tileColor: Theme.of(context).colorScheme.surfaceVariant,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                title: Text(
-                  q.title,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                subtitle: Text(
-                  '${q.questions} questions • Assigned: ${formatDate(q.assignedDate)}',
-                ),
-                trailing: Chip(
-                  label: Text(
-                    roleName.toLowerCase() == 'teacher'
-                        ? (q.status == QuizStatus.published
-                              ? 'Published'
-                              : 'Draft')
-                        : 'Attempt',
+              )
+            // Empty state
+            else if (_quizzes.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.quiz_outlined,
+                        size: 48,
+                        color: cs.onSurfaceVariant.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No quizzes yet',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Create or assign quizzes to get started',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant.withOpacity(0.7),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                  backgroundColor: q.status == QuizStatus.published
-                      ? Colors.green.withOpacity(0.12)
-                      : Colors.grey.withOpacity(0.12),
                 ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => TeacherViewQuizPage(
-                        classId: classId,
-                        roleName: roleName,
+              )
+            // Quiz list (show first 3, or all if less than 3)
+            else
+              ..._quizzes.take(3).map((quiz) {
+                final levelType = quiz['level_type'];
+                final levelTypeName = levelType != null
+                    ? levelType['level_type_name'] ?? 'Unknown'
+                    : 'Unknown';
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 6,
+                      horizontal: 4,
+                    ),
+                    tileColor: cs.surfaceContainerHighest,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    leading: Icon(Icons.quiz, color: cs.primary),
+                    title: Text(
+                      quiz['level_name'] ?? 'No Name',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
                       ),
                     ),
-                  );
-                },
-              );
-            }).toList(),
+                    subtitle: Text(
+                      'Uploaded: ${_formatDate(quiz['created_at'])}',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: cs.primaryContainer.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        levelTypeName,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.of(context)
+                          .push(
+                            MaterialPageRoute(
+                              builder: (_) => TeacherViewQuizPage(
+                                classId: widget.classId,
+                                roleName: widget.roleName,
+                              ),
+                            ),
+                          )
+                          .then((_) {
+                            // Refresh quizzes when returning
+                            _fetchQuizzes();
+                          });
+                    },
+                  ),
+                );
+              }).toList(),
+
+            // Show "View All" link if more than 3 quizzes
+            if (_quizzes.length > 3)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context)
+                          .push(
+                            MaterialPageRoute(
+                              builder: (_) => TeacherViewQuizPage(
+                                classId: widget.classId,
+                                roleName: widget.roleName,
+                              ),
+                            ),
+                          )
+                          .then((_) {
+                            // Refresh quizzes when returning
+                            _fetchQuizzes();
+                          });
+                    },
+                    child: Text(
+                      'View all ${_quizzes.length} quizzes',
+                      style: textTheme.bodySmall?.copyWith(color: cs.primary),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

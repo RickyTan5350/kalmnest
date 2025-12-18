@@ -8,6 +8,8 @@ import 'package:flutter_codelab/student/widgets/class/student_class_list_section
     as student;
 // import '../widgets/search_bar.dart';
 import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/services/layout_preferences.dart';
 
 // Global key to access ClassPage state for reloading from main.dart
 final GlobalKey<_ClassPageState> classPageGlobalKey =
@@ -26,6 +28,22 @@ class _ClassPageState extends State<ClassPage> {
   int _reloadKey = 0;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  ViewLayout _viewLayout = ViewLayout.grid;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLayoutPreference();
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    if (mounted) {
+      setState(() {
+        _viewLayout = savedLayout;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -71,23 +89,57 @@ class _ClassPageState extends State<ClassPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title (same style as AchievementPage)
-                Text(
-                  pageTitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.headlineMedium?.copyWith(color: colors.onSurface),
+                // Header with title and view toggle
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      pageTitle,
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(color: colors.onSurface),
+                    ),
+                    SegmentedButton<ViewLayout>(
+                      segments: const <ButtonSegment<ViewLayout>>[
+                        ButtonSegment<ViewLayout>(
+                          value: ViewLayout.list,
+                          icon: Icon(Icons.menu),
+                        ),
+                        ButtonSegment<ViewLayout>(
+                          value: ViewLayout.grid,
+                          icon: Icon(Icons.grid_view),
+                        ),
+                      ],
+                      selected: <ViewLayout>{_viewLayout},
+                      onSelectionChanged: (Set<ViewLayout> newSelection) {
+                        final newLayout = newSelection.first;
+                        setState(() => _viewLayout = newLayout);
+                        LayoutPreferences.saveLayout(
+                          'global_layout',
+                          newLayout,
+                        );
+                      },
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
 
-                // Search Bar (shown for all roles)
+                // Search Bar (real-time search)
                 SizedBox(
                   width: 300,
                   child: SearchBar(
                     controller: _searchController,
                     hintText: "Search by class name",
-                    trailing: <Widget>[
+                    padding: const WidgetStatePropertyAll<EdgeInsets>(
+                      EdgeInsets.symmetric(horizontal: 16.0),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value.trim();
+                      });
+                    },
+                    leading: const Icon(Icons.search),
+                    trailing: [
                       if (_searchQuery.isNotEmpty)
                         IconButton(
                           icon: const Icon(Icons.clear),
@@ -95,26 +147,10 @@ class _ClassPageState extends State<ClassPage> {
                             setState(() {
                               _searchController.clear();
                               _searchQuery = '';
-                              _reloadKey++;
                             });
                           },
                         ),
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {
-                          setState(() {
-                            _searchQuery = _searchController.text.trim();
-                            _reloadKey++;
-                          });
-                        },
-                      ),
                     ],
-                    onSubmitted: (value) {
-                      setState(() {
-                        _searchQuery = value.trim();
-                        _reloadKey++;
-                      });
-                    },
                   ),
                 ),
 
@@ -143,6 +179,7 @@ class _ClassPageState extends State<ClassPage> {
         roleName: 'admin',
         onReload: reloadClassList,
         searchQuery: _searchQuery,
+        layout: _viewLayout,
       );
     }
     if (role == 'teacher') {
@@ -150,12 +187,14 @@ class _ClassPageState extends State<ClassPage> {
         key: ValueKey('teacher_class_list_$_reloadKey'),
         roleName: 'teacher',
         searchQuery: _searchQuery,
+        layout: _viewLayout,
       );
     }
     return student.ClassListSection(
       key: ValueKey('student_class_list_$_reloadKey'),
       roleName: 'student',
       searchQuery: _searchQuery,
+      layout: _viewLayout,
     );
   }
 }
