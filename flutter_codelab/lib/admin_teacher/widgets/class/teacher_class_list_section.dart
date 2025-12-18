@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_class_page.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
 
 // Class List Item Widget for Teacher/Student (no edit/delete buttons)
 class _ClassListItem extends StatefulWidget {
@@ -101,9 +102,8 @@ class _ClassListItemState extends State<_ClassListItem> {
                         // Class Name
                         Text(
                           widget.item['class_name'] ?? 'No Name',
-                          style: widget.textTheme.bodyLarge?.copyWith(
+                          style: widget.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
-                            fontSize: 14,
                             color: widget.colorScheme.onSurface,
                           ),
                         ),
@@ -116,7 +116,6 @@ class _ClassListItemState extends State<_ClassListItem> {
                             child: Text(
                               widget.item['description'],
                               style: widget.textTheme.bodySmall?.copyWith(
-                                fontSize: 12,
                                 color: widget.colorScheme.onSurfaceVariant,
                               ),
                               maxLines: 1,
@@ -141,8 +140,7 @@ class _ClassListItemState extends State<_ClassListItem> {
                                 const SizedBox(width: 4),
                                 Text(
                                   _hasTeacher ? _teacherName : 'No teacher',
-                                  style: widget.textTheme.bodySmall?.copyWith(
-                                    fontSize: 11,
+                                  style: widget.textTheme.labelSmall?.copyWith(
                                     color: _hasTeacher
                                         ? widget.colorScheme.onSurfaceVariant
                                         : widget.colorScheme.error,
@@ -167,8 +165,7 @@ class _ClassListItemState extends State<_ClassListItem> {
                                   _studentCount > 0
                                       ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
                                       : 'No students',
-                                  style: widget.textTheme.bodySmall?.copyWith(
-                                    fontSize: 11,
+                                  style: widget.textTheme.labelSmall?.copyWith(
                                     color: _studentCount > 0
                                         ? widget.colorScheme.onSurfaceVariant
                                         : widget.colorScheme.error,
@@ -199,14 +196,171 @@ class _ClassListItemState extends State<_ClassListItem> {
   }
 }
 
+// Grid Card Widget
+class _ClassGridCard extends StatelessWidget {
+  final dynamic item;
+  final String roleName;
+  final ColorScheme colorScheme;
+  final TextTheme textTheme;
+  final VoidCallback onTap;
+
+  const _ClassGridCard({
+    required this.item,
+    required this.roleName,
+    required this.colorScheme,
+    required this.textTheme,
+    required this.onTap,
+  });
+
+  String get _teacherName {
+    if (item['teacher'] != null) {
+      return item['teacher']['name'] ?? 'Unknown Teacher';
+    }
+    return 'No teacher assigned';
+  }
+
+  int get _studentCount {
+    if (item['students'] != null && item['students'] is List) {
+      return (item['students'] as List).length;
+    }
+    return 0;
+  }
+
+  bool get _hasTeacher {
+    return item['teacher'] != null && item['teacher']['name'] != null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 1.0,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon and Title Row
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.school_rounded,
+                      size: 24,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item['class_name'] ?? 'No Name',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Description
+              if (item['description'] != null &&
+                  item['description'].toString().isNotEmpty)
+                Text(
+                  item['description'],
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              const Spacer(),
+              const SizedBox(height: 12),
+              // Teacher and Student Info
+              Row(
+                children: [
+                  Icon(
+                    Icons.person_outline,
+                    size: 14,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _hasTeacher ? _teacherName : 'No teacher',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: _hasTeacher
+                            ? colorScheme.onSurfaceVariant
+                            : colorScheme.error,
+                        fontStyle: _hasTeacher
+                            ? FontStyle.normal
+                            : FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.people_outline,
+                    size: 14,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _studentCount > 0
+                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
+                          : 'No students',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: _studentCount > 0
+                            ? colorScheme.onSurfaceVariant
+                            : colorScheme.error,
+                        fontStyle: _studentCount > 0
+                            ? FontStyle.normal
+                            : FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class ClassListSection extends StatefulWidget {
   final String roleName;
   final String searchQuery;
+  final ViewLayout layout;
 
   const ClassListSection({
     Key? key,
     required this.roleName,
     this.searchQuery = '',
+    required this.layout,
   }) : super(key: key);
 
   @override
@@ -214,10 +368,9 @@ class ClassListSection extends StatefulWidget {
 }
 
 class _ClassListSectionState extends State<ClassListSection> {
-  int currentPage = 1;
-  int totalPages = 1;
   bool loading = true;
   List<dynamic> classList = [];
+  List<dynamic> filteredList = [];
 
   @override
   void initState() {
@@ -225,91 +378,40 @@ class _ClassListSectionState extends State<ClassListSection> {
     loadClasses();
   }
 
-  // Removed edit/delete methods - teachers cannot edit or delete classes
-  /* void _onEditClass(dynamic item) async {
-    final updated = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => EditClassPage(classData: item)),
-    );
-
-    if (updated == true) {
-      loadClasses(); // refresh after edit
+  @override
+  void didUpdateWidget(ClassListSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.searchQuery != widget.searchQuery ||
+        oldWidget.layout != widget.layout) {
+      loadClasses();
     }
   }
-
-  void _onDeleteClass(dynamic item) async {
-    final confirm = await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Delete Class"),
-          content: Text(
-            "Are you sure you want to delete '${item['class_name']}'?",
-          ),
-          actions: [
-            TextButton(
-              child: const Text("Cancel"),
-              onPressed: () => Navigator.pop(context, false),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text("Delete"),
-              onPressed: () => Navigator.pop(context, true),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm == true) {
-      final success = await ClassApi.deleteClass(item['class_id']);
-      if (success) {
-        loadClasses(); // refresh list
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Failed to delete class")));
-      }
-    }
-  } */
 
   Future<void> loadClasses() async {
     if (!mounted) return;
     setState(() => loading = true);
     try {
-      print('Loading classes - Page: $currentPage');
-      final data = await ClassApi.fetchClasses(currentPage);
+      final allClasses = await ClassApi.fetchAllClasses();
       if (!mounted) return;
 
-      print('Received data: ${data.keys}');
-      print(
-        'Data keys: current_page=${data['current_page']}, last_page=${data['last_page']}, total=${data['total']}',
-      );
-
-      List<dynamic> allClasses = data['data'] ?? [];
-      print('Classes count from API: ${allClasses.length}');
-
       // Apply search filter if search query is provided
+      List<dynamic> filtered = allClasses;
       if (widget.searchQuery.isNotEmpty) {
         final query = widget.searchQuery.toLowerCase();
-        allClasses = allClasses.where((classItem) {
+        filtered = allClasses.where((classItem) {
           final className = (classItem['class_name'] ?? '')
               .toString()
               .toLowerCase();
           return className.contains(query);
         }).toList();
-        print('Classes after search filter: ${allClasses.length}');
       }
 
       if (mounted) {
         setState(() {
           classList = allClasses;
-          totalPages = data['last_page'] ?? 1;
+          filteredList = filtered;
           loading = false;
         });
-        print(
-          'State updated - classList.length: ${classList.length}, totalPages: $totalPages',
-        );
       }
     } catch (e, stackTrace) {
       print('Error loading classes: $e');
@@ -317,7 +419,7 @@ class _ClassListSectionState extends State<ClassListSection> {
       if (mounted) {
         setState(() {
           classList = [];
-          totalPages = 1;
+          filteredList = [];
           loading = false;
         });
       }
@@ -325,213 +427,115 @@ class _ClassListSectionState extends State<ClassListSection> {
   }
 
   @override
-  void didUpdateWidget(ClassListSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.searchQuery != widget.searchQuery) {
-      loadClasses();
-    }
-  }
-
-  List<Widget> _buildPageNumbers() {
-    List<Widget> buttons = [];
-    int start = currentPage - 1;
-    int end = currentPage + 1;
-
-    if (start < 1) {
-      start = 1;
-      end = (totalPages >= 3) ? 3 : totalPages;
-    }
-
-    if (end > totalPages) {
-      end = totalPages;
-      start = (totalPages - 2 > 1) ? totalPages - 2 : 1;
-    }
-
-    for (int page = start; page <= end; page++) {
-      buttons.add(_pageNumber(page));
-      if (page != end) buttons.add(const SizedBox(width: 8));
-    }
-
-    return buttons;
-  }
-
-  Widget _pageNumber(int page) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isSelected = page == currentPage;
-
-    return GestureDetector(
-      onTap: () {
-        if (!mounted) return;
-        setState(() {
-          currentPage = page;
-          loading = true;
-        });
-        loadClasses();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? colorScheme.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '$page',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _pageButton(IconData icon, Function() onTap) {
-    return IconButton(icon: Icon(icon), onPressed: onTap);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          // ===== Header =====
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Class List',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                Text(
-                  loading ? "Loading..." : "${classList.length} entries",
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          if (loading)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: CircularProgressIndicator(color: colorScheme.primary),
-            ),
-
-          if (!loading)
-            Expanded(
-              child: classList.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.school_outlined,
-                              size: 64,
-                              color: colorScheme.onSurfaceVariant.withOpacity(
-                                0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No classes found',
-                              style: textTheme.titleMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              widget.searchQuery.isNotEmpty
-                                  ? 'Try adjusting your search query'
-                                  : 'You are not assigned to any classes yet',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant.withOpacity(
-                                  0.7,
-                                ),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Column(
-                        children: classList.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final item = entry.value;
-                          final isLast = index == classList.length - 1;
-
-                          return _ClassListItem(
-                            item: item,
-                            isLast: isLast,
-                            roleName: widget.roleName,
-                            colorScheme: colorScheme,
-                            textTheme: textTheme,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ClassDetailPage(
-                                    classId: item['class_id'].toString(),
-                                    roleName: widget.roleName,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        }).toList(),
+    return Scaffold(
+      backgroundColor: colorScheme.surfaceContainerLow,
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : filteredList.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.school_outlined,
+                      size: 64,
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No classes found',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-            ),
-
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _pageButton(Icons.chevron_left, () {
-                  if (currentPage > 1 && mounted) {
-                    setState(() {
-                      currentPage--;
-                      loading = true;
-                    });
-                    loadClasses();
-                  }
-                }),
-                const SizedBox(width: 8),
-                ..._buildPageNumbers(),
-                const SizedBox(width: 8),
-                _pageButton(Icons.chevron_right, () {
-                  if (currentPage < totalPages && mounted) {
-                    setState(() {
-                      currentPage++;
-                      loading = true;
-                    });
-                    loadClasses();
-                  }
-                }),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.searchQuery.isNotEmpty
+                          ? 'Try adjusting your search query'
+                          : 'You are not assigned to any classes yet',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : widget.layout == ViewLayout.grid
+          ? CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.all(8.0),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 250.0,
+                          mainAxisSpacing: 12.0,
+                          crossAxisSpacing: 12.0,
+                          childAspectRatio: 0.85,
+                        ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final item = filteredList[index];
+                      return _ClassGridCard(
+                        item: item,
+                        roleName: widget.roleName,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ClassDetailPage(
+                                classId: item['class_id'].toString(),
+                                roleName: widget.roleName,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }, childCount: filteredList.length),
+                  ),
+                ),
+              ],
+            )
+          : CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final item = filteredList[index];
+                      final isLast = index == filteredList.length - 1;
+                      return _ClassListItem(
+                        item: item,
+                        isLast: isLast,
+                        roleName: widget.roleName,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ClassDetailPage(
+                                classId: item['class_id'].toString(),
+                                roleName: widget.roleName,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }, childCount: filteredList.length),
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

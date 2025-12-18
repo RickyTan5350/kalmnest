@@ -145,7 +145,7 @@ class LevelController extends Controller
             ], 201);
 
         } catch (Exception $e) {
-            \Log::error('LEVEL_CREATE_FAILED: ' . $e->getMessage());
+            //\Log::error('LEVEL_CREATE_FAILED: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to create level due to server error.',
                 'error' => $e->getMessage(),

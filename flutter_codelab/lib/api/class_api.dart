@@ -144,6 +144,32 @@ class ClassApi {
     }
   }
 
+  // Fetch all classes without pagination
+  static Future<List<dynamic>> fetchAllClasses() async {
+    List<dynamic> allClasses = [];
+    int currentPage = 1;
+    bool hasMorePages = true;
+
+    try {
+      while (hasMorePages) {
+        final data = await fetchClasses(currentPage);
+        final List<dynamic> pageData = data['data'] ?? [];
+        allClasses.addAll(pageData);
+
+        final int lastPage = data['last_page'] ?? 1;
+        if (currentPage >= lastPage) {
+          hasMorePages = false;
+        } else {
+          currentPage++;
+        }
+      }
+      return allClasses;
+    } catch (e) {
+      print("Error fetching all classes: $e");
+      return [];
+    }
+  }
+
   static Future<Map<String, dynamic>> updateClass(
     String id,
     Map<String, dynamic> data,
@@ -309,6 +335,99 @@ class ClassApi {
       print("Network error fetching students: $e");
       print("Stack trace: $stackTrace");
       return [];
+    }
+  }
+
+  // ========================================================================
+  // Quiz (Level) Management for Classes
+  // ========================================================================
+
+  /// Get all quizzes (levels) assigned to a class
+  static Future<List<Map<String, dynamic>>> getClassQuizzes(
+    String classId,
+  ) async {
+    final uri = Uri.parse('$base/classes/$classId/quizzes');
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.get(uri, headers: headers);
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return List<Map<String, dynamic>>.from(decoded['data'] ?? []);
+      } else {
+        print("Error fetching class quizzes: ${res.statusCode} ${res.body}");
+        return [];
+      }
+    } catch (e) {
+      print("Network error fetching class quizzes: $e");
+      return [];
+    }
+  }
+
+  /// Assign a quiz (level) to a class
+  static Future<Map<String, dynamic>> assignQuizToClass({
+    required String classId,
+    required String levelId,
+  }) async {
+    final uri = Uri.parse('$base/classes/$classId/quizzes');
+    final body = jsonEncode({'level_id': levelId});
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.post(uri, headers: headers, body: body);
+
+      if (res.statusCode == 201) {
+        return {'success': true, 'message': 'Quiz assigned successfully'};
+      } else {
+        final decoded = jsonDecode(res.body);
+        return {
+          'success': false,
+          'message': decoded['message'] ?? 'Failed to assign quiz',
+        };
+      }
+    } catch (e) {
+      print("Network error assigning quiz: $e");
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  /// Remove a quiz (level) from a class
+  static Future<bool> removeQuizFromClass({
+    required String classId,
+    required String levelId,
+  }) async {
+    final uri = Uri.parse('$base/classes/$classId/quizzes/$levelId');
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.delete(uri, headers: headers);
+
+      return res.statusCode == 200;
+    } catch (e) {
+      print("Network error removing quiz: $e");
+      return false;
+    }
+  }
+
+  /// Get quiz count for a class
+  static Future<int> getClassQuizCount(String classId) async {
+    final uri = Uri.parse('$base/classes/$classId/quizzes/count');
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.get(uri, headers: headers);
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return decoded['total_quizzes'] ?? 0;
+      } else {
+        print("Error fetching quiz count: ${res.statusCode} ${res.body}");
+        return 0;
+      }
+    } catch (e) {
+      print("Network error fetching quiz count: $e");
+      return 0;
     }
   }
 }
