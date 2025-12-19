@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  dio: ^5.4.0 # Or 'http: ^1.2.0'
   #flutter_native_html_to_pdf: ^1.1.5
   printing: ^5.14.2
 
@@ -63,6 +64,7 @@ dependencies:
   stack_trace: ^1.12.1
   web: ^1.1.1
   encrypt: ^5.0.3
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
