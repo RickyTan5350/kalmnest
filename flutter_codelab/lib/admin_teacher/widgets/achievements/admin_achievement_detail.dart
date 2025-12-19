@@ -176,6 +176,7 @@ class _AdminAchievementDetailPageState
           ),
           IconButton(
             icon: const Icon(Icons.edit),
+            tooltip: 'Edit Achievement',
 
             // In achievement_detail.dart inside the IconButton onPressed:
             onPressed: () async {
