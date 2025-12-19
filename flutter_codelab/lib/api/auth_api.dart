@@ -58,7 +58,9 @@ class AuthApi {
         await _storage.write(key: _tokenKey, value: token);
         await _storage.write(key: _userKey, value: userDataJson);
 
-        return data['user'] as Map<String, dynamic>;
+        final userMap = data['user'] as Map<String, dynamic>;
+        userMap['token'] = token; // Add token to the map
+        return userMap;
       } else if (response.statusCode == 422) {
         final errors = jsonDecode(response.body);
         String errorMessage = 'Login failed.';
