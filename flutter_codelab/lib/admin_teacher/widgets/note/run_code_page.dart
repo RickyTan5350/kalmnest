@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import '../../../../constants/api_constants.dart';
 
 class RunCodePage extends StatefulWidget {
   final String initialCode;
@@ -15,10 +19,14 @@ class RunCodePage extends StatefulWidget {
 class _RunCodePageState extends State<RunCodePage> {
   late TextEditingController _codeController;
   InAppWebViewController? _webViewController;
-  final TextEditingController _urlBarController = TextEditingController(text: "https://mysite.com/preview");
-  
+  final TextEditingController _urlBarController = TextEditingController(
+    text: "https://mysite.com/preview",
+  );
+
   bool _isRealBrowserReady = false;
   String _browserTitle = "Preview";
+  InAppLocalhostServer? _localhostServer;
+  int _serverPort = 8080;
 
   // Cache for your libraries
   final Map<String, String> _bundledLibraries = {};
@@ -26,18 +34,81 @@ class _RunCodePageState extends State<RunCodePage> {
   @override
   void initState() {
     super.initState();
+    _startLocalServer();
     _codeController = TextEditingController(text: widget.initialCode);
     _updateTitleFromCode(widget.initialCode);
-    
+
     // Load libraries in background
     _loadBundledLibraries();
+  }
+
+  Future<void> _startLocalServer() async {
+    // Start a localhost server for the WebView
+    _localhostServer = InAppLocalhostServer(
+      documentRoot: 'assets/app_www',
+      port: _serverPort,
+    );
+    // documentRoot will be overridden/ignored if we are writing specific files to app docs dir,
+    // but InAppLocalhostServer by default serves assets.
+    // Wait, standard InAppLocalhostServer serves from assets.
+    // FLutter InAppWebView doesn't easily serve from ApplicationDocumentsDirectory with InAppLocalhostServer
+    // unless we create a custom implementation or use the `InAppWebView` to access file://.
+    // However, `file://` scheme has CORS issues.
+
+    // Better approach: Use InAppLocalhostServer to serve asset files if needed,
+    // but for DYNAMIC content (user code), we might need `InAppWebView` to load specific data.
+
+    // Actually, `InAppLocalhostServer` serves ASSETS.
+    // If we want to serve files from ApplicationDocumentsDirectory, we need `InAppWebServer` (available in v6?).
+    // The current version is ^6.1.5.
+
+    // Let's check if we can just write to a file and load `file://` URL but enable allowUniversalAccessFromFileURLs.
+
+    // Re-reading user request: "allow basic web code running".
+    // Many basic web snippets work fine with `loadData`.
+    // If the user specifically wants a server, they probably want to avoid "null" origin issues.
+
+    // Let's implement a simple `HttpServer` from `dart:io` bound to localhost.
+    // This is more flexible than `InAppLocalhostServer` for serving generated content.
+
+    try {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      _serverPort = server.port;
+      _localhostServer =
+          null; // Unused if we use raw HttpServer but keeping the variable for now if we switch back.
+
+      server.listen((HttpRequest request) async {
+        // Serve index.html from temp dir
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/index.html');
+        if (await file.exists()) {
+          final content = await file.readAsString();
+          request.response
+            ..headers.contentType = ContentType.html
+            ..write(content)
+            ..close();
+        } else {
+          request.response
+            ..statusCode = HttpStatus.notFound
+            ..close();
+        }
+      });
+
+      print("Local server started on port $_serverPort");
+    } catch (e) {
+      print("Failed to start local server: $e");
+    }
   }
 
   // --- 1. Load Libraries from Assets ---
   Future<void> _loadBundledLibraries() async {
     try {
-      _bundledLibraries['math.js'] = await rootBundle.loadString('assets/js/math.js');
-      _bundledLibraries['date.js'] = await rootBundle.loadString('assets/js/date.js');
+      _bundledLibraries['math.js'] = await rootBundle.loadString(
+        'assets/js/math.js',
+      );
+      _bundledLibraries['date.js'] = await rootBundle.loadString(
+        'assets/js/date.js',
+      );
       print("Libraries loaded successfully");
     } catch (e) {
       print("Error loading libraries: $e");
@@ -45,7 +116,11 @@ class _RunCodePageState extends State<RunCodePage> {
   }
 
   void _updateTitleFromCode(String code) {
-    final RegExp titleRegex = RegExp(r'<title[^>]*>(.*?)</title>', caseSensitive: false, multiLine: true);
+    final RegExp titleRegex = RegExp(
+      r'<title[^>]*>(.*?)</title>',
+      caseSensitive: false,
+      multiLine: true,
+    );
     final Match? match = titleRegex.firstMatch(code);
 
     setState(() {
@@ -53,7 +128,7 @@ class _RunCodePageState extends State<RunCodePage> {
         _browserTitle = match.group(1) ?? "Preview";
       } else {
         if (!_browserTitle.startsWith("http")) {
-           _browserTitle = "Preview";
+          _browserTitle = "Preview";
         }
       }
     });
@@ -79,7 +154,7 @@ class _RunCodePageState extends State<RunCodePage> {
 
     if (rawContent.contains('<html')) {
       int htmlStartIndex = rawContent.indexOf('<html');
-      
+
       // Only extract top JS if <html> isn't at the very start
       if (htmlStartIndex > 0) {
         topPartJs = rawContent.substring(0, htmlStartIndex).trim();
@@ -97,12 +172,19 @@ class _RunCodePageState extends State<RunCodePage> {
     }
 
     // 2. LIBRARY INJECTION (Runs on the HTML part)
-    
+
     // Regex for standard <script src="..."></script>
-    final scriptRegex = RegExp(r'''<script\b[^>]*\bsrc=["']([\w\d_.-]+\.js)["'][^>]*>.*?</\s*script>''', caseSensitive: false, dotAll: true);
-    
+    final scriptRegex = RegExp(
+      r'''<script\b[^>]*\bsrc=["']([\w\d_.-]+\.js)["'][^>]*>.*?</\s*script>''',
+      caseSensitive: false,
+      dotAll: true,
+    );
+
     // Regex for self-closing <script src="..." />
-    final selfClosingRegex = RegExp(r'''<script\b[^>]*\bsrc=["']([\w\d_.-]+\.js)["'][^>]*/>''', caseSensitive: false);
+    final selfClosingRegex = RegExp(
+      r'''<script\b[^>]*\bsrc=["']([\w\d_.-]+\.js)["'][^>]*/>''',
+      caseSensitive: false,
+    );
 
     // Replace standard tags
     htmlPart = htmlPart.replaceAllMapped(scriptRegex, (match) {
@@ -126,8 +208,8 @@ class _RunCodePageState extends State<RunCodePage> {
     if (topPartJs.isNotEmpty) {
       if (htmlPart.contains('</head>')) {
         htmlPart = htmlPart.replaceFirst(
-          '</head>', 
-          '<script>\n/* Injected Top JS */\n$topPartJs\n</script>\n</head>'
+          '</head>',
+          '<script>\n/* Injected Top JS */\n$topPartJs\n</script>\n</head>',
         );
       } else {
         htmlPart = '<script>\n$topPartJs\n</script>\n$htmlPart';
@@ -141,23 +223,98 @@ class _RunCodePageState extends State<RunCodePage> {
   String _injectStyles(String content, String styles) {
     if (content.toLowerCase().contains('</head>')) {
       return content.replaceFirst(
-          RegExp(r'</head>', caseSensitive: false), '$styles</head>');
+        RegExp(r'</head>', caseSensitive: false),
+        '$styles</head>',
+      );
     } else if (content.toLowerCase().contains('<body>')) {
       return content.replaceFirst(
-          RegExp(r'<body>', caseSensitive: false), '<body>$styles');
+        RegExp(r'<body>', caseSensitive: false),
+        '<body>$styles',
+      );
     }
     return styles + content;
   }
 
-  void _runCode() {
-    _updateTitleFromCode(_codeController.text);
+  Future<void> _updateAndReload(String content) async {
+    // 1. Wrap content
+    final fullHtml = _wrapHtml(content);
 
-    if (_webViewController != null) {
-       final fullHtml = _wrapHtml(_codeController.text);
-      _webViewController!.loadData(data: fullHtml);
+    // 2. Write to file
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/index.html');
+      await file.writeAsString(fullHtml);
+
+      // 3. Load from localhost
+      if (_webViewController != null) {
+        _webViewController!.loadUrl(
+          urlRequest: URLRequest(
+            url: WebUri("http://localhost:$_serverPort/index.html"),
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error writing file: $e");
     }
+  }
+
+  Future<void> _runCode() async {
+    _updateTitleFromCode(_codeController.text);
+    final code = _codeController.text;
+
+    // --- PHP EXECUTION (Backend) ---
+    if (code.trim().startsWith('<?php')) {
+      // Show loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Executing PHP on backend...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      try {
+        final url = Uri.parse('${ApiConstants.baseUrl}/run-code');
+        final response = await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: jsonEncode({'code': code}),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final output = data['output'] ?? '';
+
+          await _updateAndReload(output);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('PHP Executed Successfully')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${response.statusCode} - ${response.body}'),
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Network Error: $e')));
+      }
+      return;
+    }
+
+    // --- HTML/JS EXECUTION (Local) ---
+    await _updateAndReload(code);
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Code executed!'), duration: Duration(milliseconds: 500)),
+      const SnackBar(
+        content: Text('Code executed!'),
+        duration: Duration(milliseconds: 500),
+      ),
     );
   }
 
@@ -173,6 +330,7 @@ class _RunCodePageState extends State<RunCodePage> {
   void dispose() {
     _codeController.dispose();
     _urlBarController.dispose();
+    _localhostServer?.close(); // Identify if we used specific class
     super.dispose();
   }
 
@@ -184,26 +342,37 @@ class _RunCodePageState extends State<RunCodePage> {
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: Text(
-          'Code Editor', 
-          style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)
+          'Code Editor',
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: colorScheme.surface,
         elevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
         actions: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 8.0,
+              horizontal: 16.0,
+            ),
             child: ElevatedButton.icon(
               onPressed: _runCode,
               icon: Icon(Icons.play_arrow, color: colorScheme.onPrimary),
               label: Text(
-                "Run", 
-                style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.bold)
+                "Run",
+                style: TextStyle(
+                  color: colorScheme.onPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary, 
+                backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
             ),
           ),
@@ -215,16 +384,22 @@ class _RunCodePageState extends State<RunCodePage> {
           Expanded(
             flex: 1,
             child: Container(
-              color: colorScheme.surface, 
+              color: colorScheme.surface,
               child: Column(
                 children: [
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    color: colorScheme.surfaceContainerHighest, 
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    color: colorScheme.surfaceContainerHighest,
                     child: Text(
-                      "Source Code", 
-                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)
+                      "Source Code",
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                   Expanded(
@@ -233,14 +408,16 @@ class _RunCodePageState extends State<RunCodePage> {
                       child: TextField(
                         controller: _codeController,
                         style: TextStyle(
-                          color: colorScheme.onSurface, 
-                          fontFamily: 'monospace', 
-                          fontSize: 14, 
-                          height: 1.5
+                          color: colorScheme.onSurface,
+                          fontFamily: 'monospace',
+                          fontSize: 14,
+                          height: 1.5,
                         ),
                         maxLines: null,
                         expands: true,
-                        decoration: const InputDecoration(border: InputBorder.none),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                        ),
                       ),
                     ),
                   ),
@@ -249,13 +426,17 @@ class _RunCodePageState extends State<RunCodePage> {
             ),
           ),
 
-          VerticalDivider(width: 8, thickness: 8, color: colorScheme.outlineVariant),
+          VerticalDivider(
+            width: 8,
+            thickness: 8,
+            color: colorScheme.outlineVariant,
+          ),
 
           // --- RIGHT: PREVIEW ---
           Expanded(
             flex: 1,
             child: Container(
-              color: Colors.white, 
+              color: Colors.white,
               child: Column(
                 children: [
                   // Browser Header
@@ -268,20 +449,35 @@ class _RunCodePageState extends State<RunCodePage> {
                       children: [
                         Container(
                           width: 200,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: const BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(8),
+                              topRight: Radius.circular(8),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.public, size: 14, color: Colors.blue),
+                              const Icon(
+                                Icons.public,
+                                size: 14,
+                                color: Colors.blue,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   _browserTitle,
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis, color: Colors.black87)
-                                )
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    overflow: TextOverflow.ellipsis,
+                                    color: Colors.black87,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -293,29 +489,56 @@ class _RunCodePageState extends State<RunCodePage> {
                   // URL Bar
                   Container(
                     height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 4,
+                    ),
                     decoration: const BoxDecoration(
-                      color: Colors.white, 
-                      border: Border(bottom: BorderSide(color: Colors.black12))
+                      color: Colors.white,
+                      border: Border(bottom: BorderSide(color: Colors.black12)),
                     ),
                     child: Row(
                       children: [
-                        IconButton(icon: const Icon(Icons.refresh, size: 18, color: Colors.black54), onPressed: () => _webViewController?.reload()),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.refresh,
+                            size: 18,
+                            color: Colors.black54,
+                          ),
+                          onPressed: () => _webViewController?.reload(),
+                        ),
                         Expanded(
                           child: Container(
                             height: 28,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(color: const Color(0xFFF1F1F1), borderRadius: BorderRadius.circular(16)),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F1F1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             child: Row(
                               children: [
-                                const Icon(Icons.lock, size: 12, color: Colors.grey),
+                                const Icon(
+                                  Icons.lock,
+                                  size: 12,
+                                  color: Colors.grey,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: TextField(
                                     controller: _urlBarController,
                                     onSubmitted: (value) => _loadRealUrl(value),
-                                    decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.only(bottom: 2), hintText: "Enter URL"),
-                                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.only(
+                                        bottom: 2,
+                                      ),
+                                      hintText: "Enter URL",
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black87,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -335,23 +558,25 @@ class _RunCodePageState extends State<RunCodePage> {
                         allowsInlineMediaPlayback: true,
                         iframeAllow: "camera; microphone",
                         iframeAllowFullscreen: true,
+                        allowUniversalAccessFromFileURLs: true,
                       ),
                       onWebViewCreated: (controller) async {
                         _webViewController = controller;
                         _isRealBrowserReady = true;
-                        
-                        // Load initial content
-                         final fullHtml = _wrapHtml(_codeController.text);
-                         await _webViewController!.loadData(data: fullHtml);
+
+                        // Initial load
+                        if (widget.initialCode.isNotEmpty) {
+                          _updateAndReload(widget.initialCode);
+                        }
                       },
                       onLoadStop: (controller, url) {
                         if (mounted) {
-                           _urlBarController.text = url.toString();
+                          _urlBarController.text = url.toString();
                         }
                       },
                       onTitleChanged: (controller, title) {
                         if (mounted && title != null && title.isNotEmpty) {
-                           setState(() => _browserTitle = title);
+                          setState(() => _browserTitle = title);
                         }
                       },
                       onConsoleMessage: (controller, consoleMessage) {

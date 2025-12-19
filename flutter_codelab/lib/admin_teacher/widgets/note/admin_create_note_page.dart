@@ -67,7 +67,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
   bool _isLoading = false;
   List<UploadedAttachment> _attachments = [];
 
-  final List<String> _topic = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+  final List<String> _topic = ['HTML', 'CSS', 'JS', 'PHP'];
 
   @override
   void initState() {
@@ -598,7 +598,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
         actions: [
           IconButton(
             icon: Icon(Icons.file_upload, color: colorScheme.primary),
-            tooltip: 'Import Markdown',
+            tooltip: 'Import Markdown(.txt, .md)',
             onPressed: _isLoading ? null : _handleImportMarkdown,
           ),
           IconButton(

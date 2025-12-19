@@ -1,0 +1,93 @@
+# 3.1.2 Atur Cara dan Carta Alir bagi Bahasa Penskripan Klien
+
+Semasa membangunkan atur cara penskripan klien, murid melaksanakan proses pengisihan, pencarian, mencari nilai maksimum/minimum, mengira purata, serta penggunaan struktur data seperti giliran.
+
+## 1. Proses Pengisihan (Sorting)
+Terdapat dua jenis isihan utama yang dibincangkan iaitu isihan buih (*bubble sort*) dan isihan pilih (*selection sort*). Pengisihan boleh dilakukan secara turutan menaik atau menurun.
+
+### A. Isihan Buih (Bubble Sort)
+* **Konsep:** Algoritma mudah yang membandingkan unsur-unsur bersebelahan satu persatu secara berturutan.
+* **Proses:** Kedudukan akan ditukar (*swap*) sekiranya berlaku turutan yang salah.
+    * Banding unsur pertama dan kedua.
+    * Tukar kedudukan jika perlu (contoh: unsur pertama > unsur kedua untuk turutan menaik).
+* **Kegunaan:** Sesuai untuk tujuan pembelajaran atau apabila bilangan unsur adalah kecil.
+
+[Image of bubble sort algorithm flowchart]
+
+### B. Isihan Pilih (Selection Sort)
+* **Konsep:** Algoritma yang mencari unsur terkecil atau terbesar dalam senarai.
+* **Proses:**
+    * Banding satu unsur dengan unsur terkecil/terbesar daripada unsur lain dalam senarai.
+    * Tukar kedudukan jika turutan salah.
+* **Kegunaan:** Sesuai digunakan sekiranya bilangan unsur adalah kecil (contoh: menyusun pelajar mengikut ketinggian).
+
+---
+
+## 2. Proses Carian (Searching)
+
+### Carian Perduaan (Binary Search)
+* **Syarat:** Sesuai digunakan apabila melibatkan bilangan data yang banyak dan data **telah diisih**.
+* **Konsep:** Mencari lokasi di tengah-tengah senarai ("Divide and Conquer").
+* **Langkah Perbandingan:**
+    1. Adakah unsur tengah **sama** dengan unsur yang dicari?
+    2. Adakah unsur tengah **lebih kecil** daripada unsur dicari? (Pergi ke sebelah kanan)
+    3. Adakah unsur tengah **lebih besar** daripada unsur dicari? (Pergi ke sebelah kiri)
+
+[Image of binary search algorithm diagram]
+
+---
+
+## 3. Operasi Statistik & Pengiraan
+
+### A. Nilai Maksimum & Minimum
+* **Maksimum (Terbesar):**
+    * Beri nilai awal yang rendah (contoh: -1) kepada pemboleh ubah `noMaksimum`.
+    * Bandingkan nilai dalam senarai dengan nilai awal. Jika nilai dirujuk lebih besar, kemaskini `noMaksimum`.
+* **Minimum (Terkecil):**
+    * Beri nilai awal yang tinggi (contoh: 999) kepada pemboleh ubah `noMinimum`.
+    * Bandingkan nilai dalam senarai. Jika nilai dirujuk lebih kecil, kemaskini `noMinimum`.
+
+### B. Nilai Mean (Purata)
+* **Definisi:** Purata nilai dalam suatu senarai.
+* **Formula:** `Mean = Jumlah / Bilangan`.
+* **Langkah:**
+    1. Jumlahkan nilai-nilai dalam senarai (`jumlah = jumlah + no`).
+    2. Dapatkan bilangan nilai (`pembilang = pembilang + 1`).
+    3. Bahagikan jumlah dengan bilangan.
+
+### C. Nilai Count (Bilangan)
+* **Definisi:** Mengira bilangan nilai yang terdapat dalam suatu senarai.
+* **Kaedah:** Menggunakan pembilang dengan nilai awal (biasanya 0 atau 1) dan menambah 1 bagi setiap nilai yang dicapai.
+
+---
+
+## 4. Struktur Data: Giliran (Queue)
+* **Definisi:** Struktur data linear (pengumpukan nilai dalam ruang ingatan secara teratur) yang mengamalkan konsep **FIFO (First-In, First-Out)**.
+* **Contoh:** Sistem nombor giliran di kaunter bank.
+* **Operasi Utama:**
+    * **Enqueue:** Memasukkan data ke dalam queue.
+    * **Dequeue:** Membuang data lama (terawal) dalam queue.
+
+### Implementasi dalam JavaScript
+Menggunakan fungsi tatasusunan (array):
+
+| Kaedah | Masuk Data (Enqueue) | Keluar Data (Dequeue) | Arah Aliran |
+| :--- | :--- | :--- | :--- |
+| **Kaedah 1** | `push()` (Masuk belakang) | `shift()` (Keluar depan) | Masuk belakang, keluar depan |
+| **Kaedah 2** | `unshift()` (Masuk depan) | `pop()` (Keluar belakang) | Masuk depan, keluar belakang |
+
+[Image of queue data structure diagram FIFO]
+
+---
+
+## 5. Pemboleh Ubah & Pemalar
+
+### Pemboleh Ubah (Variable)
+* Ruang ingatan untuk menyimpan nilai sementara sewaktu atur cara diproses.
+* Nilainya **boleh berubah-ubah**.
+* Contoh: `gajiPekerja`, `namaPelajar`.
+
+### Pemalar (Constant)
+* Ruang ingatan untuk menyimpan nilai sementara yang **tidak boleh berubah-ubah**.
+* Menggunakan kata kunci `const` dalam JavaScript.
+* Contoh: Nilai `pi` (3.142) atau bilangan hari dalam seminggu.
