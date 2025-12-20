@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_student_detail_page.dart';
 
 /// Teacher view: All students in a class with search, pagination, and compact cards.
 class TeacherAllStudentsPage extends StatefulWidget {
@@ -28,8 +28,11 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
 
   // Statistics
   int _totalStudents = 0;
-  double _averageScore = 0.0;
-  double _quizzesCompleted = 0.0;
+  double _averageCompletionPercentage = 0.0;
+  int _totalQuizzesAssigned = 0;
+
+  // Student completion data
+  Map<String, Map<String, dynamic>> _studentCompletionMap = {};
 
   @override
   void initState() {
@@ -67,12 +70,65 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     if (!mounted) return;
     setState(() => _loading = true);
     try {
-      final data = await ClassApi.fetchClassById(widget.classId);
-      if (!mounted || data == null) return;
+      // Fetch class data, student completion data, and quiz count in parallel
+      final classDataFuture = ClassApi.fetchClassById(widget.classId);
+      final completionDataFuture = ClassApi.getStudentCompletion(
+        widget.classId,
+      );
+      final quizCountFuture = ClassApi.getClassQuizCount(widget.classId);
+
+      final classData = await classDataFuture;
+      final completionResult = await completionDataFuture;
+      int quizCount = 0;
+      try {
+        quizCount = await quizCountFuture;
+        debugPrint('Quiz count from API: $quizCount');
+      } catch (e) {
+        debugPrint('Error fetching quiz count: $e');
+      }
+
+      if (!mounted || classData == null) return;
 
       setState(() {
-        _students = List<Map<String, dynamic>>.from(data['students'] ?? []);
+        _students = List<Map<String, dynamic>>.from(
+          classData['students'] ?? [],
+        );
         _totalStudents = _students.length;
+
+        // Set total quizzes assigned (prefer quiz count API, fallback to completion data)
+        if (quizCount > 0) {
+          _totalQuizzesAssigned = quizCount;
+        } else if (completionResult['success'] == true) {
+          _totalQuizzesAssigned =
+              completionResult['total_quizzes_assigned'] ?? 0;
+          debugPrint(
+            'Using quiz count from completion data: ${_totalQuizzesAssigned}',
+          );
+        } else {
+          _totalQuizzesAssigned = 0;
+        }
+
+        debugPrint('Total quizzes assigned: $_totalQuizzesAssigned');
+
+        // Process completion data
+        if (completionResult['success'] == true) {
+          final completionList = List<Map<String, dynamic>>.from(
+            completionResult['data'] ?? [],
+          );
+
+          // Create a map for quick lookup: user_id -> completion data
+          _studentCompletionMap = {};
+          for (var completion in completionList) {
+            final userId = completion['user_id']?.toString();
+            if (userId != null) {
+              _studentCompletionMap[userId] = completion;
+            }
+          }
+        } else {
+          _studentCompletionMap = {};
+          debugPrint('Completion data fetch failed: $completionResult');
+        }
+
         _calculateStatistics();
 
         final query = _searchController.text.trim().toLowerCase();
@@ -92,37 +148,43 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     } catch (e) {
       debugPrint('Error fetching class data: $e');
       if (mounted) {
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _totalQuizzesAssigned = 0;
+        });
       }
     }
   }
 
   void _calculateStatistics() {
     if (_students.isEmpty) {
-      _averageScore = 0.0;
-      _quizzesCompleted = 0.0;
+      _averageCompletionPercentage = 0.0;
       return;
     }
 
-    double totalScore = 0.0;
-    int totalQuizzes = 0;
-    int completedQuizzes = 0;
+    double totalCompletion = 0.0;
+    int studentsWithData = 0;
 
     for (var student in _students) {
-      // Mock performance values until backend provides real data
-      final mockScore = 70.0 + (student.hashCode % 30); // 70-100
-      const mockTotalQuizzes = 18;
-      final mockCompleted = 13 + (student.hashCode % 6); // 13-18
+      final userId =
+          student['id']?.toString() ??
+          student['user_id']?.toString() ??
+          student['student_id']?.toString();
 
-      totalScore += mockScore;
-      totalQuizzes += mockTotalQuizzes;
-      completedQuizzes += mockCompleted;
+      if (userId != null && _studentCompletionMap.containsKey(userId)) {
+        final completionData = _studentCompletionMap[userId];
+        if (completionData != null) {
+          final completionPercentage =
+              completionData['completion_percentage'] ?? 0.0;
+          totalCompletion += completionPercentage;
+          studentsWithData++;
+        }
+      }
     }
 
-    _averageScore = totalScore / _students.length;
-    _quizzesCompleted = totalQuizzes == 0
-        ? 0
-        : (completedQuizzes / totalQuizzes) * 100;
+    _averageCompletionPercentage = studentsWithData > 0
+        ? totalCompletion / studentsWithData
+        : 0.0;
   }
 
   void _applyPagination() {
@@ -238,9 +300,9 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
           child: _buildStatCard(
             cs,
             textTheme,
-            'Average Score',
-            _averageScore.toStringAsFixed(0),
-            Icons.trending_up,
+            'Completion Rate',
+            '${_averageCompletionPercentage.toStringAsFixed(1)}%',
+            Icons.check_circle,
           ),
         ),
         const SizedBox(width: 16),
@@ -248,8 +310,8 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
           child: _buildStatCard(
             cs,
             textTheme,
-            'Quizzes Completed',
-            '${_quizzesCompleted.toStringAsFixed(0)}%',
+            'Quizzes Assigned',
+            '$_totalQuizzesAssigned',
             Icons.quiz,
           ),
         ),
@@ -353,8 +415,20 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     final email = student['email'] ?? '';
     final phone = student['phone_no'] ?? '+1 234 567 8901';
     final initials = _getInitials(name);
-    final score = 70 + (student.hashCode % 30); // mock until real data
-    final progress = 70 + (student.hashCode % 30); // mock until real data
+
+    // Get real completion data
+    final userId =
+        student['id']?.toString() ??
+        student['user_id']?.toString() ??
+        student['student_id']?.toString();
+    final completionData = userId != null
+        ? _studentCompletionMap[userId]
+        : null;
+    final completedQuizzes = completionData?['completed_quizzes'] ?? 0;
+    final totalQuizzes =
+        completionData?['total_quizzes'] ?? _totalQuizzesAssigned;
+    final completionPercentage =
+        completionData?['completion_percentage'] ?? 0.0;
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -371,11 +445,14 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
           return;
         }
 
+        // Navigate to student detail page showing quiz completion
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => UserDetailPage(
-              userId: rawId.toString(),
-              userName: name.toString(),
+            builder: (context) => TeacherStudentDetailPage(
+              classId: widget.classId,
+              studentId: rawId.toString(),
+              studentName: name.toString(),
+              studentEmail: email.isNotEmpty ? email : null,
             ),
           ),
         );
@@ -453,7 +530,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Avg Score',
+                      'Completion',
                       style: textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
@@ -462,7 +539,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     Row(
                       children: [
                         Text(
-                          score.toStringAsFixed(0),
+                          '${completionPercentage.toStringAsFixed(0)}%',
                           style: textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: cs.onSurface,
@@ -470,9 +547,13 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                         ),
                         const SizedBox(width: 6),
                         Icon(
-                          Icons.trending_up,
+                          completionPercentage >= 100
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
                           size: 14,
-                          color: Colors.green.shade400,
+                          color: completionPercentage >= 100
+                              ? Colors.green.shade400
+                              : cs.onSurfaceVariant,
                         ),
                       ],
                     ),
@@ -489,7 +570,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '15/18',
+                      '$completedQuizzes/$totalQuizzes',
                       style: textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
@@ -506,7 +587,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
             ),
             const SizedBox(height: 6),
             LinearProgressIndicator(
-              value: progress / 100,
+              value: totalQuizzes > 0 ? completionPercentage / 100 : 0.0,
               minHeight: 4,
               backgroundColor: cs.outlineVariant,
               valueColor: AlwaysStoppedAnimation<Color>(cs.primary),

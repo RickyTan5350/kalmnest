@@ -96,6 +96,9 @@ Route::prefix('users')->group(function () {
         Route::get('/{id}/quizzes', [ClassController::class, 'getQuizzes']); // Get quizzes for a class
         Route::post('/{id}/quizzes', [ClassController::class, 'assignQuiz']); // Assign existing quiz to class
         Route::delete('/{classId}/quizzes/{levelId}', [ClassController::class, 'removeQuiz']); // Remove quiz from class
+        Route::get('/{id}/students/completion', [ClassController::class, 'getStudentCompletion']); // Get student completion data
+        Route::get('/{classId}/students/{studentId}/quizzes', [ClassController::class, 'getStudentQuizzes']); // Get student's quiz completion status
+        Route::get('/{classId}/quizzes/{levelId}/students', [ClassController::class, 'getQuizStudents']); // Get quiz's student completion status
     });
     
     // Class statistics
