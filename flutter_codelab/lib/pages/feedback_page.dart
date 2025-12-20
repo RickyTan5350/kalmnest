@@ -168,11 +168,38 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Feedback'),
+    final colors = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        elevation: 2.0,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- HEADER ---
+                Text(
+                  "Feedback",
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: colors.onSurface,
+                      ),
+                ),
+                const SizedBox(height: 16),
+
+                // --- CONTENT ---
+                Expanded(
+                  child: _buildBody(),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      body: _buildBody(),
     );
   }
 

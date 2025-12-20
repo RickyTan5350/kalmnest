@@ -6,7 +6,7 @@ import 'package:flutter_codelab/constants/api_constants.dart';
 
 class ClassApi {
   // Replace with your PC's local IP
-  static String get base => ApiConstants.baseUrl;
+  static String base = '${ApiConstants.baseUrl}/api';
 
   // Helper function to get headers with authentication
   static Future<Map<String, String>> _getAuthHeaders({

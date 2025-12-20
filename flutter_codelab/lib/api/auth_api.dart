@@ -44,12 +44,9 @@ class AuthApi {
           await _storage.write(key: _tokenKey, value: token);
           await _storage.write(key: _userKey, value: userDataJson);
 
-          return data['user'] as Map<String, dynamic>;
-        } catch (e) {
-          print('JSON Decode Error: $e');
-          print('Response Body: ${response.body}');
-          throw Exception('Failed to decode server response. See logs.');
-        }
+        final userMap = data['user'] as Map<String, dynamic>;
+        userMap['token'] = token; // Add token to the map
+        return userMap;
       } else if (response.statusCode == 422) {
         final errors = jsonDecode(response.body);
         // Safely extract email error or provide default

@@ -25,7 +25,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('achievements', function (Blueprint $table) {
-            $table->dropForeign(['associated_level']); 
+            $table->dropForeign(['associated_level']);
         });
     }
 };
