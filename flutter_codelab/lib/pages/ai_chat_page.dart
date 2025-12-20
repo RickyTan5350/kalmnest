@@ -64,10 +64,10 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   String? _currentSessionId;
 
   final List<String> _suggestedQuestions = [
-    "What are my achievements?",
-    "How do I create a note?",
-    "Tell me about the game levels",
-    "How can I give feedback?"
+    "Give me Learning Suggestion for HTML",
+    "Give me Learning Suggestion for CSS",
+    "Give me Learning Suggestion for JavaScript",
+    "Give me Learning suggestion for Web development"
   ];
 
   @override
@@ -193,36 +193,56 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('KalmNest Assistant'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: _messages.length > 1 ? _clearChat : null,
-            tooltip: 'Clear Chat',
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                reverse: true,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) => _MessageBubble(message: _messages[index]),
-              ),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        elevation: 2.0,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- HEADER ---
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "KalmNest Assistant",
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(color: colorScheme.onSurface),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: _messages.length > 1 ? _clearChat : null,
+                      tooltip: 'Clear Chat',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // --- CHAT CONTENT ---
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    reverse: true,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) =>
+                        _MessageBubble(message: _messages[index]),
+                  ),
+                ),
+                if (_messages.length == 1 && _isInitialized)
+                  _buildSuggestedQuestions(colorScheme),
+                _buildInputArea(colorScheme),
+              ],
             ),
-            if (_messages.length == 1 && _isInitialized)
-              _buildSuggestedQuestions(colorScheme),
-            _buildInputArea(colorScheme),
-          ],
+          ),
         ),
       ),
     );

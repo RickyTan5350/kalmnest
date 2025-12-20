@@ -2,10 +2,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 class ClassApi {
   // Replace with your PC's local IP
-  static const String base = 'https://backend_services.test/api';
+  static String base = '${ApiConstants.baseUrl}/api';
 
   // Helper function to get headers with authentication
   static Future<Map<String, String>> _getAuthHeaders({
