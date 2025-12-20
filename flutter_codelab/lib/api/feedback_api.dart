@@ -2,10 +2,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_codelab/api/auth_api.dart';
 
-
 class FeedbackApiService {
-  static const String baseUrl = 'https://backend_services.test/api'; // Laravel dev server
-  
+  static const String baseUrl =
+      'https://kalmnest.test/api'; // Laravel dev server
+
   final String? token; // Store the auth token from login
 
   FeedbackApiService({this.token});
@@ -32,7 +32,7 @@ class FeedbackApiService {
       // Import ApiConstants indirectly via AuthApi import; to avoid circular imports
       // we use the same host value hardcoded for local dev domain.
       // If you use customBaseUrl, AuthApi and game_api guard adding Host there.
-      result['Host'] = 'backend_services.test';
+      result['Host'] = 'kalmnest.test';
     } catch (_) {
       // ignore
     }
@@ -65,10 +65,9 @@ class FeedbackApiService {
     try {
       final hdrs = await getHeaders();
       print('FeedbackApiService GET $baseUrl/test headers: $hdrs');
-      final response = await http.get(
-        Uri.parse('$baseUrl/test'),
-        headers: hdrs,
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(Uri.parse('$baseUrl/test'), headers: hdrs)
+          .timeout(const Duration(seconds: 5));
 
       return response.statusCode == 200;
     } catch (e) {
@@ -77,15 +76,18 @@ class FeedbackApiService {
     }
   }
 
-
   Future<List<Map<String, dynamic>>> getStudents() async {
     try {
       // The backend exposes users via `/users` and supports filtering by role_name
       final endpoint = '/users?role_name=Student';
       print('Fetching students from: $baseUrl$endpoint');
       final hdrs = await getHeaders();
-      print('FeedbackApiService GET $baseUrl$endpoint headers: ${_maskHeaders(hdrs)}');
-      final response = await http.get(Uri.parse('$baseUrl$endpoint'), headers: hdrs).timeout(const Duration(seconds: 5));
+      print(
+        'FeedbackApiService GET $baseUrl$endpoint headers: ${_maskHeaders(hdrs)}',
+      );
+      final response = await http
+          .get(Uri.parse('$baseUrl$endpoint'), headers: hdrs)
+          .timeout(const Duration(seconds: 5));
 
       print('Students response status: ${response.statusCode}');
       print('Students response body: ${response.body}');
@@ -94,43 +96,51 @@ class FeedbackApiService {
         final decoded = json.decode(response.body);
 
         // Controller returns { message: '...', data: [ ...users ] }
-        final List<dynamic>? payloadList = decoded is Map && decoded['data'] is List
+        final List<dynamic>? payloadList =
+            decoded is Map && decoded['data'] is List
             ? List<dynamic>.from(decoded['data'] as List)
             : decoded is List
-                ? List<dynamic>.from(decoded)
-                : null;
+            ? List<dynamic>.from(decoded)
+            : null;
 
         if (payloadList == null) {
           throw Exception('Unexpected students payload: ${response.body}');
         }
 
-        final List<Map<String, dynamic>> students = payloadList.map<Map<String, dynamic>>((s) {
-          final userId = (s is Map) ? (s['user_id'] ?? s['id']) : null;
-          final name = (s is Map) ? (s['name'] ?? 'Unknown') : 'Unknown';
-          return {
-            'id': userId?.toString() ?? '',
-            'name': name?.toString() ?? 'Unknown',
-          };
-        }).toList();
+        final List<Map<String, dynamic>> students = payloadList
+            .map<Map<String, dynamic>>((s) {
+              final userId = (s is Map) ? (s['user_id'] ?? s['id']) : null;
+              final name = (s is Map) ? (s['name'] ?? 'Unknown') : 'Unknown';
+              return {
+                'id': userId?.toString() ?? '',
+                'name': name?.toString() ?? 'Unknown',
+              };
+            })
+            .toList();
 
         print('Mapped students: $students');
         return students;
       } else if (response.statusCode == 401) {
         throw Exception('Unauthorized. Please login.');
       } else {
-        throw Exception('Failed to fetch students: ${response.statusCode} - ${response.body}');
+        throw Exception(
+          'Failed to fetch students: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching students: $e');
     }
   }
+
   /// Fetch all feedback created by the teacher
   Future<List<Map<String, dynamic>>> getFeedback() async {
     try {
       final endpoint = '/feedback';
-      
+
       Map<String, String> hdrs = await getHeaders();
-      print('FeedbackApiService GET $baseUrl$endpoint headers: ${_maskHeaders(hdrs)}');
+      print(
+        'FeedbackApiService GET $baseUrl$endpoint headers: ${_maskHeaders(hdrs)}',
+      );
       var response = await http.get(
         Uri.parse('$baseUrl$endpoint'),
         headers: hdrs,
@@ -138,13 +148,22 @@ class FeedbackApiService {
 
       // If unauthorized, try once more after re-reading the stored token
       if (response.statusCode == 401) {
-        print('FeedbackApiService: received 401, refreshing token and retrying once');
+        print(
+          'FeedbackApiService: received 401, refreshing token and retrying once',
+        );
         final freshHdrs = await getHeaders();
         if (freshHdrs['Authorization'] != hdrs['Authorization']) {
-          print('FeedbackApiService: Authorization changed, retrying with new token');
+          print(
+            'FeedbackApiService: Authorization changed, retrying with new token',
+          );
           hdrs = freshHdrs;
-          print('FeedbackApiService RETRY GET $baseUrl$endpoint headers: ${_maskHeaders(hdrs)}');
-          response = await http.get(Uri.parse('$baseUrl$endpoint'), headers: hdrs);
+          print(
+            'FeedbackApiService RETRY GET $baseUrl$endpoint headers: ${_maskHeaders(hdrs)}',
+          );
+          response = await http.get(
+            Uri.parse('$baseUrl$endpoint'),
+            headers: hdrs,
+          );
         } else {
           print('FeedbackApiService: Authorization unchanged after refresh');
         }
@@ -166,7 +185,9 @@ class FeedbackApiService {
       } else if (response.statusCode == 404) {
         throw Exception('Endpoint not found. Check API URL: $baseUrl$endpoint');
       } else {
-        throw Exception('Failed to fetch feedback: ${response.statusCode} - ${response.body}');
+        throw Exception(
+          'Failed to fetch feedback: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching feedback: $e');
@@ -174,12 +195,19 @@ class FeedbackApiService {
   }
 
   /// Fetch feedback for a specific student (requires auth)
-  Future<List<Map<String, dynamic>>> getStudentFeedback(String studentId) async {
+  Future<List<Map<String, dynamic>>> getStudentFeedback(
+    String studentId,
+  ) async {
     try {
       final endpoint = '/feedback/student/$studentId';
       final hdrs = await getHeaders();
-      print('FeedbackApiService GET $baseUrl$endpoint headers: ${_maskHeaders(hdrs)}');
-      final response = await http.get(Uri.parse('$baseUrl$endpoint'), headers: hdrs);
+      print(
+        'FeedbackApiService GET $baseUrl$endpoint headers: ${_maskHeaders(hdrs)}',
+      );
+      final response = await http.get(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: hdrs,
+      );
 
       print('GET $baseUrl$endpoint - Status: ${response.statusCode}');
       print('Response: ${response.body}');
@@ -197,7 +225,9 @@ class FeedbackApiService {
       } else if (response.statusCode == 404) {
         throw Exception('Endpoint not found. Check API URL: $baseUrl$endpoint');
       } else {
-        throw Exception('Failed to fetch student feedback: ${response.statusCode} - ${response.body}');
+        throw Exception(
+          'Failed to fetch student feedback: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching student feedback: $e');
@@ -213,7 +243,7 @@ class FeedbackApiService {
     try {
       // Use public endpoint if no token provided (for testing)
       final endpoint = '/feedback';
-      
+
       final body = jsonEncode({
         'student_id': studentId,
         'topic': topic,
@@ -247,22 +277,25 @@ class FeedbackApiService {
       } else if (response.statusCode == 404) {
         throw Exception('Endpoint not found. Check API URL: $baseUrl$endpoint');
       } else {
-        throw Exception('Failed to create feedback: ${response.statusCode} - ${response.body}');
+        throw Exception(
+          'Failed to create feedback: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error creating feedback: $e');
     }
   }
-  Future<void> deleteFeedback(String feedbackId) async {
-  final url = Uri.parse('$baseUrl/feedback/$feedbackId');
-  final hdrs = await getHeaders();
-  print('FeedbackApiService DELETE $url headers: $hdrs');
-  final response = await http.delete(url, headers: hdrs);
 
-  if (response.statusCode != 200) {
-    throw Exception('Failed to delete feedback');
+  Future<void> deleteFeedback(String feedbackId) async {
+    final url = Uri.parse('$baseUrl/feedback/$feedbackId');
+    final hdrs = await getHeaders();
+    print('FeedbackApiService DELETE $url headers: $hdrs');
+    final response = await http.delete(url, headers: hdrs);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete feedback');
+    }
   }
-}
 
   Future<void> editFeedback({
     required String feedbackId,
@@ -276,15 +309,11 @@ class FeedbackApiService {
     final response = await http.put(
       url,
       headers: hdrs,
-      body: jsonEncode({
-        'topic': topic,
-        'comment': comment,
-      }),
+      body: jsonEncode({'topic': topic, 'comment': comment}),
     );
 
     if (response.statusCode != 200) {
       throw Exception('Failed to update feedback');
     }
-}
-
+  }
 }

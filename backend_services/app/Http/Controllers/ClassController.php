@@ -596,6 +596,8 @@ class ClassController extends Controller
                 'levels.level_name',
                 'levels.created_at',
                 'levels.updated_at',
+                'levels.created_by',
+                'class_levels.is_private',
                 'level_types.level_type_id',
                 'level_types.level_type_name'
             )
@@ -609,6 +611,7 @@ class ClassController extends Controller
                         'level_type_id' => $quiz->level_type_id,
                         'level_type_name' => $quiz->level_type_name,
                     ] : null,
+                    'is_private' => (bool) $quiz->is_private,
                     'created_at' => $quiz->created_at,
                     'updated_at' => $quiz->updated_at,
                 ];
@@ -657,6 +660,7 @@ class ClassController extends Controller
 
         $validator = Validator::make($request->all(), [
             'level_id' => 'required|string|exists:levels,level_id',
+            'is_private' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -683,7 +687,7 @@ class ClassController extends Controller
                 'class_level_id' => (string) Str::uuid(),
                 'class_id' => $id,
                 'level_id' => $request->level_id,
-                'is_private' => false, // Default to false (all quizzes are public)
+                'is_private' => $request->input('is_private', false),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

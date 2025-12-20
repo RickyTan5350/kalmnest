@@ -19,6 +19,7 @@ import 'package:flutter_codelab/models/user_data.dart';
 
 import 'package:flutter_codelab/pages/pages.dart';
 import 'package:flutter_codelab/pages/login_page.dart';
+import 'package:flutter_codelab/pages/game_page.dart';
 
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
@@ -211,12 +212,21 @@ class _FeedState extends State<Feed> {
         break;
 
       case 1:
-        showCreateGamePage(
-          context: context,
-          showSnackBar: _showSnackBar,
-          userRole:
-              widget.currentUser.roleName, // <-- pass the current user role
-        );
+        // Block students from creating games
+        if (widget.currentUser.isStudent) {
+          _showSnackBar(
+            context,
+            'Students cannot create games. This is for Teachers and Admins only.',
+            Theme.of(context).colorScheme.error,
+          );
+        } else {
+          showCreateGamePage(
+            context: context,
+            showSnackBar: _showSnackBar,
+            userRole: widget.currentUser.roleName,
+          );
+        }
+        break;
       case 2:
         if (widget.currentUser.isStudent) {
           // 2. BLOCK: Show error message
@@ -271,7 +281,7 @@ class _FeedState extends State<Feed> {
             onFeedbackAdded: (feedback) {
               // Optionally do something after feedback is added
             },
-            authToken: widget.currentUser.token ?? '',
+            authToken: widget.currentUser.token,
           );
         }
         break;
@@ -291,7 +301,10 @@ class _FeedState extends State<Feed> {
 
     final List<Widget> pages = [
       const UserPage(), // Index 0
-      GamePage(userRole: widget.currentUser.roleName), // Index 1
+      GamePage(
+        key: gamePageGlobalKey,
+        userRole: widget.currentUser.roleName,
+      ), // Index 1
       NotePage(currentUser: widget.currentUser),
       ClassPage(
         key: classPageGlobalKey,
@@ -320,6 +333,10 @@ class _FeedState extends State<Feed> {
                 setState(() {
                   selectedIndex = index;
                 });
+                // Refresh GamePage when navigating to it
+                if (index == 1) {
+                  gamePageGlobalKey.currentState?.refresh();
+                }
               },
               // REMOVED onLogoutPressed
               isExtended: _isRailExtended,
@@ -365,6 +382,10 @@ class _FeedState extends State<Feed> {
                 setState(() {
                   selectedIndex = index;
                 });
+                // Refresh GamePage when navigating to it
+                if (index == 1) {
+                  gamePageGlobalKey.currentState?.refresh();
+                }
               },
             ),
     );
