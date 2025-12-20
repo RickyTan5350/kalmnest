@@ -62,7 +62,7 @@ class _EditNotePageState extends State<EditNotePage> {
   final List<String> _topics = ['HTML', 'CSS', 'JS', 'PHP'];
 
   bool _isLoading = false;
-  List<UploadedAttachment> _attachments = [];
+  final List<UploadedAttachment> _attachments = [];
 
   @override
   void initState() {
@@ -83,8 +83,9 @@ class _EditNotePageState extends State<EditNotePage> {
       if (widget.initialCursorIndex != null) {
         int idx = widget.initialCursorIndex!;
         if (idx < 0) idx = 0;
-        if (idx > _contentController.text.length)
+        if (idx > _contentController.text.length) {
           idx = _contentController.text.length;
+        }
         _contentController.selection = TextSelection.collapsed(offset: idx);
       }
     });
@@ -415,7 +416,7 @@ class _EditNotePageState extends State<EditNotePage> {
                           Expanded(
                             flex: 1,
                             child: DropdownButtonFormField<String>(
-                              value: _selectedTopic,
+                              initialValue: _selectedTopic,
                               dropdownColor: colorScheme.surfaceContainer,
                               style: TextStyle(color: colorScheme.onSurface),
                               decoration: _inputDecoration(
@@ -487,7 +488,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                       onChanged: (bool value) => setState(
                                         () => _noteVisibility = value,
                                       ),
-                                      activeColor: colorScheme.primary,
+                                      activeThumbColor: colorScheme.primary,
                                     ),
                                   ),
                                 ],
@@ -723,25 +724,28 @@ class _EditNotePageState extends State<EditNotePage> {
                                 return null;
                               },
                               customStylesBuilder: (element) {
-                                if (element.localName == 'h1')
+                                if (element.localName == 'h1') {
                                   return {
                                     'margin-bottom': '10px',
                                     'font-weight': 'bold',
                                     'border-bottom':
                                         '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
                                   };
-                                if (element.localName == 'table')
+                                }
+                                if (element.localName == 'table') {
                                   return {
                                     'border-collapse': 'collapse',
                                     'width': '100%',
                                   };
+                                }
                                 if (element.localName == 'th' ||
-                                    element.localName == 'td')
+                                    element.localName == 'td') {
                                   return {
                                     'border':
                                         '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
                                     'padding': '8px',
                                   };
+                                }
                                 return null;
                               },
                             ),

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
@@ -21,6 +20,7 @@ class AchievementApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     final token = await AuthApi.getToken();
