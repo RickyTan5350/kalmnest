@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Requests\DeleteUserRequest;
+use App\Http\Controllers\GeminiController;
 /*
 |--------------------------------------------------------------------------
 | Public Routes (No Authentication Required)
@@ -59,7 +60,7 @@ Route::post('/logout', [UserController::class, 'logout']);
     // All roles (Admin/Teacher/Student) can view list/search/filter
 Route::prefix('users')->group(function () {
         // List/Search/Filter (GET /api/users)
-        Route::get('/', [UserController::class, 'index']); 
+        Route::get('/', [UserController::class, 'index']);
         // User lists for class management (MUST be before /{user} route to avoid route model binding conflict)
         Route::get('/teachers', [UserController::class, 'getTeachers']); // Get all teachers
         Route::get('/students', [UserController::class, 'getStudents']); // Get all students
@@ -92,7 +93,7 @@ Route::prefix('users')->group(function () {
         Route::put('/{id}', [ClassController::class, 'update']); // Update class (admin only)
         Route::delete('/{id}', [ClassController::class, 'destroy']); // Delete class (admin only)
     });
-    
+
     // Class statistics
     Route::get('/classes-count', [ClassController::class, 'getCount']); // Get class count
     Route::get('/classes-stats', [ClassController::class, 'getStats']); // Get class stats
@@ -167,4 +168,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Get feedback received by a specific student (requires auth)
     Route::get('/feedback/student/{studentId}', [FeedbackController::class, 'getStudentFeedback']);
+    Route::post('/chat', [GeminiController::class, 'getResponse']);
 });
