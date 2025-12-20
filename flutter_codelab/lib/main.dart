@@ -38,13 +38,16 @@ void main() async {
   }
 
   // Check for stored token and user data
-  // Variable name: storedUserJson
   final storedUserJson = await AuthApi.getStoredUser();
+  final token = await AuthApi.getToken();
 
-  // Reference the correct variable name here: storedUserJson
-  final UserDetails? initialUser = storedUserJson != null
-      ? UserDetails.fromJson(storedUserJson)
-      : null;
+  UserDetails? initialUser;
+  if (storedUserJson != null) {
+    if (token != null) {
+      storedUserJson['token'] = token;
+    }
+    initialUser = UserDetails.fromJson(storedUserJson);
+  }
 
   runApp(MainApp(initialUser: initialUser));
 }
@@ -71,7 +74,7 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false, // <--- ADD THIS LINE HERE
       theme: theme.light(),
-      darkTheme: theme.dark(),
+      //darkTheme: theme.dark(),
       themeMode: ThemeMode.system,
       home: homeWidget, // Use the determined home widget
     );
@@ -301,7 +304,10 @@ class _FeedState extends State<Feed> {
         showSnackBar: _showSnackBar,
         currentUser: widget.currentUser,
       ), // Index 4
-      const AiChatPage(), // Index 5
+      AiChatPage(
+        currentUser: widget.currentUser,
+        authToken: widget.currentUser.token,
+      ), // Index 5
       FeedbackPage(
         authToken: widget.currentUser.token,
         currentUser: widget.currentUser,

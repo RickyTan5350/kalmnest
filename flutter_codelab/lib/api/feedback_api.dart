@@ -4,6 +4,8 @@ import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 
 class FeedbackApiService {
+  static String baseUrl = '${ApiConstants.baseUrl}/api'; // Laravel dev server
+  
   final String? token; // Store the auth token from login
 
   FeedbackApiService({this.token});
