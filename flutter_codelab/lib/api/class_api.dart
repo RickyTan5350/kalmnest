@@ -372,10 +372,7 @@ class ClassApi {
     bool isPrivate = false,
   }) async {
     final uri = Uri.parse('$base/classes/$classId/quizzes');
-    final body = jsonEncode({
-      'level_id': levelId,
-      'is_private': isPrivate,
-    });
+    final body = jsonEncode({'level_id': levelId, 'is_private': isPrivate});
 
     try {
       final headers = await _getAuthHeaders(requiresAuth: true);
@@ -432,6 +429,125 @@ class ClassApi {
     } catch (e) {
       print("Network error fetching quiz count: $e");
       return 0;
+    }
+  }
+
+  /// Get student completion data for a class
+  /// Returns a list of students with their completion statistics
+  static Future<Map<String, dynamic>> getStudentCompletion(
+    String classId,
+  ) async {
+    final uri = Uri.parse('$base/classes/$classId/students/completion');
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.get(uri, headers: headers);
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return {
+          'success': true,
+          'data': List<Map<String, dynamic>>.from(decoded['data'] ?? []),
+          'total_quizzes_assigned': decoded['total_quizzes_assigned'] ?? 0,
+        };
+      } else {
+        print(
+          "Error fetching student completion: ${res.statusCode} ${res.body}",
+        );
+        return {
+          'success': false,
+          'data': <Map<String, dynamic>>[],
+          'total_quizzes_assigned': 0,
+        };
+      }
+    } catch (e) {
+      print("Network error fetching student completion: $e");
+      return {
+        'success': false,
+        'data': <Map<String, dynamic>>[],
+        'total_quizzes_assigned': 0,
+      };
+    }
+  }
+
+  /// Get student's quiz completion status for all quizzes in a class
+  static Future<Map<String, dynamic>> getStudentQuizzes(
+    String classId,
+    String studentId,
+  ) async {
+    final uri = Uri.parse('$base/classes/$classId/students/$studentId/quizzes');
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.get(uri, headers: headers);
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return {
+          'success': true,
+          'data': List<Map<String, dynamic>>.from(decoded['data'] ?? []),
+          'total_quizzes': decoded['total_quizzes'] ?? 0,
+          'completed_quizzes': decoded['completed_quizzes'] ?? 0,
+        };
+      } else {
+        print("Error fetching student quizzes: ${res.statusCode} ${res.body}");
+        return {
+          'success': false,
+          'data': <Map<String, dynamic>>[],
+          'total_quizzes': 0,
+          'completed_quizzes': 0,
+        };
+      }
+    } catch (e) {
+      print("Network error fetching student quizzes: $e");
+      return {
+        'success': false,
+        'data': <Map<String, dynamic>>[],
+        'total_quizzes': 0,
+        'completed_quizzes': 0,
+      };
+    }
+  }
+
+  /// Get quiz's student completion status for all students in a class
+  static Future<Map<String, dynamic>> getQuizStudents(
+    String classId,
+    String levelId,
+  ) async {
+    final uri = Uri.parse('$base/classes/$classId/quizzes/$levelId/students');
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.get(uri, headers: headers);
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return {
+          'success': true,
+          'quiz': decoded['quiz'],
+          'data': List<Map<String, dynamic>>.from(decoded['data'] ?? []),
+          'total_students': decoded['total_students'] ?? 0,
+          'completed_students': decoded['completed_students'] ?? 0,
+        };
+      } else {
+        print("Error fetching quiz students: ${res.statusCode} ${res.body}");
+        return {
+          'success': false,
+          'quiz': null,
+          'data': <Map<String, dynamic>>[],
+          'total_students': 0,
+          'completed_students': 0,
+        };
+      }
+    } catch (e) {
+      print("Network error fetching quiz students: $e");
+      return {
+        'success': false,
+        'quiz': null,
+        'data': <Map<String, dynamic>>[],
+        'total_students': 0,
+        'completed_students': 0,
+      };
     }
   }
 }
