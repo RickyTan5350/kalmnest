@@ -28,21 +28,21 @@ class AuthApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
+          if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
         },
         body: body,
       );
 
       if (response.statusCode == 200) {
-        try {
-          final data = jsonDecode(response.body);
-          final token = data['token'];
+        final data = jsonDecode(response.body);
+        final token = data['token'];
 
-          // The 'user' object from backend now includes the nested 'role' object
-          // We store this entire structure securely.
-          final userDataJson = jsonEncode(data['user']);
+        // The 'user' object from backend now includes the nested 'role' object
+        // We store this entire structure securely.
+        final userDataJson = jsonEncode(data['user']);
 
-          await _storage.write(key: _tokenKey, value: token);
-          await _storage.write(key: _userKey, value: userDataJson);
+        await _storage.write(key: _tokenKey, value: token);
+        await _storage.write(key: _userKey, value: userDataJson);
 
         final userMap = data['user'] as Map<String, dynamic>;
         userMap['token'] = token; // Add token to the map
@@ -97,6 +97,7 @@ class AuthApi {
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token', // Crucial: Send the token
+            if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
           },
         );
       } catch (e) {

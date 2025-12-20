@@ -295,7 +295,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant.withOpacity(0.5),
+                  color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: colorScheme.outlineVariant),
                 ),
@@ -350,7 +350,6 @@ class _MessageBubble extends StatelessWidget {
 
   const _MessageBubble({
     required this.message,
-    super.key,
   });
 
   @override
@@ -386,7 +385,7 @@ class _MessageBubble extends StatelessWidget {
                     ? null
                     : message.isError
                         ? colorScheme.errorContainer
-                        : colorScheme.surfaceVariant.withOpacity(0.7),
+                        : colorScheme.surfaceContainerHighest.withOpacity(0.7),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -463,7 +462,7 @@ class _MessageBubble extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceVariant.withOpacity(0.7),
+              color: colorScheme.surfaceContainerHighest.withOpacity(0.7),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),

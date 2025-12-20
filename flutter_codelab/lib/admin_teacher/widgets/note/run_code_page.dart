@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 class RunCodePage extends StatefulWidget {
   final String initialCode;

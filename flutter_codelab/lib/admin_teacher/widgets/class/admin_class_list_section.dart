@@ -71,7 +71,7 @@ class _ClassListItemState extends State<_ClassListItem> {
               margin: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
                 color: _isHovered
-                    ? widget.colorScheme.surfaceVariant.withOpacity(0.6)
+                    ? widget.colorScheme.surfaceContainerHighest.withOpacity(0.6)
                     : widget.colorScheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
@@ -400,12 +400,12 @@ class ClassListSection extends StatefulWidget {
   final ViewLayout layout;
 
   const ClassListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     this.onReload,
     this.searchQuery = '',
     required this.layout,
-  }) : super(key: key);
+  });
 
   @override
   State<ClassListSection> createState() => _ClassListSectionState();

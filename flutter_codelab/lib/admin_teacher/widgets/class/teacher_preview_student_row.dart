@@ -6,10 +6,10 @@ class StudentPreviewRow extends StatelessWidget {
   final VoidCallback onViewAll;
 
   const StudentPreviewRow({
-    Key? key,
+    super.key,
     required this.students,
     required this.onViewAll,
-  }) : super(key: key);
+  });
 
   Widget _studentCard(BuildContext context, Student student) {
     return Container(

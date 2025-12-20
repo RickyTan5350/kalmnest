@@ -19,7 +19,7 @@ class FileUploadZone extends StatelessWidget {
     // Colors derived from your theme or fixed for specific look
     final borderColor = colorScheme.outlineVariant;
     final boxColor = isDarkMode 
-        ? colorScheme.surfaceVariant.withOpacity(0.1) 
+        ? colorScheme.surfaceContainerHighest.withOpacity(0.1) 
         : Colors.white;
 
     return Column(
