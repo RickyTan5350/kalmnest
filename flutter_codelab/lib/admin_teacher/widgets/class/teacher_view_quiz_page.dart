@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/api/game_api.dart';
@@ -81,17 +82,125 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
   }
 
   Future<void> _handleCreateQuiz() async {
-    // Open create game page (Unity WebView)
-    // After creation, teacher can manually assign it using "Assign Quiz"
+    // First, ask teacher: How should this quiz be visible?
+    final isPrivate = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quiz Visibility'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'How should this quiz be visible after creation?',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.lock, color: Colors.orange),
+              title: const Text('Private'),
+              subtitle: const Text('Only visible to this class'),
+              onTap: () => Navigator.pop(context, true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.public, color: Colors.blue),
+              title: const Text('Public'),
+              subtitle: const Text(
+                'Visible to everyone, can be assigned to other classes',
+              ),
+              onTap: () => Navigator.pop(context, false),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // If user cancelled, return
+    if (isPrivate == null) return;
+
+    // Use Completer to wait for level creation
+    final Completer<String?> levelIdCompleter = Completer<String?>();
+
+    // Now open create game page with callback
     showCreateGamePage(
       context: context,
       userRole: widget.roleName,
       showSnackBar: _showSnackBar,
+      onLevelCreated: (levelId) {
+        if (!levelIdCompleter.isCompleted) {
+          levelIdCompleter.complete(levelId);
+        }
+      },
     );
 
-    // Refresh quizzes after a delay
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) _fetchData();
+    // Wait for level creation (with timeout)
+    final createdLevelId = await levelIdCompleter.future.timeout(
+      const Duration(seconds: 60),
+      onTimeout: () => null,
+    );
+
+    // If we got the level ID, assign it immediately
+    if (createdLevelId != null && mounted) {
+      final result = await ClassApi.assignQuizToClass(
+        classId: widget.classId,
+        levelId: createdLevelId,
+        isPrivate: isPrivate,
+      );
+
+      if (mounted) {
+        if (result['success'] == true) {
+          _showSnackBar(
+            context,
+            'Quiz created and assigned successfully as ${isPrivate ? "Private" : "Public"}',
+            Colors.green,
+          );
+          // Refresh the quiz list
+          _fetchData();
+        } else {
+          _showSnackBar(
+            context,
+            result['message'] ?? 'Failed to assign quiz',
+            Colors.red,
+          );
+        }
+      }
+    } else if (mounted) {
+      // Fallback: try to find the newly created level
+      await Future.delayed(const Duration(seconds: 2));
+      final allLevels = await GameAPI.fetchLevels(forceRefresh: true);
+
+      if (mounted && allLevels.isNotEmpty) {
+        // Get the most recently created level by current user
+        final newLevel = allLevels.firstWhere(
+          (level) => level.isCreatedByMe == true,
+          orElse: () => allLevels.first,
+        );
+
+        if (newLevel.levelId != null) {
+          final result = await ClassApi.assignQuizToClass(
+            classId: widget.classId,
+            levelId: newLevel.levelId!,
+            isPrivate: isPrivate,
+          );
+
+          if (mounted) {
+            if (result['success'] == true) {
+              _showSnackBar(
+                context,
+                'Quiz created and assigned successfully as ${isPrivate ? "Private" : "Public"}',
+                Colors.green,
+              );
+              _fetchData();
+            } else {
+              _showSnackBar(
+                context,
+                result['message'] ?? 'Failed to assign quiz',
+                Colors.red,
+              );
+            }
+          }
+        }
+      }
+    }
   }
 
   Future<void> _handleAssignQuiz() async {
@@ -118,9 +227,41 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
     );
 
     if (selectedLevel != null) {
+      // Ask teacher: Private or Public?
+      final isPrivate = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Quiz Visibility'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('How should this quiz be visible?'),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.lock, color: Colors.orange),
+                title: const Text('Private'),
+                subtitle: const Text('Only visible to this class'),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              ListTile(
+                leading: const Icon(Icons.public, color: Colors.blue),
+                title: const Text('Public'),
+                subtitle: const Text(
+                  'Visible to everyone, can be assigned to other classes',
+                ),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (isPrivate == null) return; // User cancelled
+
       final result = await ClassApi.assignQuizToClass(
         classId: widget.classId,
         levelId: selectedLevel.levelId!,
+        isPrivate: isPrivate,
       );
 
       if (!mounted) return;

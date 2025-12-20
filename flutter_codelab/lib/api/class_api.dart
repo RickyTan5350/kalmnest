@@ -369,9 +369,13 @@ class ClassApi {
   static Future<Map<String, dynamic>> assignQuizToClass({
     required String classId,
     required String levelId,
+    bool isPrivate = false,
   }) async {
     final uri = Uri.parse('$base/classes/$classId/quizzes');
-    final body = jsonEncode({'level_id': levelId});
+    final body = jsonEncode({
+      'level_id': levelId,
+      'is_private': isPrivate,
+    });
 
     try {
       final headers = await _getAuthHeaders(requiresAuth: true);
