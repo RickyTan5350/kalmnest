@@ -259,65 +259,69 @@ class _RunCodePageState extends State<RunCodePage> {
   }
 
   Future<void> _runCode() async {
-    _updateTitleFromCode(_codeController.text);
-    final code = _codeController.text;
+  _updateTitleFromCode(_codeController.text);
+  final code = _codeController.text;
 
-    // --- PHP EXECUTION (Backend) ---
-    if (code.trim().startsWith('<?php')) {
-      // Show loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Executing PHP on backend...'),
-          duration: Duration(seconds: 1),
-        ),
-      );
+  // 1. IMPROVED DETECTION: Use RegExp to find <?php anywhere in the text
+  final hasPhp = RegExp(r'<\?php', caseSensitive: false).hasMatch(code);
 
-      try {
-        final url = Uri.parse('${ApiConstants.baseUrl}/run-code');
-        final response = await http.post(
-          url,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode({'code': code}),
-        );
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final output = data['output'] ?? '';
-
-          await _updateAndReload(output);
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('PHP Executed Successfully')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${response.statusCode} - ${response.body}'),
-            ),
-          );
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Network Error: $e')));
-      }
-      return;
-    }
-
-    // --- HTML/JS EXECUTION (Local) ---
-    await _updateAndReload(code);
-
+  if (hasPhp) {
+    print("DEBUG: [PHP MODE] Sending code to: ${ApiConstants.baseUrl}/run-code");
+    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Code executed!'),
-        duration: Duration(milliseconds: 500),
+        content: Text('Executing PHP on backend...'),
+        duration: Duration(milliseconds: 800),
       ),
     );
+
+    try {
+      final url = Uri.parse('${ApiConstants.baseUrl}/run-code');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'code': code}),
+      );
+
+      print("DEBUG: Backend Status: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final output = data['output'] ?? '';
+        
+        // This output now contains the HTML + the executed PHP result
+        await _updateAndReload(output); 
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PHP Executed Successfully')),
+        );
+      } else {
+        print("DEBUG: Server Error Output: ${response.body}");
+        await _updateAndReload("<b>Backend Error (${response.statusCode}):</b><br>${response.body}");
+      }
+    } catch (e) {
+      print("DEBUG: Connection Error: $e");
+      await _updateAndReload("<b>Connection Error:</b> Could not reach Laravel server at ${ApiConstants.baseUrl}.<br>Error: $e");
+    }
+    
+    // IMPORTANT: Return early so we don't execute the local HTML logic below
+    return; 
   }
 
+  // --- HTML/JS EXECUTION (Local) ---
+  print("DEBUG: [LOCAL MODE] Running as standard HTML/JS.");
+  await _updateAndReload(code);
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Code executed locally!'),
+      duration: Duration(milliseconds: 500),
+    ),
+  );
+}
   void _loadRealUrl(String url) {
     if (_webViewController == null) return;
     if (!url.startsWith('http')) {
