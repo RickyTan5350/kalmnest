@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/user_api.dart';
+import 'package:flutter_codelab/utils/formatters.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 
 // Utility function to show the dialog
@@ -224,6 +225,31 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                 ),
                 const SizedBox(height: 24),
 
+                // Name
+                TextFormField(
+                  controller: _nameController,
+                  style: TextStyle(color: colorScheme.onSurface),
+                  decoration: _inputDecoration(
+                    labelText: 'Name',
+                    icon: Icons.person,
+                    colorScheme: colorScheme,
+                  ),
+                  validator: (value) {
+                    if (_serverErrors.containsKey('name')) {
+                      return _serverErrors['name'];
+                    }
+                    if (value == null || value.isEmpty)
+                      return 'Please enter a name';
+                    return null;
+                  },
+                  onChanged: (value) {
+                    if (_serverErrors.containsKey('name')) {
+                      setState(() => _serverErrors.remove('name'));
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
                 // Email
                 TextFormField(
                   controller: _emailController,
@@ -253,31 +279,6 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       return 'Enter a valid email address';
                     }
                     return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Name
-                TextFormField(
-                  controller: _nameController,
-                  style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: 'Name',
-                    icon: Icons.person,
-                    colorScheme: colorScheme,
-                  ),
-                  validator: (value) {
-                    if (_serverErrors.containsKey('name')) {
-                      return _serverErrors['name'];
-                    }
-                    if (value == null || value.isEmpty)
-                      return 'Please enter a name';
-                    return null;
-                  },
-                  onChanged: (value) {
-                    if (_serverErrors.containsKey('name')) {
-                      setState(() => _serverErrors.remove('name'));
-                    }
                   },
                 ),
                 const SizedBox(height: 16),
@@ -337,9 +338,10 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     labelText: 'Phone No (Optional)',
                     icon: Icons.phone,
                     colorScheme: colorScheme,
-                    hintText: 'e.g. 012-3456789 or 011-12345678',
+                    hintText: 'e.g. 012-3456789',
                   ),
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [MalaysianPhoneFormatter()],
                   onChanged: (value) {
                     if (_serverErrors.containsKey('phone_no')) {
                       setState(() => _serverErrors.remove('phone_no'));
