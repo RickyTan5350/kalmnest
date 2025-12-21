@@ -142,7 +142,7 @@ class AchievementApi {
     }
   }
 
-  Future<void> deleteAchievements(Set<String> ids) async {
+  Future<Map<String, dynamic>> deleteAchievements(Set<String> ids) async {
     final deleteUrl = '$_apiUrl/delete-batch';
     final body = jsonEncode({'ids': ids.toList()});
 
@@ -155,9 +155,20 @@ class AchievementApi {
       );
 
       if (response.statusCode == 200) {
-        return;
+        return jsonDecode(response.body) as Map<String, dynamic>;
       } else if (response.statusCode == 404) {
         throw Exception('No achievements found to delete.');
+      } else if (response.statusCode == 403) {
+        // Try to parse the specific message from the backend
+        try {
+          final jsonBody = jsonDecode(response.body);
+          if (jsonBody['message'] != null) {
+            throw Exception(jsonBody['message']);
+          }
+        } catch (_) {
+          // Fallback if parsing fails
+        }
+        throw Exception('Access Denied.');
       } else {
         throw Exception(
           'Server Error ${response.statusCode}: ${response.body}',
