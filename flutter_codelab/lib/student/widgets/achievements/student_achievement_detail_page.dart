@@ -89,8 +89,7 @@ class _StudentAchievementDetailPageState
         return Colors.yellow;
       case 'php':
         return Colors.blue;
-      case 'backend':
-        return Colors.deepPurple;
+
       default:
         return Colors.grey;
     }

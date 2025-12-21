@@ -28,7 +28,7 @@ class _AchievementPageState extends State<AchievementPage> {
     'CSS',
     'JS',
     'PHP',
-    'Level',
+
     'Quiz',
   ]; // Added 'All'
   String _selectedTopic = 'All'; // Default to 'All'

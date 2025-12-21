@@ -12,12 +12,6 @@ final List<Map<String, dynamic>> achievementIconOptions = [
   // Server-side Language
   {'display': 'PHP', 'value': 'php', 'icon': Icons.php},
 
-  // Development Areas
-  {'display': 'Backend', 'value': 'backend', 'icon': Icons.storage},
-  {'display': 'Frontend', 'value': 'frontend', 'icon': Icons.monitor},
-
-  // Custom Concepts
-  {'display': 'Level/Progress', 'value': 'level', 'icon': Icons.assessment},
   {'display': 'Quiz/Test', 'value': 'quiz', 'icon': Icons.quiz},
 
   // Add more icons here
@@ -38,8 +32,7 @@ Color getAchievementColor(BuildContext context, String? iconValue) {
         return Colors.yellow;
       case 'php':
         return Colors.blue;
-      case 'backend':
-        return Colors.deepPurple;
+
       default:
         return Colors.grey;
     }
@@ -54,8 +47,7 @@ Color getAchievementColor(BuildContext context, String? iconValue) {
       return brandColors.javascript;
     case 'php':
       return brandColors.php;
-    case 'backend':
-      return brandColors.backend;
+
     default:
       return brandColors.other;
   }
@@ -82,7 +74,6 @@ List<AchievementData> filterAchievements({
     final String title = item.achievementTitle?.toLowerCase() ?? '';
     final String description = item.achievementDescription?.toLowerCase() ?? '';
     final String icon = item.icon?.toLowerCase() ?? '';
-    final String level = item.levelName?.toLowerCase() ?? '';
 
     final isMatchingSearch =
         searchText.isEmpty ||
@@ -92,7 +83,6 @@ List<AchievementData> filterAchievements({
     final isMatchingTopic =
         selectedTopic == null ||
         icon.contains(selectedTopic) ||
-        (selectedTopic == 'level' && level.isNotEmpty) ||
         (selectedTopic == 'quiz');
 
     return isMatchingSearch && isMatchingTopic;
