@@ -65,6 +65,66 @@ class _RunCodePageState extends State<RunCodePage> {
 
     // Load libraries in background
     _loadBundledLibraries();
+
+    // Auto-load other assets from the same context
+    _loadContextAssets();
+  }
+
+  Future<void> _loadContextAssets() async {
+    if (widget.contextId == null) return;
+
+    final dirPath = 'assets/www/${widget.contextId}';
+    final dir = Directory(dirPath);
+
+    if (await dir.exists()) {
+      try {
+        final List<FileSystemEntity> entities = await dir
+            .list(recursive: true)
+            .toList();
+
+        bool foundMatchForInitial = false;
+
+        for (var entity in entities) {
+          if (entity is File) {
+            final content = await entity.readAsString();
+            // Relative path from the context root?
+            // entity.path is like assets/www/3.1.9/foo.txt
+            // We want 'foo.txt'
+            // But we need to be careful about separators.
+            String relativeName = entity.path.replaceAll(r'\', '/');
+            // Remove prefix: assets/www/{id}/
+            final prefix = '$dirPath/'.replaceAll(r'\', '/');
+            if (relativeName.startsWith(prefix)) {
+              relativeName = relativeName.substring(prefix.length);
+            } else if (relativeName.contains('/$dirPath/')) {
+              // Fallback split if prefix match fails due to absolute paths
+              relativeName = relativeName.split('/$dirPath/').last;
+            }
+
+            // Check if this file matches our initial code -> assume that is the "Active" file
+            // We used to call it "main.php" or "index.html" generic.
+            // If match, update the name.
+            if (!foundMatchForInitial && content == _files[0].content) {
+              setState(() {
+                _files[0].name =
+                    relativeName; // Update generic name to real name
+                foundMatchForInitial = true;
+              });
+            } else {
+              // Only add if not already in list (avoid duplicates if logic runs twice or overlaps)
+              // and NOT the one we just matched (though we updated _files[0] in place, so index 0 is covered)
+              if (!_files.any((f) => f.name == relativeName)) {
+                setState(() {
+                  _files.add(CodeFile(name: relativeName, content: content));
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        print("Error loading context assets: $e");
+      }
+    }
   }
 
   void _onCodeChanged() {
@@ -203,68 +263,36 @@ class _RunCodePageState extends State<RunCodePage> {
 
             print("DEBUG: Intercepted POST request: $formData");
 
-            String codeToExecute = _codeController.text;
-
             // --- MULTI-FILE PHP SUPPORT ---
-            // If the POST is to a specific .php file (e.g., /Biodata.php), try to load it from assets.
-            if (path.endsWith('.php') && widget.contextId != null) {
-              try {
-                // path has leading slash, e.g. /Biodata.php
-                final assetPath = 'assets/www/${widget.contextId}$path';
-                final fileData = await rootBundle.loadString(assetPath);
-                codeToExecute = fileData;
-                print("DEBUG: Resolved PHP file from assets: $assetPath");
-              } catch (e) {
-                print("DEBUG: Asset load failed ($path): $e");
+            // If the POST is to a specific .php file (e.g., /Biodata.php),
+            // the backend RunCodeController now handles looking it up in assets/temp dir
+            // if it's not explicitly in the sent files list.
 
-                // Fallback: Try reading directly from filesystem (Local Dev Mode)
-                try {
-                  // Try to construct absolute path or relative path
-                  // Assuming running from project root or typical structure
-                  final localFile = File('assets/www/${widget.contextId}$path');
-                  if (await localFile.exists()) {
-                    codeToExecute = await localFile.readAsString();
-                    print(
-                      "DEBUG: Resolved PHP file from Local Filesystem: ${localFile.path}",
-                    );
-                  } else {
-                    // Attempt one level up if in nested execution?
-                    // D:\Github_Project\kalmnest\flutter_codelab\assets\www\...
-                    // Current dir might be different depending on runner.
-                    // Let's print CWD to debug if this fails, but usually it works for flutter run
-                    print(
-                      "DEBUG: File not found on disk at: ${localFile.path} (CWD: ${Directory.current.path})",
-                    );
-                  }
-                } catch (e2) {
-                  print("DEBUG: Filesystem fallback failed: $e2");
-                }
-              }
-            }
             // ------------------------------
 
             // Executing PHP with this form data
 
             // 1. Determine local file match from our tabs
-            // path is like /submit.php
-            final relativeName = path.startsWith('/')
-                ? path.substring(1)
-                : path;
+            // path might be like /run_12345678/action_page.php
+            // We just want the filename part because our backend env is flat
+            final uriSegments = Uri.parse("http://dummy$path").pathSegments;
+            final fileName = uriSegments.isNotEmpty
+                ? uriSegments.last
+                : "index.php";
 
             // Check if we have this file in our tabs
             final matchingFileIndex = _files.indexWhere(
-              (f) => f.name == relativeName,
+              (f) => f.name == fileName,
             );
 
             if (matchingFileIndex != -1) {
-              codeToExecute = _files[matchingFileIndex].content;
-              print("DEBUG: Found target file in tabs: $relativeName");
+              print("DEBUG: Found target file in tabs: $fileName");
             }
 
             // Execute using our new signature
             final output = await _executePhp(
               files: _files,
-              entryPoint: relativeName,
+              entryPoint: fileName, // Send just the filename
               formData: formData,
             );
 
@@ -557,6 +585,40 @@ class _RunCodePageState extends State<RunCodePage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
+        // --- SYNC MODIFIED FILES ---
+        if (data['files'] != null && data['files'] is List) {
+          final List<dynamic> returnedFiles = data['files'];
+          for (var item in returnedFiles) {
+            final String rName = item['name'];
+            final String rContent = item['content'];
+
+            // Check if we have this file to update
+            final index = _files.indexWhere((f) => f.name == rName);
+            if (index != -1) {
+              // Update content if different
+              if (_files[index].content != rContent) {
+                setState(() {
+                  _files[index].content = rContent;
+                  // If this is the active file, update controller too
+                  if (index == _activeFileIndex) {
+                    _codeController.text = rContent;
+                  }
+                });
+                print("DEBUG: Synced file update for $rName");
+              }
+            } else {
+              // Optionally add new files created by backend?
+              // For now let's just update existing ones to be safe
+              // or maybe append? The user prompts "auto add the write file to the multitab"
+              // so yes, let's add it.
+              setState(() {
+                _files.add(CodeFile(name: rName, content: rContent));
+              });
+            }
+          }
+        }
+
         return data['output'] ?? ''; // Return the output HTML
       } else {
         return "Backend Error (${response.statusCode}): ${response.body}";

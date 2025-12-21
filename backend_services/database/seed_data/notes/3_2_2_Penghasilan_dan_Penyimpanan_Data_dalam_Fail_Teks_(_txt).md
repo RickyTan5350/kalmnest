@@ -1,0 +1,120 @@
+## 3.2.2 Penghasilan dan Penyimpanan Data dalam Fail Teks (.txt)
+#### **1\. Pengenalan Kepada PHP dan Fail Teks**
+
+* **PHP (Hypertext Preprocessor):** Merupakan skrip yang dilaksanakan oleh komputer pelayan (server).  
+```
+<html>
+<body>
+    <h1> Halaman PHP saya yang pertama </h1>
+    <?php
+        echo "Selamat Datang";
+    ?>
+</body>
+</html>
+```
+* **Keupayaan:** PHP boleh menyokong input dan output berasaskan fail, seperti membaca atau menulis data ke dalam fail teks (.txt) .  
+* **Sambungan Fail:** Fail PHP disimpan dengan sambungan `.php`.
+
+---
+
+#### **2\. Tiga Langkah Asas Operasi Fail**
+
+Untuk menyimpan data dalam fail teks, terdapat tiga langkah utama yang perlu diikuti dalam atur cara PHP:
+
+1. **Membuka Fail (`fopen`):** Fail mesti dibuka dahulu sebelum sebarang operasi dilakukan.  
+2. **Menulis Data (`fwrite`):** Menulis atau mencatatkan teks ke dalam fail yang telah dibuka.  
+3. **Menutup Fail (`fclose`):** Fail mesti ditutup setelah selesai digunakan.
+
+---
+
+#### **3\. Sintaks dan Mod Capaian Fail**
+
+Sintaks asas untuk membuka fail adalah: `$f = fopen("nama fail teks", mod capaian);`. Mod capaian menentukan jenis operasi yang boleh dilakukan ke atas fail tersebut.
+
+Jadual Mod Capaian:
+
+* **`r` (Read):** Fail dibuka hanya untuk dibaca.  
+* **`w` (Write):** Fail dibuka untuk ditulis sahaja. Kandungan asal akan dipadam atau fail baharu dicipta jika belum wujud.  
+* **`a` (Append):** Fail dibuka untuk ditulis sahaja, bermula di akhir fail (menambah data tanpa memadam data lama).  
+* **`r+`:** Dibuka untuk dibaca dan ditulis (bermula dari awal fail).  
+* **`w+`:** Dibuka untuk dibaca dan ditulis (memadam kandungan asal atau mencipta fail baharu).  
+* **`a+`:** Dibuka untuk dibaca dan ditulis (bermula dari penghujung fail, kandungan asal terpelihara).
+
+---
+
+#### **4\. Contoh Penggunaan Kod PHP**
+
+**Contoh A: Mencipta dan Menulis Fail Asas**
+
+* Kod `$f = fopen("LogMasuk.txt", "w");` akan mencipta fail bernama "LogMasuk.txt" dalam mod *writing*.  
+* Pemboleh ubah `$f` mewakili fail teks tersebut dalam pelayan.  
+* Fungsi `fwrite($f, "Selamat Datang");` akan memasukkan teks "Selamat Datang" ke dalam fail.
+```
+<?php
+    // untuk membuka fail teks dengan menggunakan mod w
+    $f = fopen("LogMasuk.txt", "w");
+
+    fwrite($f, "Selamat Datang");
+
+    // menutup fail setelah digunakan
+    fclose($f);
+?>
+```
+**Contoh B: Menggunakan Borang HTML (Form)**
+
+* Borang digunakan untuk mengambil input pengguna (contoh: Nama) melalui kotak teks dan butang "Masuk".  
+```
+<html>
+<head><title>Write to a text file</title></head>
+<body>
+    <h1>Selamat Datang</h1>
+    <h1>Ke Sekolah Menengah Bistari Jaya</h1>
+    <form method='POST'>
+        <p>Masukkan Nama Anda
+        <input type = 'text' name='namapengguna'></p>
+        <input type = 'submit' name='Submit' value='Masuk'>
+    </form>
+    <?php
+        if (isset($_POST["Submit"]))
+        {
+            $f = fopen("LogMasuk.txt", "a");
+            $nama = $_POST['namapengguna'];
+            $tarikh = date('d/m/Y h:i:s a', time());
+            $log = $nama.":".$tarikh.PHP_EOL;
+            fwrite($f, $log);
+            fclose($f);
+        }
+    ?>
+</body>
+</html>
+```
+* Data dihantar menggunakan kaedah `POST`.  
+* Apabila butang ditekan, PHP akan:  
+  1. Membuka fail dengan mod **"a"** (*append*) untuk menambah data baharu tanpa memadam data lama.  
+  2. Mengambil nama dari borang: `$nama = $_POST['namapengguna'];`.  
+  3. Mendapatkan tarikh semasa menggunakan fungsi `date`.  
+  4. Menggabungkan Nama dan Tarikh ke dalam satu pemboleh ubah `$log`.  
+  5. Menulis `$log` ke dalam fail teks.
+
+---
+
+#### **5\. Format Fungsi Tarikh (`date`)**
+
+Fungsi `date` digunakan untuk memformat tarikh dan masa.
+
+* **`d`**: Hari (01-31).  
+* **`m`**: Bulan (01-12).  
+* **`Y`**: Tahun (4 digit).  
+* **`h`**: Jam (format 12 jam, 01-12).  
+* **`i`**: Minit (00-59).  
+* **`a`**: *am* atau *pm* (huruf kecil).
+
+---
+
+#### **6\. Contoh Aplikasi/Latihan**
+
+Dokumen menyarankan aktiviti merekod kehadiran pelajar lewat:
+
+* **Situasi:** Pengawas merekod nama murid yang datang lewat pada hari Isnin dan Rabu.  
+* **Objektif:** Menghasilkan fail teks untuk menyimpan rekod ini dan mengenal pasti murid yang kerap lewat.  
+* **Contoh Data Lewat:** Raja, Nadia, Fadzliana, Embong (Isnin) dan Kumutha, Jason, Hartini, Rukumani (Rabu).
