@@ -658,7 +658,7 @@ class _RunCodePageState extends State<RunCodePage> {
 
                         // Initial load
                         if (widget.initialCode.isNotEmpty) {
-                          _runCode();;
+                          _updateAndReload(widget.initialCode);
                         }
                       },
                       onLoadStop: (controller, url) {
