@@ -8,6 +8,12 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../../../constants/api_constants.dart';
 
+class CodeFile {
+  String name;
+  String content;
+  CodeFile({required this.name, required this.content});
+}
+
 class RunCodePage extends StatefulWidget {
   final String initialCode;
   final String? contextId;
@@ -25,6 +31,10 @@ class _RunCodePageState extends State<RunCodePage> {
     text: "https://mysite.com/preview",
   );
 
+  // Multi-tab state
+  List<CodeFile> _files = [];
+  int _activeFileIndex = 0;
+
   String _browserTitle = "Preview";
   InAppLocalhostServer? _localhostServer;
   int _serverPort = 8080;
@@ -38,11 +48,141 @@ class _RunCodePageState extends State<RunCodePage> {
   void initState() {
     super.initState();
     _startLocalServer();
-    _codeController = TextEditingController(text: widget.initialCode);
+
+    // Initialize files - Default filename based on content
+    String defaultName = 'index.html';
+    if (widget.initialCode.contains('<?php')) {
+      defaultName = 'main.php';
+    }
+
+    _files = [CodeFile(name: defaultName, content: widget.initialCode)];
+    _activeFileIndex = 0;
+
+    _codeController = TextEditingController(text: _files[0].content);
+    _codeController.addListener(_onCodeChanged);
+
     _updateTitleFromCode(widget.initialCode);
 
     // Load libraries in background
     _loadBundledLibraries();
+  }
+
+  void _onCodeChanged() {
+    // Sync controller text to active file model
+    if (_activeFileIndex < _files.length) {
+      _files[_activeFileIndex].content = _codeController.text;
+    }
+  }
+
+  void _switchTab(int index) {
+    if (index == _activeFileIndex) return;
+    setState(() {
+      _activeFileIndex = index;
+      _codeController.text = _files[index].content;
+    });
+  }
+
+  void _addNewFile() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String newName = "new_file.txt";
+        return AlertDialog(
+          title: const Text("New File"),
+          content: TextField(
+            autofocus: true,
+            decoration: const InputDecoration(labelText: "File Name"),
+            onChanged: (v) => newName = v,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _files.add(CodeFile(name: newName, content: ""));
+                  _switchTab(_files.length - 1);
+                });
+                Navigator.pop(context);
+              },
+              child: const Text("Create"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _renameFile(int index) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String newName = _files[index].name;
+        return AlertDialog(
+          title: const Text("Rename File"),
+          content: TextField(
+            autofocus: true,
+            controller: TextEditingController(text: newName),
+            decoration: const InputDecoration(labelText: "File Name"),
+            onChanged: (v) => newName = v,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _files[index].name = newName;
+                });
+                Navigator.pop(context);
+              },
+              child: const Text("Rename"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteFile(int index) {
+    if (_files.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cannot delete the last file.")),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete File"),
+        content: Text("Delete ${_files[index].name}?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _files.removeAt(index);
+                if (_activeFileIndex >= _files.length) {
+                  _activeFileIndex = _files.length - 1;
+                }
+                _codeController.text = _files[_activeFileIndex].content;
+              });
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _startLocalServer() async {
@@ -103,8 +243,30 @@ class _RunCodePageState extends State<RunCodePage> {
             }
             // ------------------------------
 
-            // Execute PHP with this form data
-            final output = await _executePhp(codeToExecute, formData: formData);
+            // Executing PHP with this form data
+
+            // 1. Determine local file match from our tabs
+            // path is like /submit.php
+            final relativeName = path.startsWith('/')
+                ? path.substring(1)
+                : path;
+
+            // Check if we have this file in our tabs
+            final matchingFileIndex = _files.indexWhere(
+              (f) => f.name == relativeName,
+            );
+
+            if (matchingFileIndex != -1) {
+              codeToExecute = _files[matchingFileIndex].content;
+              print("DEBUG: Found target file in tabs: $relativeName");
+            }
+
+            // Execute using our new signature
+            final output = await _executePhp(
+              files: _files,
+              entryPoint: relativeName,
+              formData: formData,
+            );
 
             // Serve the result back to the browser
             request.response
@@ -313,31 +475,49 @@ class _RunCodePageState extends State<RunCodePage> {
   }
 
   Future<void> _updateAndReload(String content) async {
-    // 1. Wrap content
-    final fullHtml = _wrapHtml(content);
-
-    // 2. Write to UNIQUE file in TEMP dir to avoid locking issues
+    // 1. Write ALL files to a temp directory so they can reference each other
     try {
       final dir = await getTemporaryDirectory();
-      // Use timestamp to ensure unique filename
+      // Use timestamp to ensure unique folder for this run
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filename = 'index_$timestamp.html';
-      final file = File('${dir.path}/$filename');
+      final runDir = Directory('${dir.path}/run_$timestamp');
+      await runDir.create();
 
-      await file.writeAsString(fullHtml);
+      // Write all files
+      for (var file in _files) {
+        final f = File('${runDir.path}/${file.name}');
+        await f.writeAsString(file.content);
+      }
 
-      // 3. Load from localhost
-      final url = "http://localhost:$_serverPort/$filename";
-      print("DEBUG: Loading URL: $url");
+      // If we are showing an output (PHP result), write that as index.html or similar
+      // Or if we are in local mode, we want to load the ACTIVE file.
+
+      String targetUrl = "";
+
+      // If content is provided (PHP Output), write it as a special preview file
+      if (content != _files[_activeFileIndex].content) {
+        final previewFile = File('${runDir.path}/preview_output.html');
+        // Apply the wrapper
+        final fullHtml = _wrapHtml(content);
+        await previewFile.writeAsString(fullHtml);
+        targetUrl =
+            "http://localhost:$_serverPort/run_$timestamp/preview_output.html";
+      } else {
+        // Local Mode: Load the active file
+        // If it's HTML, load it. If JS/CSS, maybe warn or show raw?
+        // Usually we run the HTML file.
+        final activeFileName = _files[_activeFileIndex].name;
+        targetUrl =
+            "http://localhost:$_serverPort/run_$timestamp/$activeFileName";
+      }
+
+      print("DEBUG: Loading URL: $targetUrl");
 
       if (_webViewController != null) {
         // Wait for server to be ready
         await _serverReady.future;
-
-        _webViewController!.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
-      } else {
-        print(
-          "DEBUG: CRITICAL - WebViewController is NULL! WebView might have crashed or not initialized.",
+        _webViewController!.loadUrl(
+          urlRequest: URLRequest(url: WebUri(targetUrl)),
         );
       }
     } catch (e) {
@@ -349,15 +529,19 @@ class _RunCodePageState extends State<RunCodePage> {
   }
 
   // --- PHP EXECUTION HELPER ---
-  Future<String> _executePhp(
-    String code, {
+  Future<String> _executePhp({
+    required List<CodeFile> files,
+    String? entryPoint,
     Map<String, dynamic>? formData,
   }) async {
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}/run-code');
-      // Pass both code and form_data (if any)
+      // Pass both files and form_data (if any)
       final body = {
-        'code': code,
+        'files': files
+            .map((f) => {'name': f.name, 'content': f.content})
+            .toList(),
+        'entry_point': entryPoint,
         'context_id': widget.contextId,
         if (formData != null) 'form_data': formData,
       };
@@ -383,17 +567,22 @@ class _RunCodePageState extends State<RunCodePage> {
   }
 
   Future<void> _runCode() async {
-    final code = _codeController.text;
+    // 1. Sync active file content logic is already handled by listener,
+    // but good to ensure before run.
+    if (_activeFileIndex < _files.length) {
+      _files[_activeFileIndex].content = _codeController.text;
+    }
 
-    // Detect Language
-    final isPhp = code.toLowerCase().contains("<?php");
+    final currentFile = _files[_activeFileIndex];
+
+    // Detect Language Mode
+    bool isPhp = _files.any((f) => f.name.endsWith('.php'));
 
     if (isPhp) {
       // --- PHP MODE ---
       print(
         "DEBUG: [PHP MODE] Sending code to: ${ApiConstants.baseUrl}/run-code",
       );
-      print("DEBUG: Context ID: ${widget.contextId}");
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -402,8 +591,11 @@ class _RunCodePageState extends State<RunCodePage> {
         ),
       );
 
-      print("DEBUG: Calling _executePhp...");
-      final output = await _executePhp(code);
+      final output = await _executePhp(
+        files: _files,
+        entryPoint: currentFile.name,
+      );
+
       print(
         "DEBUG: _executePhp returned: ${output.length > 50 ? output.substring(0, 50) : output}...",
       );
@@ -412,17 +604,18 @@ class _RunCodePageState extends State<RunCodePage> {
       setState(() {
         _output = output;
       });
-      print("DEBUG: Calling _updateAndReload...");
+      // For PHP, we display the OUTPUT string, not the source file
       await _updateAndReload(output);
-      print("DEBUG: _runCode finished.");
     } else {
       // --- LOCAL WEB MODE ---
       print("DEBUG: [WEB MODE] Running locally");
-      _updateTitleFromCode(code);
+      // Just reload. _updateAndReload will write all files and load the active one.
+      _updateTitleFromCode(currentFile.content);
       setState(() {
-        _output = code; // For HTML/JS, the output IS the code
+        _output = currentFile.content;
       });
-      _updateAndReload(code);
+      // Pass content same as file content to indicate we are just loading the file
+      await _updateAndReload(currentFile.content);
     }
   }
 
@@ -498,17 +691,108 @@ class _RunCodePageState extends State<RunCodePage> {
                 children: [
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                    height: 40,
                     color: colorScheme.surfaceContainerHighest,
-                    child: Text(
-                      "Source Code",
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 12,
-                      ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _files.length,
+                            itemBuilder: (context, index) {
+                              final file = _files[index];
+                              final isActive = index == _activeFileIndex;
+                              return GestureDetector(
+                                onTap: () => _switchTab(index),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: isActive
+                                        ? colorScheme.surface
+                                        : Colors.transparent,
+                                    border: Border(
+                                      right: BorderSide(
+                                        color: colorScheme.outlineVariant,
+                                        width: 1,
+                                      ),
+                                      top: isActive
+                                          ? BorderSide(
+                                              color: colorScheme.primary,
+                                              width: 2,
+                                            )
+                                          : BorderSide.none,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        file.name,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: isActive
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          color: isActive
+                                              ? colorScheme.onSurface
+                                              : colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      if (isActive) ...[
+                                        const SizedBox(width: 4),
+                                        PopupMenuButton<String>(
+                                          icon: Icon(
+                                            Icons.arrow_drop_down,
+                                            size: 16,
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                            minWidth: 100,
+                                          ),
+                                          itemBuilder: (context) => [
+                                            const PopupMenuItem(
+                                              value: 'rename',
+                                              height: 32,
+                                              child: Text(
+                                                "Rename",
+                                                style: TextStyle(fontSize: 13),
+                                              ),
+                                            ),
+                                            const PopupMenuItem(
+                                              value: 'delete',
+                                              height: 32,
+                                              child: Text(
+                                                "Delete",
+                                                style: TextStyle(fontSize: 13),
+                                              ),
+                                            ),
+                                          ],
+                                          onSelected: (value) {
+                                            if (value == 'rename')
+                                              _renameFile(index);
+                                            if (value == 'delete')
+                                              _deleteFile(index);
+                                          },
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        // Add File Button
+                        IconButton(
+                          icon: const Icon(Icons.add, size: 20),
+                          tooltip: "New File",
+                          onPressed: _addNewFile,
+                        ),
+                      ],
                     ),
                   ),
                   Expanded(
