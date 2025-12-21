@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../../../constants/api_constants.dart';
@@ -28,6 +29,7 @@ class _RunCodePageState extends State<RunCodePage> {
   InAppLocalhostServer? _localhostServer;
   int _serverPort = 8080;
   String _output = "";
+  final Completer<void> _serverReady = Completer<void>();
 
   // Cache for your libraries
   final Map<String, String> _bundledLibraries = {};
@@ -48,6 +50,7 @@ class _RunCodePageState extends State<RunCodePage> {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       _serverPort = server.port;
       _localhostServer = null;
+      if (!_serverReady.isCompleted) _serverReady.complete();
 
       server.listen((HttpRequest request) async {
         final path = request.uri.path;
@@ -324,11 +327,17 @@ class _RunCodePageState extends State<RunCodePage> {
       await file.writeAsString(fullHtml);
 
       // 3. Load from localhost
+      final url = "http://localhost:$_serverPort/$filename";
+      print("DEBUG: Loading URL: $url");
+
       if (_webViewController != null) {
-        _webViewController!.loadUrl(
-          urlRequest: URLRequest(
-            url: WebUri("http://localhost:$_serverPort/$filename"),
-          ),
+        // Wait for server to be ready
+        await _serverReady.future;
+
+        _webViewController!.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
+      } else {
+        print(
+          "DEBUG: CRITICAL - WebViewController is NULL! WebView might have crashed or not initialized.",
         );
       }
     } catch (e) {
@@ -393,13 +402,19 @@ class _RunCodePageState extends State<RunCodePage> {
         ),
       );
 
+      print("DEBUG: Calling _executePhp...");
       final output = await _executePhp(code);
+      print(
+        "DEBUG: _executePhp returned: ${output.length > 50 ? output.substring(0, 50) : output}...",
+      );
 
       _updateTitleFromCode(output);
       setState(() {
         _output = output;
       });
-      _updateAndReload(output);
+      print("DEBUG: Calling _updateAndReload...");
+      await _updateAndReload(output);
+      print("DEBUG: _runCode finished.");
     } else {
       // --- LOCAL WEB MODE ---
       print("DEBUG: [WEB MODE] Running locally");
@@ -411,11 +426,12 @@ class _RunCodePageState extends State<RunCodePage> {
     }
   }
 
-  void _loadRealUrl(String url) {
-    if (_webViewController == null) return;
+  Future<void> _loadRealUrl(String url) async {
     if (!url.startsWith('http')) {
       url = 'https://$url';
     }
+
+    if (_webViewController == null) return;
     _webViewController!.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
   }
 
@@ -649,11 +665,10 @@ class _RunCodePageState extends State<RunCodePage> {
                         isInspectable: true,
                         mediaPlaybackRequiresUserGesture: false,
                         allowsInlineMediaPlayback: true,
-                        iframeAllow: "camera; microphone",
-                        iframeAllowFullscreen: true,
                         allowUniversalAccessFromFileURLs: true,
                       ),
                       onWebViewCreated: (controller) async {
+                        print("DEBUG: onWebViewCreated fired!");
                         _webViewController = controller;
 
                         // Initial load
