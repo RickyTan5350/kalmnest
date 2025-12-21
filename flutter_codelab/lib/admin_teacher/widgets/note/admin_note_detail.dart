@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data'; // Required for handling image data
+// Required for handling image data
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // Required for downloading images
 import 'package:flutter_codelab/admin_teacher/widgets/note/admin_edit_note.dart';

@@ -49,7 +49,7 @@ class PlayGamePage extends StatefulWidget {
 class _PlayGamePageState extends State<PlayGamePage> {
   late String selectedValue;
   late String levelName;
-  bool _saving = false;
+  final bool _saving = false;
 
   final GlobalKey<_IndexFilePreviewState> previewKey =
       GlobalKey<_IndexFilePreviewState>();

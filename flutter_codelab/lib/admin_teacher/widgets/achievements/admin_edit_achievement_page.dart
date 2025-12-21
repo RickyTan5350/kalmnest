@@ -308,8 +308,9 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                       errorText: _nameError, // Server error
                     ),
                     validator: (value) {
-                      if (_nameError != null)
+                      if (_nameError != null) {
                         return _nameError; // Server error priority
+                      }
 
                       if (value == null || value.isEmpty) {
                         return 'Please enter a name';

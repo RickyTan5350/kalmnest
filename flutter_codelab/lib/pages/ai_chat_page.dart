@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/services/ai_chat_api_service.dart';
 
 /// Model for chat messages
 class ChatMessage {
@@ -57,14 +58,22 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   
-  //late AiChatApiService _apiService;
+  late AiChatApiService _apiService;
   bool _isSending = false;
   bool _isInitialized = false;
+  String? _currentSessionId;
+
+  final List<String> _suggestedQuestions = [
+    "Give me Learning Suggestion for HTML",
+    "Give me Learning Suggestion for CSS",
+    "Give me Learning Suggestion for JavaScript",
+    "Give me Learning suggestion for Web development"
+  ];
 
   @override
   void initState() {
     super.initState();
-    //_apiService = AiChatApiService(token: widget.authToken);
+    _apiService = AiChatApiService(token: widget.authToken);
     _initializeChat();
   }
 
@@ -79,18 +88,29 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   void _initializeChat() {
     setState(() {
       _messages.add(ChatMessage(
-        text: 'Hello! 👋 I\'m your AI assistant. How can I help you today?',
+        text: 'Hello${widget.currentUser != null ? ' ${widget.currentUser!.name.split(' ')[0]}' : ''}! 👋 I\'m your AI assistant. How can I help you today?',
         isUser: false,
       ));
       _isInitialized = true;
     });
   }
 
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _scrollController.animateTo(
+          0, 
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      });
+    }
+  }
+
   Future<void> _handleSendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty || _isSending) return;
 
-    // Add user message
     final userMessage = ChatMessage(text: text, isUser: true);
     setState(() {
       _messages.insert(0, userMessage);
@@ -99,71 +119,47 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
     });
 
     _scrollToBottom();
+    _focusNode.unfocus();
 
-    // Add typing indicator
-    final typingMessage = ChatMessage(
-      text: '',
-      isUser: false,
-      isTyping: true,
-    );
-    setState(() {
-      _messages.insert(0, typingMessage);
-    });
+    final typingMessage = ChatMessage(text: '', isUser: false, isTyping: true);
+    setState(() => _messages.insert(0, typingMessage));
 
     try {
-      // Call AI API
-      //final response = await _apiService.sendMessage(text);
-      
-      // Remove typing indicator
-      setState(() {
-        _messages.removeWhere((msg) => msg.id == typingMessage.id);
-      });
-
-      // Add AI response
-      //final aiMessage = ChatMessage(
-      //  text: response,
-      // isUser: false,
-      //);
-      setState(() {
-        //_messages.insert(0, aiMessage);
-        _isSending = false;
-      });
-
-      _scrollToBottom();
-    } catch (e) {
-      // Remove typing indicator
-      setState(() {
-        _messages.removeWhere((msg) => msg.id == typingMessage.id);
-      });
-
-      // Add error message
-      final errorMessage = ChatMessage(
-        text: 'Sorry, I encountered an error. Please try again.',
-        isUser: false,
-        isError: true,
+      final responseData = await _apiService.sendMessage(
+        text, 
+        sessionId: _currentSessionId
       );
-      setState(() {
-        _messages.insert(0, errorMessage);
-        _isSending = false;
-      });
-    }
-  }
+      
+      final aiResponse = responseData['ai_response'] as String;
+      final newSessionId = responseData['session_id'] as String?;
 
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
+      if (mounted) {
+        setState(() {
+          _currentSessionId = newSessionId;
+          _messages.removeWhere((msg) => msg.id == typingMessage.id);
+          _messages.insert(0, ChatMessage(text: aiResponse, isUser: false));
+          _isSending = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.removeWhere((msg) => msg.id == typingMessage.id);
+          _messages.insert(0, ChatMessage(
+            text: 'Connection error. Please ensure the backend is running and reachable.', 
+            isUser: false, 
+            isError: true
+          ));
+          _isSending = false;
+        });
+      }
     }
+    _scrollToBottom();
   }
 
   void _handleSuggestedQuestion(String question) {
     _textController.text = question;
-    _focusNode.requestFocus();
+    _handleSendMessage();
   }
 
   void _clearChat() {
@@ -177,16 +173,16 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () {
               setState(() {
                 _messages.clear();
+                _currentSessionId = null;
                 _initializeChat();
               });
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Clear'),
+            child: const Text('Clear', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -197,258 +193,148 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [colorScheme.primary, colorScheme.secondary],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.smart_toy, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
-            const Column(
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        elevation: 2.0,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('AI Assistant', style: TextStyle(fontSize: 16)),
-                Text(
-                  'Always here to help',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal),
+                // --- HEADER ---
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "KalmNest Assistant",
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(color: colorScheme.onSurface),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: _messages.length > 1 ? _clearChat : null,
+                      tooltip: 'Clear Chat',
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 16),
+
+                // --- CHAT CONTENT ---
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    reverse: true,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) =>
+                        _MessageBubble(message: _messages[index]),
+                  ),
+                ),
+                if (_messages.length == 1 && _isInitialized)
+                  _buildSuggestedQuestions(colorScheme),
+                _buildInputArea(colorScheme),
               ],
             ),
-          ],
+          ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: _clearChat,
-            tooltip: 'Clear chat',
-          ),
-        ],
       ),
-      body: Column(
-        children: [
-          // Messages List
-          Expanded(
-            child: _messages.isEmpty
-                ? _buildEmptyState(colorScheme)
-                : _buildMessagesList(),
-          ),
-
-          // Suggested Questions (shown when chat is empty or few messages)
-          if (_messages.length <= 2) _buildSuggestedQuestions(colorScheme),
-
-          // Input Area
-          _buildInputArea(colorScheme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(ColorScheme colorScheme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  colorScheme.primary.withOpacity(0.2),
-                  colorScheme.secondary.withOpacity(0.2),
-                ],
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.chat_bubble_outline,
-              size: 50,
-              color: colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Start a conversation',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Ask me anything!',
-            style: TextStyle(
-              fontSize: 14,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessagesList() {
-    return ListView.builder(
-      controller: _scrollController,
-      reverse: true,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final message = _messages[index];
-        return _MessageBubble(
-          message: message,
-          key: ValueKey(message.id),
-        );
-      },
     );
   }
 
   Widget _buildSuggestedQuestions(ColorScheme colorScheme) {
-    final suggestions = [
-      '📚 Explain a programming concept',
-      '💡 Give me learning suggestions'
-    ];
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.3),
-        border: Border(
-          top: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Suggested questions:',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurfaceVariant,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      height: 50,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _suggestedQuestions.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ActionChip(
+              label: Text(_suggestedQuestions[index]),
+              labelStyle: TextStyle(
+                fontSize: 12,
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+              backgroundColor: colorScheme.primaryContainer.withOpacity(0.4),
+              side: BorderSide(color: colorScheme.primary.withOpacity(0.2)),
+              onPressed: () => _handleSuggestedQuestion(_suggestedQuestions[index]),
             ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: suggestions.map((suggestion) {
-              return InkWell(
-                onTap: () => _handleSuggestedQuestion(suggestion),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    suggestion,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
   Widget _buildInputArea(ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, -2),
+            offset: const Offset(0, -5),
           ),
         ],
       ),
       child: SafeArea(
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: Container(
-                constraints: const BoxConstraints(maxHeight: 120),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant.withOpacity(0.5),
+                  color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: colorScheme.outline.withOpacity(0.2),
-                  ),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: TextField(
                   controller: _textController,
                   focusNode: _focusNode,
-                  maxLines: null,
-                  textInputAction: TextInputAction.newline,
-                  decoration: InputDecoration(
+                  maxLines: 4,
+                  minLines: 1,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
                     hintText: 'Type your message...',
-                    hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
                   ),
                   onSubmitted: (_) => _handleSendMessage(),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _isSending
-                      ? [Colors.grey, Colors.grey]
-                      : [colorScheme.primary, colorScheme.secondary],
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: _isSending ? null : _handleSendMessage,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _isSending ? colorScheme.outline : colorScheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: _isSending ? [] : [
+                    BoxShadow(
+                      color: colorScheme.primary.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                shape: BoxShape.circle,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _isSending ? null : _handleSendMessage,
-                  borderRadius: BorderRadius.circular(28),
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    alignment: Alignment.center,
-                    child: _isSending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                  ),
+                child: Icon(
+                  _isSending ? Icons.hourglass_empty : Icons.send_rounded,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
             ),
@@ -459,13 +345,11 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   }
 }
 
-// Message Bubble Widget
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
 
   const _MessageBubble({
     required this.message,
-    super.key,
   });
 
   @override
@@ -477,11 +361,10 @@ class _MessageBubble extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        mainAxisAlignment:
-            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isUser) ...[
             _buildAvatar(colorScheme, isUser: false),
@@ -493,14 +376,16 @@ class _MessageBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: message.isUser
                     ? LinearGradient(
-                        colors: [colorScheme.primary, colorScheme.secondary],
+                        colors: [colorScheme.primary, colorScheme.primary.withBlue(200)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       )
                     : null,
                 color: message.isUser
                     ? null
                     : message.isError
                         ? colorScheme.errorContainer
-                        : colorScheme.surfaceVariant,
+                        : colorScheme.surfaceContainerHighest.withOpacity(0.7),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -509,8 +394,8 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 5,
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -521,23 +406,13 @@ class _MessageBubble extends StatelessWidget {
                   Text(
                     message.text,
                     style: TextStyle(
-                      color: message.isUser
-                          ? Colors.white
-                          : message.isError
-                              ? colorScheme.onErrorContainer
+                      color: message.isUser 
+                          ? Colors.white 
+                          : message.isError 
+                              ? colorScheme.onErrorContainer 
                               : colorScheme.onSurface,
                       fontSize: 15,
                       height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatTime(message.timestamp),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: message.isUser
-                          ? Colors.white.withOpacity(0.7)
-                          : colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -555,20 +430,21 @@ class _MessageBubble extends StatelessWidget {
 
   Widget _buildAvatar(ColorScheme colorScheme, {required bool isUser}) {
     return Container(
-      width: 32,
       height: 32,
+      width: 32,
       decoration: BoxDecoration(
-        gradient: isUser
-            ? LinearGradient(
-                colors: [colorScheme.tertiary, colorScheme.primary],
-              )
-            : LinearGradient(
-                colors: [colorScheme.primary, colorScheme.secondary],
-              ),
+        color: isUser ? colorScheme.tertiary : colorScheme.primary,
         shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Icon(
-        isUser ? Icons.person : Icons.smart_toy,
+        isUser ? Icons.person_outline : Icons.smart_toy_outlined,
         color: Colors.white,
         size: 18,
       ),
@@ -577,24 +453,29 @@ class _MessageBubble extends StatelessWidget {
 
   Widget _buildTypingIndicator(ColorScheme colorScheme) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           _buildAvatar(colorScheme, isUser: false),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceVariant,
-              borderRadius: BorderRadius.circular(20),
+              color: colorScheme.surfaceContainerHighest.withOpacity(0.7),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+                bottomLeft: Radius.circular(4),
+                bottomRight: Radius.circular(20),
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: const Row(
               children: [
                 _TypingDot(delay: 0),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 _TypingDot(delay: 200),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 _TypingDot(delay: 400),
               ],
             ),
@@ -603,54 +484,29 @@ class _MessageBubble extends StatelessWidget {
       ),
     );
   }
-
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final difference = now.difference(time);
-
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inDays < 1) {
-      return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-    } else {
-      return '${time.day}/${time.month} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-    }
-  }
 }
 
-// Typing Dot Animation
 class _TypingDot extends StatefulWidget {
   final int delay;
-
   const _TypingDot({required this.delay});
 
   @override
   State<_TypingDot> createState() => _TypingDotState();
 }
 
-class _TypingDotState extends State<_TypingDot>
-    with SingleTickerProviderStateMixin {
+class _TypingDotState extends State<_TypingDot> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-
+    _controller = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-
     Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) {
-        _controller.repeat(reverse: true);
-      }
+      if (mounted) _controller.repeat(reverse: true);
     });
   }
 
@@ -664,16 +520,14 @@ class _TypingDotState extends State<_TypingDot>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _animation,
-      builder: (context, child) {
-        return Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.3 + (_animation.value * 0.7)),
-            shape: BoxShape.circle,
-          ),
-        );
-      },
+      builder: (context, child) => Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.3 + (_animation.value * 0.7)),
+          shape: BoxShape.circle,
+        ),
+      ),
     );
   }
 }

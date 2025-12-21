@@ -1,0 +1,63 @@
+On branch support-module-main
+Your branch is up to date with 'origin/support-module-main'.
+
+You have unmerged paths.
+  (fix conflicts and run "git commit")
+  (use "git merge --abort" to abort the merge)
+
+Changes to be committed:
+	deleted:    backend_services/BACKEND_FEEDBACK_REFACTORING.md
+	new file:   backend_services/app/Http/Controllers/GeminiController.php
+	new file:   backend_services/app/Models/ChatbotMessage.php
+	new file:   backend_services/app/Models/ChatbotSession.php
+	modified:   backend_services/composer.json
+	modified:   backend_services/composer.lock
+	new file:   backend_services/config/gemini.php
+	modified:   backend_services/database/migrations/2025_12_10_111147_achievement_game_constraint.php
+	modified:   backend_services/database/migrations/2025_12_16_154918_create_chatbot_sessions_table.php
+	modified:   backend_services/database/migrations/2025_12_16_154942_create_chatbot_messages_table.php
+	deleted:    backend_services/database/migrations/2099_99_99_215015_create_telescope_entries_table.php
+	modified:   backend_services/database/seeders/FeedbackSeeder.php
+	modified:   backend_services/routes/api.php
+	deleted:    flutter_codelab/.dart_tool/dartpad/web_plugin_registrant.dart
+	deleted:    flutter_codelab/.dart_tool/extension_discovery/vs_code.json
+	deleted:    flutter_codelab/.dart_tool/package_config.json
+	deleted:    flutter_codelab/.dart_tool/package_graph.json
+	deleted:    flutter_codelab/.dart_tool/version
+	modified:   flutter_codelab/.flutter-plugins-dependencies
+	modified:   flutter_codelab/android/.gradle/8.12/checksums/checksums.lock
+	modified:   flutter_codelab/android/.gradle/8.12/checksums/md5-checksums.bin
+	modified:   flutter_codelab/android/.gradle/8.12/checksums/sha1-checksums.bin
+	modified:   flutter_codelab/android/local.properties
+	modified:   flutter_codelab/ios/Flutter/Generated.xcconfig
+	modified:   flutter_codelab/lib/api/auth_api.dart
+	modified:   flutter_codelab/lib/api/class_api.dart
+	modified:   flutter_codelab/lib/api/feedback_api.dart
+	modified:   flutter_codelab/lib/constants/api_constants.dart
+	modified:   flutter_codelab/lib/main.dart
+	modified:   flutter_codelab/lib/models/user_data.dart
+	modified:   flutter_codelab/lib/pages/ai_chat_page.dart
+	modified:   flutter_codelab/lib/pages/feedback_page.dart
+	new file:   flutter_codelab/lib/services/ai_chat_api_service.dart
+	modified:   flutter_codelab/macos/Flutter/ephemeral/Flutter-Generated.xcconfig
+	modified:   flutter_codelab/macos/Flutter/ephemeral/flutter_export_environment.sh
+	modified:   flutter_codelab/pubspec.lock
+	modified:   flutter_codelab/pubspec.yaml
+	modified:   flutter_codelab/windows/flutter/ephemeral/generated_config.cmake
+
+Unmerged paths:
+  (use "git add <file>..." to mark resolution)
+	both modified:   flutter_codelab/android/.gradle/8.12/fileHashes/fileHashes.bin
+	both modified:   flutter_codelab/android/.gradle/8.12/fileHashes/fileHashes.lock
+	both modified:   flutter_codelab/android/.gradle/8.12/fileHashes/resourceHashesCache.bin
+	both modified:   flutter_codelab/ios/Flutter/flutter_export_environment.sh
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   flutter_codelab/pubspec.lock
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	git_status.txt
+
