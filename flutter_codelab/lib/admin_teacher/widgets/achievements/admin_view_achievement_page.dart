@@ -192,13 +192,86 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   }
 
   // --- DELETE FUNCTION ---
+  // --- DELETE FUNCTION ---
   Future<void> _deleteSelectedAchievements() async {
+    final BuildContext scaffoldContext = context;
+
+    // Load current data to check permissions
+    final List<AchievementData> allAchievements = await _achievementsFuture;
+
+    // 1. Separate items by permission
+    final List<String> toDeleteIds = [];
+    final List<String> skippedIds = [];
+
+    for (var id in _selectedIds) {
+      final achievement = allAchievements.firstWhere(
+        (a) => a.achievementId == id,
+        orElse: () => AchievementData(achievementId: ''),
+      );
+
+      if (achievement.achievementId == null ||
+          achievement.achievementId!.isEmpty)
+        continue;
+
+      // Access Control Logic: Admin OR Creator
+      final isCreator =
+          achievement.creatorId != null &&
+          widget.userId.toString() == achievement.creatorId.toString();
+
+      if (widget.isAdmin || isCreator) {
+        toDeleteIds.add(id);
+      } else {
+        skippedIds.add(id);
+      }
+    }
+
+    if (!mounted) return;
+
+    if (toDeleteIds.isEmpty) {
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Access Denied'),
+          content: Text(
+            skippedIds.isEmpty
+                ? 'No valid items selected.'
+                : 'You do not have permission to delete the selected items. You can only delete achievements you created.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // 2. Confirmation Dialog
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Achievements?'),
-        content: Text(
-          'Are you sure you want to delete ${_selectedIds.length} selected achievement(s)? This action cannot be undone.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete ${toDeleteIds.length} achievement(s)? This action cannot be undone.',
+            ),
+            if (skippedIds.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Note: ${skippedIds.length} item(s) will be skipped because you did not create them.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(
@@ -218,36 +291,57 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
       ),
     );
 
-    if (!mounted) return;
-    final BuildContext scaffoldContext = context;
+    if (confirmed != true) return;
 
-    if (confirmed == true) {
-      setState(() {
-        _isDeleting = true;
-      });
+    if (!mounted) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    // 3. Partial Success Execution
+    int successCount = 0;
+    int failCount = 0;
+    List<String> successfullyDeletedIds = [];
+
+    for (final id in toDeleteIds) {
       try {
-        await _api.deleteAchievements(_selectedIds);
-        widget.showSnackBar(
-          scaffoldContext,
-          'Successfully deleted ${_selectedIds.length} achievement(s).',
-          Colors.green,
-        );
-        setState(() {
-          _selectedIds.clear();
-        });
-        _refreshData();
+        await _api.deleteAchievements({id});
+        successCount++;
+        successfullyDeletedIds.add(id);
       } catch (e) {
-        widget.showSnackBar(
-          scaffoldContext,
-          'Error deleting achievements: $e',
-          Colors.red,
-        );
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isDeleting = false;
-          });
-        }
+        print("Failed to delete achievement $id: $e");
+        failCount++;
+      }
+    }
+
+    // 4. Feedback & Cleanup
+    if (mounted) {
+      setState(() {
+        _isDeleting = false;
+        _selectedIds.removeWhere((id) => successfullyDeletedIds.contains(id));
+      });
+
+      String message;
+      if (failCount == 0 && skippedIds.isEmpty) {
+        message = 'Successfully deleted $successCount achievement(s).';
+      } else {
+        message =
+            'Deleted: $successCount, Failed: $failCount, Skipped: ${skippedIds.length}';
+      }
+
+      Color snackColor = (failCount > 0 || skippedIds.isNotEmpty)
+          ? Colors.orange
+          : Colors.green;
+
+      if (successCount == 0 && failCount > 0) {
+        snackColor = Colors.red;
+      }
+
+      widget.showSnackBar(scaffoldContext, message, snackColor);
+
+      if (successCount > 0) {
+        _refreshData();
       }
     }
   }
