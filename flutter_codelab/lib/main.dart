@@ -22,6 +22,7 @@ import 'package:flutter_codelab/pages/login_page.dart';
 
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +40,7 @@ void main() async {
 
   // Check for stored token and user data
   // Variable name: storedUserJson
+  await const FlutterSecureStorage().deleteAll();
   final storedUserJson = await AuthApi.getStoredUser();
 
   // Reference the correct variable name here: storedUserJson
