@@ -28,8 +28,8 @@ class _AchievementPageState extends State<AchievementPage> {
     'CSS',
     'JS',
     'PHP',
-
     'Quiz',
+    'Created by Me',
   ]; // Added 'All'
   String _selectedTopic = 'All'; // Default to 'All'
   ViewLayout _viewLayout = ViewLayout.grid;
@@ -174,25 +174,34 @@ class _AchievementPageState extends State<AchievementPage> {
                       child: Wrap(
                         spacing: 10.0,
                         runSpacing: 10.0,
-                        children: _topics.map((topic) {
-                          final isSelected = _selectedTopic == topic;
-                          return FilterChip(
-                            label: Text(
-                              topic,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? colors.primary
-                                    : colors.onSurface,
-                              ),
-                            ),
-                            selected: isSelected,
-                            onSelected: (bool selected) {
-                              setState(() {
-                                _selectedTopic = selected ? topic : 'All';
-                              });
-                            },
-                          );
-                        }).toList(),
+                        children: _topics
+                            .where((topic) {
+                              if (widget.currentUser.isStudent &&
+                                  topic == 'Created by Me') {
+                                return false;
+                              }
+                              return true;
+                            })
+                            .map((topic) {
+                              final isSelected = _selectedTopic == topic;
+                              return FilterChip(
+                                label: Text(
+                                  topic,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? colors.primary
+                                        : colors.onSurface,
+                                  ),
+                                ),
+                                selected: isSelected,
+                                onSelected: (bool selected) {
+                                  setState(() {
+                                    _selectedTopic = selected ? topic : 'All';
+                                  });
+                                },
+                              );
+                            })
+                            .toList(),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -276,7 +285,9 @@ class _AchievementPageState extends State<AchievementPage> {
                           searchText: _searchText,
                           selectedTopic: _selectedTopic == 'All'
                               ? null
-                              : _selectedTopic.toLowerCase(),
+                              : (_selectedTopic == 'Created by Me'
+                                    ? _selectedTopic
+                                    : _selectedTopic.toLowerCase()),
                           key: _studentKey,
                           sortType: _sortType,
                           sortOrder: _sortOrder,
@@ -290,7 +301,9 @@ class _AchievementPageState extends State<AchievementPage> {
                           searchText: _searchText,
                           selectedTopic: _selectedTopic == 'All'
                               ? null
-                              : _selectedTopic.toLowerCase(),
+                              : (_selectedTopic == 'Created by Me'
+                                    ? _selectedTopic
+                                    : _selectedTopic.toLowerCase()),
                           key: _adminKey,
                           sortType: _sortType,
                           sortOrder: _sortOrder,

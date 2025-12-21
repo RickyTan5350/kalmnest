@@ -363,6 +363,7 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                 achievements: originalData,
                 searchText: widget.searchText,
                 selectedTopic: widget.selectedTopic,
+                currentUserId: widget.userId,
               );
 
               // --- SORTING LOGIC ---

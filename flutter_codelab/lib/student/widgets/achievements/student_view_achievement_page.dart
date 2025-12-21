@@ -261,6 +261,7 @@ class StudentViewAchievementsPageState
             achievements: originalData,
             searchText: widget.searchText,
             selectedTopic: widget.selectedTopic,
+            currentUserId: widget.userId,
           );
 
           // --- SORTING LOGIC ---
