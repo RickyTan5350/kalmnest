@@ -7,7 +7,7 @@ Future<bool?> showEditUserDialog({
   required BuildContext context,
   required UserDetails initialData,
   required void Function(BuildContext context, String message, Color color)
-      showSnackBar,
+  showSnackBar,
 }) {
   return showDialog<bool>(
     context: context,
@@ -15,7 +15,7 @@ Future<bool?> showEditUserDialog({
       return EditUserDialog(
         initialData: initialData,
         showSnackBar: showSnackBar,
-      ); 
+      );
     },
   );
 }
@@ -23,7 +23,7 @@ Future<bool?> showEditUserDialog({
 class EditUserDialog extends StatefulWidget {
   final UserDetails initialData;
   final void Function(BuildContext context, String message, Color color)
-      showSnackBar;
+  showSnackBar;
 
   const EditUserDialog({
     super.key,
@@ -45,12 +45,14 @@ class _EditUserDialogState extends State<EditUserDialog> {
   late final TextEditingController _phoneNoController;
   late final TextEditingController _addressController;
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _passwordConfirmationController = TextEditingController(); 
+  final TextEditingController _passwordConfirmationController =
+      TextEditingController();
 
   // Variables
   late String _selectedGender;
   late String _selectedRole;
-  late bool _accountStatus; 
+  late bool _accountStatus;
+  Map<String, String> _serverErrors = {}; // Store server-side errors
 
   bool _isLoading = false;
 
@@ -63,9 +65,17 @@ class _EditUserDialogState extends State<EditUserDialog> {
     // Initialize controllers with existing data
     _emailController = TextEditingController(text: widget.initialData.email);
     _nameController = TextEditingController(text: widget.initialData.name);
-    _phoneNoController = TextEditingController(text: widget.initialData.phoneNo == 'N/A' ? '' : widget.initialData.phoneNo);
-    _addressController = TextEditingController(text: widget.initialData.address == 'N/A' ? '' : widget.initialData.address);
-    
+    _phoneNoController = TextEditingController(
+      text: widget.initialData.phoneNo == 'N/A'
+          ? ''
+          : widget.initialData.phoneNo,
+    );
+    _addressController = TextEditingController(
+      text: widget.initialData.address == 'N/A'
+          ? ''
+          : widget.initialData.address,
+    );
+
     // Initialize state variables
     _selectedGender = widget.initialData.gender;
     _selectedRole = widget.initialData.roleName;
@@ -73,7 +83,8 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
     // Ensure initial dropdown values are in the list, otherwise default to first valid option.
     if (!_genders.contains(_selectedGender)) {
-      _selectedGender = _genders[0]; // Defaulting gender to Male if 'N/A' is stored
+      _selectedGender =
+          _genders[0]; // Defaulting gender to Male if 'N/A' is stored
     }
   }
 
@@ -91,27 +102,43 @@ class _EditUserDialogState extends State<EditUserDialog> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Clear previous server errors on new submission attempt
+    setState(() {
+      _serverErrors.clear();
+    });
+
     final newPassword = _passwordController.text.trim();
-    
+
     // Check if passwords are provided but don't match
-    if (newPassword.isNotEmpty && newPassword != _passwordConfirmationController.text.trim()) {
-        widget.showSnackBar(context, 'Error: New password and confirmation must match.', Colors.red);
-        return;
+    if (newPassword.isNotEmpty &&
+        newPassword != _passwordConfirmationController.text.trim()) {
+      widget.showSnackBar(
+        context,
+        'Error: New password and confirmation must match.',
+        Colors.red,
+      );
+      return;
     }
 
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
 
     // --- Build the Update Payload (Only send fields that might change) ---
     final Map<String, dynamic> updatePayload = {
       'name': _nameController.text.trim(),
       'email': _emailController.text.trim(),
-      'phone_no': _phoneNoController.text.trim().isEmpty ? null : _phoneNoController.text.trim(),
-      'address': _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+      'phone_no': _phoneNoController.text.trim().isEmpty
+          ? null
+          : _phoneNoController.text.trim(),
+      'address': _addressController.text.trim().isEmpty
+          ? null
+          : _addressController.text.trim(),
       'gender': _selectedGender,
-      'role_name': _selectedRole, 
+      'role_name': _selectedRole,
       'account_status': _accountStatus ? 'active' : 'inactive',
     };
-    
+
     // Only include password if a new one was entered
     if (newPassword.isNotEmpty) {
       updatePayload['password'] = newPassword;
@@ -121,32 +148,56 @@ class _EditUserDialogState extends State<EditUserDialog> {
       await _userApi.updateUser(widget.initialData.id, updatePayload);
 
       if (mounted) {
-        widget.showSnackBar(context, 'User profile successfully updated!', Colors.green);
+        widget.showSnackBar(
+          context,
+          'User profile successfully updated!',
+          Colors.green,
+        );
         // Pop dialog and return 'true' to signal a successful update/refresh needed
-        Navigator.of(context).pop(true); 
+        Navigator.of(context).pop(true);
+      }
+    } on ValidationException catch (e) {
+      if (mounted) {
+        setState(() {
+          // Map the errors: key -> first error message in list
+          e.errors.forEach((key, value) {
+            if (value is List && value.isNotEmpty) {
+              _serverErrors[key] = value.first.toString();
+            }
+          });
+        });
+        // Re-trigger validation to show the errors in the fields
+        _formKey.currentState!.validate();
       }
     } catch (e) {
       if (mounted) {
         // Handle validation and network errors
         String errorString = e.toString();
         String displayMessage = 'An unknown error occurred.';
-        Color errorColor = Theme.of(context).colorScheme.error; // Standardize color
+        Color errorColor = Theme.of(
+          context,
+        ).colorScheme.error; // Standardize color
 
-        if (errorString.startsWith('Exception: ${UserApi.validationErrorCode}:')) {
-          final message = errorString.substring('Exception: ${UserApi.validationErrorCode}:'.length);
-          displayMessage = 'Validation Error:\n$message';
-        } else if (errorString.contains('403:')) {
+        if (errorString.contains('403:')) {
           // Explicit message for 403 Forbidden
-          displayMessage = 'Access Denied: Only Administrators can modify user profiles.';
+          displayMessage =
+              'Access Denied: Only Administrators can modify user profiles.';
         } else {
-           displayMessage = 'Error updating profile: ${errorString.replaceAll('Exception: ', '')}';
+          displayMessage =
+              'Error updating profile: ${errorString.replaceAll('Exception: ', '')}';
         }
-        
-        widget.showSnackBar(context, displayMessage, errorColor); // Use theme error color
+
+        widget.showSnackBar(
+          context,
+          displayMessage,
+          errorColor,
+        ); // Use theme error color
       }
-    }finally {
+    } finally {
       if (mounted) {
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -192,7 +243,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.all(24.0),
       content: SizedBox(
-        width: 360, 
+        width: 360,
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -214,11 +265,22 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _nameController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Name', icon: Icons.person, colorScheme: colorScheme,
+                    labelText: 'Name',
+                    icon: Icons.person,
+                    colorScheme: colorScheme,
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter a name';
+                    if (_serverErrors.containsKey('name')) {
+                      return _serverErrors['name'];
+                    }
+                    if (value == null || value.isEmpty)
+                      return 'Please enter a name';
                     return null;
+                  },
+                  onChanged: (value) {
+                    if (_serverErrors.containsKey('name')) {
+                      setState(() => _serverErrors.remove('name'));
+                    }
                   },
                 ),
                 const SizedBox(height: 16),
@@ -228,12 +290,29 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _emailController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Email', icon: Icons.email, colorScheme: colorScheme,
+                    labelText: 'Email',
+                    icon: Icons.email,
+                    colorScheme: colorScheme,
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter an email';
+                    if (_serverErrors.containsKey('email')) {
+                      return _serverErrors['email'];
+                    }
+                    if (value == null || value.isEmpty)
+                      return 'Please enter an email';
+                    final emailRegex = RegExp(
+                      r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
+                    );
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Enter a valid email address';
+                    }
                     return null;
+                  },
+                  onChanged: (value) {
+                    if (_serverErrors.containsKey('email')) {
+                      setState(() => _serverErrors.remove('email'));
+                    }
                   },
                 ),
                 const SizedBox(height: 16),
@@ -243,42 +322,78 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'New Password (Optional)', icon: Icons.lock, colorScheme: colorScheme,
+                    labelText: 'New Password (Optional)',
+                    icon: Icons.lock,
+                    colorScheme: colorScheme,
                   ),
                   obscureText: true,
                   validator: (value) {
-                    if (value != null && value.isNotEmpty && value.length < 8) return 'Password must be at least 8 characters';
+                    if (_serverErrors.containsKey('password')) {
+                      return _serverErrors['password'];
+                    }
+                    if (value != null && value.isNotEmpty && value.length < 8)
+                      return 'Password must be at least 8 characters';
                     return null;
+                  },
+                  onChanged: (value) {
+                    if (_serverErrors.containsKey('password')) {
+                      setState(() => _serverErrors.remove('password'));
+                    }
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Password Confirmation Field
                 TextFormField(
                   controller: _passwordConfirmationController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Confirm New Password', icon: Icons.lock_open, colorScheme: colorScheme,
+                    labelText: 'Confirm New Password',
+                    icon: Icons.lock_open,
+                    colorScheme: colorScheme,
                   ),
                   obscureText: true,
                   validator: (value) {
-                    if (_passwordController.text.isNotEmpty && (value == null || value.isEmpty)) {
+                    if (_passwordController.text.isNotEmpty &&
+                        (value == null || value.isEmpty)) {
                       return 'Please confirm the new password';
                     }
-                    if (value != _passwordController.text) return 'Passwords do not match';
+                    if (value != _passwordController.text)
+                      return 'Passwords do not match';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Phone Number
                 TextFormField(
                   controller: _phoneNoController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Phone No', icon: Icons.phone, colorScheme: colorScheme,
+                    labelText: 'Phone No',
+                    icon: Icons.phone,
+                    colorScheme: colorScheme,
+                    hintText: 'e.g. 012-3456789',
                   ),
                   keyboardType: TextInputType.phone,
+                  validator: (value) {
+                    if (_serverErrors.containsKey('phone_no')) {
+                      return _serverErrors['phone_no'];
+                    }
+                    if (value == null || value.isEmpty) return null; // Optional
+                    final phoneRegex = RegExp(
+                      r'^(\+?6?0)[0-9]{1,2}-?[0-9]{7,8}$',
+                    );
+                    if (!phoneRegex.hasMatch(value)) {
+                      return 'Enter a valid Malaysian phone number';
+                    }
+                    return null;
+                  },
+                  onChanged: (value) {
+                    if (_serverErrors.containsKey('phone_no')) {
+                      setState(() => _serverErrors.remove('phone_no'));
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -287,7 +402,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _addressController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Address', icon: Icons.location_on, colorScheme: colorScheme,
+                    labelText: 'Address',
+                    icon: Icons.location_on,
+                    colorScheme: colorScheme,
                   ),
                   maxLines: 2,
                 ),
@@ -299,34 +416,46 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Gender', icon: Icons.people, colorScheme: colorScheme,
+                    labelText: 'Gender',
+                    icon: Icons.people,
+                    colorScheme: colorScheme,
                   ),
                   items: _genders
-                      .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                      .map(
+                        (value) =>
+                            DropdownMenuItem(value: value, child: Text(value)),
+                      )
                       .toList(),
-                  onChanged: (value) => setState(() => _selectedGender = value!),
+                  onChanged: (value) =>
+                      setState(() => _selectedGender = value!),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Role Dropdown
                 DropdownButtonFormField<String>(
                   value: _selectedRole,
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Role', icon: Icons.badge, colorScheme: colorScheme,
+                    labelText: 'Role',
+                    icon: Icons.badge,
+                    colorScheme: colorScheme,
                   ),
                   items: _roles
-                      .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                      .map(
+                        (value) =>
+                            DropdownMenuItem(value: value, child: Text(value)),
+                      )
                       .toList(),
                   onChanged: (value) => setState(() => _selectedRole = value!),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please select a role';
+                    if (value == null || value.isEmpty)
+                      return 'Please select a role';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Account Status Toggle
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -335,7 +464,10 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     children: [
                       Text(
                         'Account Status:',
-                        style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontSize: 16,
+                        ),
                       ),
                       Switch(
                         value: _accountStatus,
@@ -368,7 +500,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: _isLoading ? null : _submitForm,
-                      style: ElevatedButton.styleFrom( 
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: colorScheme.primary,
                         foregroundColor: colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
@@ -379,13 +511,15 @@ class _EditUserDialogState extends State<EditUserDialog> {
                           vertical: 12,
                         ),
                       ),
-                      child: _isLoading 
+                      child: _isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text('Save Changes'),
