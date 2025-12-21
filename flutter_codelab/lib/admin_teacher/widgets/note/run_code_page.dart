@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import '../../../../constants/api_constants.dart';
 
@@ -44,6 +45,9 @@ class _RunCodePageState extends State<RunCodePage> {
   // Cache for your libraries
   final Map<String, String> _bundledLibraries = {};
 
+  // Resolved path for the context directory (handles typos/spaces mismatch)
+  String? _resolvedContextPath;
+
   @override
   void initState() {
     super.initState();
@@ -66,18 +70,88 @@ class _RunCodePageState extends State<RunCodePage> {
     // Load libraries in background
     _loadBundledLibraries();
 
-    // Auto-load other assets from the same context
-    _loadContextAssets();
+    // Resolve context path, THEN load assets
+    _resolveContextPath().then((_) {
+      _loadContextAssets();
+    });
+  }
+
+  Future<void> _resolveContextPath() async {
+    if (widget.contextId == null) return;
+
+    final rawName = widget.contextId!;
+    // Standard path
+    final strictPath = 'assets/www/$rawName';
+
+    // Check if strict path exists
+    try {
+      if (await Directory(strictPath).exists()) {
+        _resolvedContextPath = strictPath;
+        print("DEBUG: Context Path Exact Match: $strictPath");
+        return;
+      }
+    } catch (e) {
+      // Ignore invalid path syntax (errno 123) and fall through to fuzzy match
+    }
+
+    // Try fuzzy match in assets/www
+    try {
+      final wwwDir = Directory('assets/www');
+      if (await wwwDir.exists()) {
+        final entities = wwwDir.listSync();
+        for (var entity in entities) {
+          if (entity is Directory) {
+            // Get just the folder name and NORMALIZE whitespace (remove newlines/tabs)
+            String folderName = entity.path.split(Platform.pathSeparator).last;
+            if (folderName.trim().isEmpty)
+              folderName = entity.path.split('/').last;
+
+            // Replace any whitespace sequence (newline, tab, multi-space) with single space
+            folderName = folderName.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+            // Compare ignoring spaces and case
+            // print("DEBUG: Checking folder: '$folderName'");
+            // Compare removing ALL whitespace (including \r \n) and case
+            final cleanFolder = folderName
+                .replaceAll(RegExp(r'\s+'), '')
+                .toLowerCase();
+            final cleanRaw = rawName
+                .replaceAll(RegExp(r'\s+'), '')
+                .toLowerCase();
+
+            // print("DEBUG: Copy check: '$cleanFolder' vs '$cleanRaw'");
+
+            if (cleanFolder == cleanRaw) {
+              // Found a match!
+              // Construct path with forward slashes for Asset usage
+              // We need the RELATIVE path starting from assets/www
+              _resolvedContextPath = 'assets/www/$folderName';
+              print("DEBUG: Context Path Fuzzy Match: $_resolvedContextPath");
+              return;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print("Error resolving context path: $e");
+    }
+
+    // If we failed to find a match, just use strict path (will likely fail later but consistent)
+    if (_resolvedContextPath == null) {
+      _resolvedContextPath = strictPath;
+    }
   }
 
   Future<void> _loadContextAssets() async {
-    if (widget.contextId == null) return;
+    if (_resolvedContextPath == null) return;
 
-    final dirPath = 'assets/www/${widget.contextId}';
-    final dir = Directory(dirPath);
+    // Use the resolved path
+    final dirPath = _resolvedContextPath!;
 
-    if (await dir.exists()) {
-      try {
+    try {
+      final dir = Directory(dirPath);
+      // Check existence safely
+      if (await dir.exists()) {
         final List<FileSystemEntity> entities = await dir
             .list(recursive: true)
             .toList();
@@ -86,6 +160,17 @@ class _RunCodePageState extends State<RunCodePage> {
 
         for (var entity in entities) {
           if (entity is File) {
+            // SKIP BINARY FILES
+            final lPath = entity.path.toLowerCase();
+            if (lPath.endsWith('.png') ||
+                lPath.endsWith('.jpg') ||
+                lPath.endsWith('.jpeg') ||
+                lPath.endsWith('.gif') ||
+                lPath.endsWith('.ico') ||
+                lPath.endsWith('.pdf')) {
+              continue;
+            }
+
             final content = await entity.readAsString();
             // Relative path from the context root?
             // entity.path is like assets/www/3.1.9/foo.txt
@@ -121,9 +206,10 @@ class _RunCodePageState extends State<RunCodePage> {
             }
           }
         }
-      } catch (e) {
-        print("Error loading context assets: $e");
       }
+    } catch (e) {
+      // Gracefully handle invalid paths, non-existent directories on some platforms, etc.
+      print("Warning: Could not load context assets for '$dirPath': $e");
     }
   }
 
@@ -254,6 +340,7 @@ class _RunCodePageState extends State<RunCodePage> {
 
       server.listen((HttpRequest request) async {
         final path = request.uri.path;
+        print("DEBUG: Server Request: $path");
 
         // --- 0. PROXY POST REQUESTS (PHP FORM SUPPORT) ---
         if (request.method == 'POST') {
@@ -311,28 +398,117 @@ class _RunCodePageState extends State<RunCodePage> {
           return;
         }
 
-        // 1. Serve Dynamic HTML Files (from Temp Dir)
-        if (path.endsWith('.html') || path == '/') {
+        // --- 1. SERVE FILES FROM RUN DIRECTORY OR FALLBACK ---
+        // This handles HTML, CSS, JS, and Images for the running code.
+        // It first looks in the temporary run directory (where we write the editor files).
+        // If not found there (e.g. static assets like images), it looks in the context assets.
+
+        if (path.contains('/run_') || path == '/') {
           final dir = await getTemporaryDirectory();
-          // Default to index.html if root requested, though we usually request specific files now
+          // Extract the run directory if present, or just assume root?
+          // The path is already /run_timestamp/something.
+
           final filePath = (path == '/') ? 'index.html' : path.substring(1);
           final file = File('${dir.path}/$filePath');
 
+          // 1a. Try Temp Dir
           if (await file.exists()) {
-            final content = await file.readAsString();
-            request.response
-              ..headers.contentType = ContentType.html
-              ..write(content)
-              ..close();
-          } else {
-            request.response
-              ..statusCode = HttpStatus.notFound
-              ..close();
+            final contentType = _getContentType(path);
+            request.response.headers.contentType = contentType;
+            // Read as bytes to support images/binary too (if we ever write them there)
+            await request.response.addStream(file.openRead());
+            await request.response.close();
+            return;
           }
+
+          // 1b. Fallback to Asset Context (for images not in editor)
+          // We use _resolvedContextPath which might be fuzzy matched
+          // 1b. Fallback to Asset Context (for images not in editor)
+          // We use _resolvedContextPath which might be fuzzy matched
+          if (_resolvedContextPath != null) {
+            try {
+              // Extract relative path from validity check
+              // path: /run_123456/LogoKelab.png -> relative: LogoKelab.png
+              // path: /run_123456/css/style.css -> relative: css/style.css
+              final segments = Uri.parse("http://dummy$path").pathSegments;
+              // Filter out the 'run_xxxxx' segment
+              final relevantSegments = segments
+                  .where((s) => !s.startsWith('run_'))
+                  .toList();
+
+              if (relevantSegments.isNotEmpty) {
+                final relativePath = relevantSegments.join('/');
+                // _resolvedContextPath is like 'assets/www/Folder Name'
+                final assetKey = '$_resolvedContextPath/$relativePath';
+                print("DEBUG: Fallback attempting to load: $assetKey");
+
+                Uint8List? bodyBytes;
+
+                // 1. Try Filesystem FIRST (For "Live" changes)
+                try {
+                  File file = File(assetKey);
+                  if (await file.exists()) {
+                    bodyBytes = await file.readAsBytes();
+                    print("DEBUG: Asset found on filesystem (Live)!");
+                  } else {
+                    // Try with platform separators just in case
+                    final fixedPath = assetKey.replaceAll(
+                      '/',
+                      Platform.pathSeparator,
+                    );
+                    final fileFixed = File(fixedPath);
+                    if (await fileFixed.exists()) {
+                      bodyBytes = await fileFixed.readAsBytes();
+                      print(
+                        "DEBUG: Asset found on filesystem (Live/FixedSep)!",
+                      );
+                    }
+                  }
+                } catch (e) {
+                  // fs failed, move on
+                }
+
+                // 2. Fallback to Bundle (If not on disk / Release mode)
+                if (bodyBytes == null) {
+                  try {
+                    // Try plain key
+                    final data = await rootBundle.load(assetKey);
+                    bodyBytes = data.buffer.asUint8List();
+                    print("DEBUG: Asset found in bundle (plain)!");
+                  } catch (e) {
+                    // 3. Try encoded key (handle spaces as %20)
+                    try {
+                      final encodedKey = Uri.encodeFull(assetKey);
+                      print("DEBUG: Trying encoded key: $encodedKey");
+                      final data = await rootBundle.load(encodedKey);
+                      bodyBytes = data.buffer.asUint8List();
+                      print("DEBUG: Asset found in bundle (encoded)!");
+                    } catch (eEncoded) {
+                      print("DEBUG: Asset load failed entirely for $assetKey");
+                    }
+                  }
+                }
+
+                if (bodyBytes != null) {
+                  final contentType = _getContentType(path);
+                  request.response.headers.contentType = contentType;
+                  request.response.add(bodyBytes);
+                  await request.response.close();
+                  return;
+                }
+              }
+            } catch (e) {
+              print("DEBUG: Asset fallback failed: $e");
+            }
+          }
+
+          request.response
+            ..statusCode = HttpStatus.notFound
+            ..close();
           return;
         }
 
-        // 2. Serve Static Assets (from assets/www)
+        // 2. Serve General Static Assets (from assets/www direct access)
         try {
           // Remove leading slash for asset key
           final assetKey = 'assets/www${path}';
@@ -370,6 +546,27 @@ class _RunCodePageState extends State<RunCodePage> {
   // --- 1. Load Libraries from Assets ---
   Future<void> _loadBundledLibraries() async {
     try {
+      // DEBUG: Check what assets are actually bundled
+      try {
+        final manifestContent = await rootBundle.loadString(
+          'AssetManifest.json',
+        );
+        final Map<String, dynamic> manifestMap = json.decode(manifestContent);
+        final matchingKeys = manifestMap.keys
+            .where((key) => key.toLowerCase().contains('logokelab'))
+            .toList();
+        print("DEBUG: Bundled 'LogoKelab' keys: $matchingKeys");
+
+        // Also print keys for the specific folder if possible
+        final folderKeys = manifestMap.keys
+            .where((key) => key.contains('3.2.9'))
+            .take(5)
+            .toList();
+        print("DEBUG: Sample bundled keys for 3.2.9: $folderKeys");
+      } catch (e) {
+        print("DEBUG: Could not check manifest: $e");
+      }
+
       _bundledLibraries['math.js'] = await rootBundle.loadString(
         'assets/js/math.js',
       );

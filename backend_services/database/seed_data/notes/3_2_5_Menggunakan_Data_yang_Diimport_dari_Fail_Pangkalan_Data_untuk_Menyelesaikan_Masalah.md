@@ -6,21 +6,7 @@ Bahagian ini menerangkan cara menggunakan bahasa penskripan pelayan (PHP) untuk 
 #### **1\. Langkah Utama Capaian Data**
 
 Terdapat empat langkah yang **berturutan (sequential)** yang wajib dilakukan untuk memproses data:
-```
-<?php
-$con = mysqli_connect("localhost","root","");
-if (!$con)
-{
-  die('Sambungan kepada Pangkalan Data Gagal'.mysqli_connect_error());
 
-mysqli_select_db($con,"dbPelajar");
-
-$hasil = mysqli_query($con,"SELECT * from MURID");
-
-mysqli_close($con); 
-?>
-
-```
 1. Membuat sambungan ke pangkalan data.  
 2. Memilih nama pangkalan data.  
 3. Membuat pertanyaan (query) SQL.  
