@@ -91,6 +91,7 @@ class GameAPI {
       }
 
       print("Failed to fetch levels: ${response.statusCode}");
+      print(response.body);
       return [];
     } catch (e) {
       print("Error fetching levels: $e");
