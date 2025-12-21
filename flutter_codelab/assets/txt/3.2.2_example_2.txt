@@ -1,9 +1,0 @@
-<?php
-    // untuk membuka fail teks dengan menggunakan mod w
-    $f = fopen("LogMasuk.txt", "w");
-
-    fwrite($f, "Selamat Datang");
-
-    // menutup fail setelah digunakan
-    fclose($f);
-?>

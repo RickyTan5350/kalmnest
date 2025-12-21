@@ -133,10 +133,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
   void _openRunPage(String code) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) =>
-            RunCodePage(initialCode: code, contextId: _currentTitle),
-      ),
+      MaterialPageRoute(builder: (context) => RunCodePage(initialCode: code)),
     );
   }
 
@@ -527,7 +524,6 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final screenWidth = MediaQuery.of(context).size.width;
 
     return CallbackShortcuts(
       bindings: {
@@ -776,25 +772,14 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
                       ),
                     ),
                     if (_isSearching)
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        width: screenWidth > 350 ? 350 : screenWidth - 32,
-                        child: CallbackShortcuts(
-                          bindings: {
-                            const SingleActivator(LogicalKeyboardKey.enter):
-                                _nextMatch,
-                          },
-                          child: SearchNote(
-                            controller: _searchController,
-                            focusNode: _searchFocusNode,
-                            matchCount: _currentMatchIndex,
-                            totalMatches: _totalMatches,
-                            onNext: _nextMatch,
-                            onPrev: _prevMatch,
-                            onClose: _toggleSearch,
-                          ),
-                        ),
+                      SearchNote(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        matchCount: _currentMatchIndex,
+                        totalMatches: _totalMatches,
+                        onNext: _nextMatch,
+                        onPrev: _prevMatch,
+                        onClose: _toggleSearch,
                       ),
                   ],
                 ),

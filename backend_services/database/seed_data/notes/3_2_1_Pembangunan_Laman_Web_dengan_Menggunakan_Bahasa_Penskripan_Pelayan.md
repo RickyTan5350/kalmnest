@@ -1,4 +1,3 @@
-##  3.2.1 Pembangunan Laman Web dengan Menggunakan Bahasa Penskripan Pelayan
 #### **1\. Konsep Pelanggan (Client) dan Pelayan (Server)**
 
 Model ini adalah asas kepada komunikasi Internet.
