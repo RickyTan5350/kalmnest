@@ -24,6 +24,7 @@ class GameAPI {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
   }
 

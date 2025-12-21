@@ -5,7 +5,7 @@ import 'package:flutter_codelab/api/class_api.dart';
 class EditClassPage extends StatefulWidget {
   final dynamic classData;
 
-  const EditClassPage({Key? key, required this.classData}) : super(key: key);
+  const EditClassPage({super.key, required this.classData});
 
   @override
   State<EditClassPage> createState() => _EditClassPageState();
@@ -343,7 +343,7 @@ class _EditClassPageState extends State<EditClassPage> {
                   // TEACHER DROPDOWN
                   // Ensure value exists in items to avoid assertion error
                   DropdownButtonFormField<String>(
-                    value:
+                    initialValue:
                         (_selectedTeacher == null ||
                             _teachers.any(
                               (t) =>
@@ -488,7 +488,7 @@ class _EditClassPageState extends State<EditClassPage> {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: DropdownButtonFormField<String>(
-                          value: validValue,
+                          initialValue: validValue,
                           dropdownColor: const Color(
                             0xFFF5FAFC,
                           ), // Match create page

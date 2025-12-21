@@ -295,7 +295,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
                 // Gender Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedGender,
+                  initialValue: _selectedGender,
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
@@ -310,7 +310,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                 
                 // Role Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(

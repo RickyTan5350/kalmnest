@@ -656,8 +656,9 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     int start = (_currentPage - 1).clamp(1, _totalPages);
     int end = (_currentPage + 1).clamp(1, _totalPages);
     if (start == 1 && end < 3 && _totalPages >= 3) end = 3;
-    if (end == _totalPages && start > 1 && _totalPages >= 3)
+    if (end == _totalPages && start > 1 && _totalPages >= 3) {
       start = _totalPages - 2;
+    }
 
     for (int i = start; i <= end; i++) {
       buttons.add(
