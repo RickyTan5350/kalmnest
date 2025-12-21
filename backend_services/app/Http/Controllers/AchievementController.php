@@ -322,6 +322,11 @@ class AchievementController extends Controller
             return response()->json(['message' => 'Achievement not found'], 404);
         }
 
+        // ACCESS CONTROL: Teachers can only update their own achievements
+        if ($this->isTeacher() && $achievement->created_by !== Auth::id()) {
+            return response()->json(['message' => 'Access Denied: You can only edit achievements you created.'], 403);
+        }
+
         try {
             $validatedData = $request->validate([
                 'achievement_name' => [
@@ -373,15 +378,46 @@ class AchievementController extends Controller
         $idsToDelete = $validatedData['ids'];
 
         try {
-            $deleteCount = Achievement::whereIn('achievement_id', $idsToDelete)->delete();
+            // Partial Success Logic
+            $query = Achievement::whereIn('achievement_id', $idsToDelete);
 
-            if ($deleteCount == 0) {
-                return response()->json(['message' => 'No matching achievements found.'], 404);
+            if ($this->isTeacher()) {
+                 // only include achievements created by this teacher
+                $query->where('created_by', Auth::id());
             }
 
-            Log::info("ACHIEVEMENTS_DELETED: " . count($idsToDelete) . " items deleted by User " . Auth::id());
+            $deletedCount = $query->delete();
+            $requestedCount = count($idsToDelete);
+            $forbiddenCount = $requestedCount - $deletedCount;
 
-            return response()->json(['message' => "Successfully deleted $deleteCount achievements."], 200);
+            if ($deletedCount == 0 && $requestedCount > 0 && $forbiddenCount == $requestedCount) {
+                 // All requested were forbidden (or didn't exist, but we assume forbidden for safety in this context if they existed)
+                 // Let's check if they existed to be precise, or just return the Forbidden message if we know they asked for some.
+                 
+                 // If we want to be strict: "No matching achievements found." is for 404.
+                 // "Forbidden" is for 403.
+                 // If we deleted 0, let's see why.
+                 
+                 $existingCount = Achievement::whereIn('achievement_id', $idsToDelete)->count();
+                 if ($existingCount > 0) {
+                     return response()->json(['message' => 'Forbidden. Access Denied.'], 403);
+                 } else {
+                     return response()->json(['message' => 'No matching achievements found.'], 404);
+                 }
+            }
+
+            Log::info("ACHIEVEMENTS_DELETED: " . $deletedCount . " items deleted by User " . Auth::id());
+
+            $message = "Successfully deleted $deletedCount achievement(s).";
+            if ($forbiddenCount > 0) {
+                $message .= " $forbiddenCount item(s) could not be deleted (access denied).";
+            }
+
+            return response()->json([
+                'message' => $message,
+                'deleted_count' => $deletedCount,
+                'forbidden_count' => $forbiddenCount
+            ], 200);
 
         } catch (Exception $e) {
             // SECURITY FIX: Log details, return generic message

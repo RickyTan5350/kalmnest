@@ -218,12 +218,20 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         _isDeleting = true;
       });
       try {
-        await _api.deleteAchievements(_selectedIds);
-        widget.showSnackBar(
-          scaffoldContext,
-          'Successfully deleted ${_selectedIds.length} achievement(s).',
-          Colors.green,
-        );
+        final result = await _api.deleteAchievements(_selectedIds);
+        final String message = result['message'] ?? 'Deletion complete.';
+        final int forbiddenCount = result['forbidden_count'] ?? 0;
+
+        // Determine Color based on partial success
+        Color snackColor = Colors.green;
+        if (forbiddenCount > 0) {
+          snackColor = Colors.orange;
+        }
+
+        if (mounted) {
+          widget.showSnackBar(scaffoldContext, message, snackColor);
+        }
+
         setState(() {
           _selectedIds.clear();
         });
