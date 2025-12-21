@@ -69,6 +69,7 @@ List<AchievementData> filterAchievements({
   required List<AchievementData> achievements,
   required String searchText,
   required String? selectedTopic,
+  String? currentUserId,
 }) {
   return achievements.where((item) {
     final String title = item.achievementTitle?.toLowerCase() ?? '';
@@ -80,10 +81,18 @@ List<AchievementData> filterAchievements({
         title.contains(searchText) ||
         description.contains(searchText);
 
-    final isMatchingTopic =
-        selectedTopic == null ||
-        icon.contains(selectedTopic) ||
-        (selectedTopic == 'quiz');
+    bool isMatchingTopic = true;
+    if (selectedTopic == 'Created by Me') {
+      // Filter by creator ID
+      if (currentUserId != null) {
+        isMatchingTopic = item.creatorId.toString() == currentUserId.toString();
+      }
+    } else {
+      isMatchingTopic =
+          selectedTopic == null ||
+          icon.contains(selectedTopic.toLowerCase()) ||
+          (selectedTopic.toLowerCase() == 'quiz');
+    }
 
     return isMatchingSearch && isMatchingTopic;
   }).toList();

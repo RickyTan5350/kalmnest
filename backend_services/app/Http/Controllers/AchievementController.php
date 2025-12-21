@@ -100,12 +100,15 @@ class AchievementController extends Controller
 
         // Build the query
         $query = DB::table('achievements')
+            ->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
             ->selectRaw('
                 achievements.achievement_id, 
                 achievements.achievement_name, 
                 achievements.title, 
                 achievements.icon, 
-                achievements.description
+                achievements.description,
+                achievements.created_by,
+                users.name as creator_name
             ');
 
         // Add unlocked_count subquery based on role
