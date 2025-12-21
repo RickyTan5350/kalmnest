@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
@@ -274,8 +275,16 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     final textTheme = Theme.of(context).textTheme;
     final String currentId = widget.achievement['achievement_id'].toString();
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+           Navigator.of(context).maybePop();
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        child: WillPopScope(
+          onWillPop: _onWillPop,
       child: AlertDialog(
         backgroundColor: colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -464,6 +473,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
