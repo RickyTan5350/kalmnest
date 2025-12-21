@@ -87,6 +87,10 @@ List<AchievementData> filterAchievements({
       if (currentUserId != null) {
         isMatchingTopic = item.creatorId.toString() == currentUserId.toString();
       }
+    } else if (selectedTopic == 'Unlocked') {
+      isMatchingTopic = item.isUnlocked;
+    } else if (selectedTopic == 'Locked') {
+      isMatchingTopic = !item.isUnlocked;
     } else {
       isMatchingTopic =
           selectedTopic == null ||
@@ -115,6 +119,12 @@ List<AchievementData> sortAchievements({
         final dateA = a.createdAt ?? DateTime(0);
         final dateB = b.createdAt ?? DateTime(0);
         result = dateA.compareTo(dateB);
+        break;
+      case SortType.unlocked:
+        // Sort by unlocked status (unlocked first)
+        final unlockedA = a.isUnlocked ? 1 : 0;
+        final unlockedB = b.isUnlocked ? 1 : 0;
+        result = unlockedB.compareTo(unlockedA); // Descending (1 before 0)
         break;
     }
     if (sortOrder == SortOrder.descending) {

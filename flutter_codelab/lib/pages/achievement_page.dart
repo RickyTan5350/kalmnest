@@ -30,6 +30,8 @@ class _AchievementPageState extends State<AchievementPage> {
     'PHP',
     'Quiz',
     'Created by Me',
+    'Unlocked',
+    'Locked',
   ]; // Added 'All'
   String _selectedTopic = 'All'; // Default to 'All'
   ViewLayout _viewLayout = ViewLayout.grid;
@@ -176,9 +178,14 @@ class _AchievementPageState extends State<AchievementPage> {
                         runSpacing: 10.0,
                         children: _topics
                             .where((topic) {
-                              if (widget.currentUser.isStudent &&
-                                  topic == 'Created by Me') {
-                                return false;
+                              if (widget.currentUser.isStudent) {
+                                // Student: Hide 'Created by Me'
+                                if (topic == 'Created by Me') return false;
+                              } else {
+                                // Teacher/Admin: Hide 'Unlocked', 'Locked'
+                                if (topic == 'Unlocked' || topic == 'Locked') {
+                                  return false;
+                                }
                               }
                               return true;
                             })
@@ -215,6 +222,8 @@ class _AchievementPageState extends State<AchievementPage> {
                             _sortType = SortType.alphabetical;
                           } else if (value == 'Date') {
                             _sortType = SortType.updated;
+                          } else if (value == 'Unlocked') {
+                            _sortType = SortType.unlocked;
                           } else if (value == 'Ascending') {
                             _sortOrder = SortOrder.ascending;
                           } else if (value == 'Descending') {
@@ -241,6 +250,13 @@ class _AchievementPageState extends State<AchievementPage> {
                               checked: _sortType == SortType.updated,
                               child: const Text('Date'),
                             ),
+                            // NEW: Unlocked sort (Visible only for students)
+                            if (widget.currentUser.isStudent)
+                              CheckedPopupMenuItem<String>(
+                                value: 'Unlocked',
+                                checked: _sortType == SortType.unlocked,
+                                child: const Text('Unlocked'),
+                              ),
                             const PopupMenuDivider(),
                             const PopupMenuItem<String>(
                               enabled: false,
@@ -285,7 +301,11 @@ class _AchievementPageState extends State<AchievementPage> {
                           searchText: _searchText,
                           selectedTopic: _selectedTopic == 'All'
                               ? null
-                              : (_selectedTopic == 'Created by Me'
+                              : ([
+                                      'Created by Me',
+                                      'Unlocked',
+                                      'Locked',
+                                    ].contains(_selectedTopic)
                                     ? _selectedTopic
                                     : _selectedTopic.toLowerCase()),
                           key: _studentKey,
@@ -301,7 +321,11 @@ class _AchievementPageState extends State<AchievementPage> {
                           searchText: _searchText,
                           selectedTopic: _selectedTopic == 'All'
                               ? null
-                              : (_selectedTopic == 'Created by Me'
+                              : ([
+                                      'Created by Me',
+                                      'Unlocked',
+                                      'Locked',
+                                    ].contains(_selectedTopic)
                                     ? _selectedTopic
                                     : _selectedTopic.toLowerCase()),
                           key: _adminKey,
