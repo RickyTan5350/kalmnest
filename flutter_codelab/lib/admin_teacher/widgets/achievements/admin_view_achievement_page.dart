@@ -23,6 +23,7 @@ class AdminViewAchievementsPage extends StatefulWidget {
   final String? selectedTopic;
   final SortType sortType;
   final SortOrder sortOrder;
+  final bool isAdmin; // NEW
 
   const AdminViewAchievementsPage({
     super.key,
@@ -33,6 +34,7 @@ class AdminViewAchievementsPage extends StatefulWidget {
     this.selectedTopic,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
+    this.isAdmin = false, // NEW
   });
 
   @override
@@ -491,6 +493,8 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         selectedIds: _selectedIds,
         onToggleSelection: _toggleSelection,
         itemKeys: _gridItemKeys,
+        currentUserId: widget.userId, // NEW
+        isAdmin: widget.isAdmin, // NEW
       );
     } else {
       // --- LIST VIEW ---
@@ -605,8 +609,11 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      AdminAchievementDetailPage(initialData: originalItem),
+                  builder: (context) => AdminAchievementDetailPage(
+                    initialData: originalItem,
+                    currentUserId: widget.userId, // NEW
+                    isAdmin: widget.isAdmin, // NEW
+                  ),
                 ),
               );
             }

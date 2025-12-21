@@ -331,6 +331,7 @@ class _AchievementPageState extends State<AchievementPage> {
                           key: _adminKey,
                           sortType: _sortType,
                           sortOrder: _sortOrder,
+                          isAdmin: widget.currentUser.isAdmin, // NEW
                         ),
                 ),
               ],
