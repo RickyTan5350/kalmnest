@@ -6,7 +6,6 @@ import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_achieve
 import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'admin_edit_achievement_page.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
 
 class AdminAchievementDetailPage extends StatefulWidget {
   final AchievementData initialData; // The partial data from the grid
@@ -29,9 +28,6 @@ class _AdminAchievementDetailPageState
   bool _isLoading = true;
   final AchievementApi _api = AchievementApi();
 
-  String? _currentUserId;
-  bool _isTeacher = false;
-
   @override
   void initState() {
     super.initState();
@@ -41,20 +37,6 @@ class _AdminAchievementDetailPageState
     // 2. Fetch the full data using the ID
     if (widget.initialData.achievementId != null) {
       _fetchFullDetails(widget.initialData.achievementId!);
-    }
-
-    _fetchCurrentUser();
-  }
-
-  Future<void> _fetchCurrentUser() async {
-    final userData = await AuthApi.getStoredUser();
-    if (userData != null && mounted) {
-      setState(() {
-        _currentUserId =
-            userData['user_id']; // Adjust key based on your AuthApi response
-        final roleName = userData['role']?['role_name'];
-        _isTeacher = roleName == 'Teacher';
-      });
     }
   }
 
@@ -192,52 +174,48 @@ class _AdminAchievementDetailPageState
             },
             tooltip: 'Refresh',
           ),
-          // ACCESS CONTROL: Only show Edit/Delete if Admin or formatted Creator
-          if (!_isTeacher ||
-              (_isTeacher && _currentUserId == _displayData.creatorId)) ...[
-            IconButton(
-              icon: const Icon(Icons.edit),
-              tooltip: 'Edit Achievement',
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Edit Achievement',
 
-              // In achievement_detail.dart inside the IconButton onPressed:
-              onPressed: () async {
-                // 1. Map ALL fields required by the new Edit Form
-                final Map<String, dynamic> achievementMap = {
-                  'achievement_id': _displayData.achievementId,
-                  'achievement_name': _displayData.achievementName, // Added
-                  'title': _displayData.achievementTitle,
-                  'description': _displayData.achievementDescription,
-                  'associated_level': _displayData.levelId, // Added
-                  'icon': _displayData.icon, // Added
-                };
+            // In achievement_detail.dart inside the IconButton onPressed:
+            onPressed: () async {
+              // 1. Map ALL fields required by the new Edit Form
+              final Map<String, dynamic> achievementMap = {
+                'achievement_id': _displayData.achievementId,
+                'achievement_name': _displayData.achievementName, // Added
+                'title': _displayData.achievementTitle,
+                'description': _displayData.achievementDescription,
+                'associated_level': _displayData.levelId, // Added
+                'icon': _displayData.icon, // Added
+              };
 
-                // 2. Call the dialog
-                await showEditAchievementDialog(
-                  context: context,
-                  achievement: achievementMap,
-                  showSnackBar: (ctx, msg, color) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text(msg), backgroundColor: color),
-                    );
-                  },
-                );
+              // 2. Call the dialog
+              await showEditAchievementDialog(
+                context: context,
+                achievement: achievementMap,
+                showSnackBar: (ctx, msg, color) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text(msg), backgroundColor: color),
+                  );
+                },
+              );
 
-                // 3. Refresh
-                if (_displayData.achievementId != null && mounted) {
-                  _fetchFullDetails(_displayData.achievementId!);
-                }
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () {
-                if (_displayData.achievementId != null) {
-                  _deleteAchievement();
-                }
-              },
-              tooltip: 'Delete Achievement',
-            ),
-          ],
+              // 3. Refresh
+              if (_displayData.achievementId != null && mounted) {
+                _fetchFullDetails(_displayData.achievementId!);
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: () {
+              if (_displayData.achievementId != null) {
+                _deleteAchievement();
+              }
+            },
+            tooltip: 'Delete Achievement',
+          ),
         ],
       ),
       body: RefreshIndicator(
