@@ -218,20 +218,12 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         _isDeleting = true;
       });
       try {
-        final result = await _api.deleteAchievements(_selectedIds);
-        final String message = result['message'] ?? 'Deletion complete.';
-        final int forbiddenCount = result['forbidden_count'] ?? 0;
-
-        // Determine Color based on partial success
-        Color snackColor = Colors.green;
-        if (forbiddenCount > 0) {
-          snackColor = Colors.orange;
-        }
-
-        if (mounted) {
-          widget.showSnackBar(scaffoldContext, message, snackColor);
-        }
-
+        await _api.deleteAchievements(_selectedIds);
+        widget.showSnackBar(
+          scaffoldContext,
+          'Successfully deleted ${_selectedIds.length} achievement(s).',
+          Colors.green,
+        );
         setState(() {
           _selectedIds.clear();
         });
@@ -437,10 +429,7 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
                             child: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 300),
                               child: _selectedIds.isNotEmpty
-                                  ? _buildSelectionHeader(
-                                      context,
-                                      uiData.length,
-                                    )
+                                  ? _buildSelectionHeade    cont     uiData.le    )
                                   : _buildSortHeader(context, uiData.length),
                             ),
                           ),
