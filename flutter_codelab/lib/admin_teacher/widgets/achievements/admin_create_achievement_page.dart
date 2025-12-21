@@ -1,5 +1,6 @@
 import 'dart:convert'; // Required for jsonDecode
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
@@ -411,7 +412,15 @@ class _AdminCreateAchievementDialogState
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return WillPopScope(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+           Navigator.of(context).maybePop();
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        child: WillPopScope(
       onWillPop: _onWillPop,
       child: AlertDialog(
         backgroundColor: colorScheme.surface,
@@ -635,8 +644,10 @@ class _AdminCreateAchievementDialogState
           ),
         ),
       ),
+      ),
     );
   }
+
 
   Future<bool> _onWillPop() async {
     final hasChanges =

@@ -435,142 +435,187 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // _buildSelectionMenuBar() removed
-        Expanded(
-          child: FutureBuilder<List<AchievementData>>(
-            future: _achievementsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(child: Text("Error: ${snapshot.error}"));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text("No achievements found."));
-              }
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          if (_selectedIds.isNotEmpty) {
+            setState(() => _selectedIds.clear());
+          }
+        },
+        const SingleActivator(
+          LogicalKeyboardKey.keyC,
+          control: true,
+        ): () async {
+          if (_selectedIds.isNotEmpty) {
+            final List<AchievementData> allAchievements =
+                await _achievementsFuture;
+            final selectedItems = allAchievements
+                .where((a) => _selectedIds.contains(a.achievementId))
+                .map(
+                  (a) => "${a.achievementTitle} - ${a.achievementDescription}",
+                )
+                .join('\n');
 
-              List<AchievementData> originalData = snapshot.data!;
+            await Clipboard.setData(ClipboardData(text: selectedItems));
 
-              // --- FILTERING LOGIC ---
-              List<AchievementData> filteredData = filterAchievements(
-                achievements: originalData,
-                searchText: widget.searchText,
-                selectedTopic: widget.selectedTopic,
-                currentUserId: widget.userId,
+            if (context.mounted) {
+              widget.showSnackBar(
+                context,
+                "Copied ${_selectedIds.length} item(s) to clipboard.",
+                Colors.green,
               );
+            }
+          }
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        child: Column(
+          children: [
+            // _buildSelectionMenuBar() removed
+            Expanded(
+              child: FutureBuilder<List<AchievementData>>(
+                future: _achievementsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text("Error: ${snapshot.error}"));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text("No achievements found."));
+                  }
 
-              // --- SORTING LOGIC ---
-              filteredData = sortAchievements(
-                achievements: filteredData,
-                sortType: widget.sortType,
-                sortOrder: widget.sortOrder,
-              );
+                  List<AchievementData> originalData = snapshot.data!;
 
-              if (filteredData.isEmpty) {
-                return const Center(
-                  child: Text("No achievements match your search or filter."),
-                );
-              }
+                  // --- FILTERING LOGIC ---
+                  List<AchievementData> filteredData = filterAchievements(
+                    achievements: originalData,
+                    searchText: widget.searchText,
+                    selectedTopic: widget.selectedTopic,
+                    currentUserId: widget.userId,
+                  );
 
-              final List<Map<String, dynamic>> uiData = _transformData(
-                filteredData,
-              );
+                  // --- SORTING LOGIC ---
+                  filteredData = sortAchievements(
+                    achievements: filteredData,
+                    sortType: widget.sortType,
+                    sortOrder: widget.sortOrder,
+                  );
 
-              // --- REPLACED Gesture Logic with WRAPPER ---
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // --- STICKY HEADER ---
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _selectedIds.isNotEmpty
-                          ? _buildSelectionHeader(context, uiData.length)
-                          : _buildSortHeader(context, uiData.length),
-                    ),
-                  ),
+                  if (filteredData.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        "No achievements match your search or filter.",
+                      ),
+                    );
+                  }
 
-                  // --- SCROLLABLE CONTENT ---
-                  Expanded(
-                    child: SelectionGestureWrapper(
-                      isDesktop: _isDesktop,
-                      selectedIds: _selectedIds,
-                      itemKeys: _gridItemKeys,
+                  final List<Map<String, dynamic>> uiData = _transformData(
+                    filteredData,
+                  );
 
-                      // Start "Selection Mode"
-                      onLongPressStart: (details) {
-                        if (_isDesktop) {
-                          // WINDOWS: Prepare box selection
-                          _initialSelection = Set.from(_selectedIds);
-                          setState(() {
-                            _dragStart = details.localPosition;
-                            _dragEnd = details.localPosition;
-                          });
-                          _handleBoxSelect(details.localPosition);
-                        } else {
-                          // MOBILE: Select item under finger
-                          _dragProcessedIds.clear();
-                          _handleDragSelect(details.globalPosition);
-                        }
-                      },
+                  // --- REPLACED Gesture Logic with WRAPPER ---
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // --- STICKY HEADER ---
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          16.0,
+                          8.0,
+                          16.0,
+                          16.0,
+                        ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: _selectedIds.isNotEmpty
+                              ? _buildSelectionHeader(context, uiData.length)
+                              : _buildSortHeader(context, uiData.length),
+                        ),
+                      ),
 
-                      // Continue selection
-                      onLongPressMoveUpdate: (details) {
-                        if (_isDesktop) {
-                          // WINDOWS: Update box size
-                          _handleBoxSelect(details.localPosition);
-                        } else {
-                          // MOBILE: Check for new items under finger
-                          _handleDragSelect(details.globalPosition);
-                        }
-                      },
+                      // --- SCROLLABLE CONTENT ---
+                      Expanded(
+                        child: SelectionGestureWrapper(
+                          isDesktop: _isDesktop,
+                          selectedIds: _selectedIds,
+                          itemKeys: _gridItemKeys,
 
-                      // Cleanup on release (ignoring details)
-                      onLongPressEnd: (_) => _endDrag(),
+                          // Start "Selection Mode"
+                          onLongPressStart: (details) {
+                            if (_isDesktop) {
+                              // WINDOWS: Prepare box selection
+                              _initialSelection = Set.from(_selectedIds);
+                              setState(() {
+                                _dragStart = details.localPosition;
+                                _dragEnd = details.localPosition;
+                              });
+                              _handleBoxSelect(details.localPosition);
+                            } else {
+                              // MOBILE: Select item under finger
+                              _dragProcessedIds.clear();
+                              _handleDragSelect(details.globalPosition);
+                            }
+                          },
 
-                      child: Stack(
-                        key: _selectionAreaKey, // Coordinate reference for drag
-                        children: [
-                          // Layer 1: The Grid Content
-                          CustomScrollView(
-                            slivers: [
-                              // Pass filteredData here
-                              _buildSliverContent(
-                                context,
-                                uiData,
-                                filteredData,
+                          // Continue selection
+                          onLongPressMoveUpdate: (details) {
+                            if (_isDesktop) {
+                              // WINDOWS: Update box size
+                              _handleBoxSelect(details.localPosition);
+                            } else {
+                              // MOBILE: Check for new items under finger
+                              _handleDragSelect(details.globalPosition);
+                            }
+                          },
+
+                          // Cleanup on release (ignoring details)
+                          onLongPressEnd: (_) => _endDrag(),
+
+                          child: Stack(
+                            key:
+                                _selectionAreaKey, // Coordinate reference for drag
+                            children: [
+                              // Layer 1: The Grid Content
+                              CustomScrollView(
+                                slivers: [
+                                  // Pass filteredData here
+                                  _buildSliverContent(
+                                    context,
+                                    uiData,
+                                    filteredData,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
 
-                          // Layer 2: The Blue Selection Box (Desktop Only)
-                          if (_isDesktop &&
-                              _dragStart != null &&
-                              _dragEnd != null)
-                            Positioned.fill(
-                              child: IgnorePointer(
-                                child: CustomPaint(
-                                  painter: SelectionBoxPainter(
-                                    start: _dragStart,
-                                    end: _dragEnd,
+                              // Layer 2: The Blue Selection Box (Desktop Only)
+                              if (_isDesktop &&
+                                  _dragStart != null &&
+                                  _dragEnd != null)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: CustomPaint(
+                                      painter: SelectionBoxPainter(
+                                        start: _dragStart,
+                                        end: _dragEnd,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                        ],
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
