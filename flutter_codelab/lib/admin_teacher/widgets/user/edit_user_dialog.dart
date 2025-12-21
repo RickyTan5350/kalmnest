@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/user_api.dart';
+import 'package:flutter_codelab/utils/formatters.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 
 // Utility function to show the dialog
@@ -376,6 +377,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     hintText: 'e.g. 012-3456789',
                   ),
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [MalaysianPhoneFormatter()],
                   validator: (value) {
                     if (_serverErrors.containsKey('phone_no')) {
                       return _serverErrors['phone_no'];
