@@ -87,7 +87,7 @@ class StudentViewPageState extends State<StudentViewPage> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor:colorScheme.surfaceContainerLow,
+      backgroundColor: colorScheme.surfaceContainerLow,
       body: FutureBuilder<List<NoteBrief>>(
         future: _noteFuture,
         builder: (context, snapshot) {
@@ -247,10 +247,7 @@ class StudentViewPageState extends State<StudentViewPage> {
         topicColor = brandColors?.php ?? Colors.indigo;
         topicIcon = Icons.php;
         break;
-      case 'backend':
-        topicColor = brandColors?.backend ?? Colors.purple;
-        topicIcon = Icons.storage;
-        break;
+
       default:
         topicColor = brandColors?.other ?? Colors.grey;
         topicIcon = Icons.folder_open;
@@ -259,8 +256,8 @@ class StudentViewPageState extends State<StudentViewPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
+
       // Match Admin color (Surface) instead of SurfaceContainer
-     
       shape: RoundedRectangleBorder(
         side: BorderSide(color: colorScheme.outlineVariant, width: 1),
         borderRadius: BorderRadius.circular(12.0),

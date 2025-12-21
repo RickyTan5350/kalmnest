@@ -55,6 +55,7 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   Offset? _dragStart;
   Offset? _dragEnd;
   Set<String> _initialSelection = {};
+  final GlobalKey _selectionAreaKey = GlobalKey();
 
   // Helper to detect platform
   bool get _isDesktop {
@@ -138,20 +139,25 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
     // Start with what we had before dragging
     final Set<String> newSelection = Set.from(_initialSelection);
 
+    // Get the selection area (Stack) render object
+    final RenderBox? ancestor =
+        _selectionAreaKey.currentContext?.findRenderObject() as RenderBox?;
+    if (ancestor == null) return;
+
     for (final entry in _gridItemKeys.entries) {
       final String id = entry.key;
       final GlobalKey key = entry.value;
 
-      final RenderBox? renderBox =
+      final RenderBox? itemBox =
           key.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox == null) continue;
+      if (itemBox == null) continue;
 
-      // Get item's position relative to the Stack (context)
-      final Offset itemPosition = renderBox.localToGlobal(
+      // Get item's position relative to the Stack (ancestor)
+      final Offset itemPosition = itemBox.localToGlobal(
         Offset.zero,
-        ancestor: context.findRenderObject(),
+        ancestor: ancestor,
       );
-      final Rect itemRect = itemPosition & renderBox.size;
+      final Rect itemRect = itemPosition & itemBox.size;
 
       // Check if Blue Box touches Item Box
       if (selectionBox.overlaps(itemRect)) {
@@ -377,82 +383,92 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
               );
 
               // --- REPLACED Gesture Logic with WRAPPER ---
-              return SelectionGestureWrapper(
-                isDesktop: _isDesktop,
-                selectedIds: _selectedIds,
-                itemKeys: _gridItemKeys,
-
-                // Start "Selection Mode"
-                onLongPressStart: (details) {
-                  if (_isDesktop) {
-                    // WINDOWS: Prepare box selection
-                    _initialSelection = Set.from(_selectedIds);
-                    setState(() {
-                      _dragStart = details.localPosition;
-                      _dragEnd = details.localPosition;
-                    });
-                    _handleBoxSelect(details.localPosition);
-                  } else {
-                    // MOBILE: Select item under finger
-                    _dragProcessedIds.clear();
-                    _handleDragSelect(details.globalPosition);
-                  }
-                },
-
-                // Continue selection
-                onLongPressMoveUpdate: (details) {
-                  if (_isDesktop) {
-                    // WINDOWS: Update box size
-                    _handleBoxSelect(details.localPosition);
-                  } else {
-                    // MOBILE: Check for new items under finger
-                    _handleDragSelect(details.globalPosition);
-                  }
-                },
-
-                // Cleanup on release (ignoring details)
-                onLongPressEnd: (_) => _endDrag(),
-
-                child: Stack(
-                  children: [
-                    // Layer 1: The Grid Content
-                    CustomScrollView(
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              16.0,
-                              8.0,
-                              16.0,
-                              16.0,
-                            ),
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: _selectedIds.isNotEmpty
-                                  ? _buildSelectionHeade    cont     uiData.le    )
-                                  : _buildSortHeader(context, uiData.length),
-                            ),
-                          ),
-                        ),
-                        // Pass filteredData here
-                        _buildSliverContent(context, uiData, filteredData),
-                      ],
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // --- STICKY HEADER ---
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _selectedIds.isNotEmpty
+                          ? _buildSelectionHeader(context, uiData.length)
+                          : _buildSortHeader(context, uiData.length),
                     ),
+                  ),
 
-                    // Layer 2: The Blue Selection Box (Desktop Only)
-                    if (_isDesktop && _dragStart != null && _dragEnd != null)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: CustomPaint(
-                            painter: SelectionBoxPainter(
-                              start: _dragStart,
-                              end: _dragEnd,
-                            ),
+                  // --- SCROLLABLE CONTENT ---
+                  Expanded(
+                    child: SelectionGestureWrapper(
+                      isDesktop: _isDesktop,
+                      selectedIds: _selectedIds,
+                      itemKeys: _gridItemKeys,
+
+                      // Start "Selection Mode"
+                      onLongPressStart: (details) {
+                        if (_isDesktop) {
+                          // WINDOWS: Prepare box selection
+                          _initialSelection = Set.from(_selectedIds);
+                          setState(() {
+                            _dragStart = details.localPosition;
+                            _dragEnd = details.localPosition;
+                          });
+                          _handleBoxSelect(details.localPosition);
+                        } else {
+                          // MOBILE: Select item under finger
+                          _dragProcessedIds.clear();
+                          _handleDragSelect(details.globalPosition);
+                        }
+                      },
+
+                      // Continue selection
+                      onLongPressMoveUpdate: (details) {
+                        if (_isDesktop) {
+                          // WINDOWS: Update box size
+                          _handleBoxSelect(details.localPosition);
+                        } else {
+                          // MOBILE: Check for new items under finger
+                          _handleDragSelect(details.globalPosition);
+                        }
+                      },
+
+                      // Cleanup on release (ignoring details)
+                      onLongPressEnd: (_) => _endDrag(),
+
+                      child: Stack(
+                        key: _selectionAreaKey, // Coordinate reference for drag
+                        children: [
+                          // Layer 1: The Grid Content
+                          CustomScrollView(
+                            slivers: [
+                              // Pass filteredData here
+                              _buildSliverContent(
+                                context,
+                                uiData,
+                                filteredData,
+                              ),
+                            ],
                           ),
-                        ),
+
+                          // Layer 2: The Blue Selection Box (Desktop Only)
+                          if (_isDesktop &&
+                              _dragStart != null &&
+                              _dragEnd != null)
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                child: CustomPaint(
+                                  painter: SelectionBoxPainter(
+                                    start: _dragStart,
+                                    end: _dragEnd,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               );
             },
           ),

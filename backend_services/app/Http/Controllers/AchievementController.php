@@ -403,10 +403,10 @@ class AchievementController extends Controller
         
         // FIX: We pass a second array with extra column values (the pivot 'id')
         $user->achievements()->syncWithoutDetaching([
-            $request->achievement_id => ['id' => (string) Str::uuid7()]
+            $request->input('achievement_id') => ['id' => (string) Str::uuid7()]
         ]);
 
-        Log::info("ACHIEVEMENT_UNLOCKED: Achievement {$request->achievement_id} unlocked by Student " . Auth::id());
+        Log::info("ACHIEVEMENT_UNLOCKED: Achievement {$request->input('achievement_id')} unlocked by Student " . Auth::id());
 
         return response()->json(['message' => 'Achievement Unlocked!']);
     }
