@@ -30,7 +30,7 @@ Terdapat beberapa tag HTML yang digunakan untuk mencetuskan tindakan interaktif:
 ```
 <html>
   <body>
-    <form action="/action_page.php">
+    <form action="action_page.php"  method= "POST">
       Nama:
       <input type="text" name="namapengguna" value="">
       <input type="submit" value="Hantar">

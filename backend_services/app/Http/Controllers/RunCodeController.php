@@ -9,8 +9,6 @@ use Symfony\Component\Process\Process;
 
 class RunCodeController extends Controller
 {
-
-    
     public function execute(Request $request)
     {
         $code = $request->input('code');
@@ -32,16 +30,13 @@ class RunCodeController extends Controller
 
         try {
             // --- 0. COPY COMPANION ASSETS (If context_id provided) ---
-            // This allows the script to read files like 'LogMasuk.txt' if they exist in assets
             $contextId = $request->input('context_id');
             if ($contextId) {
                 // Adjust this matching your folder structure
-                // backend_services/../../flutter_codelab/assets/www/{ID}
                 $rawPath = base_path('../flutter_codelab/assets/www/' . $contextId);
                 $sourceDir = realpath($rawPath);
                 
                 if ($sourceDir && is_dir($sourceDir)) {
-                    // Method to copy recursively
                     \Illuminate\Support\Facades\File::copyDirectory($sourceDir, $tempDir);
                 }
             }
@@ -55,20 +50,36 @@ class RunCodeController extends Controller
                     $fileContent = $file['content'] ?? '';
                     file_put_contents($tempDir . '/' . $fileName, $fileContent);
 
-                    // Determine main file: either explicitly set, or the first PHP file
+                    // Determine main file
                     if ($fileName === $entryPoint || ($mainFileToRun === null && str_ends_with($fileName, '.php'))) {
                          $mainFileToRun = $tempDir . '/' . $fileName;
                     }
                 }
             }
 
-            // --- 2. BACKWARD COMPATIBILITY / SINGLE FILE MODE ---
-            // If we have 'code' but no specific file list, treat it as a single file run
+            // --- 2. FIND ENTRY POINT (Fallback checks) ---
+            // If main file is still not found, check if the entry point exists on disk (e.g. copied from assets)
+            if (!$mainFileToRun && $entryPoint) {
+                // 1. Try exact path
+                $potentialPath = $tempDir . '/' . $entryPoint;
+                if (file_exists($potentialPath)) {
+                    $mainFileToRun = $potentialPath;
+                } else {
+                    // 2. Try just the basename (robustness against frontend sending paths)
+                    $basename = basename($entryPoint);
+                    $potentialPathBase = $tempDir . '/' . $basename;
+                    if (file_exists($potentialPathBase)) {
+                        $mainFileToRun = $potentialPathBase;
+                    }
+                }
+            }
+
+            // --- 3. SINGLE FILE FALLBACK ---
             if (empty($files) && !empty($code)) {
                 $filename = 'php_run_' . $uniqueId . '.php';
                 $mainFileToRun = $tempDir . '/' . $filename;
                 
-                // Form Data Mocking (Only meaningful for single file "PHP mock" mode usually)
+                // Form Data Mocking for legacy single-file mode
                 $formData = $request->input('form_data');
                 if (!empty($formData) && is_array($formData)) {
                     $mockCode = "<?php\n";
@@ -85,46 +96,90 @@ class RunCodeController extends Controller
                 return response()->json(['output' => 'No executable PHP file found.'], 400);
             }
 
-            // --- 3. LINT CHECK (On the main file) ---
+            // --- 4. INJECT POST MOCKING (If form data exists) ---
+            $formData = $request->input('form_data');
+            // Only inject if we haven't already injected for single-file mode above (detected by checking content match, or just do it safely)
+            // For multi-file execution or asset execution, we need this.
+            // Be careful not to double-inject if it was legacy single file.
+            // Legacy single file writes to $mainFileToRun with injected code.
+            // So we only inject here if it's NOT the legacy path result, OR we just check if it needs valid injection.
+            // Actually, simpler: The single-file block creates a NEW file. The multi-file/asset block uses EXISTING/UPLOADED files.
+            // So if we are in multi-file mode (files not empty OR entry point found on disk), we inject.
+            
+            // Refinement: If it came from legacy single file block, we already injected.
+            // If it came from Asset or Files, we haven't.
+            // We can check if 'files' was provided OR if we found an asset file.
+            $isLegacySingleFile = (empty($files) && !empty($code) && str_contains($mainFileToRun, 'php_run_'));
+
+            if (!$isLegacySingleFile && !empty($formData) && is_array($formData)) {
+                $mockCode = "<?php\n";
+                $mockCode .= "\$_SERVER['REQUEST_METHOD'] = 'POST';\n";
+                $mockCode .= "\$_POST = " . var_export($formData, true) . ";\n";
+                $mockCode .= "?>\n";
+                
+                $currentContent = file_get_contents($mainFileToRun);
+                file_put_contents($mainFileToRun, $mockCode . $currentContent);
+            }
+
+            // --- 5. LINT CHECK ---
             $lintProcess = new Process(['php', '-l', $mainFileToRun]);
             $lintProcess->run();
             
             if (!$lintProcess->isSuccessful()) {
-                // Return just the error message
                 $error = $lintProcess->getOutput();
-                // Clean up path from error message for security/clarity
                 $error = str_replace($mainFileToRun, basename($mainFileToRun), $error);
                 return response()->json(['output' => $error]);
             }
 
-            // --- 4. PREPARE EXECUTION ---
-            $debugInfo = "";
-            $contextId = $request->input('context_id');
-            // Default CWD is the temp dir so files can include each other relatively
+            // --- 6. EXECUTE ---
             $cwd = $tempDir; 
-
-            // If context_id is provided, we might want to allow access to those assets.
-            // However, for multi-file run, usually the user provides the context.
-            // If we strictly need asset access, we might need to symlink or copy.
-            // For now, let's Stick to temp dir as CWD for user files isolation.
             
-            // Execute
             $process = new Process(['php', '-f', $mainFileToRun], $cwd);
-            $process->setTimeout(10); // 10 seconds timeout
+            $process->setTimeout(10);
             $process->run();
 
-            // Capture output
             $output = $process->getOutput();
             $errorOutput = $process->getErrorOutput();
 
+            // --- 6.5 RESTORE MAIN FILE CONTENT (Undo Injection) ---
+            // We must undo the mock injection so that the 'clean' file is returned to frontend,
+            // unless the script itself modified it (which is rare/hard to distinguish, but restoring 
+            // original pre-injection content is the safest bet for 'Session Persistence' of OTHER files).
+            if (isset($currentContent) && !$isLegacySingleFile && file_exists($mainFileToRun)) {
+                file_put_contents($mainFileToRun, $currentContent);
+            }
+
+            // --- 7. CAPTURE MODIFIED FILES ---
+            // Scan the temp dir for files to return for session persistence
+            $simulatedFiles = [];
+            
+            // Only scan if directory still exists (it should)
+            if (is_dir($tempDir)) {
+                $filesOnDisk = scandir($tempDir);
+                foreach ($filesOnDisk as $f) {
+                    if ($f === '.' || $f === '..') continue;
+                    
+                    // Skip the generated wrapper if it exists (for legacy single file mode)
+                    if (str_starts_with($f, 'php_run_')) continue;
+
+                    $fullPath = $tempDir . '/' . $f;
+                    if (is_file($fullPath)) {
+                        $simulatedFiles[] = [
+                            'name' => $f,
+                            'content' => file_get_contents($fullPath)
+                        ];
+                    }
+                }
+            }
+
             return response()->json([
-                'output' => $debugInfo . (!empty($output) ? $output : $errorOutput)
+                'output' => (!empty($output) ? $output : $errorOutput),
+                'files' => $simulatedFiles
             ]);
 
         } catch (\Exception $e) {
             return response()->json(['output' => 'Execution Error: ' . $e->getMessage()], 500);
         } finally {
-            // Cleanup: Delete the temp folder and all files
             if (is_dir($tempDir)) {
                 $this->deleteDirectory($tempDir);
             }

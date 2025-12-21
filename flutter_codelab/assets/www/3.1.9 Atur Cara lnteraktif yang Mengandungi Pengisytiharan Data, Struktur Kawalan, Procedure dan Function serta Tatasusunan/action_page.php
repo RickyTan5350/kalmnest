@@ -10,9 +10,9 @@
 
     <?php
     // Check if the form was submitted using the GET method (default for your HTML)
-    if (isset($_GET['namapengguna'])) {
+    if (isset($_POST['namapengguna'])) {
         // Retrieve the data from the 'namapengguna' input field
-        $nama = htmlspecialchars($_GET['namapengguna']);
+        $nama = htmlspecialchars($_POST['namapengguna']);
         
         // Display the result matching your example output
         echo "namapengguna=" . $nama;
@@ -21,7 +21,6 @@
     }
     ?>
 
-    <p>The server has processed your input and returned this answer.</p>
 
 </body>
 </html>

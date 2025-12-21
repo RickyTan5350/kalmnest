@@ -1,4 +1,4 @@
-## Penggunaan Bahasa Penskripan Pelayan untuk Membina Laman Web yang Unik bagi Setiap Pengguna
+## 3.2.3 Penggunaan Bahasa Penskripan Pelayan untuk Membina Laman Web yang Unik bagi Setiap Pengguna
 #### **1\. Konsep Laman Web Unik**
 
 * **Definisi:** Laman web dianggap unik apabila ia memaparkan maklumat khusus untuk pengguna yang sedang log masuk sahaja, bukannya maklumat umum.  
@@ -22,6 +22,21 @@ Sebelum menggunakan pangkalan data sebenar (seperti MySQL), fail teks boleh digu
 Proses ini melibatkan dua fail utama:
 
 **A. Fail Klien (`LogMasuk.php`)**
+
+* Mengandungi borang HTML (`form`) untuk pengguna memasukkan input.  
+* Menggunakan atribut `method="POST"` dan `action="Biodata.php"` untuk menghantar data ke pelayan.  
+* Mempunyai kotak teks untuk `namapengguna` dan `katalaluan` (jenis input password untuk keselamatan) .
+
+**B. Fail Pelayan (`Biodata.php`)**
+
+* Bertanggungjawab menerima data, membuka fail teks, dan menyemak padanan data .  
+* Jika nama pengguna dan kata laluan sepadan dengan rekod dalam fail teks, maklumat terperinci akan dipaparkan.
+
+---
+
+#### **4\. Fungsi PHP Penting dalam Proses Ini**
+
+Berikut adalah fungsi PHP yang digunakan untuk memproses data daripada fail teks:
 ```
 <html>
 <head>
@@ -45,70 +60,6 @@ Proses ini melibatkan dua fail utama:
 </body>
 </html>
 
-```
-* Mengandungi borang HTML (`form`) untuk pengguna memasukkan input.  
-* Menggunakan atribut `method="POST"` dan `action="Biodata.php"` untuk menghantar data ke pelayan.  
-* Mempunyai kotak teks untuk `namapengguna` dan `katalaluan` (jenis input password untuk keselamatan) .
-
-**B. Fail Pelayan (`Biodata.php`)**
-
-* Bertanggungjawab menerima data, membuka fail teks, dan menyemak padanan data .  
-* Jika nama pengguna dan kata laluan sepadan dengan rekod dalam fail teks, maklumat terperinci akan dipaparkan.
-
----
-
-#### **4\. Fungsi PHP Penting dalam Proses Ini**
-
-Berikut adalah fungsi PHP yang digunakan untuk memproses data daripada fail teks:
-```
-<html>
-<head>
-    <title>Log Masuk</title>
-    <?php
-        $nama = $_POST['namapengguna'];
-        $katalaluan = $_POST['katalaluan'];
-        $jumpa = False;
-    ?>
-</head>
-<body>
-    <p>Biodata Murid</p>
-
- <?php
-    $f = fopen("Biodata.txt","r"); // 1. Opens file for reading
-    $valid = false;
-    print "<table>";
-    while (!feof($f)) // 2. Loops until end of file
-    {
-        $medan = explode (',', fgets ($f)); // 3. Splits line by comma
-        
-        $user = $medan[0];
-        $pass = $medan[1];
-        $namapenuh = $medan[2];
-        $kelas = $medan[3];
-        $jantina = $medan[4];
-        $negeri = $medan[5];
-        
-        if (strcmp($nama,$user)==0) // 4. Compares username
-        {
-            if (strcmp($katalaluan,$pass)==0) // 5. Compares password
-            {
-                // Displays data in a table if matched
-                print "<tr><td>NAMA</td><td>".$namapenuh."</td></tr>";
-                print "<tr><td>KELAS</td><td>".$kelas."</td></tr>";
-                print "<tr><td>JANTINA</td><td>".$jantina."</td></tr>";
-                print "<tr><td>NEGERI LAHIR</td><td>".$negeri."</td></tr>";
-                $jumpa = True;
-                break;
-            }
-        }
-    }
-    print "</table>";
-    if ($jumpa != True)
-        print "Rekod Tidak Dijumpai";
-    fclose ($f);
-?>
-</body>
-</html>   
 ```
 1. **`fopen("NamaFail.txt", "r")`**: Membuka fail teks untuk dibaca (*read*).  
 2. **`while (!feof($f))`**: Gelung ulangan yang membaca fail baris demi baris sehingga ke penghujung fail (*end of file*).  

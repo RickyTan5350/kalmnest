@@ -94,7 +94,7 @@ Berikut adalah fungsi-fungsi utama yang digunakan dalam atur cara:
         
         print "</table>";
         fclose($f); // menutup fail yang telah dibuka
-    ?> //penamat untuk php
+    ?> 
     </body>
 </html>
 ```
@@ -123,20 +123,7 @@ Berikut adalah fungsi-fungsi utama yang digunakan dalam atur cara:
 
 ---
 
-### **3\. Penggunaan Pangkalan Data (Bab 3.2.5)**
 
-Bahagian ini menyentuh tentang interaksi antara bahasa penskripan pelayan (PHP) dengan pangkalan data (MySQL).
-
-#### **Langkah Utama Capaian Data**
-
-Terdapat langkah berturutan (*sequential*) yang wajib diikuti untuk mengakses data:
-
-1. **Membuat Penyambungan (Connection):** Mesti menyambung ke pangkalan data terlebih dahulu sebelum data boleh dicapai.  
-2. *(Langkah ini biasanya memilih pangkalan data, namun teks sumber kurang jelas)*.  
-3. **Membuat Pertanyaan (Query):** Melaksanakan arahan (seperti SQL) terhadap pangkalan data untuk memperoleh data yang dikehendaki.  
-4. **Menamatkan Sambungan:** Menutup sambungan ke pangkalan data setelah selesai.
-
-#### **Nota Tambahan (Aktiviti Pasar Raya Ah Seng)**
 
 * Dalam senario aktiviti, laman web perlu merekodkan maklumat pengguna dan kata laluan.  
 * Borang (Form) digunakan dengan kotak teks untuk 'namapengguna' dan 'katalaluan'.  
