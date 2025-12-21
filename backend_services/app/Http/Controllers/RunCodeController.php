@@ -14,86 +14,103 @@ class RunCodeController extends Controller
     public function execute(Request $request)
     {
         $code = $request->input('code');
+        $files = $request->input('files'); // Expecting array of {name: "filename.ext", content: "..."}
+        $entryPoint = $request->input('entry_point');
 
-        if (empty($code)) {
-            return response()->json(['output' => 'No code provided.'], 400);
+        if (empty($code) && empty($files)) {
+            return response()->json(['output' => 'No code or files provided.'], 400);
         }
 
-        $filename = 'php_run_' . Str::random(10) . '.php';
-        $tempPath = storage_path('app/temp/' . $filename);
+        // Create a unique temporary directory for this execution
+        $uniqueId = Str::random(10);
+        $tempDirName = 'run_' . $uniqueId;
+        $tempDir = storage_path('app/temp/' . $tempDirName);
 
-        // 1. Prepare Content
-        $code = $request->input('code');
-        $formData = $request->input('form_data');
-
-        // --- PHP POST MOCKING ---
-        if (!empty($formData) && is_array($formData)) {
-            $mockCode = "<?php\n";
-            $mockCode .= "\$_SERVER['REQUEST_METHOD'] = 'POST';\n";
-            $mockCode .= "\$_POST = " . var_export($formData, true) . ";\n";
-            $mockCode .= "?>\n";
-            
-            // Remove existing <?php from user code if it exists at the start
-            // to avoid nested/double opening tags which might be weird, 
-            // but actually standard PHP handles multiple blocks fine.
-            // Best to just prepend.
-            $code = $mockCode . $code;
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0777, true);
         }
-        // ------------------------
-
-        // Basic syntax check (lint)
-        $lintFile = tempnam(sys_get_temp_dir(), 'lint') . '.php';
-        file_put_contents($lintFile, $code);
-        $lintProcess = new Process(['php', '-l', $lintFile]);
-        $lintProcess->run();
-        
-        if (!$lintProcess->isSuccessful()) {
-            unlink($lintFile);
-            // Return just the error message, stripped of filename
-            $error = $lintProcess->getOutput();
-            return response()->json(['output' => $error]);
-        }
-        unlink($lintFile); // Lint file clean up
-
-        // Write actual execution file
-        $tempPath = tempnam(sys_get_temp_dir(), 'php_code') . '.php';
-        file_put_contents($tempPath, $code);
 
         try {
-            // 1. Syntax Check (This is now redundant due to the lint check above, but keeping for now)
-            $syntaxCheck = new Process(['php', '-l', $tempPath]);
-            $syntaxCheck->run();
+            // --- 0. COPY COMPANION ASSETS (If context_id provided) ---
+            // This allows the script to read files like 'LogMasuk.txt' if they exist in assets
+            $contextId = $request->input('context_id');
+            if ($contextId) {
+                // Adjust this matching your folder structure
+                // backend_services/../../flutter_codelab/assets/www/{ID}
+                $rawPath = base_path('../flutter_codelab/assets/www/' . $contextId);
+                $sourceDir = realpath($rawPath);
+                
+                if ($sourceDir && is_dir($sourceDir)) {
+                    // Method to copy recursively
+                    \Illuminate\Support\Facades\File::copyDirectory($sourceDir, $tempDir);
+                }
+            }
 
-            if (!$syntaxCheck->isSuccessful()) {
-                $error = $syntaxCheck->getErrorOutput();
-                $error = str_replace($tempPath, 'your code', $error);
+            $mainFileToRun = null;
+
+            // --- 1. HANDLE FILES ---
+            if (!empty($files) && is_array($files)) {
+                foreach ($files as $file) {
+                    $fileName = $file['name'] ?? 'unknown.txt';
+                    $fileContent = $file['content'] ?? '';
+                    file_put_contents($tempDir . '/' . $fileName, $fileContent);
+
+                    // Determine main file: either explicitly set, or the first PHP file
+                    if ($fileName === $entryPoint || ($mainFileToRun === null && str_ends_with($fileName, '.php'))) {
+                         $mainFileToRun = $tempDir . '/' . $fileName;
+                    }
+                }
+            }
+
+            // --- 2. BACKWARD COMPATIBILITY / SINGLE FILE MODE ---
+            // If we have 'code' but no specific file list, treat it as a single file run
+            if (empty($files) && !empty($code)) {
+                $filename = 'php_run_' . $uniqueId . '.php';
+                $mainFileToRun = $tempDir . '/' . $filename;
+                
+                // Form Data Mocking (Only meaningful for single file "PHP mock" mode usually)
+                $formData = $request->input('form_data');
+                if (!empty($formData) && is_array($formData)) {
+                    $mockCode = "<?php\n";
+                    $mockCode .= "\$_SERVER['REQUEST_METHOD'] = 'POST';\n";
+                    $mockCode .= "\$_POST = " . var_export($formData, true) . ";\n";
+                    $mockCode .= "?>\n";
+                    $code = $mockCode . $code;
+                }
+                
+                file_put_contents($mainFileToRun, $code);
+            }
+
+            if (!$mainFileToRun) {
+                return response()->json(['output' => 'No executable PHP file found.'], 400);
+            }
+
+            // --- 3. LINT CHECK (On the main file) ---
+            $lintProcess = new Process(['php', '-l', $mainFileToRun]);
+            $lintProcess->run();
+            
+            if (!$lintProcess->isSuccessful()) {
+                // Return just the error message
+                $error = $lintProcess->getOutput();
+                // Clean up path from error message for security/clarity
+                $error = str_replace($mainFileToRun, basename($mainFileToRun), $error);
                 return response()->json(['output' => $error]);
             }
 
+            // --- 4. PREPARE EXECUTION ---
             $debugInfo = "";
             $contextId = $request->input('context_id');
-            $cwd = null;
+            // Default CWD is the temp dir so files can include each other relatively
+            $cwd = $tempDir; 
 
-            if ($contextId) {
-                // Adjust this path relative to your Laravel install
-                // D:\Github_Project\kalmnest\backend_services\..\flutter_codelab\...
-                $rawPath = base_path('../flutter_codelab/assets/www/' . $contextId);
-                $targetDir = realpath($rawPath);
-                
-                if ($targetDir && is_dir($targetDir)) {
-                    $cwd = $targetDir;
-                    $debugInfo .= "DEBUG: CWD set to: $targetDir<br>";
-                } else {
-                     $debugInfo .= "DEBUG: Path resolution failed.<br>";
-                     $debugInfo .= "Raw: $rawPath<br>";
-                     $debugInfo .= "Real: " . var_export($targetDir, true) . "<br>";
-                }
-            } else {
-                $debugInfo .= "DEBUG: No context_id received.<br>";
-            }
-
-            $process = new Process(['php', '-f', $tempPath], $cwd);
-            $process->setTimeout(5);
+            // If context_id is provided, we might want to allow access to those assets.
+            // However, for multi-file run, usually the user provides the context.
+            // If we strictly need asset access, we might need to symlink or copy.
+            // For now, let's Stick to temp dir as CWD for user files isolation.
+            
+            // Execute
+            $process = new Process(['php', '-f', $mainFileToRun], $cwd);
+            $process->setTimeout(10); // 10 seconds timeout
             $process->run();
 
             // Capture output
@@ -107,9 +124,28 @@ class RunCodeController extends Controller
         } catch (\Exception $e) {
             return response()->json(['output' => 'Execution Error: ' . $e->getMessage()], 500);
         } finally {
-            if (file_exists($tempPath)) {
-                unlink($tempPath);
+            // Cleanup: Delete the temp folder and all files
+            if (is_dir($tempDir)) {
+                $this->deleteDirectory($tempDir);
             }
         }
-    } // End of execute method
-} // End of class
+    }
+
+    private function deleteDirectory($dir) {
+        if (!file_exists($dir)) {
+            return true;
+        }
+        if (!is_dir($dir)) {
+            return unlink($dir);
+        }
+        foreach (scandir($dir) as $item) {
+            if ($item == '.' || $item == '..') {
+                continue;
+            }
+            if (!$this->deleteDirectory($dir . DIRECTORY_SEPARATOR . $item)) {
+                return false;
+            }
+        }
+        return rmdir($dir);
+    }
+}
