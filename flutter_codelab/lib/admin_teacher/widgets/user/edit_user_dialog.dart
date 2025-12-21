@@ -323,7 +323,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'New Password (Optional)',
+                    labelText: 'New Password',
                     icon: Icons.lock,
                     colorScheme: colorScheme,
                   ),
@@ -382,7 +382,8 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     if (_serverErrors.containsKey('phone_no')) {
                       return _serverErrors['phone_no'];
                     }
-                    if (value == null || value.isEmpty) return null; // Optional
+                    if (value == null || value.isEmpty)
+                      return 'Please enter a phone number';
                     final phoneRegex = RegExp(
                       r'^(\+?6?0)[0-9]{1,2}-?[0-9]{7,8}$',
                     );
@@ -409,6 +410,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     colorScheme: colorScheme,
                   ),
                   maxLines: 2,
+                  validator: (value) {
+                    if (value == null || value.isEmpty)
+                      return 'Please enter an address';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -430,6 +436,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       .toList(),
                   onChanged: (value) =>
                       setState(() => _selectedGender = value!),
+                  validator: (value) {
+                    if (value == null || value.isEmpty)
+                      return 'Please select a gender';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 

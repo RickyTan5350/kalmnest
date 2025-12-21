@@ -335,7 +335,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _phoneNoController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Phone No (Optional)',
+                    labelText: 'Phone No',
                     icon: Icons.phone,
                     colorScheme: colorScheme,
                     hintText: 'e.g. 012-3456789',
@@ -351,7 +351,8 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     if (_serverErrors.containsKey('phone_no')) {
                       return _serverErrors['phone_no'];
                     }
-                    if (value == null || value.isEmpty) return null; // Optional
+                    if (value == null || value.isEmpty)
+                      return 'Please enter a phone number';
                     // Regex for Malaysian Phone Numbers:
                     // Matches: +601..., 601..., 01...
                     // Supports dashes or no dashes
@@ -371,22 +372,27 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _addressController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Address (Optional)',
+                    labelText: 'Address',
                     icon: Icons.location_on,
                     colorScheme: colorScheme,
                   ),
                   maxLines: 2,
+                  validator: (value) {
+                    if (value == null || value.isEmpty)
+                      return 'Please enter an address';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 
                 // Gender Dropdown
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedGender,
-                  // FIX: Use colorScheme.surfaceContainer instead of hardcoded dark color
+                  value:
+                      _selectedGender, // Removed initialValue in favor of value
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Gender (Optional)',
+                    labelText: 'Gender',
                     icon: Icons.people,
                     colorScheme: colorScheme,
                   ),
@@ -397,6 +403,11 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       )
                       .toList(),
                   onChanged: (value) => setState(() => _selectedGender = value),
+                  validator: (value) {
+                    if (value == null || value.isEmpty)
+                      return 'Please select a gender';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 
