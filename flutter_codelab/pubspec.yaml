@@ -92,9 +92,6 @@ flutter:
     - assets/a2.png
     - assets/a3.png
     - assets/unity_webgl/
-    - assets/www/
-    - assets/www/3.2.2/
-    - assets/txt/
 
 
   # To add assets to your application, add an assets section, like this:

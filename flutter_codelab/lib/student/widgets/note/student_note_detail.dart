@@ -216,10 +216,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   void _openRunPage(String code) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) =>
-            RunCodePage(initialCode: code, contextId: _currentTitle),
-      ),
+      MaterialPageRoute(builder: (context) => RunCodePage(initialCode: code)),
     );
   }
 
@@ -472,19 +469,14 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                         ),
                       ),
                       if (_isSearching)
-                        Positioned(
-                          top: 16,
-                          left: 16,
-                          right: 16,
-                          child: SearchNote(
-                            controller: _searchController,
-                            focusNode: _searchFocusNode,
-                            matchCount: _currentMatchIndex,
-                            totalMatches: _totalMatches,
-                            onNext: _nextMatch,
-                            onPrev: _prevMatch,
-                            onClose: _toggleSearch,
-                          ),
+                        SearchNote(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          matchCount: _currentMatchIndex,
+                          totalMatches: _totalMatches,
+                          onNext: _nextMatch,
+                          onPrev: _prevMatch,
+                          onClose: _toggleSearch,
                         ),
                     ],
                   ),
