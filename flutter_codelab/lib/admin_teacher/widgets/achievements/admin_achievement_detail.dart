@@ -10,11 +10,15 @@ import 'admin_edit_achievement_page.dart';
 class AdminAchievementDetailPage extends StatefulWidget {
   final AchievementData initialData; // The partial data from the grid
   final double progress;
+  final String? currentUserId; // NEW
+  final bool isAdmin; // NEW
 
   const AdminAchievementDetailPage({
     super.key,
     required this.initialData,
     this.progress = 0.0,
+    this.currentUserId,
+    this.isAdmin = false,
   });
 
   @override
@@ -174,48 +178,50 @@ class _AdminAchievementDetailPageState
             },
             tooltip: 'Refresh',
           ),
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: 'Edit Achievement',
+          // ACCESS CONTROL: Only Admin or Creator can Edit/Delete
+          if (widget.isAdmin ||
+              (widget.currentUserId != null &&
+                  _displayData.creatorId != null &&
+                  widget.currentUserId.toString() ==
+                      _displayData.creatorId.toString())) ...[
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: 'Edit Achievement',
+              onPressed: () async {
+                final Map<String, dynamic> achievementMap = {
+                  'achievement_id': _displayData.achievementId,
+                  'achievement_name': _displayData.achievementName,
+                  'title': _displayData.achievementTitle,
+                  'description': _displayData.achievementDescription,
+                  'associated_level': _displayData.levelId,
+                  'icon': _displayData.icon,
+                };
 
-            // In achievement_detail.dart inside the IconButton onPressed:
-            onPressed: () async {
-              // 1. Map ALL fields required by the new Edit Form
-              final Map<String, dynamic> achievementMap = {
-                'achievement_id': _displayData.achievementId,
-                'achievement_name': _displayData.achievementName, // Added
-                'title': _displayData.achievementTitle,
-                'description': _displayData.achievementDescription,
-                'associated_level': _displayData.levelId, // Added
-                'icon': _displayData.icon, // Added
-              };
+                await showEditAchievementDialog(
+                  context: context,
+                  achievement: achievementMap,
+                  showSnackBar: (ctx, msg, color) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text(msg), backgroundColor: color),
+                    );
+                  },
+                );
 
-              // 2. Call the dialog
-              await showEditAchievementDialog(
-                context: context,
-                achievement: achievementMap,
-                showSnackBar: (ctx, msg, color) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text(msg), backgroundColor: color),
-                  );
-                },
-              );
-
-              // 3. Refresh
-              if (_displayData.achievementId != null && mounted) {
-                _fetchFullDetails(_displayData.achievementId!);
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: () {
-              if (_displayData.achievementId != null) {
-                _deleteAchievement();
-              }
-            },
-            tooltip: 'Delete Achievement',
-          ),
+                if (_displayData.achievementId != null && mounted) {
+                  _fetchFullDetails(_displayData.achievementId!);
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () {
+                if (_displayData.achievementId != null) {
+                  _deleteAchievement();
+                }
+              },
+              tooltip: 'Delete Achievement',
+            ),
+          ],
         ],
       ),
       body: RefreshIndicator(
