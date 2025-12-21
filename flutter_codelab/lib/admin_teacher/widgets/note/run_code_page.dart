@@ -9,8 +9,9 @@ import '../../../../constants/api_constants.dart';
 
 class RunCodePage extends StatefulWidget {
   final String initialCode;
+  final String? contextId;
 
-  const RunCodePage({super.key, required this.initialCode});
+  const RunCodePage({super.key, required this.initialCode, this.contextId});
 
   @override
   State<RunCodePage> createState() => _RunCodePageState();
@@ -23,10 +24,10 @@ class _RunCodePageState extends State<RunCodePage> {
     text: "https://mysite.com/preview",
   );
 
-  bool _isRealBrowserReady = false;
   String _browserTitle = "Preview";
   InAppLocalhostServer? _localhostServer;
   int _serverPort = 8080;
+  String _output = "";
 
   // Cache for your libraries
   final Map<String, String> _bundledLibraries = {};
@@ -43,51 +44,113 @@ class _RunCodePageState extends State<RunCodePage> {
   }
 
   Future<void> _startLocalServer() async {
-    // Start a localhost server for the WebView
-    _localhostServer = InAppLocalhostServer(
-      documentRoot: 'assets/app_www',
-      port: _serverPort,
-    );
-    // documentRoot will be overridden/ignored if we are writing specific files to app docs dir,
-    // but InAppLocalhostServer by default serves assets.
-    // Wait, standard InAppLocalhostServer serves from assets.
-    // FLutter InAppWebView doesn't easily serve from ApplicationDocumentsDirectory with InAppLocalhostServer
-    // unless we create a custom implementation or use the `InAppWebView` to access file://.
-    // However, `file://` scheme has CORS issues.
-
-    // Better approach: Use InAppLocalhostServer to serve asset files if needed,
-    // but for DYNAMIC content (user code), we might need `InAppWebView` to load specific data.
-
-    // Actually, `InAppLocalhostServer` serves ASSETS.
-    // If we want to serve files from ApplicationDocumentsDirectory, we need `InAppWebServer` (available in v6?).
-    // The current version is ^6.1.5.
-
-    // Let's check if we can just write to a file and load `file://` URL but enable allowUniversalAccessFromFileURLs.
-
-    // Re-reading user request: "allow basic web code running".
-    // Many basic web snippets work fine with `loadData`.
-    // If the user specifically wants a server, they probably want to avoid "null" origin issues.
-
-    // Let's implement a simple `HttpServer` from `dart:io` bound to localhost.
-    // This is more flexible than `InAppLocalhostServer` for serving generated content.
-
     try {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       _serverPort = server.port;
-      _localhostServer =
-          null; // Unused if we use raw HttpServer but keeping the variable for now if we switch back.
+      _localhostServer = null;
 
       server.listen((HttpRequest request) async {
-        // Serve index.html from temp dir
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/index.html');
-        if (await file.exists()) {
-          final content = await file.readAsString();
-          request.response
-            ..headers.contentType = ContentType.html
-            ..write(content)
-            ..close();
-        } else {
+        final path = request.uri.path;
+
+        // --- 0. PROXY POST REQUESTS (PHP FORM SUPPORT) ---
+        if (request.method == 'POST') {
+          try {
+            final content = await utf8.decoder.bind(request).join();
+            final formData = Uri.splitQueryString(content);
+
+            print("DEBUG: Intercepted POST request: $formData");
+
+            String codeToExecute = _codeController.text;
+
+            // --- MULTI-FILE PHP SUPPORT ---
+            // If the POST is to a specific .php file (e.g., /Biodata.php), try to load it from assets.
+            if (path.endsWith('.php') && widget.contextId != null) {
+              try {
+                // path has leading slash, e.g. /Biodata.php
+                final assetPath = 'assets/www/${widget.contextId}$path';
+                final fileData = await rootBundle.loadString(assetPath);
+                codeToExecute = fileData;
+                print("DEBUG: Resolved PHP file from assets: $assetPath");
+              } catch (e) {
+                print("DEBUG: Asset load failed ($path): $e");
+
+                // Fallback: Try reading directly from filesystem (Local Dev Mode)
+                try {
+                  // Try to construct absolute path or relative path
+                  // Assuming running from project root or typical structure
+                  final localFile = File('assets/www/${widget.contextId}$path');
+                  if (await localFile.exists()) {
+                    codeToExecute = await localFile.readAsString();
+                    print(
+                      "DEBUG: Resolved PHP file from Local Filesystem: ${localFile.path}",
+                    );
+                  } else {
+                    // Attempt one level up if in nested execution?
+                    // D:\Github_Project\kalmnest\flutter_codelab\assets\www\...
+                    // Current dir might be different depending on runner.
+                    // Let's print CWD to debug if this fails, but usually it works for flutter run
+                    print(
+                      "DEBUG: File not found on disk at: ${localFile.path} (CWD: ${Directory.current.path})",
+                    );
+                  }
+                } catch (e2) {
+                  print("DEBUG: Filesystem fallback failed: $e2");
+                }
+              }
+            }
+            // ------------------------------
+
+            // Execute PHP with this form data
+            final output = await _executePhp(codeToExecute, formData: formData);
+
+            // Serve the result back to the browser
+            request.response
+              ..headers.contentType = ContentType.html
+              ..write(output)
+              ..close();
+          } catch (e) {
+            print("Error parsing POST data: $e");
+            request.response
+              ..statusCode = HttpStatus.internalServerError
+              ..write("Error processing form: $e")
+              ..close();
+          }
+          return;
+        }
+
+        // 1. Serve Dynamic HTML Files (from Temp Dir)
+        if (path.endsWith('.html') || path == '/') {
+          final dir = await getTemporaryDirectory();
+          // Default to index.html if root requested, though we usually request specific files now
+          final filePath = (path == '/') ? 'index.html' : path.substring(1);
+          final file = File('${dir.path}/$filePath');
+
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            request.response
+              ..headers.contentType = ContentType.html
+              ..write(content)
+              ..close();
+          } else {
+            request.response
+              ..statusCode = HttpStatus.notFound
+              ..close();
+          }
+          return;
+        }
+
+        // 2. Serve Static Assets (from assets/www)
+        try {
+          // Remove leading slash for asset key
+          final assetKey = 'assets/www${path}';
+          final data = await rootBundle.load(assetKey);
+
+          final contentType = _getContentType(path);
+          request.response.headers.contentType = contentType;
+          request.response.add(data.buffer.asUint8List());
+          request.response.close();
+        } catch (e) {
+          print("Asset not found: $path ($e)");
           request.response
             ..statusCode = HttpStatus.notFound
             ..close();
@@ -98,6 +161,17 @@ class _RunCodePageState extends State<RunCodePage> {
     } catch (e) {
       print("Failed to start local server: $e");
     }
+  }
+
+  ContentType _getContentType(String path) {
+    if (path.endsWith('.html')) return ContentType.html;
+    if (path.endsWith('.js')) return ContentType('application', 'javascript');
+    if (path.endsWith('.css')) return ContentType('text', 'css');
+    if (path.endsWith('.png')) return ContentType('image', 'png');
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg'))
+      return ContentType('image', 'jpeg');
+    if (path.endsWith('.json')) return ContentType.json;
+    return ContentType.binary;
   }
 
   // --- 1. Load Libraries from Assets ---
@@ -190,7 +264,7 @@ class _RunCodePageState extends State<RunCodePage> {
     htmlPart = htmlPart.replaceAllMapped(scriptRegex, (match) {
       String filename = match.group(1) ?? "";
       if (_bundledLibraries.containsKey(filename)) {
-        return '<script>\n/* Injected $filename */\n${_bundledLibraries[filename]}\n</script>';
+        return '<script>\n/* Injected \$filename */\n${_bundledLibraries[filename]}\n</script>';
       }
       return ""; // Remove unknown scripts to prevent errors
     });
@@ -199,7 +273,7 @@ class _RunCodePageState extends State<RunCodePage> {
     htmlPart = htmlPart.replaceAllMapped(selfClosingRegex, (match) {
       String filename = match.group(1) ?? "";
       if (_bundledLibraries.containsKey(filename)) {
-        return '<script>\n/* Injected $filename */\n${_bundledLibraries[filename]}\n</script>';
+        return '<script>\n/* Injected \$filename */\n${_bundledLibraries[filename]}\n</script>';
       }
       return "";
     });
@@ -239,89 +313,104 @@ class _RunCodePageState extends State<RunCodePage> {
     // 1. Wrap content
     final fullHtml = _wrapHtml(content);
 
-    // 2. Write to file
+    // 2. Write to UNIQUE file in TEMP dir to avoid locking issues
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/index.html');
+      final dir = await getTemporaryDirectory();
+      // Use timestamp to ensure unique filename
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filename = 'index_$timestamp.html';
+      final file = File('${dir.path}/$filename');
+
       await file.writeAsString(fullHtml);
 
       // 3. Load from localhost
       if (_webViewController != null) {
         _webViewController!.loadUrl(
           urlRequest: URLRequest(
-            url: WebUri("http://localhost:$_serverPort/index.html"),
+            url: WebUri("http://localhost:$_serverPort/$filename"),
           ),
         );
       }
     } catch (e) {
       print("Error writing file: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error writing preview file: $e')));
     }
   }
 
-  Future<void> _runCode() async {
-  _updateTitleFromCode(_codeController.text);
-  final code = _codeController.text;
-
-  // 1. IMPROVED DETECTION: Use RegExp to find <?php anywhere in the text
-  final hasPhp = RegExp(r'<\?php', caseSensitive: false).hasMatch(code);
-
-  if (hasPhp) {
-    print("DEBUG: [PHP MODE] Sending code to: ${ApiConstants.baseUrl}/run-code");
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Executing PHP on backend...'),
-        duration: Duration(milliseconds: 800),
-      ),
-    );
-
+  // --- PHP EXECUTION HELPER ---
+  Future<String> _executePhp(
+    String code, {
+    Map<String, dynamic>? formData,
+  }) async {
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}/run-code');
+      // Pass both code and form_data (if any)
+      final body = {
+        'code': code,
+        'context_id': widget.contextId,
+        if (formData != null) 'form_data': formData,
+      };
+
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({'code': code}),
+        body: jsonEncode(body),
       );
-
-      print("DEBUG: Backend Status: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final output = data['output'] ?? '';
-        
-        // This output now contains the HTML + the executed PHP result
-        await _updateAndReload(output); 
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PHP Executed Successfully')),
-        );
+        return data['output'] ?? ''; // Return the output HTML
       } else {
-        print("DEBUG: Server Error Output: ${response.body}");
-        await _updateAndReload("<b>Backend Error (${response.statusCode}):</b><br>${response.body}");
+        return "Backend Error (${response.statusCode}): ${response.body}";
       }
     } catch (e) {
-      print("DEBUG: Connection Error: $e");
-      await _updateAndReload("<b>Connection Error:</b> Could not reach Laravel server at ${ApiConstants.baseUrl}.<br>Error: $e");
+      return "Network Error: $e";
     }
-    
-    // IMPORTANT: Return early so we don't execute the local HTML logic below
-    return; 
   }
 
-  // --- HTML/JS EXECUTION (Local) ---
-  print("DEBUG: [LOCAL MODE] Running as standard HTML/JS.");
-  await _updateAndReload(code);
+  Future<void> _runCode() async {
+    final code = _codeController.text;
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Code executed locally!'),
-      duration: Duration(milliseconds: 500),
-    ),
-  );
-}
+    // Detect Language
+    final isPhp = code.toLowerCase().contains("<?php");
+
+    if (isPhp) {
+      // --- PHP MODE ---
+      print(
+        "DEBUG: [PHP MODE] Sending code to: ${ApiConstants.baseUrl}/run-code",
+      );
+      print("DEBUG: Context ID: ${widget.contextId}");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Executing PHP on backend...'),
+          duration: Duration(milliseconds: 800),
+        ),
+      );
+
+      final output = await _executePhp(code);
+
+      _updateTitleFromCode(output);
+      setState(() {
+        _output = output;
+      });
+      _updateAndReload(output);
+    } else {
+      // --- LOCAL WEB MODE ---
+      print("DEBUG: [WEB MODE] Running locally");
+      _updateTitleFromCode(code);
+      setState(() {
+        _output = code; // For HTML/JS, the output IS the code
+      });
+      _updateAndReload(code);
+    }
+  }
+
   void _loadRealUrl(String url) {
     if (_webViewController == null) return;
     if (!url.startsWith('http')) {
@@ -566,7 +655,6 @@ class _RunCodePageState extends State<RunCodePage> {
                       ),
                       onWebViewCreated: (controller) async {
                         _webViewController = controller;
-                        _isRealBrowserReady = true;
 
                         // Initial load
                         if (widget.initialCode.isNotEmpty) {
