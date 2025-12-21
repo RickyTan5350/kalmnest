@@ -420,10 +420,25 @@ class AchievementController extends Controller
             return response()->json(['message' => 'Access Denied: Only students have achievement progress.'], 403);
         }
 
-        $achievements = $request->user()
-                                ->achievements()
-                                ->orderBy('achievement_user.created_at', 'desc')
-                                ->get();
+        $userId = Auth::id();
+
+        // Fetch ALL achievements, left joining the pivot table for THIS user
+        $achievements = DB::table('achievements')
+            ->leftJoin('achievement_user', function ($join) use ($userId) {
+                $join->on('achievements.achievement_id', '=', 'achievement_user.achievement_id')
+                     ->where('achievement_user.user_id', '=', $userId);
+            })
+            ->leftJoin('users', 'achievements.created_by', '=', 'users.user_id') // Join creator
+            ->select(
+                'achievements.*',
+                'achievement_user.created_at as unlocked_at', // Will be NULL if locked
+                'users.name as creator_name'
+            )
+            // Order by: Unlocked first (descending date), then Locked (by creation date)
+            ->orderByRaw('CASE WHEN achievement_user.created_at IS NOT NULL THEN 1 ELSE 0 END DESC')
+            ->orderBy('achievement_user.created_at', 'desc')
+            ->orderBy('achievements.created_at', 'desc')
+            ->get();
 
         return response()->json($achievements);
     }

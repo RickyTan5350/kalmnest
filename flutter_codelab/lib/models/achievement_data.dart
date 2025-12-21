@@ -12,6 +12,7 @@ class AchievementData {
   final DateTime? updatedAt;
   final int? unlockedCount;
   final int? totalStudents;
+  final DateTime? unlockedAt; // NEW
 
   AchievementData({
     this.achievementId,
@@ -27,6 +28,7 @@ class AchievementData {
     this.updatedAt,
     this.unlockedCount,
     this.totalStudents,
+    this.unlockedAt,
   });
 
   factory AchievementData.fromJson(Map<String, dynamic> json) {
@@ -49,8 +51,13 @@ class AchievementData {
           : DateTime.tryParse(json['updated_at'] as String),
       unlockedCount: json['unlocked_count'] as int?,
       totalStudents: json['total_students'] as int?,
+      unlockedAt: json['unlocked_at'] == null
+          ? null
+          : DateTime.tryParse(json['unlocked_at'] as String),
     );
   }
+
+  bool get isUnlocked => unlockedAt != null;
 
   // Used for API uploads (creation)
   Map<String, dynamic> newAchievementToJson() {
