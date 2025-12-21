@@ -88,8 +88,12 @@ class FeedbackApiService {
         // Controller returns { message: '...', data: [ ...users ] }
         final List<dynamic>? payloadList =
             decoded is Map && decoded['data'] is List
+        final List<dynamic>? payloadList =
+            decoded is Map && decoded['data'] is List
             ? List<dynamic>.from(decoded['data'] as List)
             : decoded is List
+            ? List<dynamic>.from(decoded)
+            : null;
             ? List<dynamic>.from(decoded)
             : null;
 
@@ -97,6 +101,16 @@ class FeedbackApiService {
           throw Exception('Unexpected students payload: ${response.body}');
         }
 
+        final List<Map<String, dynamic>> students = payloadList
+            .map<Map<String, dynamic>>((s) {
+              final userId = (s is Map) ? (s['user_id'] ?? s['id']) : null;
+              final name = (s is Map) ? (s['name'] ?? 'Unknown') : 'Unknown';
+              return {
+                'id': userId?.toString() ?? '',
+                'name': name?.toString() ?? 'Unknown',
+              };
+            })
+            .toList();
         final List<Map<String, dynamic>> students = payloadList
             .map<Map<String, dynamic>>((s) {
               final userId = (s is Map) ? (s['user_id'] ?? s['id']) : null;
@@ -116,16 +130,21 @@ class FeedbackApiService {
         throw Exception(
           'Failed to fetch students: ${response.statusCode} - ${response.body}',
         );
+        throw Exception(
+          'Failed to fetch students: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching students: $e');
     }
   }
 
+
   /// Fetch all feedback created by the teacher
   Future<List<Map<String, dynamic>>> getFeedback() async {
     try {
       final endpoint = '/feedback';
+
 
       Map<String, String> hdrs = await getHeaders();
       print(
@@ -141,8 +160,14 @@ class FeedbackApiService {
         print(
           'FeedbackApiService: received 401, refreshing token and retrying once',
         );
+        print(
+          'FeedbackApiService: received 401, refreshing token and retrying once',
+        );
         final freshHdrs = await getHeaders();
         if (freshHdrs['Authorization'] != hdrs['Authorization']) {
+          print(
+            'FeedbackApiService: Authorization changed, retrying with new token',
+          );
           print(
             'FeedbackApiService: Authorization changed, retrying with new token',
           );
@@ -182,6 +207,9 @@ class FeedbackApiService {
         throw Exception(
           'Failed to fetch feedback: ${response.statusCode} - ${response.body}',
         );
+        throw Exception(
+          'Failed to fetch feedback: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching feedback: $e');
@@ -189,6 +217,9 @@ class FeedbackApiService {
   }
 
   /// Fetch feedback for a specific student (requires auth)
+  Future<List<Map<String, dynamic>>> getStudentFeedback(
+    String studentId,
+  ) async {
   Future<List<Map<String, dynamic>>> getStudentFeedback(
     String studentId,
   ) async {
@@ -226,6 +257,9 @@ class FeedbackApiService {
         throw Exception(
           'Failed to fetch student feedback: ${response.statusCode} - ${response.body}',
         );
+        throw Exception(
+          'Failed to fetch student feedback: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching student feedback: $e');
@@ -241,6 +275,7 @@ class FeedbackApiService {
     try {
       // Use public endpoint if no token provided (for testing)
       final endpoint = '/feedback';
+
 
       final body = jsonEncode({
         'student_id': studentId,
@@ -284,11 +319,15 @@ class FeedbackApiService {
         throw Exception(
           'Failed to create feedback: ${response.statusCode} - ${response.body}',
         );
+        throw Exception(
+          'Failed to create feedback: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error creating feedback: $e');
     }
   }
+
 
   Future<void> deleteFeedback(String feedbackId) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/feedback/$feedbackId');
@@ -296,6 +335,10 @@ class FeedbackApiService {
     print('FeedbackApiService DELETE $url headers: $hdrs');
     final response = await http.delete(url, headers: hdrs);
 
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete feedback');
+    }
+  }
     if (response.statusCode != 200) {
       throw Exception('Failed to delete feedback');
     }
@@ -314,10 +357,12 @@ class FeedbackApiService {
       url,
       headers: hdrs,
       body: jsonEncode({'topic': topic, 'comment': comment}),
+      body: jsonEncode({'topic': topic, 'comment': comment}),
     );
 
     if (response.statusCode != 200) {
       throw Exception('Failed to update feedback');
     }
+  }
   }
 }
