@@ -76,6 +76,8 @@ class _EditNotePageState extends State<EditNotePage> {
   String _searchTerm = '';
   int _currentMatchIndex = 0;
   int _totalMatches = 0;
+  bool _isHoveringInput = false;
+  final ScrollController _inputScrollController = ScrollController();
   List<GlobalKey> _matchKeys = [];
 
   @override
@@ -83,8 +85,12 @@ class _EditNotePageState extends State<EditNotePage> {
     super.initState();
     _titleController = TextEditingController(text: widget.currentTitle);
     _contentController = TextEditingController(text: widget.currentContent);
+
     _contentController.addListener(_onContentChanged);
     _searchController.addListener(_onSearchChanged);
+    _inputScrollController.addListener(() {
+      if (mounted) setState(() {});
+    });
 
     _selectedTopic = widget.currentTopic;
     _noteVisibility = widget.currentVisibility;
@@ -110,6 +116,7 @@ class _EditNotePageState extends State<EditNotePage> {
     _contentController.removeListener(_onContentChanged);
     _titleController.dispose();
     _contentController.dispose();
+    _inputScrollController.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -508,6 +515,36 @@ class _EditNotePageState extends State<EditNotePage> {
     );
   }
 
+  // --- Dynamic Popup Positioning ---
+  double _getCursorVerticalPosition() {
+    final selection = _contentController.selection;
+    final text = _contentController.text;
+
+    // Default to top padding if no selection or text
+    double position = 16.0;
+
+    if (selection.baseOffset >= 0 && text.isNotEmpty) {
+      // Safety check for index out of bounds
+      int offset = selection.baseOffset;
+      if (offset > text.length) offset = text.length;
+
+      final textBeforeCursor = text.substring(0, offset);
+      final lineCount = textBeforeCursor.split('\n').length;
+      final lineHeight = 15.0 * 1.5; // fontSize * height
+
+      position = 16.0 + (lineCount - 1) * lineHeight;
+    }
+
+    // Adjust for scroll offset
+    if (_inputScrollController.hasClients) {
+      position -= _inputScrollController.offset;
+    }
+
+    // Clamp to ensure it doesn't go too far up/down if wanted,
+    // but allowing negative values hides it correctly if scrolled out.
+    return position;
+  }
+
   // --- Inline Attachment List Widget ---
   Widget _buildAttachmentList(ColorScheme colorScheme) {
     return Column(
@@ -613,6 +650,102 @@ class _EditNotePageState extends State<EditNotePage> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildHoverFileInserter(ColorScheme colorScheme) {
+    final uniqueFiles = _attachments
+        .where((a) => !a.isFailed && a.publicUrl != null)
+        .toList();
+
+    if (uniqueFiles.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 200, maxWidth: 250),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              'Insert File Link',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              primary: false,
+              itemCount: uniqueFiles.length,
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final file = uniqueFiles[index];
+                final isImage = [
+                  'jpg',
+                  'jpeg',
+                  'png',
+                  'webp',
+                  'bmp',
+                  'gif',
+                ].contains(file.localFile.extension?.toLowerCase());
+                return InkWell(
+                  onTap: () => _insertMarkdownLink(
+                    file.localFile.name,
+                    file.publicUrl!,
+                    isImage,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isImage ? Icons.image : Icons.insert_drive_file,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            file.localFile.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: colorScheme.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.add_circle_outline,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -854,25 +987,47 @@ class _EditNotePageState extends State<EditNotePage> {
                                 ),
                               ),
                               Expanded(
-                                child: TextFormField(
-                                  controller: _contentController,
-                                  style: TextStyle(
-                                    color: colorScheme.onSurface,
-                                    fontSize: 15,
-                                    fontFamily: 'monospace',
-                                    height: 1.5,
+                                child: MouseRegion(
+                                  onEnter: (_) =>
+                                      setState(() => _isHoveringInput = true),
+                                  onExit: (_) =>
+                                      setState(() => _isHoveringInput = false),
+                                  child: Stack(
+                                    children: [
+                                      TextFormField(
+                                        controller: _contentController,
+                                        scrollController:
+                                            _inputScrollController,
+                                        style: TextStyle(
+                                          color: colorScheme.onSurface,
+                                          fontSize: 15,
+                                          fontFamily: 'monospace',
+                                          height: 1.5,
+                                        ),
+                                        maxLines: null,
+                                        minLines: null,
+                                        expands: true,
+                                        textAlignVertical:
+                                            TextAlignVertical.top,
+                                        keyboardType: TextInputType.multiline,
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.all(16),
+                                        ),
+                                        validator: (v) =>
+                                            v!.isEmpty ? 'Required' : null,
+                                      ),
+                                      if (_attachments.isNotEmpty &&
+                                          _isHoveringInput)
+                                        Positioned(
+                                          top: _getCursorVerticalPosition(),
+                                          right: 16,
+                                          child: _buildHoverFileInserter(
+                                            colorScheme,
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                                  maxLines: null,
-                                  minLines: null,
-                                  expands: true,
-                                  textAlignVertical: TextAlignVertical.top,
-                                  keyboardType: TextInputType.multiline,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.all(16),
-                                  ),
-                                  validator: (v) =>
-                                      v!.isEmpty ? 'Required' : null,
                                 ),
                               ),
                             ],

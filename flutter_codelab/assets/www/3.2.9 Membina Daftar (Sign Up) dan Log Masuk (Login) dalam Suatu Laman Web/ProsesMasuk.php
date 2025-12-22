@@ -13,14 +13,13 @@ if ($con->connect_error) {
 
 $namapengguna = $_POST['namapengguna'];
 $katalaluan = $_POST['katalaluan'];
-$jenis = $_POST['jenis'];
 
-$sql = "INSERT INTO PENGGUNA (NAMAPENGGUNA, KATALALUAN, JENISPENGGUNA) 
-        VALUES ('$namapengguna', '$katalaluan', '$jenis')";
+$rekod = mysqli_query($con, "SELECT * FROM PENGGUNA WHERE NAMAPENGGUNA = '$namapengguna' AND KATALALUAN = '$katalaluan'");
+$hasil = mysqli_num_rows($rekod);
 
-$result = mysqli_query($con, $sql);
-
-// Redirect to login page or admin page after registration
-header('location:LogMasuk.php'); 
-mysqli_close($con);
+if ($hasil > 0) {
+    header("location:Masuk.php?namapengguna=" . $namapengguna);
+} else {
+    header("location:LogMasuk.php"); // Kembali ke laman log masuk jika gagal
+}
 ?>

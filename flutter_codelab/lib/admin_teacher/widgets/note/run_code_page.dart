@@ -41,6 +41,7 @@ class _RunCodePageState extends State<RunCodePage> {
   int _serverPort = 8080;
   String _output = "";
   final Completer<void> _serverReady = Completer<void>();
+  String _phpSessionId = "";
 
   // Cache for your libraries
   final Map<String, String> _bundledLibraries = {};
@@ -61,6 +62,10 @@ class _RunCodePageState extends State<RunCodePage> {
 
     _files = [CodeFile(name: defaultName, content: widget.initialCode)];
     _activeFileIndex = 0;
+
+    // Generate a fixed session ID for this run session
+    _phpSessionId =
+        "sess-${DateTime.now().millisecondsSinceEpoch}-${(DateTime.now().microsecond % 1000)}";
 
     _codeController = TextEditingController(text: _files[0].content);
     _codeController.addListener(_onCodeChanged);
@@ -348,7 +353,11 @@ class _RunCodePageState extends State<RunCodePage> {
             final content = await utf8.decoder.bind(request).join();
             final formData = Uri.splitQueryString(content);
 
-            print("DEBUG: Intercepted POST request: $formData");
+            print("DEBUG: ----------------------------------------");
+            print("DEBUG: PHP POST INTERCEPTED");
+            print("DEBUG: Target: $path");
+            print("DEBUG: Form Data: $formData");
+            print("DEBUG: ----------------------------------------");
 
             // --- MULTI-FILE PHP SUPPORT ---
             // If the POST is to a specific .php file (e.g., /Biodata.php),
@@ -381,6 +390,7 @@ class _RunCodePageState extends State<RunCodePage> {
               files: _files,
               entryPoint: fileName, // Send just the filename
               formData: formData,
+              getData: request.uri.queryParameters,
             );
 
             // Serve the result back to the browser
@@ -396,6 +406,44 @@ class _RunCodePageState extends State<RunCodePage> {
               ..close();
           }
           return;
+        }
+
+        // --- 0.5 INTERCEPT PHP GET REQUESTS (LINKING/REDIRECTION) ---
+        if (request.method == 'GET' && path.endsWith('.php')) {
+          try {
+            // 1. Determine filename
+            final uriSegments = Uri.parse("http://dummy$path").pathSegments;
+            final fileName = uriSegments.isNotEmpty
+                ? uriSegments.last
+                : "index.php";
+
+            print("DEBUG: ----------------------------------------");
+            print("DEBUG: PHP GET INTERCEPTED");
+            print("DEBUG: Target: $fileName");
+            print("DEBUG: Query Params: ${request.uri.queryParameters}");
+            print("DEBUG: ----------------------------------------");
+
+            // Execute using our new signature
+            final output = await _executePhp(
+              files: _files,
+              entryPoint: fileName,
+              getData: request.uri.queryParameters,
+            );
+
+            // Serve the result back to the browser
+            request.response
+              ..headers.contentType = ContentType.html
+              ..write(output)
+              ..close();
+            return;
+          } catch (e) {
+            print("Error executing PHP GET: $e");
+            request.response
+              ..statusCode = HttpStatus.internalServerError
+              ..write("Error executing file: $e")
+              ..close();
+            return;
+          }
         }
 
         // --- 1. SERVE FILES FROM RUN DIRECTORY OR FALLBACK ---
@@ -758,6 +806,7 @@ class _RunCodePageState extends State<RunCodePage> {
     required List<CodeFile> files,
     String? entryPoint,
     Map<String, dynamic>? formData,
+    Map<String, dynamic>? getData,
   }) async {
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}/run-code');
@@ -768,7 +817,9 @@ class _RunCodePageState extends State<RunCodePage> {
             .toList(),
         'entry_point': entryPoint,
         'context_id': widget.contextId,
+        'php_session_id': _phpSessionId,
         if (formData != null) 'form_data': formData,
+        if (getData != null) 'get_data': getData,
       };
 
       final response = await http.post(

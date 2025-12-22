@@ -66,10 +66,10 @@ $hasil = mysqli_query($con, "SELECT * FROM MURID");
 while($row = mysqli_fetch_array($hasil))
 {
     // FIX: Use expected column names (lowercase)
-    $nomurid = $row['nomurid'];      // "id" implies No Murid
+    $nomurid = $row['id'];      // "id" implies No Murid
     $nama = $row['nama'];       // "nama"
     $kelas = $row['kelas'];     // "kelas"
-    $negeri = $row['negerilahir'];   // "negeri" implies Negeri Lahir
+    $negeri = $row['negeri'];   // "negeri" implies Negeri Lahir
 
     print "<tr>";
     print "<td>".$nomurid."</td>";
@@ -82,6 +82,7 @@ print "</table>";
 
 mysqli_close($con);
 ?>
+
 
 ```
 **Aliran Proses Atur Cara:**
