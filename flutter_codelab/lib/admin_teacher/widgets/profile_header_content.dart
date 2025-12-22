@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
 
 class ProfileHeaderContent extends StatelessWidget {
   final UserDetails currentUser;
@@ -13,10 +14,14 @@ class ProfileHeaderContent extends StatelessWidget {
 
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
-      case 'admin': return scheme.error;
-      case 'teacher': return scheme.tertiary;
-      case 'student': return scheme.primary;
-      default: return scheme.secondary;
+      case 'admin':
+        return scheme.error;
+      case 'teacher':
+        return scheme.tertiary;
+      case 'student':
+        return scheme.primary;
+      default:
+        return scheme.secondary;
     }
   }
 
@@ -26,36 +31,38 @@ class ProfileHeaderContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // User's Name
-        Flexible( 
+        Flexible(
           child: Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: Text(
-              'Hello, ${currentUser.name}', 
+              'Hello, ${currentUser.name}',
               style: textTheme.titleMedium?.copyWith(
                 color: colorScheme.onSurface,
-                fontSize: 14, 
+                fontSize: 14,
               ),
-              overflow: TextOverflow.ellipsis, 
+              overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
           ),
         ),
-        
+
         // Profile Avatar with initials
         CircleAvatar(
-          radius: 16, 
+          radius: 16,
           backgroundColor: _getRoleColor(currentUser.roleName, colorScheme),
           foregroundColor: colorScheme.onPrimary,
           child: Text(
-            currentUser.name.isNotEmpty ? currentUser.name[0].toUpperCase() : '?',
+            currentUser.name.isNotEmpty
+                ? currentUser.name[0].toUpperCase()
+                : '?',
             style: textTheme.titleMedium?.copyWith(
               color: colorScheme.onPrimary,
               fontWeight: FontWeight.bold,
-              fontSize: 16, 
+              fontSize: 16,
             ),
           ),
         ),
-        
+
         // Dropdown Arrow (matching the image style)
         Icon(Icons.keyboard_arrow_down, color: colorScheme.onSurfaceVariant),
       ],
@@ -69,9 +76,9 @@ class ProfileHeaderContent extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      // MODIFIED: Increased top padding (4.0) and reduced bottom padding (0.0) 
+      // MODIFIED: Increased top padding (4.0) and reduced bottom padding (0.0)
       // to shift content down without increasing overall vertical size.
-      padding: const EdgeInsets.fromLTRB(24.0, 15.0, 24.0, 0.0), 
+      padding: const EdgeInsets.fromLTRB(24.0, 15.0, 24.0, 0.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -79,43 +86,53 @@ class ProfileHeaderContent extends StatelessWidget {
           // It uses the built profile display widget as its child.
           PopupMenuButton<String>(
             // Set offset to position the menu directly below the icon/profile area
-            offset: const Offset(0, 48), 
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            
+            offset: const Offset(0, 48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+
             // This is the clickable area: the profile name + avatar + arrow
             child: _buildProfileDisplay(colorScheme, textTheme),
-            
+
             // Handle selection from the menu items
-            onSelected: (String result) {
+            onSelected: (String result) async {
               if (result == 'logout') {
                 onLogoutPressed();
+              } else if (result == 'profile') {
+                // Navigate to Self-Edit Profile
+                // Note: user_detail_page handles isSelfProfile internally
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => UserDetailPage(
+                      userId: currentUser.id,
+                      userName: currentUser.name,
+                      isSelfProfile: true, // Enable restricted mode
+                    ),
+                  ),
+                );
               }
             },
-            
+
             // Define the content of the menu items
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
               // --- Placeholder Items (Kept: Accessibility, Profile, Private files, Reports) ---
-              
               const PopupMenuItem<String>(
                 value: 'profile',
                 child: Text('Profile'),
               ),
               const PopupMenuDivider(), // Divider
-
               // --- Logout Item (Icon color adapts to the theme) ---
               PopupMenuItem<String>(
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.logout, 
-                      color: colorScheme.onSurface, 
-                    ), 
+                    Icon(Icons.logout, color: colorScheme.onSurface),
                     const SizedBox(width: 8),
                     Text(
                       'Log out',
                       style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.error, // Text color remains error red for emphasis
+                        color: colorScheme
+                            .error, // Text color remains error red for emphasis
                       ),
                     ),
                   ],

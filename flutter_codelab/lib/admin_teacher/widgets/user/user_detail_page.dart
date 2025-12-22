@@ -8,12 +8,14 @@ class UserDetailPage extends StatefulWidget {
   final String userId;
   final String userName; // Passed for the app bar title before loading
   final List<BreadcrumbItem>? breadcrumbs;
+  final bool isSelfProfile;
 
   const UserDetailPage({
     super.key,
     required this.userId,
     required this.userName,
     this.breadcrumbs,
+    this.isSelfProfile = false,
   });
 
   @override
@@ -55,6 +57,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final bool? refreshed = await showEditUserDialog(
       context: context,
       initialData: user,
+      isSelfEdit: widget.isSelfProfile,
       showSnackBar: (ctx, msg, color) {
         ScaffoldMessenger.of(
           ctx,
