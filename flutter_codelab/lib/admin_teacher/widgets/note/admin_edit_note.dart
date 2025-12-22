@@ -12,7 +12,6 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'run_code_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/file_manager.dart';
 import 'package:flutter_codelab/theme.dart';
 
 class EditNotePage extends StatefulWidget {
@@ -758,199 +757,175 @@ class _EditNotePageState extends State<EditNotePage> {
           body: Stack(
             children: [
               NestedScrollView(
-                headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-                  return [
-                    SliverToBoxAdapter(
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                headerSliverBuilder:
+                    (BuildContext context, bool innerBoxIsScrolled) {
+                      return [
+                        SliverToBoxAdapter(
+                          child: Container(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    flex: 1,
-                                    child: DropdownButtonFormField<String>(
-                                      value: _selectedTopic,
-                                      dropdownColor:
-                                          colorScheme.surfaceContainer,
-                                      style: TextStyle(
-                                        color: colorScheme.onSurface,
-                                      ),
-                                      decoration: _inputDecoration(
-                                        labelText: 'Topic',
-                                        icon: Icons.category,
-                                        colorScheme: colorScheme,
-                                      ),
-                                      items: _topics
-                                          .map(
-                                            (value) => DropdownMenuItem(
-                                              value: value,
-                                              child: Text(value),
-                                            ),
-                                          )
-                                          .toList(),
-                                      onChanged: (value) => setState(
-                                        () => _selectedTopic = value,
-                                      ),
-                                      validator: (value) =>
-                                          value == null || value.isEmpty
-                                          ? 'Required'
-                                          : null,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    flex: 1,
-                                    child: Container(
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        color:
-                                            colorScheme.surfaceContainerHighest,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: colorScheme.outlineVariant,
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 1,
+                                        child: DropdownButtonFormField<String>(
+                                          value: _selectedTopic,
+                                          dropdownColor:
+                                              colorScheme.surfaceContainer,
+                                          style: TextStyle(
+                                            color: colorScheme.onSurface,
+                                          ),
+                                          decoration: _inputDecoration(
+                                            labelText: 'Topic',
+                                            icon: Icons.category,
+                                            colorScheme: colorScheme,
+                                          ),
+                                          items: _topics
+                                              .map(
+                                                (value) => DropdownMenuItem(
+                                                  value: value,
+                                                  child: Text(value),
+                                                ),
+                                              )
+                                              .toList(),
+                                          onChanged: (value) => setState(
+                                            () => _selectedTopic = value,
+                                          ),
+                                          validator: (value) =>
+                                              value == null || value.isEmpty
+                                              ? 'Required'
+                                              : null,
                                         ),
                                       ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        flex: 1,
+                                        child: Container(
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: colorScheme
+                                                .surfaceContainerHighest,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: colorScheme.outlineVariant,
+                                            ),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                          child: Row(
                                             mainAxisAlignment:
-                                                MainAxisAlignment.center,
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(
-                                                'Visibility',
-                                                style: TextStyle(
-                                                  color: colorScheme
-                                                      .onSurfaceVariant,
-                                                  fontSize: 10,
-                                                ),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    'Visibility',
+                                                    style: TextStyle(
+                                                      color: colorScheme
+                                                          .onSurfaceVariant,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    _noteVisibility
+                                                        ? 'Public'
+                                                        : 'Private',
+                                                    style: TextStyle(
+                                                      color:
+                                                          colorScheme.onSurface,
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                              Text(
-                                                _noteVisibility
-                                                    ? 'Public'
-                                                    : 'Private',
-                                                style: TextStyle(
-                                                  color: colorScheme.onSurface,
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.bold,
+                                              Transform.scale(
+                                                scale: 0.8,
+                                                child: Switch(
+                                                  value: _noteVisibility,
+                                                  onChanged: (bool value) =>
+                                                      setState(
+                                                        () => _noteVisibility =
+                                                            value,
+                                                      ),
+                                                  activeColor:
+                                                      colorScheme.primary,
                                                 ),
                                               ),
                                             ],
                                           ),
-                                          Transform.scale(
-                                            scale: 0.8,
-                                            child: Switch(
-                                              value: _noteVisibility,
-                                              onChanged: (bool value) =>
-                                                  setState(
-                                                    () =>
-                                                        _noteVisibility = value,
-                                                  ),
-                                              activeColor: colorScheme.primary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _titleController,
-                                style: TextStyle(
-                                  color: colorScheme.onSurface,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                decoration: _inputDecoration(
-                                  labelText: 'Title',
-                                  icon: Icons.title,
-                                  colorScheme: colorScheme,
-                                ),
-                                validator: (v) =>
-                                    v!.isEmpty ? 'Required' : null,
-                              ),
-                              const SizedBox(height: 12),
-                              FileUploadZone(
-                                onTap: _handleFileUpload,
-                                isLoading: _isLoading,
-                                attachments: _attachments,
-                                onRemove: _removeFile,
-                                onInsertLink: (item) {
-                                  final isImage =
-                                      [
-                                        'jpg',
-                                        'jpeg',
-                                        'png',
-                                        'webp',
-                                        'bmp',
-                                        'gif',
-                                      ].contains(
-                                        item.localFile.extension?.toLowerCase(),
-                                      );
-                                  if (item.publicUrl != null) {
-                                    _insertMarkdownLink(
-                                      item.localFile.name,
-                                      item.publicUrl!,
-                                      isImage,
-                                    );
-                                  }
-                                },
-                                onInsertCode: _insertCodeBlock,
-                              ),
-                              const SizedBox(height: 16),
-                              // _buildAttachmentList was here, now integrated into FileUploadZone
-                              // --- FILE MANAGER (Assets) ---
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainer,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: colorScheme.outlineVariant,
-                                  ),
-                                ),
-                                child: Theme(
-                                  data: Theme.of(
-                                    context,
-                                  ).copyWith(dividerColor: Colors.transparent),
-                                  child: ExpansionTile(
-                                    title: const Text(
-                                      "Note Assets & Context",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: const Text(
-                                      "Manage files for code execution (e.g. php files, images)",
-                                    ),
-                                    children: [
-                                      FileManager(
-                                        noteTitle: widget.currentTitle,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ),
+                                  const SizedBox(height: 12),
+                                  TextFormField(
+                                    controller: _titleController,
+                                    style: TextStyle(
+                                      color: colorScheme.onSurface,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    decoration: _inputDecoration(
+                                      labelText: 'Title',
+                                      icon: Icons.title,
+                                      colorScheme: colorScheme,
+                                    ),
+                                    validator: (v) =>
+                                        v!.isEmpty ? 'Required' : null,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  FileUploadZone(
+                                    onTap: _handleFileUpload,
+                                    isLoading: _isLoading,
+                                    attachments: _attachments,
+                                    onRemove: _removeFile,
+                                    onInsertLink: (item) {
+                                      final isImage =
+                                          [
+                                            'jpg',
+                                            'jpeg',
+                                            'png',
+                                            'webp',
+                                            'bmp',
+                                            'gif',
+                                          ].contains(
+                                            item.localFile.extension
+                                                ?.toLowerCase(),
+                                          );
+                                      if (item.publicUrl != null) {
+                                        _insertMarkdownLink(
+                                          item.localFile.name,
+                                          item.publicUrl!,
+                                          isImage,
+                                        );
+                                      }
+                                    },
+                                    onInsertCode: _insertCodeBlock,
+                                  ),
+                                  const SizedBox(height: 16),
 
-                              const SizedBox(height: 12),
-                            ],
+                                  // _buildAttachmentList was here, now integrated into FileUploadZone
+                                  const SizedBox(height: 12),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ];
-                },
+                      ];
+                    },
                 body: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Row(
