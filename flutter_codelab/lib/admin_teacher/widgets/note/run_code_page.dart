@@ -18,8 +18,14 @@ class CodeFile {
 class RunCodePage extends StatefulWidget {
   final String initialCode;
   final String? contextId;
+  final String? initialFileName;
 
-  const RunCodePage({super.key, required this.initialCode, this.contextId});
+  const RunCodePage({
+    super.key,
+    required this.initialCode,
+    this.contextId,
+    this.initialFileName,
+  });
 
   @override
   State<RunCodePage> createState() => _RunCodePageState();
@@ -55,8 +61,10 @@ class _RunCodePageState extends State<RunCodePage> {
     _startLocalServer();
 
     // Initialize files - Default filename based on content
-    String defaultName = 'index.html';
-    if (widget.initialCode.contains('<?php')) {
+    // Initialize files - Default filename based on content
+    String defaultName = widget.initialFileName ?? 'index.html';
+    if (widget.initialFileName == null &&
+        widget.initialCode.contains('<?php')) {
       defaultName = 'main.php';
     }
 
