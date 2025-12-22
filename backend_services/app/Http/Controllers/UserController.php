@@ -425,6 +425,21 @@ public function destroy(User $user, DeleteUserRequest $request)
                 'message' => 'User list imported successfully.'
             ], 200);
 
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+             // Handle Validation Errors from the Excel file
+             $failures = $e->failures();
+             $messages = [];
+             foreach ($failures as $failure) {
+                 foreach ($failure->errors() as $error) {
+                     $messages[] = "Row " . $failure->row() . ": " . $error;
+                 }
+             }
+             
+             return response()->json([
+                 'message' => 'Validation failed for some rows.',
+                 'error_detail' => implode("\n", $messages)
+             ], 422);
+
         } catch (\Exception $e) {
             // Log the detailed error
             \Illuminate\Support\Facades\Log::error("User Import Failed: " . $e->getMessage());

@@ -9,7 +9,10 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
-class UsersImport implements ToModel, WithHeadingRow
+use Maatwebsite\Excel\Concerns\WithValidation;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
+
+class UsersImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmptyRows
 {
     /**
      * @param array $row
@@ -18,23 +21,8 @@ class UsersImport implements ToModel, WithHeadingRow
      */
     public function model(array $row)
     {
-        // Skip row if 'email' is empty
-        if (empty($row['email'])) {
-            return null;
-        }
+        // Note: Validation runs before this, so we don't need manual uniqueness checks here anymore.
 
-        // Check if user already exists
-        $user = User::where('email', $row['email'])->first();
-
-        // If user exists, skip creation
-        if ($user) {
-            // Option: If you want to update existing users instead of skipping:
-            // $user->update([
-            //     'name' => $row['name'],
-            //     'role_id' => $row['role_id'],
-            // ]);
-            return null; // Skip creation
-        }
 
         // Generate a temporary password if none is provided in the file
         $password = $row['password'] ?? Str::random(10); 
@@ -69,5 +57,13 @@ class UsersImport implements ToModel, WithHeadingRow
             'address' => $row['address'] ?? '-', // Mandatory field fallback
             'gender' => $row['gender'] ?? '-', // Mandatory field fallback
         ]);
+    }
+
+    public function rules(): array
+    {
+        return [
+            'email' => 'required|email|unique:users,email',
+            'name' => 'unique:users,name', // User requested validation for existing name
+        ];
     }
 }
