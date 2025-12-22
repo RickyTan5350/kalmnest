@@ -33,18 +33,22 @@ class AuthApi {
       );
 
       if (response.statusCode == 200) {
-        try {
+      try {
           final data = jsonDecode(response.body);
           final token = data['token'];
 
-          // The 'user' object from backend now includes the nested 'role' object
-          // We store this entire structure securely.
-          final userDataJson = jsonEncode(data['user']);
+          // 1. Extract the user map
+          final Map<String, dynamic> userMap = Map<String, dynamic>.from(data['user']);
+          
+          // 2. IMPORTANT: Inject the token into the user map so UserDetails model can see it
+          userMap['token'] = token; 
 
+          // 3. Store the updated map and the token
+          final userDataJson = jsonEncode(userMap);
           await _storage.write(key: _tokenKey, value: token);
           await _storage.write(key: _userKey, value: userDataJson);
 
-          return data['user'] as Map<String, dynamic>;
+          return userMap; // Return the map that now contains the token
         } catch (e) {
           print('JSON Decode Error: $e');
           print('Response Body: ${response.body}');
