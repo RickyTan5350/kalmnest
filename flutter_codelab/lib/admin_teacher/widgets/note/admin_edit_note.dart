@@ -13,23 +13,7 @@ import 'package:flutter_codelab/constants/api_constants.dart';
 import 'run_code_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/file_manager.dart';
-
-// Helper Class (Retained for file management)
-class UploadedAttachment {
-  final PlatformFile localFile;
-  final String? serverFileId;
-  final String? publicUrl;
-  final bool isUploading;
-  final bool isFailed;
-
-  UploadedAttachment({
-    required this.localFile,
-    this.serverFileId,
-    this.publicUrl,
-    this.isUploading = false,
-    this.isFailed = false,
-  });
-}
+import 'package:flutter_codelab/theme.dart';
 
 class EditNotePage extends StatefulWidget {
   final String noteId;
@@ -213,6 +197,7 @@ class _EditNotePageState extends State<EditNotePage> {
       if (_attachments[i].isUploading && _attachments[i].serverFileId == null) {
         Map<String, dynamic>? result = await _fileApi.uploadSingleAttachment(
           _attachments[i].localFile,
+          folderName: _titleController.text, // Pass title as folder
         );
 
         if (!mounted) return;
@@ -234,6 +219,58 @@ class _EditNotePageState extends State<EditNotePage> {
           }
         });
       }
+    }
+  }
+
+  Future<void> _insertCodeBlock(UploadedAttachment item) async {
+    final file = item.localFile;
+    String? content;
+
+    try {
+      if (file.path != null) {
+        content = await File(file.path!).readAsString();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to read file: $e')));
+      return;
+    }
+
+    if (content != null) {
+      final ext = file.extension?.toLowerCase() ?? '';
+      // Only insert if it's not empty, or even if empty if user wants structure
+      final codeBlock = '\n```$ext\n$content\n```\n';
+
+      final text = _contentController.text;
+      final selection = _contentController.selection;
+      String newString;
+      int newCursorPos;
+
+      if (selection.isValid && selection.start >= 0) {
+        newString = text.replaceRange(
+          selection.start,
+          selection.end,
+          codeBlock,
+        );
+        newCursorPos = selection.start + codeBlock.length;
+      } else {
+        newString = text + codeBlock;
+        newCursorPos = newString.length;
+      }
+
+      _contentController.value = TextEditingValue(
+        text: newString,
+        selection: TextSelection.collapsed(offset: newCursorPos),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Code block inserted!'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+      setState(() {});
     }
   }
 
@@ -546,114 +583,6 @@ class _EditNotePageState extends State<EditNotePage> {
     return position;
   }
 
-  // --- Inline Attachment List Widget ---
-  Widget _buildAttachmentList(ColorScheme colorScheme) {
-    return Column(
-      children: _attachments.asMap().entries.map((entry) {
-        final index = entry.key;
-        final item = entry.value;
-        final file = item.localFile;
-        final isImage = [
-          'jpg',
-          'jpeg',
-          'png',
-          'webp',
-          'bmp',
-          'gif',
-        ].contains(file.extension?.toLowerCase());
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: item.isFailed
-                    ? colorScheme.error
-                    : colorScheme.outlineVariant,
-              ),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 4,
-              ),
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: isImage && file.path != null
-                    ? Image.file(
-                        File(file.path!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => Icon(
-                          Icons.broken_image,
-                          size: 20,
-                          color: colorScheme.error,
-                        ),
-                      )
-                    : Icon(Icons.insert_drive_file, color: colorScheme.primary),
-              ),
-              title: Text(
-                file.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
-              ),
-              subtitle: item.isUploading
-                  ? LinearProgressIndicator(
-                      minHeight: 4,
-                      borderRadius: BorderRadius.circular(2),
-                    )
-                  : item.isFailed
-                  ? Text(
-                      'Failed',
-                      style: TextStyle(color: colorScheme.error, fontSize: 12),
-                    )
-                  : SelectableText(
-                      item.publicUrl ?? '',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontSize: 12,
-                      ),
-                      maxLines: 1,
-                    ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!item.isUploading &&
-                      !item.isFailed &&
-                      item.publicUrl != null)
-                    IconButton(
-                      icon: const Icon(Icons.add_link),
-                      color: colorScheme.primary,
-                      tooltip: 'Insert',
-                      onPressed: () => _insertMarkdownLink(
-                        file.name,
-                        item.publicUrl!,
-                        isImage,
-                      ),
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    color: colorScheme.error,
-                    tooltip: 'Remove',
-                    onPressed: () => _removeFile(index),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Widget _buildHoverFileInserter(ColorScheme colorScheme) {
     final uniqueFiles = _attachments
         .where((a) => !a.isFailed && a.publicUrl != null)
@@ -661,8 +590,10 @@ class _EditNotePageState extends State<EditNotePage> {
 
     if (uniqueFiles.isEmpty) return const SizedBox.shrink();
 
+    final brandColors = Theme.of(context).extension<BrandColors>();
+
     return Container(
-      constraints: const BoxConstraints(maxHeight: 200, maxWidth: 250),
+      constraints: const BoxConstraints(maxHeight: 200, maxWidth: 300),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(8),
@@ -677,7 +608,7 @@ class _EditNotePageState extends State<EditNotePage> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              'Insert File Link',
+              'Insert File',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -693,7 +624,10 @@ class _EditNotePageState extends State<EditNotePage> {
               itemCount: uniqueFiles.length,
               separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, index) {
-                final file = uniqueFiles[index];
+                final item = uniqueFiles[index];
+                final file = item.localFile;
+                final ext = file.extension?.toLowerCase() ?? '';
+
                 final isImage = [
                   'jpg',
                   'jpeg',
@@ -701,13 +635,39 @@ class _EditNotePageState extends State<EditNotePage> {
                   'webp',
                   'bmp',
                   'gif',
-                ].contains(file.localFile.extension?.toLowerCase());
+                ].contains(ext);
+                final isCode = ['html', 'css', 'js', 'php'].contains(ext);
+
+                IconData iconData = Icons.insert_drive_file;
+                Color iconColor = colorScheme.primary;
+
+                if (isImage) {
+                  iconData = Icons.image;
+                } else if (isCode) {
+                  iconData = Icons.code;
+                  if (brandColors != null) {
+                    if (ext == 'html')
+                      iconColor = brandColors.html;
+                    else if (ext == 'css')
+                      iconColor = brandColors.css;
+                    else if (ext == 'js')
+                      iconColor = brandColors.javascript;
+                    else if (ext == 'php')
+                      iconColor = brandColors.php;
+                  }
+                } else {
+                  if (brandColors != null) iconColor = brandColors.other;
+                }
+
                 return InkWell(
-                  onTap: () => _insertMarkdownLink(
-                    file.localFile.name,
-                    file.publicUrl!,
-                    isImage,
-                  ),
+                  onTap: () {
+                    // Logic: Code files -> Code Block ONLY. Others -> Link.
+                    if (isCode) {
+                      _insertCodeBlock(item);
+                    } else {
+                      _insertMarkdownLink(file.name, item.publicUrl!, isImage);
+                    }
+                  },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -715,15 +675,11 @@ class _EditNotePageState extends State<EditNotePage> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          isImage ? Icons.image : Icons.insert_drive_file,
-                          size: 16,
-                          color: colorScheme.primary,
-                        ),
+                        Icon(iconData, size: 16, color: iconColor),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            file.localFile.name,
+                            file.name,
                             style: TextStyle(
                               fontSize: 13,
                               color: colorScheme.onSurface,
@@ -734,9 +690,9 @@ class _EditNotePageState extends State<EditNotePage> {
                         ),
                         const SizedBox(width: 4),
                         Icon(
-                          Icons.add_circle_outline,
+                          isCode ? Icons.data_object : Icons.add_link,
                           size: 16,
-                          color: colorScheme.primary,
+                          color: isCode ? iconColor : colorScheme.primary,
                         ),
                       ],
                     ),
@@ -802,186 +758,199 @@ class _EditNotePageState extends State<EditNotePage> {
           body: Stack(
             children: [
               NestedScrollView(
-                headerSliverBuilder:
-                    (BuildContext context, bool innerBoxIsScrolled) {
-                      return [
-                        SliverToBoxAdapter(
-                          child: Container(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+                  return [
+                    SliverToBoxAdapter(
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 1,
-                                        child: DropdownButtonFormField<String>(
-                                          value: _selectedTopic,
-                                          dropdownColor:
-                                              colorScheme.surfaceContainer,
-                                          style: TextStyle(
-                                            color: colorScheme.onSurface,
-                                          ),
-                                          decoration: _inputDecoration(
-                                            labelText: 'Topic',
-                                            icon: Icons.category,
-                                            colorScheme: colorScheme,
-                                          ),
-                                          items: _topics
-                                              .map(
-                                                (value) => DropdownMenuItem(
-                                                  value: value,
-                                                  child: Text(value),
-                                                ),
-                                              )
-                                              .toList(),
-                                          onChanged: (value) => setState(
-                                            () => _selectedTopic = value,
-                                          ),
-                                          validator: (value) =>
-                                              value == null || value.isEmpty
-                                              ? 'Required'
-                                              : null,
+                                  Expanded(
+                                    flex: 1,
+                                    child: DropdownButtonFormField<String>(
+                                      value: _selectedTopic,
+                                      dropdownColor:
+                                          colorScheme.surfaceContainer,
+                                      style: TextStyle(
+                                        color: colorScheme.onSurface,
+                                      ),
+                                      decoration: _inputDecoration(
+                                        labelText: 'Topic',
+                                        icon: Icons.category,
+                                        colorScheme: colorScheme,
+                                      ),
+                                      items: _topics
+                                          .map(
+                                            (value) => DropdownMenuItem(
+                                              value: value,
+                                              child: Text(value),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (value) => setState(
+                                        () => _selectedTopic = value,
+                                      ),
+                                      validator: (value) =>
+                                          value == null || value.isEmpty
+                                          ? 'Required'
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Container(
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: colorScheme.outlineVariant,
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        flex: 1,
-                                        child: Container(
-                                          height: 48,
-                                          decoration: BoxDecoration(
-                                            color: colorScheme
-                                                .surfaceContainerHighest,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color: colorScheme.outlineVariant,
-                                            ),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                          ),
-                                          child: Row(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
+                                                MainAxisAlignment.center,
                                             children: [
-                                              Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    'Visibility',
-                                                    style: TextStyle(
-                                                      color: colorScheme
-                                                          .onSurfaceVariant,
-                                                      fontSize: 10,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    _noteVisibility
-                                                        ? 'Public'
-                                                        : 'Private',
-                                                    style: TextStyle(
-                                                      color:
-                                                          colorScheme.onSurface,
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ],
+                                              Text(
+                                                'Visibility',
+                                                style: TextStyle(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant,
+                                                  fontSize: 10,
+                                                ),
                                               ),
-                                              Transform.scale(
-                                                scale: 0.8,
-                                                child: Switch(
-                                                  value: _noteVisibility,
-                                                  onChanged: (bool value) =>
-                                                      setState(
-                                                        () => _noteVisibility =
-                                                            value,
-                                                      ),
-                                                  activeColor:
-                                                      colorScheme.primary,
+                                              Text(
+                                                _noteVisibility
+                                                    ? 'Public'
+                                                    : 'Private',
+                                                style: TextStyle(
+                                                  color: colorScheme.onSurface,
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
                                               ),
                                             ],
                                           ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  TextFormField(
-                                    controller: _titleController,
-                                    style: TextStyle(
-                                      color: colorScheme.onSurface,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    decoration: _inputDecoration(
-                                      labelText: 'Title',
-                                      icon: Icons.title,
-                                      colorScheme: colorScheme,
-                                    ),
-                                    validator: (v) =>
-                                        v!.isEmpty ? 'Required' : null,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  FileUploadZone(
-                                    onTap: _handleFileUpload,
-                                    isLoading: _isLoading,
-                                  ),
-                                  if (_attachments.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    _buildAttachmentList(colorScheme),
-                                  ],
-                                  const SizedBox(height: 16),
-
-                                  // --- FILE MANAGER (Assets) ---
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.surfaceContainer,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: colorScheme.outlineVariant,
-                                      ),
-                                    ),
-                                    child: Theme(
-                                      data: Theme.of(context).copyWith(
-                                        dividerColor: Colors.transparent,
-                                      ),
-                                      child: ExpansionTile(
-                                        title: const Text(
-                                          "Note Assets & Context",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        subtitle: const Text(
-                                          "Manage files for code execution (e.g. php files, images)",
-                                        ),
-                                        children: [
-                                          FileManager(
-                                            noteTitle: widget.currentTitle,
+                                          Transform.scale(
+                                            scale: 0.8,
+                                            child: Switch(
+                                              value: _noteVisibility,
+                                              onChanged: (bool value) =>
+                                                  setState(
+                                                    () =>
+                                                        _noteVisibility = value,
+                                                  ),
+                                              activeColor: colorScheme.primary,
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
                                   ),
-
-                                  const SizedBox(height: 12),
                                 ],
                               ),
-                            ),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _titleController,
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                decoration: _inputDecoration(
+                                  labelText: 'Title',
+                                  icon: Icons.title,
+                                  colorScheme: colorScheme,
+                                ),
+                                validator: (v) =>
+                                    v!.isEmpty ? 'Required' : null,
+                              ),
+                              const SizedBox(height: 12),
+                              FileUploadZone(
+                                onTap: _handleFileUpload,
+                                isLoading: _isLoading,
+                                attachments: _attachments,
+                                onRemove: _removeFile,
+                                onInsertLink: (item) {
+                                  final isImage =
+                                      [
+                                        'jpg',
+                                        'jpeg',
+                                        'png',
+                                        'webp',
+                                        'bmp',
+                                        'gif',
+                                      ].contains(
+                                        item.localFile.extension?.toLowerCase(),
+                                      );
+                                  if (item.publicUrl != null) {
+                                    _insertMarkdownLink(
+                                      item.localFile.name,
+                                      item.publicUrl!,
+                                      isImage,
+                                    );
+                                  }
+                                },
+                                onInsertCode: _insertCodeBlock,
+                              ),
+                              const SizedBox(height: 16),
+                              // _buildAttachmentList was here, now integrated into FileUploadZone
+                              // --- FILE MANAGER (Assets) ---
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: colorScheme.outlineVariant,
+                                  ),
+                                ),
+                                child: Theme(
+                                  data: Theme.of(
+                                    context,
+                                  ).copyWith(dividerColor: Colors.transparent),
+                                  child: ExpansionTile(
+                                    title: const Text(
+                                      "Note Assets & Context",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    subtitle: const Text(
+                                      "Manage files for code execution (e.g. php files, images)",
+                                    ),
+                                    children: [
+                                      FileManager(
+                                        noteTitle: widget.currentTitle,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+                            ],
                           ),
                         ),
-                      ];
-                    },
+                      ),
+                    ),
+                  ];
+                },
                 body: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Row(
