@@ -184,7 +184,8 @@ class _UserDetailPageState extends State<UserDetailPage> {
             future: _userFuture,
             builder: (context, snapshot) {
               // Only show delete button if the page has successfully loaded the user details
-              if (snapshot.hasData) {
+              // AND it is not the user's own profile
+              if (snapshot.hasData && !widget.isSelfProfile) {
                 return IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: _deleteUser,
