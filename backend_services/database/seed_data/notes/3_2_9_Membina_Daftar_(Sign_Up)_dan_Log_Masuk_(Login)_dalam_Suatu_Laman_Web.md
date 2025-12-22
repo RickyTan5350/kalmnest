@@ -27,12 +27,12 @@ Bahagian ini menerangkan cara membina borang untuk pengguna baharu mendaftar kea
                 <td style="background-color:#00FF00;" align="center">Daftar Ahli Baru</td>
             </tr>
             <tr>
-                <td><img src="LogoKelab.png" style = "width: 150px; height: 150px"></td>
-                <td width="63%">
+               <td><img src="LogoKelab.png" style="width: 150px"></td>
+                <td width="60%">
                     <table>
                         <tr>
                             <td>Nama Pengguna</td>
-                            <td><input name="namapengguna" size="18" type="text"></td>
+                            <td><input name="namapengguna" size="10" type="text"></td>
                         </tr>
                         <tr>
                             <td>Katalaluan</td>
@@ -85,7 +85,41 @@ Fail ini menerima data dari borang dan menyimpannya ke dalam pangkalan data.
 Bahagian ini menerangkan cara membina sistem untuk ahli yang sudah berdaftar masuk ke laman web.
 
 #### **A. Halaman Borang Log Masuk (`LogMasuk.php`)**
-
+```
+<html>
+<head>
+    <title>Log Masuk</title>
+</head>
+<body>
+    <table border="0">
+        <tr>
+            <td style="background-color:#00FF00;" align="center">Selamat Datang</td>
+            <td style="background-color:#00FF00;" align="center">Log Masuk</td>
+        </tr>
+        <tr>
+             <td><img src="LogoKelab.png" style="width: 150px"></td>
+            <td width="60%">
+                <form action="ProsesMasuk.php" method="POST">
+                    <table>
+                        <tr>
+                            <td>Nama Pengguna</td>
+                            <td><input name="namapengguna" size="10" type="text"></td>
+                        </tr>
+                        <tr>
+                            <td>Katalaluan</td>
+                            <td><input name="katalaluan" size="15" type="password"></td>
+                        </tr>
+                        <tr>
+                            <td><input name="submit" value="Masuk" type="submit"></td>
+                        </tr>
+                    </table>
+                </form>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+```
 Antaramuka untuk pengguna memasukkan nama dan kata laluan .
 
 * **Elemen Borang:**  
@@ -106,7 +140,36 @@ Fail ini menyemak sama ada pengguna wujud dalam pangkalan data.
 ---
 
 ### **4\. Halaman Ahli (`Masuk.php`)**
-
+```
+<?php
+    $nama = $_GET['namapengguna'];
+?>
+<html>
+<head>
+    <title>Laman Utama</title>
+</head>
+<body>
+    <table border="1">
+        <tr>
+            <td style="background-color:#00FF00;" align="center">Selamat Datang</td>
+            <td colspan="2" style="background-color:#00FF00;" align="left">
+                Nama Pengguna: <?php print $nama; ?>
+            </td>
+        </tr>
+        <tr>
+            <td width="40%"><img src="LogoKelab.png" style="width: 150px"></td>
+            <td colspan="2" valign="top"></td>
+        </tr>
+        <tr>
+            <td colspan="2" align="right">
+                <a href="KelabCatur.php">Log Keluar</a>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+</html>
+```
 Ini adalah laman yang dipaparkan setelah pengguna berjaya log masuk.
 
 * **Paparan Maklumat:**  

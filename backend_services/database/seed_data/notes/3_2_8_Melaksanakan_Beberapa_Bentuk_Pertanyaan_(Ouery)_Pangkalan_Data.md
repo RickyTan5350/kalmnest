@@ -76,8 +76,8 @@ include 'setup_db.php';
 
 // Data extracted from the image
 $data = [
-    ["1", "Siti Khadijah Sofia", "4 Bistari 1", "Kedah"],
-    ["2", "Amri bin Yahya", "4 Bistari 2", "Johor"]
+    ["6", "Siti Khadijah Sofia", "4 Bistari 1", "Kedah"],
+    ["7", "Amri bin Yahya", "4 Bistari 2", "Johor"]
 ];
 
 foreach ($data as $row) {
@@ -87,7 +87,7 @@ foreach ($data as $row) {
     $kelas = $conn->real_escape_string($row[2]);
     $negeri = $conn->real_escape_string($row[3]);
 
-    $sql = "INSERT INTO MURID (NOMURID, NAMA, KELAS, NEGERILAHIR) 
+    $sql = "INSERT INTO MURID (ID, NAMA, KELAS, NEGERI) 
             VALUES ('$nomurid', '$nama', '$kelas', '$negeri')";
 
     if ($conn->query($sql) === TRUE) {
@@ -129,10 +129,10 @@ if ($result->num_rows > 0) {
     // Output data of each row
     while($row = $result->fetch_assoc()) {
         echo "<tr>";
-        echo "<td>" . $row["NOMURID"] . "</td>";
-        echo "<td>" . $row["NAMA"] . "</td>";
-        echo "<td>" . $row["KELAS"] . "</td>";
-        echo "<td>" . $row["NEGERILAHIR"] . "</td>";
+        echo "<td>" . $row["id"] . "</td>";
+        echo "<td>" . $row["nama"] . "</td>";
+        echo "<td>" . $row["kelas"] . "</td>";
+        echo "<td>" . $row["negeri"] . "</td>";
         echo "</tr>";
     }
     echo "</table>";
