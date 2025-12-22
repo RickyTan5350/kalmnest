@@ -11,10 +11,12 @@ class UserPage extends StatefulWidget {
   const UserPage({super.key});
 
   @override
-  State<UserPage> createState() => _UserPageState();
+  State<UserPage> createState() => UserPageState();
 }
 
-class _UserPageState extends State<UserPage> {
+final GlobalKey<UserPageState> userPageGlobalKey = GlobalKey<UserPageState>();
+
+class UserPageState extends State<UserPage> {
   // Filter States
   final List<String> _roles = ['All', 'Student', 'Teacher', 'Admin'];
   final List<String> _statuses = ['All Status', 'Active', 'Inactive'];
@@ -61,7 +63,7 @@ class _UserPageState extends State<UserPage> {
     _userListKey.currentState?.refreshData();
   }
 
-  Future<void> _importUsers() async {
+  Future<void> importUsers() async {
     try {
       // 1. Pick the file
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -91,7 +93,7 @@ class _UserPageState extends State<UserPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Users imported successfully!'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: Colors.green,
           ),
         );
         _handleRefresh(); // Refresh list via key
@@ -190,18 +192,8 @@ class _UserPageState extends State<UserPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      FilledButton.icon(
-                        onPressed: _importUsers,
-                        icon: const Icon(Icons.upload_file),
-                        label: const Text('Import Users'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 20,
-                          ),
-                        ),
-                      ),
+
+                      // Removed Import Button from here as it's now in the main FAB menu
                     ],
                   ),
                   const SizedBox(height: 16),

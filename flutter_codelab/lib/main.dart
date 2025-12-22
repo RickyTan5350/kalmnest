@@ -18,6 +18,7 @@ import 'package:flutter_codelab/theme.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 
 import 'package:flutter_codelab/pages/pages.dart';
+import 'package:flutter_codelab/pages/user_page.dart'; // Explicit import for key
 import 'package:flutter_codelab/pages/login_page.dart';
 
 import 'package:flutter_codelab/api/auth_api.dart';
@@ -204,10 +205,52 @@ class _FeedState extends State<Feed> {
             Theme.of(context).colorScheme.error,
           );
         } else {
-          // Only Admins can proceed to create a new user account
-          showCreateUserAccountDialog(
+          // Only Admins can see the options
+          showDialog(
             context: context,
-            showSnackBar: _showSnackBar,
+            builder: (BuildContext context) {
+              return SimpleDialog(
+                title: const Text('Select Action'),
+                children: [
+                  SimpleDialogOption(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      showCreateUserAccountDialog(
+                        context: context,
+                        showSnackBar: _showSnackBar,
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_add),
+                          SizedBox(width: 12),
+                          Text('Create User Profile'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      // Trigger import via GlobalKey
+                      userPageGlobalKey.currentState?.importUsers();
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.file_upload),
+                          SizedBox(width: 12),
+                          Text('Import User Profile'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         }
         break;
@@ -292,7 +335,7 @@ class _FeedState extends State<Feed> {
     );
 
     final List<Widget> pages = [
-      const UserPage(), // Index 0
+      UserPage(key: userPageGlobalKey), // Index 0
       GamePage(userRole: widget.currentUser.roleName), // Index 1
       NotePage(currentUser: widget.currentUser),
       ClassPage(
