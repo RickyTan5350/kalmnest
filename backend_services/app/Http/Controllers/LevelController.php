@@ -318,7 +318,6 @@ class LevelController extends Controller
 
     public function getData (Request $request, $dataType, $type) {
     $path = public_path("unity_build/StreamingAssets/{$type}/{$dataType}Data.json");
-    File::ensureDirectoryExists(dirname($path));
 
     if (!File::exists($path)) {
         return response('File not found', 404);
