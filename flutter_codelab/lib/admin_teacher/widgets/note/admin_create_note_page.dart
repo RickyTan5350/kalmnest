@@ -13,23 +13,6 @@ import 'package:flutter_codelab/api/file_api.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
-// --- Helper Class to Track Upload State ---
-class UploadedAttachment {
-  final PlatformFile localFile;
-  final String? serverFileId;
-  final String? publicUrl; // Stores URL for inserting into Markdown
-  final bool isUploading;
-  final bool isFailed;
-
-  UploadedAttachment({
-    required this.localFile,
-    this.serverFileId,
-    this.publicUrl,
-    this.isUploading = false,
-    this.isFailed = false,
-  });
-}
-
 void showCreateNotesDialog({
   required BuildContext context,
   required void Function(BuildContext context, String message, Color color)
@@ -67,7 +50,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
   bool _isLoading = false;
   List<UploadedAttachment> _attachments = [];
 
-  final List<String> _topic = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+  final List<String> _topic = ['HTML', 'CSS', 'JS', 'PHP'];
 
   @override
   void initState() {
@@ -144,6 +127,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
         // Call API
         Map<String, dynamic>? result = await _fileApi.uploadSingleAttachment(
           _attachments[i].localFile,
+          folderName: _noteTitleController.text, // Pass title as folder
         );
 
         if (!mounted) return;
@@ -179,6 +163,50 @@ class _CreateNotePageState extends State<CreateNotePage> {
     setState(() {
       _attachments.removeAt(index);
     });
+  }
+
+  Future<void> _insertCodeBlock(UploadedAttachment item) async {
+    final file = item.localFile;
+    String? content;
+
+    try {
+      if (file.path != null) {
+        content = await File(file.path!).readAsString();
+      }
+    } catch (e) {
+      widget.showSnackBar(context, 'Failed to read file: $e', Colors.red);
+      return;
+    }
+
+    if (content != null) {
+      final ext = file.extension?.toLowerCase() ?? '';
+      final codeBlock = '\n```$ext\n$content\n```\n';
+
+      final text = _noteMarkdownController.text;
+      final selection = _noteMarkdownController.selection;
+      String newString;
+      int newCursorPos;
+
+      if (selection.isValid && selection.start >= 0) {
+        newString = text.replaceRange(
+          selection.start,
+          selection.end,
+          codeBlock,
+        );
+        newCursorPos = selection.start + codeBlock.length;
+      } else {
+        newString = text + codeBlock;
+        newCursorPos = newString.length;
+      }
+
+      _noteMarkdownController.value = TextEditingValue(
+        text: newString,
+        selection: TextSelection.collapsed(offset: newCursorPos),
+      );
+
+      widget.showSnackBar(context, 'Code inserted!', Colors.green);
+      setState(() {});
+    }
   }
 
   // --- IMPORT MARKDOWN LOGIC ---
@@ -412,141 +440,6 @@ class _CreateNotePageState extends State<CreateNotePage> {
 
   // --- WIDGET BUILDERS ---
 
-  Widget _buildUploadedFilePreview(ColorScheme colorScheme) {
-    if (_attachments.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Attached Files (${_attachments.length})',
-          style: TextStyle(
-            color: colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _attachments.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 8),
-          itemBuilder: (context, index) {
-            final item = _attachments[index];
-            final file = item.localFile;
-            final isImage = [
-              'jpg',
-              'jpeg',
-              'png',
-              'webp',
-              'bmp',
-              'gif',
-            ].contains(file.extension?.toLowerCase());
-
-            return Container(
-              decoration: BoxDecoration(
-                // Use surfaceContainer for cards/list items in M3
-                color: colorScheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: item.isFailed
-                      ? colorScheme.error
-                      : colorScheme.outlineVariant,
-                ),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  clipBehavior: Clip.hardEdge,
-                  child: isImage && file.path != null
-                      ? Image.file(File(file.path!), fit: BoxFit.cover)
-                      : Icon(
-                          Icons.insert_drive_file,
-                          color: colorScheme.primary,
-                        ),
-                ),
-                title: Text(
-                  file.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
-                ),
-                subtitle: item.isUploading
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: LinearProgressIndicator(
-                          minHeight: 4,
-                          borderRadius: BorderRadius.circular(2),
-                          backgroundColor: colorScheme.surfaceVariant,
-                          color: colorScheme.primary,
-                        ),
-                      )
-                    : item.isFailed
-                    ? Text(
-                        'Upload Failed',
-                        style: TextStyle(
-                          color: colorScheme.error,
-                          fontSize: 12,
-                        ),
-                      )
-                    : SelectableText(
-                        item.publicUrl ?? 'Ready to insert',
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontSize: 12,
-                        ),
-                        maxLines: 1,
-                      ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!item.isUploading &&
-                        !item.isFailed &&
-                        item.publicUrl != null)
-                      IconButton(
-                        icon: const Icon(Icons.add_link),
-                        color: colorScheme.primary,
-                        tooltip: 'Insert into text',
-                        onPressed: () {
-                          _insertMarkdownLink(
-                            file.name,
-                            item.publicUrl!,
-                            isImage,
-                          );
-                          widget.showSnackBar(
-                            context,
-                            'Link inserted!',
-                            Colors.green,
-                          );
-                        },
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      color: colorScheme.error,
-                      tooltip: 'Remove file',
-                      onPressed: () => _removeFile(index),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-
   InputDecoration _inputDecoration({
     required String labelText,
     required IconData icon,
@@ -598,7 +491,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
         actions: [
           IconButton(
             icon: Icon(Icons.file_upload, color: colorScheme.primary),
-            tooltip: 'Import Markdown',
+            tooltip: 'Import Markdown(.txt, .md)',
             onPressed: _isLoading ? null : _handleImportMarkdown,
           ),
           IconButton(
@@ -673,11 +566,36 @@ class _CreateNotePageState extends State<CreateNotePage> {
                   FileUploadZone(
                     onTap: _handleFileUpload,
                     isLoading: _isLoading,
+                    attachments: _attachments,
+                    onRemove: _removeFile,
+                    onInsertLink: (item) {
+                      final isImage = [
+                        'jpg',
+                        'jpeg',
+                        'png',
+                        'webp',
+                        'bmp',
+                        'gif',
+                      ].contains(item.localFile.extension?.toLowerCase());
+                      if (item.publicUrl != null) {
+                        _insertMarkdownLink(
+                          item.localFile.name,
+                          item.publicUrl!,
+                          isImage,
+                        );
+                        widget.showSnackBar(
+                          context,
+                          'Link inserted!',
+                          Colors.green,
+                        );
+                      }
+                    },
+                    onInsertCode: _insertCodeBlock,
                   ),
                   const SizedBox(height: 16),
 
-                  // 4. Attachments Preview
-                  _buildUploadedFilePreview(colorScheme),
+                  // 4. Attachments Preview (Moved to FileUploadZone)
+                  // _buildUploadedFilePreview(colorScheme), -- Removed
 
                   // 5. Markdown Editor
                   TextFormField(
