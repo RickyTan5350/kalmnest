@@ -1,4 +1,4 @@
-## 3.2.9 Membina Daftar (Sign Up) dan Log Masuk (Login)dalam Suatu Laman Web
+## 3.2.9 Membina Daftar (Sign Up) dan Log Masuk (Login) dalam Suatu Laman Web
 ### **1\. Pengenalan Pendaftaran & Log Masuk**
 
 Kebanyakan laman web moden memerlukan pengguna mendaftar sebagai ahli yang sah untuk mengakses maklumat tertentu.

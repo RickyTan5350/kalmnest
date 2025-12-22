@@ -12,6 +12,7 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'run_code_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/file_manager.dart';
 
 // Helper Class (Retained for file management)
 class UploadedAttachment {
@@ -939,6 +940,40 @@ class _EditNotePageState extends State<EditNotePage> {
                                     const SizedBox(height: 8),
                                     _buildAttachmentList(colorScheme),
                                   ],
+                                  const SizedBox(height: 16),
+
+                                  // --- FILE MANAGER (Assets) ---
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.surfaceContainer,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                    child: Theme(
+                                      data: Theme.of(context).copyWith(
+                                        dividerColor: Colors.transparent,
+                                      ),
+                                      child: ExpansionTile(
+                                        title: const Text(
+                                          "Note Assets & Context",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        subtitle: const Text(
+                                          "Manage files for code execution (e.g. php files, images)",
+                                        ),
+                                        children: [
+                                          FileManager(
+                                            noteTitle: widget.currentTitle,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
                                   const SizedBox(height: 12),
                                 ],
                               ),
