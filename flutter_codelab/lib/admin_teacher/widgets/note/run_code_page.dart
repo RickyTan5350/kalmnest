@@ -55,6 +55,9 @@ class _RunCodePageState extends State<RunCodePage> {
   // Resolved path for the context directory (handles typos/spaces mismatch)
   String? _resolvedContextPath;
 
+  // Cache for allowed files to prevent backend sync from re-adding hidden files
+  Set<String>? _allowedFilesCache;
+
   @override
   void initState() {
     super.initState();
@@ -169,56 +172,125 @@ class _RunCodePageState extends State<RunCodePage> {
             .list(recursive: true)
             .toList();
 
-        bool foundMatchForInitial = false;
+        // 1. First Pass: Load all candidates into memory to find the "Real Name" of initial file
+        List<CodeFile> loadedCandidates = [];
+        String? detectedRealName;
 
         for (var entity in entities) {
           if (entity is File) {
-            // SKIP BINARY FILES
+            // SKIP BINARY FILES & JSON
             final lPath = entity.path.toLowerCase();
             if (lPath.endsWith('.png') ||
                 lPath.endsWith('.jpg') ||
                 lPath.endsWith('.jpeg') ||
                 lPath.endsWith('.gif') ||
                 lPath.endsWith('.ico') ||
-                lPath.endsWith('.pdf')) {
-              continue;
+                lPath.endsWith('.pdf') ||
+                lPath.endsWith('.json')) {
+              continue; // Skip these
             }
 
             final content = await entity.readAsString();
-            // Relative path from the context root?
-            // entity.path is like assets/www/3.1.9/foo.txt
-            // We want 'foo.txt'
-            // But we need to be careful about separators.
+            // Relative path calculation
             String relativeName = entity.path.replaceAll(r'\', '/');
-            // Remove prefix: assets/www/{id}/
             final prefix = '$dirPath/'.replaceAll(r'\', '/');
             if (relativeName.startsWith(prefix)) {
               relativeName = relativeName.substring(prefix.length);
             } else if (relativeName.contains('/$dirPath/')) {
-              // Fallback split if prefix match fails due to absolute paths
               relativeName = relativeName.split('/$dirPath/').last;
             }
 
-            // Check if this file matches our initial code -> assume that is the "Active" file
-            // We used to call it "main.php" or "index.html" generic.
-            // If match, update the name.
-            if (!foundMatchForInitial && content == _files[0].content) {
-              setState(() {
-                _files[0].name =
-                    relativeName; // Update generic name to real name
-                foundMatchForInitial = true;
-              });
-            } else {
-              // Only add if not already in list (avoid duplicates if logic runs twice or overlaps)
-              // and NOT the one we just matched (though we updated _files[0] in place, so index 0 is covered)
-              if (!_files.any((f) => f.name == relativeName)) {
-                setState(() {
-                  _files.add(CodeFile(name: relativeName, content: content));
-                });
-              }
+            // Check match with initial code
+            if (detectedRealName == null && content == _files[0].content) {
+              detectedRealName = relativeName;
             }
+
+            loadedCandidates.add(
+              CodeFile(name: relativeName, content: content),
+            );
           }
         }
+
+        // 2. Update the initial file name if we found a match
+        String effectiveEntryName = _files[0].name;
+        if (detectedRealName != null) {
+          effectiveEntryName = detectedRealName;
+          // We can update the UI state for this later or now.
+          // Let's do it in the final batch, but for logic we use effectiveEntryName.
+        }
+
+        // 3. Determine Allowed Files (Filtering)
+        Set<String>? allowedFiles;
+        try {
+          final visibleFile = File('$dirPath/visible_files.json');
+          if (await visibleFile.exists()) {
+            final content = await visibleFile.readAsString();
+            final Map<String, dynamic> rules = jsonDecode(content);
+
+            print(
+              "DEBUG: visible_files.json Loaded. Entry: '$effectiveEntryName'",
+            );
+
+            if (rules.containsKey(effectiveEntryName)) {
+              final List<dynamic> allowed = rules[effectiveEntryName];
+              final allowedSet = allowed.map((e) => e.toString()).toSet();
+
+              // Always keep the main file itself
+              allowedSet.add(effectiveEntryName);
+
+              _allowedFilesCache =
+                  allowedSet; // Update cache for backend sync checks
+              allowedFiles = allowedSet;
+              print("DEBUG: Keeping only: $allowedFiles");
+            }
+          }
+        } catch (e) {
+          print("Error parsing visible_files.json: $e");
+        }
+
+        // 4. Final Batch Update
+        setState(() {
+          // Update main file name if detected
+          if (detectedRealName != null) {
+            _files[0].name = detectedRealName;
+          }
+
+          // Add candidates ONLY if they adhere to the rules
+          for (var candidate in loadedCandidates) {
+            // Don't duplicate the main file (which is already in _files[0])
+            if (candidate.name == _files[0].name) {
+              print(
+                "DEBUG: Candidate '${candidate.name}' SKIPPED (Duplicate/Main)",
+              );
+              continue;
+            }
+            ;
+            if (_files.any((f) => f.name == candidate.name)) {
+              print(
+                "DEBUG: Candidate '${candidate.name}' SKIPPED (Already exists)",
+              );
+              continue;
+            }
+            ;
+
+            // Apply filter
+            if (allowedFiles != null) {
+              final isAllowed = allowedFiles.contains(candidate.name);
+              print(
+                "DEBUG: Candidate '${candidate.name}' check. Allowed? $isAllowed",
+              );
+              if (!isAllowed) {
+                print(
+                  "DEBUG: Candidate '${candidate.name}' REJECTED by filter.",
+                );
+                continue; // Skip hidden file
+              }
+            }
+
+            print("DEBUG: Candidate '${candidate.name}' ACCEPTED.");
+            _files.add(candidate);
+          }
+        });
       }
     } catch (e) {
       // Gracefully handle invalid paths, non-existent directories on some platforms, etc.
@@ -865,12 +937,47 @@ class _RunCodePageState extends State<RunCodePage> {
               }
             } else {
               // Optionally add new files created by backend?
-              // For now let's just update existing ones to be safe
-              // or maybe append? The user prompts "auto add the write file to the multitab"
-              // so yes, let's add it.
-              setState(() {
-                _files.add(CodeFile(name: rName, content: rContent));
-              });
+
+              // --- FILTERING CHECK (Backend Sync) ---
+              // Check if we should ignore this file based on visible_files.json rules
+              // We need to re-read or cache the allowed rules.
+              // Since we don't have easy access to the rule set here (it's in _loadContextAssets),
+              // we can rely on a simpler check:
+              // If the user has explicitly loaded a context and we have hidden files, they shouldn't come back.
+
+              // However, since we don't persist 'allowedFiles' as a class member, we need to check if we can add it.
+              // Strategy: If the file was available in the context BUT is not in _files, it means it was filtered out.
+              // So we should NOT add it back.
+
+              // BUT: What if it's a NEW file created by the script (e.g. output.txt)? We probably want to see that.
+
+              // Let's rely on `_resolvedContextPath`. If the file exists in that path, but is NOT in _files,
+              // it means it was filtered.
+
+              bool shouldSkip = false;
+              if (_resolvedContextPath != null) {
+                // If it exists on disk (meaning it's part of the original set) but not in our tabs,
+                // it must have been filtered. Skip it.
+                // CAUTION: This assumes synchronous FS, which we can't do easily here without await.
+                // But we can just add it and let the user see it?
+                // NO, the user complained about "reappearing".
+
+                // Better: Pass the 'allowedSet' to _executePhp? Or store it in class State.
+                // Let's store `_allowedFilesCache` in State.
+                if (_allowedFilesCache != null &&
+                    !_allowedFilesCache!.contains(rName)) {
+                  print(
+                    "DEBUG: Backend returned '$rName' but it is filtered out. Skipping add.",
+                  );
+                  shouldSkip = true;
+                }
+              }
+
+              if (!shouldSkip) {
+                setState(() {
+                  _files.add(CodeFile(name: rName, content: rContent));
+                });
+              }
             }
           }
         }
