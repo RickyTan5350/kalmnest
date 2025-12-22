@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/models/user_data.dart'; // Using the UserDetails class from here
 import 'package:flutter_codelab/main.dart'; // Import the Feed structure
+import 'package:flutter_codelab/pages/forgot_password_page.dart';
 
 // Define a new page for the login screen
 class LoginPage extends StatefulWidget {
@@ -59,7 +60,6 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       }
-
     } catch (e) {
       if (mounted) {
         // --- START FIX: Logic to clean the error message for display ---
@@ -67,8 +67,10 @@ class _LoginPageState extends State<LoginPage> {
 
         // 1. Check for specific unwanted technical prefixes/codes and replace with a generic message.
         //    This prevents revealing internal structure errors (like 302 redirects).
-        if (errorMessage.contains('302') || errorMessage.contains('Server Error')) {
-          errorMessage = 'A network or server configuration error occurred. Please try again.';
+        if (errorMessage.contains('302') ||
+            errorMessage.contains('Server Error')) {
+          errorMessage =
+              'A network or server configuration error occurred. Please try again.';
         } else if (errorMessage.startsWith('Exception: ')) {
           // 2. Only clean the general Dart prefix for expected exceptions (e.g., failed credentials)
           errorMessage = errorMessage.substring('Exception: '.length);
@@ -112,14 +114,10 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   // Logo/App Title
-                  Icon(
-                    Icons.school, // Use a relevant icon
-                    size: 80,
-                    color: colorScheme.primary,
-                  ),
+                  Image.asset('assets/CodePlay.png', height: 80),
                   const SizedBox(height: 20),
                   Text(
-                    'Welcome Back!',
+                    'CodePlay',
                     style: textTheme.headlineMedium?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -143,7 +141,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty || !value.contains('@')) {
+                      if (value == null ||
+                          value.isEmpty ||
+                          !value.contains('@')) {
                         return 'Please enter a valid email address.';
                       }
                       return null;
@@ -163,7 +163,9 @@ class _LoginPageState extends State<LoginPage> {
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -183,28 +185,36 @@ class _LoginPageState extends State<LoginPage> {
 
                   // 3. Login Button (Material 3: FilledButton)
                   _isLoading
-                      ? Center(child: CircularProgressIndicator(color: colorScheme.primary,))
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: colorScheme.primary,
+                          ),
+                        )
                       : FilledButton.icon(
-                    onPressed: _handleLogin,
-                    icon: const Icon(Icons.login),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text(
-                        'Log In',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                  ),
+                          onPressed: _handleLogin,
+                          icon: const Icon(Icons.login),
+                          label: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12.0),
+                            child: Text(
+                              'Log In',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                          ),
+                        ),
 
                   const SizedBox(height: 20),
 
-                  // 4. Forgot Password/Sign Up Link (Material 3: TextButton)
+                  // 4. Forgot Password Link
                   TextButton(
                     onPressed: () {
-                      // TODO: Implement navigation to registration page
-                      print('Navigate to Registration');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordPage(),
+                        ),
+                      );
                     },
-                    child: const Text('Don\'t have an account? Sign Up'),
+                    child: const Text('Forgot Password?'),
                   ),
                 ],
               ),
