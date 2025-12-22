@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/user/user_list_content.dart';
+import 'package:flutter_codelab/api/user_api.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 import 'package:flutter_codelab/enums/sort_enums.dart';
 import 'package:flutter_codelab/services/layout_preferences.dart';
@@ -28,6 +30,7 @@ class _UserPageState extends State<UserPage> {
   final FocusNode _searchFocusNode = FocusNode();
   final GlobalKey<UserListContentState> _userListKey =
       GlobalKey<UserListContentState>();
+  final UserApi _userApi = UserApi();
 
   @override
   void initState() {
@@ -56,6 +59,53 @@ class _UserPageState extends State<UserPage> {
 
   Future<void> _handleRefresh() async {
     _userListKey.currentState?.refreshData();
+  }
+
+  Future<void> _importUsers() async {
+    try {
+      // 1. Pick the file
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        // 2. Show loading
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Importing users...'),
+            duration: Duration(days: 1), // Indefinite until dismissed
+          ),
+        );
+
+        final filePath = result.files.single.path!;
+        final fileName = result.files.single.name;
+
+        // 3. Call API
+        await _userApi.importUsers(filePath, fileName);
+
+        // 4. Success handling
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Users imported successfully!'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+        _handleRefresh(); // Refresh list via key
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Import Failed: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -116,24 +166,43 @@ class _UserPageState extends State<UserPage> {
                   const SizedBox(height: 16),
 
                   // --- Search Bar (Left Aligned) ---
-                  SizedBox(
-                    width: 300,
-                    child: SearchBar(
-                      focusNode: _searchFocusNode,
-                      hintText: "Search user...",
-                      padding: const WidgetStatePropertyAll<EdgeInsets>(
-                        EdgeInsets.symmetric(horizontal: 16.0),
-                      ),
-                      onChanged: (val) => setState(() => _searchQuery = val),
-                      leading: const Icon(Icons.search),
-                      trailing: [
-                        if (_searchQuery.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () => setState(() => _searchQuery = ''),
+                  // --- Search Bar & Import Button ---
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 300,
+                        child: SearchBar(
+                          focusNode: _searchFocusNode,
+                          hintText: "Search user...",
+                          padding: const WidgetStatePropertyAll<EdgeInsets>(
+                            EdgeInsets.symmetric(horizontal: 16.0),
                           ),
-                      ],
-                    ),
+                          onChanged: (val) =>
+                              setState(() => _searchQuery = val),
+                          leading: const Icon(Icons.search),
+                          trailing: [
+                            if (_searchQuery.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () =>
+                                    setState(() => _searchQuery = ''),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: _importUsers,
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('Import Users'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 20,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
