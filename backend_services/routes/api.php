@@ -4,6 +4,7 @@ use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\NotesController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\LevelController;
+use App\Http\Controllers\LevelUserController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\FeedbackController;
 use Illuminate\Http\Request;
@@ -146,6 +147,16 @@ Route::prefix('users')->group(function () {
     Route::put('/levels/{levelId}', [LevelController::class, 'update']);
     Route::delete('/levels/{levelId}', [LevelController::class, 'destroy']);
     Route::get('/level/{levelId}', [LevelController::class, 'singleLevel']);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Level User (Level Progress & Completion)
+    |--------------------------------------------------------------------------
+    */
+    Route::post('/level-user/{levelId}/save', [LevelUserController::class, 'saveLevelData']);
+    Route::post('/level-user/{levelId}/save-file', [LevelUserController::class, 'storeProgressFromFiles']);
+    Route::get('/level-user/{levelId}', [LevelUserController::class, 'getLevelData']);
+    Route::post('/level-user/complete', [LevelUserController::class, 'completeLevel']);
 });
 
 

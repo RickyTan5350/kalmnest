@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\level_type;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use App\Models\LevelUser;
 use Exception;
 
 class LevelController extends Controller
@@ -101,6 +103,35 @@ class LevelController extends Controller
     public function singleLevel(Request $request, $levelId)
     {
         $level = Level::with('level_type')->find($levelId);
+
+        if (!$level) {
+            return response()->json(['error' => 'Level not found'], 404);
+        }
+
+        // Logic for Students: Ensure LevelUser entry exists
+        $user = Auth::user();
+        if ($user) {
+            $user->load('role');
+            $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+            if ($roleName === 'student') {
+                $existingEntry = LevelUser::where('level_id', $levelId)
+                    ->where('user_id', $user->user_id)
+                    ->exists();
+
+                if (!$existingEntry) {
+                    LevelUser::create([
+                        'level_user_id' => (string) Str::uuid7(),
+                        'level_id' => $levelId,
+                        'user_id' => $user->user_id,
+                        'saved_data' => null,
+                    ]);
+                    Log::info("LEVEL_INIT: Auto-created level_user entry for User {$user->user_id} on Level {$levelId}");
+                } else {
+                    Log::info("LEVEL_INIT: Entry already exists for User {$user->user_id} on Level {$levelId}");
+                }
+            }
+        }
 
         $levelTypes = ["html", "css", "js", "php"];
 
