@@ -26,7 +26,7 @@ Route::post('/user', [UserController::class, 'store']); // Registration
 // These are public so your Flutter app can access them without a token.
 
 Route::get('/notes', [NotesController::class, 'showNotesBrief']);
-Route::get('/notes/search', [NotesController::class, 'search']); 
+Route::get('/notes/search', [NotesController::class, 'search']);
 Route::post('/notes/new', [NotesController::class, 'store']);         // <--- This is the active Create Note route
 Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- This is the active Upload route
 
@@ -56,10 +56,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-Route::post('/logout', [UserController::class, 'logout']);
-// --- User Management (CRUD/View) ---
+    Route::post('/logout', [UserController::class, 'logout']);
+    // --- User Management (CRUD/View) ---
     // All roles (Admin/Teacher/Student) can view list/search/filter
-Route::prefix('users')->group(function () {
+    Route::prefix('users')->group(function () {
         // List/Search/Filter (GET /api/users)
         Route::get('/', [UserController::class, 'index']);
         // User lists for class management (MUST be before /{user} route to avoid route model binding conflict)
@@ -86,14 +86,14 @@ Route::prefix('users')->group(function () {
             'role_name' => $user->role?->role_name ?? 'N/A',
         ]);
     });
- // --- Classes Module ---
+    // --- Classes Module ---
     Route::prefix('classes')->group(function () {
         Route::get('/', [ClassController::class, 'index']); // List classes (role-based)
         Route::post('/', [ClassController::class, 'store']); // Create class (admin only)
         Route::get('/{id}', [ClassController::class, 'show']); // Get class details
         Route::put('/{id}', [ClassController::class, 'update']); // Update class (admin only)
         Route::delete('/{id}', [ClassController::class, 'destroy']); // Delete class (admin only)
-        
+
         // Quiz (Level) management for classes
         Route::get('/{id}/quizzes', [ClassController::class, 'getQuizzes']); // Get quizzes for a class
         Route::post('/{id}/quizzes', [ClassController::class, 'assignQuiz']); // Assign existing quiz to class
@@ -153,10 +153,7 @@ Route::prefix('users')->group(function () {
     | Level User (Level Progress & Completion)
     |--------------------------------------------------------------------------
     */
-    Route::post('/level-user/{levelId}/save', [LevelUserController::class, 'saveLevelData']);
-    Route::post('/level-user/{levelId}/save-file', [LevelUserController::class, 'storeProgressFromFiles']);
-    Route::get('/level-user/{levelId}', [LevelUserController::class, 'getLevelData']);
-    Route::post('/level-user/complete', [LevelUserController::class, 'completeLevel']);
+
 });
 
 
@@ -167,7 +164,10 @@ Route::prefix('users')->group(function () {
 */
 
 
-
+Route::post('/level-user/{levelId}/save', [LevelUserController::class, 'saveLevelData']);
+Route::post('/level-user/{levelId}/{userId}/save-file', [LevelUserController::class, 'storeProgressFromFiles']);
+Route::get('/level-user/{levelId}', [LevelUserController::class, 'getLevelData']);
+Route::post('/level-user/{levelId}/{userId}/complete', [LevelUserController::class, 'completeLevel']);
 
 // --- 2. WILDCARD ROUTES (MUST BE AT THE BOTTOM) ---
 // These catch urls like /notes/1, /notes/50, etc.

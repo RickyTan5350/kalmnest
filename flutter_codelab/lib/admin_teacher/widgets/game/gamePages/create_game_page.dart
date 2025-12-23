@@ -234,13 +234,13 @@ class _CreateGamePageState extends State<CreateGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "${ApiConstants.domain}/unity_build/index.html?role=${widget.userRole}",
+                          "${ApiConstants.domain}/unity_build/index.html?role=${widget.userRole}&level_id=12345&user_id=12345",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
                         // Cross-platform settings
                         javaScriptEnabled: true,
-                        isInspectable: kDebugMode,
+                        //isInspectable: kDebugMode,
                       ),
                     ),
                   ),

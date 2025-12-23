@@ -416,16 +416,28 @@ class _GamePageState extends State<GamePage> {
                                         ),
                                       ],
                                     ),
-                              onTap: isStudent
+                                onTap: isStudent
                                   ? () async {
                                       final currentLevel =
                                           await GameAPI.fetchLevelById(
                                             level.levelId!,
                                           );
+                                      
+                                      if (currentLevel == null) {
+                                        showSnackBar(
+                                          context,
+                                          "Failed to load level data",
+                                          Colors.red,
+                                        );
+                                        return;
+                                      }
+
+                                      if (!context.mounted) return;
+
                                       showPlayGamePage(
                                         context: context,
                                         showSnackBar: showSnackBar,
-                                        level: currentLevel!,
+                                        level: currentLevel,
                                         userRole: widget.userRole,
                                       );
                                     }
