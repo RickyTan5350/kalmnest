@@ -72,8 +72,8 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
           feedbackId: widget.feedback.feedbackId,
           studentName: widget.feedback.studentName,
           studentId: widget.feedback.studentId,
-          teacherName: widget.feedback.teacherName, // Will be updated from API
-          teacherId: widget.feedback.teacherId, // Will be updated from API
+          teacherName: widget.feedback.teacherName, 
+          teacherId: widget.feedback.teacherId, 
           topic: _topicController.text,
           feedback: _feedbackController.text,
         ),

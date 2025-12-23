@@ -261,7 +261,7 @@ class _FeedState extends State<Feed> {
         }
         break;
       case 6: // This is the index for 'Feedback Page'
-        if (widget.currentUser.isStudent) {
+        if (!widget.currentUser.isTeacher) {
           _showSnackBar(
             context,
             'You do not have access to create feedback',

@@ -303,11 +303,6 @@ class _EmptyView extends StatelessWidget {
             style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
           ),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onAddFeedback,
-            icon: const Icon(Icons.add),
-            label: const Text('Add Feedback'),
-          ),
         ],
       ),
     );
