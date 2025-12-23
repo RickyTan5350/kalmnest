@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LevelUser;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -88,16 +89,11 @@ class LevelUserController extends Controller
     /**
      * Get level data for the authenticated user
      */
-    public function getLevelData(Request $request, $levelId)
+    public function getLevelData(Request $request, $levelId, $userId)
     {
         try {
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json(['error' => 'Unauthenticated'], 401);
-            }
-
             $levelUser = LevelUser::where('level_id', $levelId)
-                                  ->where('user_id', $user->user_id)
+                                  ->where('user_id', $userId)
                                   ->first();
 
             if (!$levelUser) {
@@ -129,23 +125,24 @@ class LevelUserController extends Controller
      * Unlock achievement when level is completed
      * This method is called from Unity when a student completes a level
      */
-    public function completeLevel(Request $request)
+    public function completeLevel(Request $request, $levelId, $userId)
     {
         try {
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json(['error' => 'Unauthenticated'], 401);
+            // Validate level existence
+            $levelExists = DB::table('levels')->where('level_id', $levelId)->exists();
+            if (!$levelExists) {
+                return response()->json(['error' => 'Level not found'], 404);
             }
 
-            $validatedData = $request->validate([
-                'level_id' => 'required|string|exists:levels,level_id',
-                'achievement_id' => 'required|string|exists:achievements,achievement_id',
-            ]);
+            $user = User::where('user_id', $userId)->first();
+            if (!$user) {
+                return response()->json(['error' => 'User not found'], 404);
+            }
 
             // Check if user has role 'Student'
             $userRoleName = DB::table('users')
                             ->join('roles', 'users.role_id', '=', 'roles.role_id')
-                            ->where('users.user_id', $user->user_id)
+                            ->where('users.user_id', $userId)
                             ->value('roles.role_name');
 
             if (strtolower(trim($userRoleName ?? '')) !== 'student') {
@@ -154,19 +151,35 @@ class LevelUserController extends Controller
                 ], 403);
             }
 
-            // Directly unlock the achievement using the same logic as AchievementController::unlock
-            $user->achievements()->syncWithoutDetaching([
-                $validatedData['achievement_id'] => ['id' => (string) Str::uuid7()]
-            ]);
+            // Find if there is an achievement associated with this level
+            $achievement = DB::table('achievements')
+                ->where('associated_level', $levelId)
+                ->first();
 
-            Log::info("LEVEL_COMPLETED: Level {$validatedData['level_id']} completed by User {$user->user_id}, Achievement {$validatedData['achievement_id']} unlocked");
-            Log::info("ACHIEVEMENT_UNLOCKED: Achievement {$validatedData['achievement_id']} unlocked by Student {$user->user_id}");
+            if ($achievement) {
+                 // Directly unlock the achievement
+                $user->achievements()->syncWithoutDetaching([
+                    $achievement->achievement_id => ['id' => (string) Str::uuid7()]
+                ]);
+
+                Log::info("LEVEL_COMPLETED: Level {$levelId} completed by User {$userId}. Achievement {$achievement->achievement_id} unlocked.");
+                
+                return response()->json([
+                    'message' => 'Level completed and achievement unlocked successfully',
+                    'achievement_unlocked' => true,
+                    'achievement_name' => $achievement->achievement_name
+                ], 200);
+            }
+
+            Log::info("LEVEL_COMPLETED: Level {$levelId} completed by User {$userId}. No achievement associated.");
 
             return response()->json([
-                'message' => 'Level completed and achievement unlocked successfully',
+                'message' => 'Level completed successfully (no achievement associated)',
+                'achievement_unlocked' => false
             ], 200);
+
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
+             return response()->json([
                 'error' => 'Validation failed',
                 'messages' => $e->errors(),
             ], 422);
@@ -185,14 +198,9 @@ class LevelUserController extends Controller
      * Save level data from files (Unity buffer) to level_user table
      * This mimics LevelController::store but for user progress
      */
-    public function storeProgressFromFiles(Request $request, $levelId)
+    public function storeProgressFromFiles(Request $request, $levelId, $userId)
     {
         try {
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json(['error' => 'Unauthenticated'], 401);
-            }
-
             // Check if level exists
             $levelExists = DB::table('levels')->where('level_id', $levelId)->exists();
             if (!$levelExists) {
@@ -210,7 +218,6 @@ class LevelUserController extends Controller
             }
 
             $savedData = json_encode($finalLevelData, JSON_PRETTY_PRINT);
-            $userId = $user->user_id;
 
             // Update or Create LevelUser entry
             $levelUser = LevelUser::where('level_id', $levelId)
@@ -228,9 +235,6 @@ class LevelUserController extends Controller
                     'saved_data' => $savedData,
                 ]);
             }
-
-            // Clear the files after saving (mimicking LevelController::clearLevelFiles)
-            $this->clearLevelFiles();
 
             return response()->json([
                 'message' => 'Level progress saved from files successfully',
