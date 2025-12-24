@@ -1,5 +1,6 @@
 import 'dart:convert'; // Required for jsonDecode
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
@@ -65,6 +66,14 @@ class _AdminCreateAchievementDialogState
       TextEditingController();
   final TextEditingController _levelDisplayController = TextEditingController();
 
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _titleFocus = FocusNode();
+  final FocusNode _descFocus = FocusNode();
+
+  AutovalidateMode _nameMode = AutovalidateMode.disabled;
+  AutovalidateMode _titleMode = AutovalidateMode.disabled;
+  AutovalidateMode _descMode = AutovalidateMode.disabled;
+
   List<AchievementData> _existingAchievements = [];
 
   // State variables for individual field errors
@@ -96,6 +105,24 @@ class _AdminCreateAchievementDialogState
     super.initState();
     _fetchExistingAchievements();
     _fetchLevels();
+
+    _nameFocus.addListener(() {
+      if (!_nameFocus.hasFocus) {
+        setState(() => _nameMode = AutovalidateMode.onUserInteraction);
+      }
+    });
+
+    _titleFocus.addListener(() {
+      if (!_titleFocus.hasFocus) {
+        setState(() => _titleMode = AutovalidateMode.onUserInteraction);
+      }
+    });
+
+    _descFocus.addListener(() {
+      if (!_descFocus.hasFocus) {
+        setState(() => _descMode = AutovalidateMode.onUserInteraction);
+      }
+    });
 
     if (widget.initialName != null) {
       _achievementNameController.text = widget.initialName!;
@@ -162,6 +189,9 @@ class _AdminCreateAchievementDialogState
     _achievementDescriptionController.dispose();
     _achievementTitleController.dispose();
     _levelDisplayController.dispose();
+    _nameFocus.dispose();
+    _titleFocus.dispose();
+    _descFocus.dispose();
     super.dispose();
   }
 
@@ -249,6 +279,7 @@ class _AdminCreateAchievementDialogState
   }
 
   void _checkForJsonPaste() {
+    if (!kDebugMode) return;
     final text = _achievementNameController.text.trim();
     if (text.startsWith('{') && text.endsWith('}')) {
       try {
@@ -499,7 +530,7 @@ class _AdminCreateAchievementDialogState
               child: SingleChildScrollView(
                 child: Form(
                   key: _formKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  // autovalidateMode: AutovalidateMode.onUserInteraction, // Managed individually
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -514,6 +545,8 @@ class _AdminCreateAchievementDialogState
                       // Achievement Name
                       TextFormField(
                         controller: _achievementNameController,
+                        focusNode: _nameFocus,
+                        autovalidateMode: _nameMode,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Achievement Name',
@@ -547,6 +580,8 @@ class _AdminCreateAchievementDialogState
                       // Title
                       TextFormField(
                         controller: _achievementTitleController,
+                        focusNode: _titleFocus,
+                        autovalidateMode: _titleMode,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Achievement Title',
@@ -579,6 +614,8 @@ class _AdminCreateAchievementDialogState
                       // Description
                       TextFormField(
                         controller: _achievementDescriptionController,
+                        focusNode: _descFocus,
+                        autovalidateMode: _descMode,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Achievement Description',
