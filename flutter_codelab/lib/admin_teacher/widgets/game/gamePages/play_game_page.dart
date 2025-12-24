@@ -5,6 +5,8 @@ import 'package:flutter_codelab/api/game_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_codelab/utils/local_asset_server.dart';
+import 'package:flutter_codelab/services/local_level_storage.dart';
 
 /// Opens the edit dialog
 Future<void> showPlayGamePage({
@@ -56,15 +58,43 @@ class _PlayGamePageState extends State<PlayGamePage> {
 
   final List<String> levelTypes = ['HTML', 'CSS', 'JS', 'PHP', 'Quiz'];
 
+  LocalAssetServer? _server;
+  String? _serverUrl;
+  InAppWebViewController? _webViewController;
+  final LocalLevelStorage _levelStorage = LocalLevelStorage();
+
   @override
   void initState() {
     super.initState();
     levelName = widget.level.levelName ?? '';
     selectedValue = widget.level.levelTypeName ?? 'HTML';
+    _initServer();
+  }
+
+  Future<void> _initServer() async {
+    _server = LocalAssetServer();
+    try {
+      await _server!.start(path: 'assets');
+      setState(() {
+        _serverUrl = 'http://localhost:${_server!.port}';
+      });
+    } catch (e) {
+      print("Error starting local server: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _server?.stop();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_serverUrl == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -185,7 +215,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "${ApiConstants.domain}/unity_build/index.html?role=${widget.userRole}",
+                          "$_serverUrl/unity/index.html?role=${widget.userRole}&levelId=${widget.level.levelId}",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
@@ -193,6 +223,124 @@ class _PlayGamePageState extends State<PlayGamePage> {
                         javaScriptEnabled: true,
                         isInspectable: kDebugMode,
                       ),
+                      onWebViewCreated: (controller) {
+                        _webViewController = controller;
+                        
+                        // Set up JavaScript handlers for Unity to call Flutter
+                        controller.addJavaScriptHandler(
+                          handlerName: 'getLevelFile',
+                          callback: (args) async {
+                            // Unity calls: window.flutter_inappwebview.callHandler('getLevelFile', levelId, type, dataType, useProgress)
+                            if (args.length >= 3) {
+                              final levelId = args[0] as String? ?? widget.level.levelId ?? '';
+                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final dataType = args[2] as String? ?? 'levelData'; // levelData or winData
+                              final useProgress = args.length >= 4 ? (args[3] as bool? ?? false) : false;
+                              
+                              final content = await _levelStorage.getFileContent(
+                                levelId: levelId,
+                                type: type,
+                                dataType: dataType,
+                                useProgress: useProgress,
+                              );
+                              
+                              return content ?? '';
+                            }
+                            return '';
+                          },
+                        );
+                        
+                        // Handler for save-data route
+                        controller.addJavaScriptHandler(
+                          handlerName: 'saveLevelFile',
+                          callback: (args) async {
+                            // Unity calls: window.flutter_inappwebview.callHandler('saveLevelFile', levelId, type, dataType, content)
+                            if (args.length >= 4) {
+                              final levelId = args[0] as String? ?? widget.level.levelId ?? '';
+                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final dataType = args[2] as String? ?? 'levelData';
+                              final content = args[3] as String? ?? '';
+                              
+                              final success = await _levelStorage.saveDataFile(
+                                levelId: levelId,
+                                type: type,
+                                dataType: dataType,
+                                content: content,
+                              );
+                              
+                              return success;
+                            }
+                            return false;
+                          },
+                        );
+                        
+                        // Handler for save-index route
+                        controller.addJavaScriptHandler(
+                          handlerName: 'saveIndexFile',
+                          callback: (args) async {
+                            // Unity calls: window.flutter_inappwebview.callHandler('saveIndexFile', levelId, type, content)
+                            if (args.length >= 3) {
+                              final levelId = args[0] as String? ?? widget.level.levelId ?? '';
+                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final content = args[2] as String? ?? '';
+                              
+                              final success = await _levelStorage.saveIndexFile(
+                                levelId: levelId,
+                                type: type,
+                                content: content,
+                              );
+                              
+                              return success;
+                            }
+                            return false;
+                          },
+                        );
+                        
+                        // Handler for saving student progress (saves locally and optionally syncs to Laravel)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'saveStudentProgress',
+                          callback: (args) async {
+                            // Unity calls: window.flutter_inappwebview.callHandler('saveStudentProgress', levelId, savedDataJson, syncToServer)
+                            if (args.length >= 2) {
+                              final levelId = args[0] as String? ?? widget.level.levelId ?? '';
+                              final savedDataJson = args[1] as String?;
+                              final syncToServer = args.length >= 3 ? (args[2] as bool? ?? true) : true;
+                              
+                              // Save locally first
+                              final localSuccess = await _levelStorage.saveStudentProgress(
+                                levelId: levelId,
+                                savedDataJson: savedDataJson,
+                              );
+                              
+                              // Optionally sync to Laravel
+                              if (syncToServer && savedDataJson != null) {
+                                try {
+                                  final response = await GameAPI.saveStudentProgress(
+                                    levelId: levelId,
+                                    savedData: savedDataJson,
+                                  );
+                                  if (kDebugMode) {
+                                    print('Synced progress to server: ${response['message']}');
+                                  }
+                                } catch (e) {
+                                  if (kDebugMode) {
+                                    print('Failed to sync progress to server: $e');
+                                  }
+                                  // Continue even if sync fails - local save succeeded
+                                }
+                              }
+                              
+                              return localSuccess;
+                            }
+                            return false;
+                          },
+                        );
+                      },
+                      onConsoleMessage: (controller, consoleMessage) {
+                        if (kDebugMode) {
+                          print("Unity Console: ${consoleMessage.message}");
+                        }
+                      },
                     ),
                   ),
                 ),
@@ -224,6 +372,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
                     child: IndexFilePreview(
                       key: previewKey,
                       userRole: widget.userRole,
+                      serverUrl: _serverUrl!,
                     ),
                   ),
                 ),
@@ -239,8 +388,13 @@ class _PlayGamePageState extends State<PlayGamePage> {
 /// WebView preview for Unity build
 class IndexFilePreview extends StatefulWidget {
   final String userRole;
+  final String serverUrl;
 
-  const IndexFilePreview({super.key, required this.userRole});
+  const IndexFilePreview({
+    super.key,
+    required this.userRole,
+    required this.serverUrl,
+  });
 
   @override
   State<IndexFilePreview> createState() => _IndexFilePreviewState();
@@ -251,8 +405,9 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
 
   @override
   Widget build(BuildContext context) {
+    // Assuming unity/StreamingAssets/html/index.html exists based on previous code usage
     final url =
-        "${ApiConstants.domain}/unity_build/StreamingAssets/html/index.html";
+        "${widget.serverUrl}/unity/StreamingAssets/html/index.html";
 
     return InAppWebView(
       key: _key,

@@ -51,6 +51,8 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   
   flutter_inappwebview: ^6.1.5
+  shelf: ^1.4.1
+  shelf_static: ^1.1.2
   dotted_border: ^3.1.0
   cross_file: ^0.3.5+1
 
@@ -92,7 +94,7 @@ flutter:
     - assets/js/
     - assets/a2.png
     - assets/a3.png
-    - assets/unity_webgl/
+    - assets/unity/
 
 
   # To add assets to your application, add an assets section, like this:

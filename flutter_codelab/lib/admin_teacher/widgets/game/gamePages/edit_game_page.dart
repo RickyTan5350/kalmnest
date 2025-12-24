@@ -5,6 +5,7 @@ import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/game_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_codelab/utils/local_asset_server.dart';
 
 /// Opens the edit dialog
 Future<void> showEditGamePage({
@@ -56,15 +57,41 @@ class _EditGamePageState extends State<EditGamePage> {
 
   final List<String> levelTypes = ['HTML', 'CSS', 'JS', 'PHP', 'Quiz'];
 
+  LocalAssetServer? _server;
+  String? _serverUrl;
+
   @override
   void initState() {
     super.initState();
     levelName = widget.level.levelName ?? '';
     selectedValue = widget.level.levelTypeName ?? 'HTML';
+    _initServer();
+  }
+
+  Future<void> _initServer() async {
+    _server = LocalAssetServer();
+    try {
+      await _server!.start(path: 'assets');
+      setState(() {
+        _serverUrl = 'http://localhost:${_server!.port}';
+      });
+    } catch (e) {
+      print("Error starting local server: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _server?.stop();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_serverUrl == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -189,10 +216,11 @@ class _EditGamePageState extends State<EditGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "${ApiConstants.domain}/unity_build/index.html?role=${widget.userRole}",
+                          "$_serverUrl/unity/index.html?role=${widget.userRole}",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
+                        // Cross-platform settings
                         javaScriptEnabled: true,
                         isInspectable: kDebugMode,
                       ),
@@ -227,6 +255,7 @@ class _EditGamePageState extends State<EditGamePage> {
                     child: IndexFilePreview(
                       key: previewKey,
                       userRole: widget.userRole,
+                      serverUrl: _serverUrl!,
                     ),
                   ),
                 ),
@@ -242,8 +271,13 @@ class _EditGamePageState extends State<EditGamePage> {
 /// WebView preview for Unity build
 class IndexFilePreview extends StatefulWidget {
   final String userRole;
+  final String serverUrl;
 
-  const IndexFilePreview({super.key, required this.userRole});
+  const IndexFilePreview({
+    super.key,
+    required this.userRole,
+    required this.serverUrl,
+  });
 
   @override
   State<IndexFilePreview> createState() => _IndexFilePreviewState();
@@ -255,7 +289,7 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
   @override
   Widget build(BuildContext context) {
     final url =
-        "${ApiConstants.domain}/unity_build/StreamingAssets/html/index.html";
+        "${widget.serverUrl}/unity/StreamingAssets/html/index.html";
 
     return InAppWebView(
       key: _key,

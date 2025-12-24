@@ -133,29 +133,8 @@ class LevelController extends Controller
             }
         }
 
-        $levelTypes = ["html", "css", "js", "php"];
-
-        $levelDataObj = json_decode($level->level_data);
-        $winDataObj = json_decode($level->win_condition);
-
-        foreach ($levelTypes as $levelType) {
-            $levelData = $levelDataObj->$levelType ?? null;
-            if ($levelData === null)
-                continue;
-
-            $path = public_path("unity_build/StreamingAssets/{$levelType}/levelData.json");
-            File::ensureDirectoryExists(dirname($path));
-            File::put($path, $levelData);
-
-            $winData = $winDataObj->$levelType ?? null;
-            $path = public_path("unity_build/StreamingAssets/{$levelType}/winData.json");
-            File::ensureDirectoryExists(dirname($path));
-            File::put($path, $winData);
-        }
-
-        if (!$level) {
-            return response()->json(['error' => 'Level not found'], 404);
-        }
+        // Removed file writing - data will be returned in JSON response for Unity to save locally
+        // Level data and win condition are already included in the response below
 
         $result = [
             'level_id' => $level->level_id,
@@ -331,33 +310,112 @@ class LevelController extends Controller
         }
     }
 
+    /**
+     * Save index file data - returns data to client for local storage
+     * Data is sent from Unity and returned so Unity can save it locally
+     */
     public function saveToIndexFile(Request $request, $type)
     {
-        $path = public_path("unity_build/StreamingAssets/$type/index.$type");
-        File::ensureDirectoryExists(path: dirname($path));
-        File::put($path, $request->getContent());
-        return response('index file saved successfully', 200);
+        // Instead of saving to server, return the data so Unity can save it locally
+        $indexData = $request->getContent();
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Index data received - save to local device',
+            'type' => $type,
+            'data' => $indexData,
+        ], 200);
     }
 
+    /**
+     * Save data - returns data to client for local storage
+     * Data is sent from Unity and returned so Unity can save it locally
+     */
     public function saveData(Request $request, $dataType, $type)
     {
-        $path = public_path("unity_build/StreamingAssets/$type/{$dataType}Data.json");
-        File::ensureDirectoryExists(dirname($path));
-        File::put($path, $request->getContent());
-        return response()->json(['status' => 'saved']);
+        // Instead of saving to server, return the data so Unity can save it locally
+        $data = $request->getContent();
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data received - save to local device',
+            'dataType' => $dataType,
+            'type' => $type,
+            'data' => $data,
+        ], 200);
     }
 
-    public function getData (Request $request, $dataType, $type) {
-    $path = public_path("unity_build/StreamingAssets/{$type}/{$dataType}Data.json");
-
-    if (!File::exists($path)) {
-        return response('File not found', 404);
+    /**
+     * Get data - retrieves from database instead of public folder
+     * For students: 
+     *   - levelData: returns saved_data from level_user table (student's progress)
+     *   - winData: returns win_condition from levels table
+     * For level creation/editing: returns data from levels table if level_id provided
+     */
+    public function getData(Request $request, $dataType, $type) {
+        try {
+            $user = Auth::user();
+            $levelId = $request->query('level_id');
+            $levelType = strtolower($type);
+            
+            if (!$levelId) {
+                return response()->json(null, 200)
+                    ->header('Content-Type', 'application/json');
+            }
+            
+            // Get the level
+            $level = Level::find($levelId);
+            if (!$level) {
+                return response()->json(['error' => 'Level not found'], 404);
+            }
+            
+            $levelDataObj = json_decode($level->level_data, true);
+            $winDataObj = json_decode($level->win_condition, true);
+            
+            // Handle winData - always get from level (win condition doesn't change per user)
+            if ($dataType === 'win' && isset($winDataObj[$levelType])) {
+                $winData = $winDataObj[$levelType];
+                return response($winData, 200)
+                    ->header('Content-Type', 'application/json');
+            }
+            
+            // Handle levelData - for students, try to get from level_user.saved_data first
+            if ($dataType === 'level') {
+                if ($user) {
+                    $user->load('role');
+                    $roleName = strtolower(trim($user->role?->role_name ?? ''));
+                    
+                    // For students, check if they have saved progress
+                    if ($roleName === 'student') {
+                        $levelUser = LevelUser::where('level_id', $levelId)
+                                              ->where('user_id', $user->user_id)
+                                              ->first();
+                        
+                        if ($levelUser && $levelUser->saved_data) {
+                            $savedData = json_decode($levelUser->saved_data, true);
+                            
+                            // saved_data structure: {"html": "...", "css": "...", ...}
+                            if (isset($savedData[$levelType]) && $savedData[$levelType] !== null) {
+                                return response($savedData[$levelType], 200)
+                                    ->header('Content-Type', 'application/json');
+                            }
+                        }
+                    }
+                }
+                
+                // Fallback: return level data from level table (initial/empty state)
+                if (isset($levelDataObj[$levelType])) {
+                    return response($levelDataObj[$levelType], 200)
+                        ->header('Content-Type', 'application/json');
+                }
+            }
+            
+            // Return null if not found
+            return response()->json(null, 200)
+                ->header('Content-Type', 'application/json');
+        } catch (\Exception $e) {
+            Log::error('GET_DATA_ERROR: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to retrieve data'], 500);
+        }
     }
-
-    $content = File::get($path);
-
-    // Return raw JSON content with correct header
-    return response($content, 200)
-        ->header('Content-Type', 'application/json');
-}
 }

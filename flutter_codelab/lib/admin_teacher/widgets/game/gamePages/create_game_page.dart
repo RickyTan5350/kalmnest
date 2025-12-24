@@ -4,6 +4,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_codelab/api/game_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
+import 'package:flutter_codelab/utils/local_asset_server.dart';
 
 /// ===============================================================
 /// Platform helper (SAFE for Web)
@@ -61,8 +62,39 @@ class _CreateGamePageState extends State<CreateGamePage> {
   final GlobalKey<_IndexFilePreviewState> previewKey =
       GlobalKey<_IndexFilePreviewState>();
 
+  LocalAssetServer? _server;
+  String? _serverUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _initServer();
+  }
+
+  Future<void> _initServer() async {
+    _server = LocalAssetServer();
+    try {
+      await _server!.start(path: 'assets');
+      setState(() {
+        _serverUrl = 'http://localhost:${_server!.port}';
+      });
+    } catch (e) {
+      print("Error starting local server: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _server?.stop();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_serverUrl == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -234,7 +266,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "${ApiConstants.domain}/unity_build/index.html?role=${widget.userRole}&level_id=12345&user_id=12345",
+                          "$_serverUrl/unity/index.html?role=${widget.userRole}&level_id=12345&user_id=12345",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
@@ -273,6 +305,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                     child: IndexFilePreview(
                       key: previewKey,
                       userRole: widget.userRole,
+                      serverUrl: _serverUrl!,
                     ),
                   ),
                 ),
@@ -290,8 +323,13 @@ class _CreateGamePageState extends State<CreateGamePage> {
 /// ===============================================================
 class IndexFilePreview extends StatefulWidget {
   final String userRole;
+  final String serverUrl;
 
-  const IndexFilePreview({super.key, required this.userRole});
+  const IndexFilePreview({
+    super.key,
+    required this.userRole,
+    required this.serverUrl,
+  });
 
   @override
   State<IndexFilePreview> createState() => _IndexFilePreviewState();
@@ -304,7 +342,7 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
   @override
   Widget build(BuildContext context) {
     final url =
-        "${ApiConstants.domain}/unity_build/StreamingAssets/html/index.html";
+        "${widget.serverUrl}/unity/StreamingAssets/html/index.html";
 
     return InAppWebView(
       key: _key,
