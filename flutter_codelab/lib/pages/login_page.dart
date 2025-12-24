@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/models/user_data.dart'; // Using the UserDetails class from here
 import 'package:flutter_codelab/main.dart'; // Import the Feed structure
@@ -35,6 +36,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _checkForJsonPaste() {
+    if (!kDebugMode) return;
     final text = _emailController.text.trim();
     if (text.startsWith('{') && text.endsWith('}')) {
       try {
