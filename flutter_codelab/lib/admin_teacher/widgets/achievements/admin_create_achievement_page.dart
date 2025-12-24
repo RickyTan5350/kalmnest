@@ -113,6 +113,7 @@ class _AdminCreateAchievementDialogState
     // Clear errors when the user starts typing
     _achievementNameController.addListener(() {
       if (_nameError != null) setState(() => _nameError = null);
+      _checkForJsonPaste();
     });
     _achievementTitleController.addListener(() {
       if (_titleError != null) setState(() => _titleError = null);
@@ -244,6 +245,71 @@ class _AdminCreateAchievementDialogState
         _selectedLevel = result.levelId;
         _levelDisplayController.text = result.levelName ?? '';
       });
+    }
+  }
+
+  void _checkForJsonPaste() {
+    final text = _achievementNameController.text.trim();
+    if (text.startsWith('{') && text.endsWith('}')) {
+      try {
+        final Map<String, dynamic> json = jsonDecode(text);
+        _populateFormFromJson(json);
+      } catch (e) {
+        // Not valid JSON, ignore
+      }
+    }
+  }
+
+  void _populateFormFromJson(Map<String, dynamic> json) {
+    String? getValue(List<String> keys) {
+      for (final key in keys) {
+        if (json.containsKey(key)) {
+          return json[key]?.toString();
+        }
+      }
+      return null;
+    }
+
+    final name = getValue(['achievementName', 'name']);
+    final title = getValue(['achievementTitle', 'title']);
+    final description = getValue([
+      'achievementDescription',
+      'description',
+      'desc',
+    ]);
+    // final icon = getValue(['icon', 'iconName']);
+    // final levelId = getValue(['levelId', 'level_id']);
+
+    setState(() {
+      if (name != null) _achievementNameController.text = name;
+      if (title != null) _achievementTitleController.text = title;
+      if (description != null) {
+        _achievementDescriptionController.text = description;
+      }
+
+      // if (icon != null) {
+      //   final isValidIcon = iconOptions.any((opt) => opt['value'] == icon);
+      //   if (isValidIcon) {
+      //     _selectedIcon = icon;
+      //     _selectedLevel = null;
+      //     _levelDisplayController.clear();
+      //   }
+      // }
+
+      // if (levelId != null) {
+      //   _selectedLevel = levelId;
+      //   final match = _levels.firstWhere(
+      //     (l) => l.levelId == levelId,
+      //     orElse: () => LevelModel(levelId: '', levelName: ''),
+      //   );
+      //   if (match.levelId?.isNotEmpty ?? false) {
+      //     _levelDisplayController.text = match.levelName ?? '';
+      //   }
+      // }
+    });
+
+    if (mounted) {
+      widget.showSnackBar(context, 'Form autofilled from JSON', Colors.blue);
     }
   }
 
