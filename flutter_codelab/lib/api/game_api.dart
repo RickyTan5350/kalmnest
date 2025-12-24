@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_codelab/services/local_level_storage.dart';
 
 /// CENTRAL API BASE URL
 String get apiBase => ApiConstants.baseUrl;
@@ -111,7 +112,40 @@ class GameAPI {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = jsonDecode(response.body);
-        return LevelModel.fromJson(jsonData);
+        final level = LevelModel.fromJson(jsonData);
+        
+        // Save level data to local storage for Unity to access
+        if (level != null && level.levelData != null && level.winCondition != null) {
+          final storage = LocalLevelStorage();
+          final levelDataJson = jsonDecode(level.levelData!);
+          final winConditionJson = jsonDecode(level.winCondition!);
+          
+          await storage.saveLevelData(
+            levelId: levelId,
+            levelDataJson: levelDataJson,
+            winConditionJson: winConditionJson,
+          );
+          
+          // Also try to load and save student progress if exists
+          final progressUrl = Uri.parse("$apiBase/level-user/$levelId");
+          try {
+            final progressResponse = await http.get(progressUrl, headers: headers);
+            if (progressResponse.statusCode == 200) {
+              final progressData = jsonDecode(progressResponse.body);
+              if (progressData['saved_data'] != null) {
+                await storage.saveStudentProgress(
+                  levelId: levelId,
+                  savedDataJson: progressData['saved_data'],
+                );
+              }
+            }
+          } catch (e) {
+            // Progress may not exist yet, which is fine
+            print("No saved progress found for level: $levelId");
+          }
+        }
+        
+        return level;
       }
 
       print("Failed to fetch level: ${response.statusCode}");
@@ -268,6 +302,41 @@ class GameAPI {
       );
     } catch (e) {
       return ApiResponse(success: false, message: "Error: $e");
+    }
+  }
+
+  /// ------------------------------------------------------------
+  /// SAVE STUDENT PROGRESS
+  /// ------------------------------------------------------------
+  static Future<Map<String, dynamic>> saveStudentProgress({
+    required String levelId,
+    required String? savedData,
+  }) async {
+    try {
+      final url = Uri.parse("$apiBase/level-user/$levelId/save");
+      final headers = await _getHeaders();
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: jsonEncode({
+          'saved_data': savedData,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+
+      return {
+        'success': false,
+        'message': 'Failed to save progress: ${response.body}',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error: $e',
+      };
     }
   }
 }
