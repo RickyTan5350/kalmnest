@@ -10,7 +10,7 @@ import 'package:flutter_codelab/admin_teacher/widgets/class/admin_create_class_p
 import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/profile_header_content.dart';
 
 import 'package:flutter_codelab/util.dart';
 import 'package:flutter_codelab/theme.dart';
