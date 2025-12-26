@@ -16,7 +16,10 @@ class UserDetailPage extends StatefulWidget {
     required this.userName,
     this.breadcrumbs,
     this.isSelfProfile = false,
+    this.viewerRole = 'Student',
   });
+
+  final String viewerRole;
 
   @override
   State<UserDetailPage> createState() => _UserDetailPageState();
@@ -168,7 +171,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
           FutureBuilder<UserDetails>(
             future: _userFuture,
             builder: (context, snapshot) {
-              if (snapshot.hasData) {
+              if (snapshot.hasData &&
+                  (widget.viewerRole.toLowerCase() == 'admin' ||
+                      widget.isSelfProfile)) {
                 // Edit Button
                 return IconButton(
                   icon: const Icon(Icons.edit),
@@ -185,7 +190,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
             builder: (context, snapshot) {
               // Only show delete button if the page has successfully loaded the user details
               // AND it is not the user's own profile
-              if (snapshot.hasData && !widget.isSelfProfile) {
+              if (snapshot.hasData &&
+                  !widget.isSelfProfile &&
+                  widget.viewerRole.toLowerCase() == 'admin') {
                 return IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: _deleteUser,

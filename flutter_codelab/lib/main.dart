@@ -335,7 +335,10 @@ class _FeedState extends State<Feed> {
     );
 
     final List<Widget> pages = [
-      UserPage(key: userPageGlobalKey), // Index 0
+      UserPage(
+        key: userPageGlobalKey,
+        currentUser: widget.currentUser,
+      ), // Index 0
       GamePage(userRole: widget.currentUser.roleName), // Index 1
       NotePage(currentUser: widget.currentUser),
       ClassPage(

@@ -14,6 +14,7 @@ class UserListContent extends StatefulWidget {
   final ViewLayout viewLayout;
   final SortType sortType;
   final SortOrder sortOrder;
+  final UserDetails? currentUser;
 
   const UserListContent({
     super.key,
@@ -23,6 +24,7 @@ class UserListContent extends StatefulWidget {
     required this.viewLayout,
     required this.sortType,
     required this.sortOrder,
+    this.currentUser,
   });
 
   @override
@@ -312,11 +314,16 @@ class UserListContentState extends State<UserListContent> {
   }
 
   Future<void> _navigateToDetail(String userId, String userName) async {
+    final bool isSelf = widget.currentUser?.id == userId;
     final bool? deleted = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            UserDetailPage(userId: userId, userName: userName),
+        builder: (context) => UserDetailPage(
+          userId: userId,
+          userName: userName,
+          viewerRole: widget.currentUser?.roleName ?? 'Student',
+          isSelfProfile: isSelf,
+        ),
       ),
     );
     if (deleted == true) {
