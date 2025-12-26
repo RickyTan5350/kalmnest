@@ -4,7 +4,6 @@ import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 import 'package:flutter_codelab/enums/sort_enums.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/user/user_grid_layout.dart';
-import 'package:flutter_codelab/theme.dart'; // Ensure BrandColors or others if needed
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
@@ -223,7 +222,7 @@ class UserListContentState extends State<UserListContent> {
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return scheme.error;
+        return Colors.purple;
       case 'teacher':
         return scheme.tertiary;
       case 'student':
