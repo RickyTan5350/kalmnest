@@ -3,6 +3,7 @@ import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/admin_edit_class_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_class_page.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 // Class List Item Widget with hover effect
 class _ClassListItem extends StatefulWidget {
@@ -64,16 +65,19 @@ class _ClassListItemState extends State<_ClassListItem> {
           onExit: (_) => setState(() => _isHovered = false),
           child: InkWell(
             onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: EdgeInsets.symmetric(
+                horizontal: ClassConstants.defaultPadding * 0.75,
+                vertical: ClassConstants.defaultPadding * 0.625,
+              ),
               margin: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
                 color: _isHovered
                     ? widget.colorScheme.surfaceVariant.withOpacity(0.6)
                     : widget.colorScheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                 border: Border.all(
                   color: _isHovered
                       ? widget.colorScheme.primary.withOpacity(0.3)
@@ -90,7 +94,7 @@ class _ClassListItemState extends State<_ClassListItem> {
                     height: 40,
                     decoration: BoxDecoration(
                       color: widget.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -206,10 +210,10 @@ class _ClassListItemState extends State<_ClassListItem> {
                     ),
                     IconButton(
                       onPressed: widget.onDelete,
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.delete,
                         size: 18,
-                        color: Colors.red,
+                        color: widget.colorScheme.error,
                       ),
                       tooltip: 'Delete',
                       padding: const EdgeInsets.all(8),
@@ -277,12 +281,14 @@ class _ClassGridCard extends StatelessWidget {
     return Card(
       elevation: 1.0,
       clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(ClassConstants.defaultPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -295,7 +301,7 @@ class _ClassGridCard extends StatelessWidget {
                     height: 48,
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -474,7 +480,10 @@ class _ClassListSectionState extends State<ClassListSection> {
               onPressed: () => Navigator.pop(context, false),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
               child: const Text("Delete"),
               onPressed: () => Navigator.pop(context, true),
             ),
@@ -501,7 +510,7 @@ class _ClassListSectionState extends State<ClassListSection> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Class "${item['class_name']}" deleted successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
@@ -571,7 +580,7 @@ class _ClassListSectionState extends State<ClassListSection> {
           : filteredList.isEmpty
           ? Center(
               child: Padding(
-                padding: const EdgeInsets.all(32.0),
+                padding: EdgeInsets.all(ClassConstants.defaultPadding * 2),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -580,14 +589,14 @@ class _ClassListSectionState extends State<ClassListSection> {
                       size: 64,
                       color: colorScheme.onSurfaceVariant.withOpacity(0.5),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: ClassConstants.defaultPadding),
                     Text(
                       'No classes found',
                       style: textTheme.titleMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: ClassConstants.defaultPadding * 0.5),
                     Text(
                       widget.searchQuery.isNotEmpty
                           ? 'Try adjusting your search query'
@@ -605,13 +614,13 @@ class _ClassListSectionState extends State<ClassListSection> {
           ? CustomScrollView(
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
                   sliver: SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 250.0,
-                          mainAxisSpacing: 12.0,
-                          crossAxisSpacing: 12.0,
+                          mainAxisSpacing: ClassConstants.defaultPadding * 0.75,
+                          crossAxisSpacing: ClassConstants.defaultPadding * 0.75,
                           childAspectRatio: 0.85,
                         ),
                     delegate: SliverChildBuilderDelegate((context, index) {
@@ -661,7 +670,9 @@ class _ClassListSectionState extends State<ClassListSection> {
           : CustomScrollView(
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ClassConstants.defaultPadding * 0.5,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final item = filteredList[index];

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/student/widgets/class/student_view_class_page.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 // Class List Item Widget for Student (no edit/delete buttons)
 class _ClassListItem extends StatefulWidget {
@@ -59,16 +60,19 @@ class _ClassListItemState extends State<_ClassListItem> {
           onExit: (_) => setState(() => _isHovered = false),
           child: InkWell(
             onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: EdgeInsets.symmetric(
+                horizontal: ClassConstants.defaultPadding * 0.75,
+                vertical: ClassConstants.defaultPadding * 0.625,
+              ),
               margin: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
                 color: _isHovered
                     ? widget.colorScheme.surfaceVariant.withOpacity(0.6)
                     : widget.colorScheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                 border: Border.all(
                   color: _isHovered
                       ? widget.colorScheme.primary.withOpacity(0.3)
@@ -85,7 +89,7 @@ class _ClassListItemState extends State<_ClassListItem> {
                     height: 40,
                     decoration: BoxDecoration(
                       color: widget.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -237,13 +241,13 @@ class _ClassGridCard extends StatelessWidget {
       elevation: 1.0,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(ClassConstants.defaultPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -256,7 +260,7 @@ class _ClassGridCard extends StatelessWidget {
                     height: 48,
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -308,8 +312,9 @@ class _ClassGridCard extends StatelessWidget {
                         color: _hasTeacher
                             ? colorScheme.onSurfaceVariant
                             : colorScheme.error,
-                        fontStyle:
-                            _hasTeacher ? FontStyle.normal : FontStyle.italic,
+                        fontStyle: _hasTeacher
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -335,8 +340,9 @@ class _ClassGridCard extends StatelessWidget {
                         color: _studentCount > 0
                             ? colorScheme.onSurfaceVariant
                             : colorScheme.error,
-                        fontStyle:
-                            _studentCount > 0 ? FontStyle.normal : FontStyle.italic,
+                        fontStyle: _studentCount > 0
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -437,112 +443,108 @@ class _ClassListSectionState extends State<ClassListSection> {
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : filteredList.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.school_outlined,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No classes found',
-                          style: textTheme.titleMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.searchQuery.isNotEmpty
-                              ? 'Try adjusting your search query'
-                              : 'You are not enrolled in any classes yet',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: EdgeInsets.all(ClassConstants.defaultPadding * 2),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.school_outlined,
+                      size: 64,
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.5),
                     ),
-                  ),
-                )
-              : widget.layout == ViewLayout.grid
-                  ? CustomScrollView(
-                      slivers: [
+                    SizedBox(height: ClassConstants.defaultPadding),
+                    Text(
+                      'No classes found',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    SizedBox(height: ClassConstants.defaultPadding * 0.5),
+                    Text(
+                      widget.searchQuery.isNotEmpty
+                          ? 'Try adjusting your search query'
+                          : 'You are not enrolled in any classes yet',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : widget.layout == ViewLayout.grid
+          ? CustomScrollView(
+              slivers: [
                         SliverPadding(
-                          padding: const EdgeInsets.all(8.0),
+                          padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
                           sliver: SliverGrid(
                             gridDelegate:
                                 const SliverGridDelegateWithMaxCrossAxisExtent(
                               maxCrossAxisExtent: 250.0,
-                              mainAxisSpacing: 12.0,
-                              crossAxisSpacing: 12.0,
+                              mainAxisSpacing: ClassConstants.defaultPadding * 0.75,
+                              crossAxisSpacing: ClassConstants.defaultPadding * 0.75,
                               childAspectRatio: 0.85,
                             ),
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final item = filteredList[index];
-                                return _ClassGridCard(
-                                  item: item,
-                                  roleName: widget.roleName,
-                                  colorScheme: colorScheme,
-                                  textTheme: textTheme,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ClassDetailPage(
-                                          classId: item['class_id'].toString(),
-                                          roleName: widget.roleName,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                              childCount: filteredList.length,
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final item = filteredList[index];
+                      return _ClassGridCard(
+                        item: item,
+                        roleName: widget.roleName,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ClassDetailPage(
+                                classId: item['class_id'].toString(),
+                                roleName: widget.roleName,
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : CustomScrollView(
-                      slivers: [
+                          );
+                        },
+                      );
+                    }, childCount: filteredList.length),
+                  ),
+                ),
+              ],
+            )
+          : CustomScrollView(
+              slivers: [
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final item = filteredList[index];
-                                final isLast = index == filteredList.length - 1;
-                                return _ClassListItem(
-                                  item: item,
-                                  isLast: isLast,
-                                  roleName: widget.roleName,
-                                  colorScheme: colorScheme,
-                                  textTheme: textTheme,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ClassDetailPage(
-                                          classId: item['class_id'].toString(),
-                                          roleName: widget.roleName,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                              childCount: filteredList.length,
-                            ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: ClassConstants.defaultPadding * 0.5,
                           ),
-                        ),
-                      ],
-                    ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final item = filteredList[index];
+                      final isLast = index == filteredList.length - 1;
+                      return _ClassListItem(
+                        item: item,
+                        isLast: isLast,
+                        roleName: widget.roleName,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ClassDetailPage(
+                                classId: item['class_id'].toString(),
+                                roleName: widget.roleName,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }, childCount: filteredList.length),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

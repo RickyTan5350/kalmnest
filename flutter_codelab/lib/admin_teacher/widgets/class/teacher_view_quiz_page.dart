@@ -6,6 +6,7 @@ import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_quiz_detail_page.dart';
 import 'package:flutter_codelab/models/level.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 /// Full-page teacher view: all quizzes for a single class.
 ///
@@ -95,15 +96,21 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
               'How should this quiz be visible after creation?',
               style: TextStyle(fontSize: 16),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ClassConstants.defaultPadding),
             ListTile(
-              leading: const Icon(Icons.lock, color: Colors.orange),
+              leading: Icon(
+                Icons.lock,
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
               title: const Text('Private'),
               subtitle: const Text('Only visible to this class'),
               onTap: () => Navigator.pop(context, true),
             ),
             ListTile(
-              leading: const Icon(Icons.public, color: Colors.blue),
+              leading: Icon(
+                Icons.public,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               title: const Text('Public'),
               subtitle: const Text(
                 'Visible to everyone, can be assigned to other classes',
@@ -152,7 +159,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
           _showSnackBar(
             context,
             'Quiz created and assigned successfully as ${isPrivate ? "Private" : "Public"}',
-            Colors.green,
+            Theme.of(context).colorScheme.primary,
           );
           // Refresh the quiz list
           _fetchData();
@@ -160,7 +167,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
           _showSnackBar(
             context,
             result['message'] ?? 'Failed to assign quiz',
-            Colors.red,
+            Theme.of(context).colorScheme.error,
           );
         }
       }
@@ -188,14 +195,14 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
               _showSnackBar(
                 context,
                 'Quiz created and assigned successfully as ${isPrivate ? "Private" : "Public"}',
-                Colors.green,
+                Theme.of(context).colorScheme.primary,
               );
               _fetchData();
             } else {
               _showSnackBar(
                 context,
                 result['message'] ?? 'Failed to assign quiz',
-                Colors.red,
+                Theme.of(context).colorScheme.error,
               );
             }
           }
@@ -237,15 +244,21 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text('How should this quiz be visible?'),
-              const SizedBox(height: 16),
+              SizedBox(height: ClassConstants.defaultPadding),
               ListTile(
-                leading: const Icon(Icons.lock, color: Colors.orange),
+                leading: Icon(
+                Icons.lock,
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
                 title: const Text('Private'),
                 subtitle: const Text('Only visible to this class'),
                 onTap: () => Navigator.pop(context, true),
               ),
               ListTile(
-                leading: const Icon(Icons.public, color: Colors.blue),
+                leading: Icon(
+                Icons.public,
+                color: Theme.of(context).colorScheme.primary,
+              ),
                 title: const Text('Public'),
                 subtitle: const Text(
                   'Visible to everyone, can be assigned to other classes',
@@ -341,7 +354,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
         child: _loading
             ? Center(child: CircularProgressIndicator(color: cs.primary))
             : Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(ClassConstants.defaultPadding),
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,7 +363,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                       Card(
                         elevation: 2,
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: EdgeInsets.all(ClassConstants.defaultPadding),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -361,7 +374,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                                     _classData?['description'] ??
                                     'No description',
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: ClassConstants.defaultPadding),
                               Row(
                                 children: [
                                   Expanded(
@@ -391,7 +404,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                         ),
                       ),
 
-                      const SizedBox(height: 16),
+                      SizedBox(height: ClassConstants.defaultPadding),
 
                       // Quizzes card
                       Card(
@@ -401,7 +414,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(16.0),
+                          padding: EdgeInsets.all(ClassConstants.defaultPadding),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -425,7 +438,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              SizedBox(height: ClassConstants.defaultPadding * 0.75),
                               TextField(
                                 controller: _searchController,
                                 onChanged: (value) {
@@ -440,19 +453,19 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                                   filled: true,
                                   fillColor: cs.surfaceContainerHighest,
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
                                     borderSide: BorderSide(
                                       color: cs.outlineVariant,
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
                                     borderSide: BorderSide(
                                       color: cs.outlineVariant,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
                                     borderSide: BorderSide(
                                       color: cs.primary,
                                       width: 2,
@@ -469,11 +482,11 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                                       : null,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: ClassConstants.defaultPadding),
                               _filteredQuizzes.isEmpty
                                   ? Center(
                                       child: Padding(
-                                        padding: const EdgeInsets.all(32.0),
+                                        padding: EdgeInsets.all(ClassConstants.defaultPadding * 2),
                                         child: Column(
                                           children: [
                                             Icon(
@@ -482,7 +495,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                                               color: cs.onSurfaceVariant
                                                   .withOpacity(0.5),
                                             ),
-                                            const SizedBox(height: 16),
+                                            SizedBox(height: ClassConstants.defaultPadding),
                                             Text(
                                               _searchQuery.isNotEmpty
                                                   ? 'No quizzes match your search'
@@ -492,7 +505,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                                                     color: cs.onSurfaceVariant,
                                                   ),
                                             ),
-                                            const SizedBox(height: 8),
+                                            SizedBox(height: ClassConstants.defaultPadding * 0.5),
                                             Text(
                                               _searchQuery.isNotEmpty
                                                   ? 'Try adjusting your search query'
@@ -833,7 +846,7 @@ class _AssignQuizDialogState extends State<_AssignQuizDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ClassConstants.defaultPadding),
             TextField(
               controller: _searchController,
               onChanged: (value) => setState(() => _searchQuery = value),
@@ -851,7 +864,7 @@ class _AssignQuizDialogState extends State<_AssignQuizDialog> {
                     : null,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ClassConstants.defaultPadding),
             Expanded(
               child: _filteredLevels.isEmpty
                   ? Center(
@@ -863,7 +876,7 @@ class _AssignQuizDialogState extends State<_AssignQuizDialog> {
                             size: 48,
                             color: cs.onSurfaceVariant.withOpacity(0.5),
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: ClassConstants.defaultPadding),
                           Text(
                             'No quizzes available',
                             style: textTheme.bodyMedium?.copyWith(

@@ -3,6 +3,7 @@ import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 /// Full-page student view: all quizzes for a single class.
 ///
@@ -84,7 +85,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
             children: [
               // Header with close button
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   border: Border(
@@ -168,13 +169,13 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
         child: _loading
             ? Center(child: CircularProgressIndicator(color: cs.primary))
             : ListView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(ClassConstants.cardPadding),
                 children: [
                   // Header + class meta
                   Card(
                     elevation: 2,
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(ClassConstants.defaultPadding),
                       child: _Header(
                         className: _classData?['class_name'] ?? 'No Name',
                         classDescription:
@@ -183,17 +184,17 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: ClassConstants.defaultPadding),
 
                   // Stats row
                   Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       side: BorderSide(color: cs.outlineVariant, width: 1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: EdgeInsets.all(ClassConstants.defaultPadding),
                       child: Row(
                         children: [
                           Expanded(
@@ -219,17 +220,17 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: ClassConstants.defaultPadding),
 
                   // Quizzes card
                   Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       side: BorderSide(color: cs.outlineVariant, width: 1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: EdgeInsets.all(ClassConstants.defaultPadding),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -237,7 +238,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                             title: 'Quizzes',
                             subtitle: 'All quizzes for this class',
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: ClassConstants.defaultPadding * 0.75),
                           TextField(
                             controller: _searchController,
                             onChanged: (value) {
@@ -264,16 +265,16 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                               filled: true,
                               fillColor: cs.surfaceContainerHighest,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
                                 borderSide: BorderSide.none,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: ClassConstants.defaultPadding),
                           _filteredQuizzes.isEmpty
                               ? Center(
                                   child: Padding(
-                                    padding: const EdgeInsets.all(32.0),
+                                    padding: EdgeInsets.all(ClassConstants.defaultPadding * 2),
                                     child: Column(
                                       children: [
                                         Icon(
@@ -282,7 +283,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                                           color: cs.onSurfaceVariant
                                               .withOpacity(0.5),
                                         ),
-                                        const SizedBox(height: 16),
+                                        SizedBox(height: ClassConstants.defaultPadding),
                                         Text(
                                           _searchQuery.isNotEmpty
                                               ? 'No quizzes match your search'
@@ -292,7 +293,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                                                 color: cs.onSurfaceVariant,
                                               ),
                                         ),
-                                        const SizedBox(height: 8),
+                                        SizedBox(height: ClassConstants.defaultPadding * 0.5),
                                         Text(
                                           _searchQuery.isNotEmpty
                                               ? 'Try adjusting your search query'
@@ -358,7 +359,7 @@ class _Header extends StatelessWidget {
             color: cs.onSurface,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: ClassConstants.defaultPadding * 0.25),
         Text(
           className,
           style: textTheme.titleMedium?.copyWith(
@@ -366,7 +367,7 @@ class _Header extends StatelessWidget {
             color: cs.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: ClassConstants.defaultPadding * 0.25),
         Text(
           classDescription,
           style: textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
@@ -539,7 +540,7 @@ class _SectionHeader extends StatelessWidget {
             color: cs.onSurface,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: ClassConstants.defaultPadding * 0.25),
         Text(
           subtitle,
           style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
