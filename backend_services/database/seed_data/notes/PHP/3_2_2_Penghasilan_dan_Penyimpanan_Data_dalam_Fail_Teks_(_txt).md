@@ -1,3 +1,4 @@
+## 3.2.2 Penghasilan dan Penyimpanan Data dalam Fail Teks (.txt)
 #### **1\. Pengenalan Kepada PHP dan Fail Teks**
 
 * **PHP (Hypertext Preprocessor):** Merupakan skrip yang dilaksanakan oleh komputer pelayan (server).  
@@ -117,4 +118,3 @@ Dokumen menyarankan aktiviti merekod kehadiran pelajar lewat:
 * **Situasi:** Pengawas merekod nama murid yang datang lewat pada hari Isnin dan Rabu.  
 * **Objektif:** Menghasilkan fail teks untuk menyimpan rekod ini dan mengenal pasti murid yang kerap lewat.  
 * **Contoh Data Lewat:** Raja, Nadia, Fadzliana, Embong (Isnin) dan Kumutha, Jason, Hartini, Rukumani (Rabu).
-

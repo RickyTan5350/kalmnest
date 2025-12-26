@@ -1,3 +1,4 @@
+##  3.2.1 Pembangunan Laman Web dengan Menggunakan Bahasa Penskripan Pelayan
 #### **1\. Konsep Pelanggan (Client) dan Pelayan (Server)**
 
 Model ini adalah asas kepada komunikasi Internet.
@@ -61,4 +62,3 @@ Laman web bertindak sebagai perantara yang menentukan cara pengguna berinteraksi
   * **Enjin Carian:** Pengguna memasukkan kata kunci untuk dapatkan maklumat.  
   * **Syarikat Penerbangan:** Pengguna memasukkan destinasi dan tarikh untuk melihat harga tiket.  
 * Tanpa laman web, interaksi dengan sistem perbankan, media sosial, atau enjin carian adalah sukar.
-

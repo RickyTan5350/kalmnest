@@ -1,4 +1,4 @@
-### **1\. Penggunaan Data Daripada Fail Teks (Bab 3.2.4)**
+### 3.2.4 Penggunaan Data yang Diimport daripada Fail Teks untuk Menyelesaikan Masalah
 
 Bahagian ini menerangkan cara memproses data yang banyak menggunakan fail teks (.txt) dan PHP, tanpa perlu memasukkan data satu persatu secara manual.
 
@@ -13,23 +13,23 @@ Bahagian ini menerangkan cara memproses data yang banyak menggunakan fail teks (
 Berikut adalah fungsi-fungsi utama yang digunakan dalam atur cara:
 ```
 <?php
-  $f = fopen("Nombor.txt","r"); 1
-  while (!feof($f)) 2
+  $f = fopen("Nombor.txt","r"); 
+  while (!feof($f)) 
   {
-    $arrNombor = explode(',',fgets($f)); 3
+    $arrNombor = explode(',',fgets($f)); 
   }
-  $bilangan = count($arrNombor); 4
+  $bilangan = count($arrNombor); 
   $jumlah = 0;
-  for ($x = 0;$x < $bilangan; $x++) 5
+  for ($x = 0;$x < $bilangan; $x++) 
   {
-    print $arrNombor[$x]."<br>"; 6
+    print $arrNombor[$x]."<br>"; 
     $jumlah = $jumlah + $arrNombor[$x];
   }
   $purata = $jumlah / $bilangan;
   print "Jumlah = ".$jumlah."<br>";
   print "Nilai Purata = ".$purata."<br>";
   // tutup fail yang telah dibuka
-  fclose($f); 7
+  fclose($f); 
 ?> //penamat untuk php
 ```
 * **`fopen("NamaFail.txt", "r")`**: Membuka fail teks untuk dibaca (`r` bermaksud *read*).  
@@ -94,7 +94,7 @@ Berikut adalah fungsi-fungsi utama yang digunakan dalam atur cara:
         
         print "</table>";
         fclose($f); // menutup fail yang telah dibuka
-    ?> //penamat untuk php
+    ?> 
     </body>
 </html>
 ```
@@ -123,22 +123,8 @@ Berikut adalah fungsi-fungsi utama yang digunakan dalam atur cara:
 
 ---
 
-### **3\. Penggunaan Pangkalan Data (Bab 3.2.5)**
 
-Bahagian ini menyentuh tentang interaksi antara bahasa penskripan pelayan (PHP) dengan pangkalan data (MySQL).
-
-#### **Langkah Utama Capaian Data**
-
-Terdapat langkah berturutan (*sequential*) yang wajib diikuti untuk mengakses data:
-
-1. **Membuat Penyambungan (Connection):** Mesti menyambung ke pangkalan data terlebih dahulu sebelum data boleh dicapai.  
-2. *(Langkah ini biasanya memilih pangkalan data, namun teks sumber kurang jelas)*.  
-3. **Membuat Pertanyaan (Query):** Melaksanakan arahan (seperti SQL) terhadap pangkalan data untuk memperoleh data yang dikehendaki.  
-4. **Menamatkan Sambungan:** Menutup sambungan ke pangkalan data setelah selesai.
-
-#### **Nota Tambahan (Aktiviti Pasar Raya Ah Seng)**
 
 * Dalam senario aktiviti, laman web perlu merekodkan maklumat pengguna dan kata laluan.  
 * Borang (Form) digunakan dengan kotak teks untuk 'namapengguna' dan 'katalaluan'.  
 * Kotak teks kata laluan akan memaparkan simbol `*` untuk keselamatan.
-
