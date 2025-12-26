@@ -5,6 +5,7 @@ import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter_codelab/services/local_level_storage.dart';
+import 'package:flutter/foundation.dart';
 
 /// CENTRAL API BASE URL
 String get apiBase => ApiConstants.baseUrl;
@@ -115,15 +116,19 @@ class GameAPI {
         final level = LevelModel.fromJson(jsonData);
         
         // Save level data to local storage for Unity to access
-        if (level != null && level.levelData != null && level.winCondition != null) {
+        if (level.levelData != null && level.winCondition != null) {
           final storage = LocalLevelStorage();
           final levelDataJson = jsonDecode(level.levelData!);
           final winConditionJson = jsonDecode(level.winCondition!);
+          
+          final user = await AuthApi.getStoredUser();
+          final userId = user?['user_id']?.toString();
           
           await storage.saveLevelData(
             levelId: levelId,
             levelDataJson: levelDataJson,
             winConditionJson: winConditionJson,
+            userId: userId,
           );
           
           // Also try to load and save student progress if exists
@@ -135,8 +140,14 @@ class GameAPI {
               if (progressData['saved_data'] != null) {
                 await storage.saveStudentProgress(
                   levelId: levelId,
-                  savedDataJson: progressData['saved_data'],
+                  savedDataJson: progressData['saved_data'] is String 
+                    ? progressData['saved_data'] 
+                    : jsonEncode(progressData['saved_data']),
+                  userId: userId,
                 );
+                if (kDebugMode) {
+                  print("Loaded backend progress for level $levelId");
+                }
               }
             }
           } catch (e) {
@@ -162,6 +173,8 @@ class GameAPI {
   static Future<ApiResponse> createLevel({
     required String levelName,
     required String levelTypeName,
+    String? levelData,
+    String? winCondition,
   }) async {
     try {
       final url = Uri.parse("$apiBase/create-level");
@@ -173,6 +186,8 @@ class GameAPI {
         body: jsonEncode({
           'level_name': levelName,
           'level_type_name': levelTypeName,
+          if (levelData != null) 'level_data': levelData,
+          if (winCondition != null) 'win_condition': winCondition,
         }),
       );
 
@@ -331,6 +346,39 @@ class GameAPI {
       return {
         'success': false,
         'message': 'Failed to save progress: ${response.body}',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error: $e',
+      };
+    }
+  }
+
+  /// ------------------------------------------------------------
+  /// MARK LEVEL AS COMPLETE
+  /// ------------------------------------------------------------
+  static Future<Map<String, dynamic>> completeLevel({
+    required String levelId,
+    required String userId,
+  }) async {
+    try {
+      final url = Uri.parse("$apiBase/level-user/$levelId/$userId/complete");
+      final headers = await _getHeaders();
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        // No body needed for this specific endpoint based on user request
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+
+      return {
+        'success': false,
+        'message': 'Failed to complete level: ${response.body}',
       };
     } catch (e) {
       return {

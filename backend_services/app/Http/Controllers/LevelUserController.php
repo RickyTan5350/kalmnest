@@ -56,6 +56,11 @@ class LevelUserController extends Controller
                 ], 200);
             } else {
                 // Create new entry
+                // If savedData is null, default to level's base data
+                if (empty($savedData)) {
+                    $savedData = DB::table('levels')->where('level_id', $levelId)->value('level_data');
+                }
+
                 $levelUser = LevelUser::create([
                     'level_user_id' => (string) Str::uuid7(),
                     'level_id' => $levelId,
@@ -63,7 +68,7 @@ class LevelUserController extends Controller
                     'saved_data' => $savedData,
                 ]);
 
-                Log::info("LEVEL_SAVE_CREATED: New entry created for Level {$levelId} and User {$userId}");
+                Log::info("LEVEL_SAVE_CREATED: New entry created for Level {$levelId} and User {$userId} with default/provided data");
                 
                 return response()->json([
                     'message' => 'Level data saved successfully',
@@ -89,9 +94,15 @@ class LevelUserController extends Controller
     /**
      * Get level data for the authenticated user
      */
-    public function getLevelData(Request $request, $levelId, $userId)
+    public function getLevelData(Request $request, $levelId)
     {
         try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthenticated'], 401);
+            }
+            $userId = $user->user_id;
+
             $levelUser = LevelUser::where('level_id', $levelId)
                                   ->where('user_id', $userId)
                                   ->first();
@@ -228,6 +239,21 @@ class LevelUserController extends Controller
                 $levelUser->saved_data = $savedData;
                 $levelUser->save();
             } else {
+                // Check if all levels in savedData are null
+                $isAllNull = true;
+                foreach ($finalLevelData as $type => $data) {
+                    if ($data !== null) {
+                        $isAllNull = false;
+                        break;
+                    }
+                }
+
+                // If no file data found, default to level's base data
+                if ($isAllNull) {
+                    $savedData = DB::table('levels')->where('level_id', $levelId)->value('level_data');
+                    Log::info("LEVEL_FILE_SAVE: No buffer files found for Level {$levelId}. Defaulting to level_data.");
+                }
+
                 $levelUser = LevelUser::create([
                     'level_user_id' => (string) Str::uuid7(),
                     'level_id' => $levelId,
