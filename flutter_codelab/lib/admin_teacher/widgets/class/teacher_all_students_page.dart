@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_student_detail_page.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 /// Teacher view: All students in a class with search, pagination, and compact cards.
 class TeacherAllStudentsPage extends StatefulWidget {
@@ -232,20 +233,20 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
       body: _loading
           ? Center(child: CircularProgressIndicator(color: cs.primary))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(ClassConstants.cardPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(cs, textTheme),
-                  const SizedBox(height: 24),
+                  SizedBox(height: ClassConstants.sectionSpacing),
                   _buildStatisticsSection(cs, textTheme),
-                  const SizedBox(height: 24),
+                  SizedBox(height: ClassConstants.sectionSpacing),
                   _buildSearchSection(cs),
-                  const SizedBox(height: 24),
+                  SizedBox(height: ClassConstants.sectionSpacing),
                   _filteredStudents.isEmpty
                       ? _buildEmptyState(cs)
                       : _buildStudentsGrid(cs),
-                  const SizedBox(height: 24),
+                  SizedBox(height: ClassConstants.sectionSpacing),
                   if (_filteredStudents.isNotEmpty) _buildPagination(cs),
                 ],
               ),
@@ -327,10 +328,10 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     IconData icon,
   ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(ClassConstants.defaultPadding),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
@@ -365,15 +366,15 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         filled: true,
         fillColor: cs.surfaceContainerHighest,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
           borderSide: BorderSide(color: cs.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
           borderSide: BorderSide(color: cs.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
           borderSide: BorderSide(color: cs.primary, width: 2),
         ),
       ),
@@ -458,10 +459,13 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: EdgeInsets.symmetric(
+          horizontal: ClassConstants.defaultPadding,
+          vertical: ClassConstants.defaultPadding * 0.875,
+        ),
         decoration: BoxDecoration(
           color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
           border: Border.all(color: cs.outlineVariant, width: 1),
         ),
         child: Column(
@@ -513,7 +517,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               overflow: TextOverflow.ellipsis,
               style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: ClassConstants.defaultPadding * 0.25),
             Text(
               phone,
               maxLines: 1,
@@ -591,7 +595,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               minHeight: 4,
               backgroundColor: cs.outlineVariant,
               valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
             ),
           ],
         ),

@@ -71,9 +71,9 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to load student quiz data'),
-              backgroundColor: Colors.red,
+            SnackBar(
+              content: const Text('Failed to load student quiz data'),
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }

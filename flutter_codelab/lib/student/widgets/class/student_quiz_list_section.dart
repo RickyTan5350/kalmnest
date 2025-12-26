@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/student/widgets/class/student_view_quiz_page.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class QuizListSection extends StatefulWidget {
   final String roleName;
@@ -68,11 +69,11 @@ class _QuizListSectionState extends State<QuizListSection> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         side: BorderSide(color: cs.outlineVariant, width: 1),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(ClassConstants.defaultPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -90,7 +91,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                         color: cs.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: ClassConstants.defaultPadding * 0.25),
                     Text(
                       '${_quizzes.length} quiz${_quizzes.length != 1 ? 'es' : ''} available',
                       style: textTheme.bodySmall?.copyWith(
@@ -148,7 +149,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                           color: cs.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: ClassConstants.defaultPadding * 0.25),
                       Text(
                         'Your teacher hasn\'t assigned any quizzes yet',
                         style: textTheme.bodySmall?.copyWith(

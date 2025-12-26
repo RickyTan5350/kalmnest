@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_theme_extensions.dart';
 
 class StatItem {
   final String label;
@@ -56,7 +58,9 @@ class _ClassStatisticsSectionState extends State<ClassStatisticsSection> {
       children: stats.map((stat) {
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: ClassConstants.defaultPadding * 0.5,
+            ),
             child: _StatCard(stat: stat),
           ),
         );
@@ -78,11 +82,11 @@ class _StatCard extends StatelessWidget {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.2)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(ClassConstants.defaultPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -92,7 +96,7 @@ class _StatCard extends StatelessWidget {
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: ClassConstants.defaultPadding * 0.375),
             Text(
               stat.value,
               style: textTheme.headlineSmall?.copyWith(
@@ -101,7 +105,7 @@ class _StatCard extends StatelessWidget {
               ),
             ),
             if (stat.change != null) ...[
-              const SizedBox(height: 6),
+              SizedBox(height: ClassConstants.defaultPadding * 0.375),
               Row(
                 children: [
                   Icon(Icons.trending_up, size: 16, color: colorScheme.primary),

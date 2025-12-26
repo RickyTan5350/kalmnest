@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_class_page.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 // Class List Item Widget for Teacher/Student (no edit/delete buttons)
 class _ClassListItem extends StatefulWidget {
@@ -61,13 +62,16 @@ class _ClassListItemState extends State<_ClassListItem> {
             onTap: widget.onTap,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: EdgeInsets.symmetric(
+                horizontal: ClassConstants.defaultPadding * 0.75,
+                vertical: ClassConstants.defaultPadding * 0.625,
+              ),
               margin: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
                 color: _isHovered
                     ? widget.colorScheme.surfaceVariant.withOpacity(0.6)
                     : widget.colorScheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                 border: Border.all(
                   color: _isHovered
                       ? widget.colorScheme.primary.withOpacity(0.3)
@@ -84,7 +88,7 @@ class _ClassListItemState extends State<_ClassListItem> {
                     height: 40,
                     decoration: BoxDecoration(
                       color: widget.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -107,12 +111,14 @@ class _ClassListItemState extends State<_ClassListItem> {
                             color: widget.colorScheme.onSurface,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: ClassConstants.defaultPadding * 0.25),
                         // Class Description (single line)
                         if (widget.item['description'] != null &&
                             widget.item['description'].toString().isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
+                            padding: EdgeInsets.only(
+                              bottom: ClassConstants.defaultPadding * 0.25,
+                            ),
                             child: Text(
                               widget.item['description'],
                               style: widget.textTheme.bodySmall?.copyWith(
@@ -122,7 +128,7 @@ class _ClassListItemState extends State<_ClassListItem> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: ClassConstants.defaultPadding * 0.25),
                         // Teacher and Student Info Row
                         Wrap(
                           spacing: 12,
@@ -235,12 +241,14 @@ class _ClassGridCard extends StatelessWidget {
     return Card(
       elevation: 1.0,
       clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(ClassConstants.defaultPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -253,7 +261,7 @@ class _ClassGridCard extends StatelessWidget {
                     height: 48,
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -275,7 +283,7 @@ class _ClassGridCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: ClassConstants.defaultPadding * 0.75),
               // Description
               if (item['description'] != null &&
                   item['description'].toString().isNotEmpty)
@@ -288,7 +296,7 @@ class _ClassGridCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               const Spacer(),
-              const SizedBox(height: 12),
+              SizedBox(height: ClassConstants.defaultPadding * 0.75),
               // Teacher and Student Info
               Row(
                 children: [

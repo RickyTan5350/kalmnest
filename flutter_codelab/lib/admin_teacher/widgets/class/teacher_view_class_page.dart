@@ -6,6 +6,7 @@ import 'package:flutter_codelab/student/widgets/class/student_preview_teacher_ro
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_quiz_list_section.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_all_students_page.dart';
 import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class ClassDetailPage extends StatefulWidget {
   final String classId;
@@ -88,14 +89,14 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
         child: loading
             ? const Center(child: CircularProgressIndicator())
             : Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(ClassConstants.defaultPadding),
                 child: Card(
                   elevation: 2,
                   child: SizedBox(
                     width: double.infinity,
                     height: double.infinity,
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(ClassConstants.defaultPadding),
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,11 +209,11 @@ class _ClassHeader extends StatelessWidget {
       elevation: 0,
       color: cs.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         side: BorderSide(color: cs.outlineVariant, width: 1),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(ClassConstants.defaultPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

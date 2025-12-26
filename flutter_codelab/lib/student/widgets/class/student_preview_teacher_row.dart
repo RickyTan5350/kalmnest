@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class TeacherPreviewRow extends StatelessWidget {
   final String teacherName;
@@ -22,41 +23,42 @@ class TeacherPreviewRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Teacher in-charge",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: ClassConstants.defaultPadding * 0.75),
 
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          padding: EdgeInsets.symmetric(
+            vertical: ClassConstants.defaultPadding * 0.75,
+            horizontal: ClassConstants.defaultPadding,
+          ),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
-              ),
-            ],
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.2),
+            ),
           ),
           child: Row(
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: Colors.blueGrey.shade700,
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                 child: Text(
                   _getInitials(teacherName),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
 
-              const SizedBox(width: 16),
+              SizedBox(width: ClassConstants.defaultPadding),
 
               Expanded(
                 child: Column(
@@ -64,24 +66,26 @@ class TeacherPreviewRow extends StatelessWidget {
                   children: [
                     Text(
                       teacherName,
-                      style: const TextStyle(
-                        fontSize: 18,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: ClassConstants.defaultPadding * 0.25),
                     Text(
                       teacherDescription,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade700,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const Icon(Icons.chevron_right, size: 28, color: Colors.grey),
+              Icon(
+                Icons.chevron_right,
+                size: 28,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),

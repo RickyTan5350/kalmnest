@@ -1,6 +1,8 @@
 //lib/widgets/create_class_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_theme_extensions.dart';
 
 class CreateClassScreen extends StatefulWidget {
   const CreateClassScreen({super.key});
@@ -28,12 +30,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         .whereType<String>()
         .where((id) => id.isNotEmpty)
         .toSet();
-    
+
     // Remove the current selection from the set (so it can be shown in current dropdown)
     if (_selectedStudents[currentIndex] != null) {
       selectedIds.remove(_selectedStudents[currentIndex]);
     }
-    
+
     return _students.where((student) {
       final studentId = student['user_id'] as String?;
       return studentId != null && !selectedIds.contains(studentId);
@@ -146,11 +148,11 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Failed to create class'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
               label: 'OK',
-              textColor: Colors.white,
+              textColor: Theme.of(context).colorScheme.onError,
               onPressed: () {},
             ),
           ),
@@ -163,30 +165,13 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     required String labelText,
     required IconData icon,
     String? hintText,
-    required ColorScheme colorScheme,
+    required BuildContext context,
   }) {
-    return InputDecoration(
+    return ClassTheme.inputDecoration(
+      context: context,
       labelText: labelText,
+      icon: icon,
       hintText: hintText,
-      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.outline),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.primary, width: 2),
-      ),
-      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-      hintStyle: TextStyle(
-        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-      ),
-      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.25),
-      filled: true,
     );
   }
 
@@ -195,9 +180,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5FAFC), // Same as dialog
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5FAFC),
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
@@ -205,16 +190,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(ClassConstants.cardPadding),
         child: Center(
           child: Container(
-            width: 420,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5FAFC),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            padding: const EdgeInsets.all(24),
+            constraints: BoxConstraints(maxWidth: ClassConstants.formMaxWidth),
+            decoration: ClassTheme.cardDecoration(context),
+            padding: EdgeInsets.all(ClassConstants.cardPadding),
             child: Form(
               key: _formKey,
               child: Column(
@@ -222,45 +203,44 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 children: [
                   Text(
                     'Create New Class',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: colorScheme.onSurface,
-                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: ClassConstants.sectionSpacing),
 
                   // Class Name
                   TextFormField(
                     controller: _classNameController,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
+                      context: context,
                       labelText: 'Class Name',
                       hintText: 'Enter class name',
                       icon: Icons.class_,
-                      colorScheme: colorScheme,
                     ),
                     validator: (value) => (value == null || value.isEmpty)
                         ? 'Please enter class name'
                         : null,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: ClassConstants.formSpacing),
 
                   // Description
                   TextFormField(
                     controller: _descriptionController,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
+                      context: context,
                       labelText: 'Description',
                       hintText: 'Enter description',
                       icon: Icons.description,
-                      colorScheme: colorScheme,
                     ),
                     validator: (value) => (value == null || value.isEmpty)
                         ? 'Please enter description'
                         : null,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: ClassConstants.formSpacing),
 
                   // Teacher Dropdown
                   DropdownButtonFormField<String>(
@@ -268,12 +248,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     dropdownColor: const Color(0xFFF5FAFC),
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
+                      context: context,
                       labelText: 'Assign Teacher (Optional)',
                       hintText: _loadingTeachers
                           ? 'Loading...'
                           : 'Select teacher',
                       icon: Icons.person,
-                      colorScheme: colorScheme,
                     ),
                     selectedItemBuilder: (BuildContext context) {
                       return [
@@ -292,7 +272,8 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                         child: Text('None (Optional)'),
                       ),
                       ..._teachers.map((teacher) {
-                        final status = teacher['account_status'] as String? ?? 'unknown';
+                        final status =
+                            teacher['account_status'] as String? ?? 'unknown';
                         final isActive = status == 'active';
                         return DropdownMenuItem(
                           value: teacher['user_id'] as String,
@@ -302,15 +283,17 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                               children: [
                                 Flexible(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
                                         teacher['name'] as String? ?? '',
                                         style: TextStyle(
-                                          color: isActive 
-                                              ? colorScheme.onSurface 
-                                              : colorScheme.onSurface.withOpacity(0.6),
+                                          color: isActive
+                                              ? colorScheme.onSurface
+                                              : colorScheme.onSurface
+                                                    .withOpacity(0.6),
                                           fontWeight: FontWeight.w500,
                                         ),
                                         overflow: TextOverflow.ellipsis,
@@ -321,9 +304,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                                         teacher['email'] as String? ?? '',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: isActive 
-                                              ? colorScheme.onSurfaceVariant 
-                                              : colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                          color: isActive
+                                              ? colorScheme.onSurfaceVariant
+                                              : colorScheme.onSurfaceVariant
+                                                    .withOpacity(0.6),
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                         maxLines: 1,
@@ -333,9 +317,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: isActive 
+                                    color: isActive
                                         ? Colors.green.withOpacity(0.2)
                                         : Colors.red.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(4),
@@ -345,7 +332,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: isActive ? Colors.green : Colors.red,
+                                      color: isActive
+                                          ? Colors.green
+                                          : Colors.red,
                                     ),
                                   ),
                                 ),
@@ -364,7 +353,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                           },
                     // Optional: no validator to keep it optional
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: ClassConstants.formSpacing),
 
                   // Students
                   Text(
@@ -383,12 +372,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                           dropdownColor: const Color(0xFFF5FAFC),
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: _inputDecoration(
+                            context: context,
                             labelText: 'Student ${index + 1} (Optional)',
                             hintText: _loadingStudents
                                 ? 'Loading...'
                                 : 'Select student',
                             icon: Icons.person_add,
-                            colorScheme: colorScheme,
                           ),
                           selectedItemBuilder: (BuildContext context) {
                             return [
@@ -407,25 +396,30 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                               child: Text('None (Optional)'),
                             ),
                             ...availableStudents.map((student) {
-                              final status = student['account_status'] as String? ?? 'unknown';
+                              final status =
+                                  student['account_status'] as String? ??
+                                  'unknown';
                               final isActive = status == 'active';
                               return DropdownMenuItem(
                                 value: student['user_id'] as String,
                                 child: IntrinsicHeight(
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Flexible(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Text(
                                               student['name'] as String? ?? '',
                                               style: TextStyle(
-                                                color: isActive 
-                                                    ? colorScheme.onSurface 
-                                                    : colorScheme.onSurface.withOpacity(0.6),
+                                                color: isActive
+                                                    ? colorScheme.onSurface
+                                                    : colorScheme.onSurface
+                                                          .withOpacity(0.6),
                                                 fontWeight: FontWeight.w500,
                                               ),
                                               overflow: TextOverflow.ellipsis,
@@ -436,9 +430,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                                               student['email'] as String? ?? '',
                                               style: TextStyle(
                                                 fontSize: 12,
-                                                color: isActive 
-                                                    ? colorScheme.onSurfaceVariant 
-                                                    : colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                                color: isActive
+                                                    ? colorScheme
+                                                          .onSurfaceVariant
+                                                    : colorScheme
+                                                          .onSurfaceVariant
+                                                          .withOpacity(0.6),
                                               ),
                                               overflow: TextOverflow.ellipsis,
                                               maxLines: 1,
@@ -448,19 +445,26 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                                       ),
                                       const SizedBox(width: 8),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: isActive 
+                                          color: isActive
                                               ? Colors.green.withOpacity(0.2)
                                               : Colors.red.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: Text(
                                           status.toUpperCase(),
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
-                                            color: isActive ? Colors.green : Colors.red,
+                                            color: isActive
+                                                ? Colors.green
+                                                : Colors.red,
                                           ),
                                         ),
                                       ),
@@ -495,7 +499,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  SizedBox(height: ClassConstants.sectionSpacing),
 
                   // Buttons
                   Row(
