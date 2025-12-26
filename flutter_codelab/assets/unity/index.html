@@ -52,12 +52,12 @@
       }
 
       var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/unity_build.loader.js";
+      var loaderUrl = buildUrl + "/unity.loader.js";
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/unity_build.data",
-        frameworkUrl: buildUrl + "/unity_build.framework.js",
-        codeUrl: buildUrl + "/unity_build.wasm",
+        dataUrl: buildUrl + "/unity.data",
+        frameworkUrl: buildUrl + "/unity.framework.js",
+        codeUrl: buildUrl + "/unity.wasm",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "KalmNest",
         productName: "CodePlay",
@@ -116,6 +116,8 @@
         createUnityInstance(canvas, config, (progress) => {
           document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
               }).then((unityInstance) => {
+                window.unityInstance = unityInstance;
+                window.uGameInstance = unityInstance; // <-- IMPORTANT
                 document.querySelector("#unity-loading-bar").style.display = "none";
                 document.querySelector("#unity-fullscreen-button").onclick = () => {
                   unityInstance.SetFullscreen(1);

@@ -6,6 +6,9 @@ import 'package:flutter_codelab/api/game_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_codelab/utils/local_asset_server.dart';
+import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/services/local_level_storage.dart';
+import 'dart:convert';
 
 /// Opens the edit dialog
 Future<void> showEditGamePage({
@@ -60,6 +63,8 @@ class _EditGamePageState extends State<EditGamePage> {
   LocalAssetServer? _server;
   String? _serverUrl;
 
+  String? _userId;
+
   @override
   void initState() {
     super.initState();
@@ -72,8 +77,13 @@ class _EditGamePageState extends State<EditGamePage> {
     _server = LocalAssetServer();
     try {
       await _server!.start(path: 'assets');
+
+      // Fetch user ID to pass to Unity
+      final user = await AuthApi.getStoredUser();
+
       setState(() {
         _serverUrl = 'http://localhost:${_server!.port}';
+        _userId = user?['id']?.toString();
       });
     } catch (e) {
       print("Error starting local server: $e");
@@ -216,7 +226,7 @@ class _EditGamePageState extends State<EditGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "$_serverUrl/unity/index.html?role=${widget.userRole}",
+                          "$_serverUrl/unity/index.html?role=${widget.userRole}&level_Id=${widget.level.levelId}&user_Id=$_userId",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
@@ -224,6 +234,69 @@ class _EditGamePageState extends State<EditGamePage> {
                         javaScriptEnabled: true,
                         isInspectable: kDebugMode,
                       ),
+                      onWebViewCreated: (controller) {
+                        // Handler for saving level data (triggered by Unity)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'saveLevelFile',
+                          callback: (args) async {
+                            if (args.length >= 3) {
+                              final levelId = args[0] as String;
+                              final type = args[1] as String;
+                              final dataType = args[2] as String;
+                              final content = args[3] as String;
+
+                              final storage = LocalLevelStorage();
+                              return await storage.saveDataFile(
+                                levelId: levelId,
+                                type: type,
+                                dataType: dataType,
+                                content: content,
+                              );
+                            }
+                            return false;
+                          },
+                        );
+
+                        // Handler for saving index file (triggered by Unity)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'saveIndexFile',
+                          callback: (args) async {
+                            if (args.length >= 2) {
+                              final levelId = args[0] as String;
+                              final type = args[1] as String;
+                              final content = args[2] as String;
+
+                              final storage = LocalLevelStorage();
+                              return await storage.saveIndexFile(
+                                levelId: levelId,
+                                type: type,
+                                content: content,
+                              );
+                            }
+                            return false;
+                          },
+                        );
+
+                        // Handler for getting level files (triggered by Unity)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'getLevelFile',
+                          callback: (args) async {
+                            if (args.length >= 3) {
+                              final levelId = args[0] as String;
+                              final type = args[1] as String;
+                              final dataType = args[2] as String;
+
+                              final storage = LocalLevelStorage();
+                              return await storage.getFileContent(
+                                levelId: levelId,
+                                type: type,
+                                dataType: dataType,
+                              );
+                            }
+                            return null;
+                          },
+                        );
+                      },
                     ),
                   ),
                 ),

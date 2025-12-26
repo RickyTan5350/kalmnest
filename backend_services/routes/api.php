@@ -153,6 +153,10 @@ Route::middleware('auth:sanctum')->group(function () {
     | Level User (Level Progress & Completion)
     |--------------------------------------------------------------------------
     */
+    Route::post('/level-user/{levelId}/save', [LevelUserController::class, 'saveLevelData']);
+    Route::post('/level-user/{levelId}/{userId}/save-file', [LevelUserController::class, 'storeProgressFromFiles']);
+    Route::get('/level-user/{levelId}', [LevelUserController::class, 'getLevelData']);
+    Route::post('/level-user/{levelId}/{userId}/complete', [LevelUserController::class, 'completeLevel']);
 
 });
 
@@ -163,11 +167,6 @@ Route::middleware('auth:sanctum')->group(function () {
 |--------------------------------------------------------------------------
 */
 
-
-Route::post('/level-user/{levelId}/save', [LevelUserController::class, 'saveLevelData']);
-Route::post('/level-user/{levelId}/{userId}/save-file', [LevelUserController::class, 'storeProgressFromFiles']);
-Route::get('/level-user/{levelId}', [LevelUserController::class, 'getLevelData']);
-Route::post('/level-user/{levelId}/{userId}/complete', [LevelUserController::class, 'completeLevel']);
 
 // --- 2. WILDCARD ROUTES (MUST BE AT THE BOTTOM) ---
 // These catch urls like /notes/1, /notes/50, etc.

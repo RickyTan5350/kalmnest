@@ -5,6 +5,10 @@ import 'package:flutter_codelab/api/game_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
 import 'package:flutter_codelab/utils/local_asset_server.dart';
+import 'package:flutter_codelab/api/auth_api.dart';
+
+import 'package:flutter_codelab/services/local_level_storage.dart';
+import 'dart:convert';
 
 /// ===============================================================
 /// Platform helper (SAFE for Web)
@@ -63,7 +67,11 @@ class _CreateGamePageState extends State<CreateGamePage> {
       GlobalKey<_IndexFilePreviewState>();
 
   LocalAssetServer? _server;
+  LocalAssetServer? _previewServer;
   String? _serverUrl;
+  String? _previewServerUrl;
+
+  String? _userId;
 
   @override
   void initState() {
@@ -73,10 +81,23 @@ class _CreateGamePageState extends State<CreateGamePage> {
 
   Future<void> _initServer() async {
     _server = LocalAssetServer();
+    _previewServer = LocalAssetServer();
     try {
       await _server!.start(path: 'assets');
+
+      // Fetch user ID to pass to Unity
+      final user = await AuthApi.getStoredUser();
+      final userId = user?['user_id']?.toString();
+      
+      // Start preview server for local storage
+      final storage = LocalLevelStorage();
+      final storageBasePath = await storage.getBasePath(userId: userId);
+      await _previewServer!.start(path: storageBasePath);
+
       setState(() {
         _serverUrl = 'http://localhost:${_server!.port}';
+        _previewServerUrl = 'http://localhost:${_previewServer!.port}';
+        _userId = userId;
       });
     } catch (e) {
       print("Error starting local server: $e");
@@ -86,6 +107,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
   @override
   void dispose() {
     _server?.stop();
+    _previewServer?.stop();
     super.dispose();
   }
 
@@ -161,9 +183,31 @@ class _CreateGamePageState extends State<CreateGamePage> {
                         // The user request says "when the user submits... show an extra dialog".
                         // Let's stick to: Call API -> If success -> Pop Game Dialog -> Ask about Achievement.
 
+                        // Read data from temp storage
+                        final storage = LocalLevelStorage();
+                        final levelTypes = ['html', 'css', 'js', 'php'];
+                        
+                        Map<String, String?> tempLevelData = {};
+                        Map<String, String?> tempWinData = {};
+
+                        for (final type in levelTypes) {
+                          tempLevelData[type] = await storage.getFileContent(
+                            levelId: 'temp',
+                            type: type,
+                            dataType: 'level',
+                          );
+                          tempWinData[type] = await storage.getFileContent(
+                            levelId: 'temp',
+                            type: type,
+                            dataType: 'win',
+                          );
+                        }
+
                         final response = await GameAPI.createLevel(
                           levelName: levelName,
                           levelTypeName: selectedValue,
+                          levelData: jsonEncode(tempLevelData),
+                          winCondition: jsonEncode(tempWinData),
                         );
 
                         if (!mounted) return;
@@ -179,6 +223,9 @@ class _CreateGamePageState extends State<CreateGamePage> {
                         );
 
                         if (response.success) {
+                          // Clear temp data after successful creation
+                          await storage.clearLevelData('temp');
+
                           // Extract data
                           final data = response.data;
                           // Check for different possible JSON structures
@@ -266,7 +313,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "$_serverUrl/unity/index.html?role=${widget.userRole}&level_id=12345&user_id=12345",
+                          "$_serverUrl/unity/index.html?role=${widget.userRole}&user_Id=$_userId&level_Id=temp",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
@@ -274,6 +321,69 @@ class _CreateGamePageState extends State<CreateGamePage> {
                         javaScriptEnabled: true,
                         //isInspectable: kDebugMode,
                       ),
+                      onWebViewCreated: (controller) {
+                        // Handler for saving level data (triggered by Unity)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'saveLevelFile',
+                          callback: (args) async {
+                            if (args.length >= 3) {
+                              final levelId = args[0] as String;
+                              final type = args[1] as String;
+                              final dataType = args[2] as String;
+                              final content = args[3] as String;
+
+                              final storage = LocalLevelStorage();
+                              return await storage.saveDataFile(
+                                levelId: levelId,
+                                type: type,
+                                dataType: dataType,
+                                content: content,
+                              );
+                            }
+                            return false;
+                          },
+                        );
+
+                        // Handler for saving index file (triggered by Unity)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'saveIndexFile',
+                          callback: (args) async {
+                            if (args.length >= 2) {
+                              final levelId = args[0] as String;
+                              final type = args[1] as String;
+                              final content = args[2] as String;
+
+                              final storage = LocalLevelStorage();
+                              return await storage.saveIndexFile(
+                                levelId: levelId,
+                                type: type,
+                                content: content,
+                              );
+                            }
+                            return false;
+                          },
+                        );
+
+                        // Handler for getting level files (triggered by Unity)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'getLevelFile',
+                          callback: (args) async {
+                            if (args.length >= 3) {
+                              final levelId = args[0] as String;
+                              final type = args[1] as String;
+                              final dataType = args[2] as String;
+
+                              final storage = LocalLevelStorage();
+                              return await storage.getFileContent(
+                                levelId: levelId,
+                                type: type,
+                                dataType: dataType,
+                              );
+                            }
+                            return null;
+                          },
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -305,7 +415,8 @@ class _CreateGamePageState extends State<CreateGamePage> {
                     child: IndexFilePreview(
                       key: previewKey,
                       userRole: widget.userRole,
-                      serverUrl: _serverUrl!,
+                      serverUrl: _previewServerUrl ?? '',
+                      levelId: 'temp',
                     ),
                   ),
                 ),
@@ -324,11 +435,13 @@ class _CreateGamePageState extends State<CreateGamePage> {
 class IndexFilePreview extends StatefulWidget {
   final String userRole;
   final String serverUrl;
+  final String levelId;
 
   const IndexFilePreview({
     super.key,
     required this.userRole,
     required this.serverUrl,
+    required this.levelId,
   });
 
   @override
@@ -341,8 +454,12 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.serverUrl.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
     final url =
-        "${widget.serverUrl}/unity/StreamingAssets/html/index.html";
+        "${widget.serverUrl}/${widget.levelId}/index/index.html";
 
     return InAppWebView(
       key: _key,

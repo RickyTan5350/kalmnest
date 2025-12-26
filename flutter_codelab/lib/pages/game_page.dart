@@ -4,6 +4,7 @@ import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/game_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/edit_game_page.dart';
+import 'package:flutter_codelab/api/achievement_api.dart';
 
 // Global key to access GamePage state for refreshing from main.dart
 final GlobalKey<_GamePageState> gamePageGlobalKey = GlobalKey<_GamePageState>();
@@ -27,6 +28,7 @@ class _GamePageState extends State<GamePage> {
 
   List<LevelModel> _levels = [];
   List<LevelModel> _filteredLevels = [];
+  Set<String> _completedLevelIds = {};
   bool _loading = true;
   String _searchQuery = '';
 
@@ -52,11 +54,24 @@ class _GamePageState extends State<GamePage> {
 
   Future<void> fetchLevels({String? topic, bool forceRefresh = false}) async {
     setState(() => _loading = true);
-    final levels = await GameAPI.fetchLevels(topic: topic, forceRefresh: forceRefresh);
+    
+    // Fetch levels and completed achievements in parallel
+    final results = await Future.wait([
+      GameAPI.fetchLevels(topic: topic, forceRefresh: forceRefresh),
+      AchievementApi().fetchMyUnlockedAchievements(),
+    ]);
+
+    final levels = results[0] as List<LevelModel>;
+    final achievements = results[1] as List<dynamic>;
+
     if (!mounted) return;
 
     setState(() {
       _levels = levels;
+      _completedLevelIds = achievements
+          .map((a) => a.levelId?.toString())
+          .whereType<String>()
+          .toSet();
       _filteredLevels = _applyFilters(levels);
       _loading = false;
     });
@@ -262,8 +277,10 @@ class _GamePageState extends State<GamePage> {
                             final level = _filteredLevels[index];
                             final levelTypeName =
                                 level.levelTypeName ?? 'Unknown';
+                            final isCompleted = _completedLevelIds.contains(level.levelId);
 
                             return ListTile(
+                              tileColor: isCompleted ? Colors.green.withOpacity(0.1) : null,
                               title: Row(
                                 children: [
                                   Expanded(
@@ -339,7 +356,10 @@ class _GamePageState extends State<GamePage> {
                                 ],
                               ),
                               subtitle: Text(levelTypeName),
-                              leading: const Icon(Icons.videogame_asset),
+                              leading: Icon(
+                                isCompleted ? Icons.check_circle : Icons.videogame_asset,
+                                color: isCompleted ? Colors.green : null,
+                              ),
                               trailing: isStudent
                                   ? null
                                   : Row(

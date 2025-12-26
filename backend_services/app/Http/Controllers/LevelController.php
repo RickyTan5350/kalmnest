@@ -197,24 +197,36 @@ class LevelController extends Controller
         // ];
 
         $levelTypes = ["html", "css", "js", "php"];
-        $finalLevelData = [];
-        $finalWinData = [];
+        $finalLevelDataArr = [];
+        $finalWinDataArr = [];
 
-        foreach ($levelTypes as $level_type) {
-            $levelDataPath = public_path("unity_build/StreamingAssets/$level_type/levelData.json");
-            $winDataPath = public_path("unity_build/StreamingAssets/$level_type/winData.json");
+        // Priority 1: Use data passed from Flutter (from 'temp' saving)
+        if ($request->has('level_data') && $request->has('win_condition')) {
+            $dataToBePassed = [
+                'level_name' => $request->level_name,
+                'level_type_id' => $levelType->level_type_id,
+                'level_data' => $request->level_data,
+                'win_condition' => $request->win_condition,
+                'created_by' => $user->user_id,
+            ];
+        } else {
+            // Priority 2: Fall back to existing public folder logic (if any)
+            foreach ($levelTypes as $level_type) {
+                $levelDataPath = public_path("unity_build/StreamingAssets/$level_type/levelData.json");
+                $winDataPath = public_path("unity_build/StreamingAssets/$level_type/winData.json");
 
-            $finalLevelData[$level_type] = file_exists($levelDataPath) ? file_get_contents($levelDataPath) : null;
-            $finalWinData[$level_type] = file_exists($winDataPath) ? file_get_contents($winDataPath) : null;
+                $finalLevelDataArr[$level_type] = file_exists($levelDataPath) ? file_get_contents($levelDataPath) : null;
+                $finalWinDataArr[$level_type] = file_exists($winDataPath) ? file_get_contents($winDataPath) : null;
+            }
+
+            $dataToBePassed = [
+                'level_name' => $request->level_name,
+                'level_type_id' => $levelType->level_type_id,
+                'level_data' => json_encode($finalLevelDataArr, JSON_PRETTY_PRINT),
+                'win_condition' => json_encode($finalWinDataArr, JSON_PRETTY_PRINT),
+                'created_by' => $user->user_id,
+            ];
         }
-
-        $dataToBePassed = [
-            'level_name' => $request->level_name,
-            'level_type_id' => $levelType->level_type_id,
-            'level_data' => json_encode($finalLevelData, JSON_PRETTY_PRINT),
-            'win_condition' => json_encode($finalWinData, JSON_PRETTY_PRINT),
-            'created_by' => $user->user_id,
-        ];
 
 
         try {
