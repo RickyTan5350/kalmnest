@@ -21,6 +21,7 @@
         "flutter_markdown_plus",
         "flutter_secure_storage",
         "flutter_widget_from_html",
+        "font_awesome_flutter",
         "google_fonts",
         "htmltopdfwidgets",
         "http",
@@ -56,6 +57,13 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "font_awesome_flutter",
+      "version": "10.12.0",
+      "dependencies": [
+        "flutter"
       ]
     },
     {

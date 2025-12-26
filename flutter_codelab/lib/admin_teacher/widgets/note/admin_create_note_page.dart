@@ -209,174 +209,6 @@ class _CreateNotePageState extends State<CreateNotePage> {
     }
   }
 
-  // --- IMPORT MARKDOWN LOGIC ---
-  Future<void> _handleImportMarkdown() async {
-    // 1. Pick MD or TXT File
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['md', 'txt'],
-    );
-
-    if (result == null || result.files.isEmpty) return;
-
-    final pickedFile = result.files.single;
-    if (pickedFile.path == null) return;
-
-    setState(() => _isLoading = true);
-    widget.showSnackBar(context, 'Importing note...', Colors.blue);
-
-    try {
-      final file = File(pickedFile.path!);
-      final content = await file.readAsString();
-      final baseDir = file.parent.path;
-
-      // 2. Set Title (Filename without extension)
-      final title = pickedFile.name.replaceAll(
-        RegExp(r'\.(md|txt)$', caseSensitive: false),
-        '',
-      );
-      _noteTitleController.text = title;
-
-      // 3. Parse Attachments
-      // Robust Regex to match ![alt](path) handling one level of nested parentheses
-      // e.g. matches "image (1).png" inside ![alt](image (1).png)
-      // Dart's RegExp engine (standard JS-like) supports non-capturing groups
-      final imageRegex = RegExp(r'!\[(.*?)\]\(((?:[^()]|\([^()]*\))+)\)');
-
-      String updatedContent = content;
-      final matches = imageRegex.allMatches(content);
-
-      // Find all UNIQUE paths first
-      Set<String> uniquePaths = {};
-      for (final match in matches) {
-        final path = match.group(2);
-        if (path != null && !path.trim().startsWith('http')) {
-          uniquePaths.add(path);
-        }
-      }
-
-      int uploadedCount = 0;
-
-      for (String relativePath in uniquePaths) {
-        // Clean the path: strip quotes, whitespace
-        String cleanPath = relativePath.trim();
-        if ((cleanPath.startsWith('"') && cleanPath.endsWith('"')) ||
-            (cleanPath.startsWith("'") && cleanPath.endsWith("'"))) {
-          cleanPath = cleanPath.substring(1, cleanPath.length - 1);
-        }
-
-        // Possible candidates for the local file
-        List<String> candidates = [];
-
-        // 1. Exact relative path (decoded)
-        String decoded = Uri.decodeFull(cleanPath);
-        candidates.add(decoded);
-
-        // 2. Windows-style path (backslashes)
-        if (Platform.isWindows) {
-          candidates.add(decoded.replaceAll('/', '\\'));
-        }
-
-        // 3. Just the filename (Flat import)
-        String filename = decoded.split('/').last.split('\\').last;
-        candidates.add(filename);
-
-        File? localFile;
-
-        // Try finding the file
-        for (final candidate in candidates) {
-          final attemptPath = '$baseDir${Platform.pathSeparator}$candidate';
-          final f = File(attemptPath);
-          if (await f.exists()) {
-            localFile = f;
-            break;
-          }
-        }
-
-        if (localFile == null) {
-          // 4. Recursive Fallback (Aggressive Search)
-          // If we still haven't found it, search the entire base directory for the filename.
-          try {
-            final parentDir = Directory(baseDir);
-            if (await parentDir.exists()) {
-              await for (var entity in parentDir.list(
-                recursive: true,
-                followLinks: false,
-              )) {
-                if (entity is File) {
-                  String name = entity.path.split(Platform.pathSeparator).last;
-                  if (name.toLowerCase() == filename.toLowerCase()) {
-                    localFile = entity;
-                    debugPrint("Found recursively: ${entity.path}");
-                    break;
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            debugPrint("Recursive search error: $e");
-          }
-        }
-
-        if (localFile != null) {
-          // Upload it
-          // Create PlatformFile for the API
-          final pFile = PlatformFile(
-            name: localFile.path.split(Platform.pathSeparator).last,
-            path: localFile.path,
-            size: await localFile.length(),
-          );
-
-          // Trigger Upload
-          Map<String, dynamic>? res = await _fileApi.uploadSingleAttachment(
-            pFile,
-          );
-
-          if (res != null && res['url'] != null) {
-            final serverUrl = res['url'];
-            final serverId = res['id'];
-
-            // Replace in Markdown
-            // We use replaceAll to replace ALL occurrences of this specific relative path
-            // This is safe enough for "image.png" -> "http://.../uuid.png"
-            updatedContent = updatedContent.replaceAll(relativePath, serverUrl);
-
-            // Add to attachments list for UI
-            setState(() {
-              _attachments.add(
-                UploadedAttachment(
-                  localFile: pFile,
-                  serverFileId: serverId,
-                  publicUrl: serverUrl,
-                  isUploading: false,
-                ),
-              );
-            });
-            uploadedCount++;
-          }
-        } else {
-          debugPrint(
-            "Skipping: Could not find local file for '$cleanPath' in '$baseDir'",
-          );
-        }
-      }
-
-      // 4. Update Content
-      _noteMarkdownController.text = updatedContent;
-
-      widget.showSnackBar(
-        context,
-        'Imported "$title" with $uploadedCount images.',
-        Colors.green,
-      );
-    } catch (e) {
-      debugPrint("Import Error: $e");
-      widget.showSnackBar(context, 'Import failed: $e', Colors.red);
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
   // --- SUBMIT FORM LOGIC ---
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
@@ -490,11 +322,6 @@ class _CreateNotePageState extends State<CreateNotePage> {
 
         actions: [
           IconButton(
-            icon: Icon(Icons.file_upload, color: colorScheme.primary),
-            tooltip: 'Import Markdown(.txt, .md)',
-            onPressed: _isLoading ? null : _handleImportMarkdown,
-          ),
-          IconButton(
             icon: _isLoading
                 ? SizedBox(
                     width: 20,
@@ -551,7 +378,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                     controller: _noteTitleController,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
-                      labelText: 'Note Title',
+                      labelText: 'Title',
                       hintText: 'Enter a title',
                       icon: Icons.title,
                       colorScheme: colorScheme,
