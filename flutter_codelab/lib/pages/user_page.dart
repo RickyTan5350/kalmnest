@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/user/user_list_content.dart';
 import 'package:flutter_codelab/api/user_api.dart';
+import 'package:flutter_codelab/models/user_data.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 import 'package:flutter_codelab/enums/sort_enums.dart';
 import 'package:flutter_codelab/services/layout_preferences.dart';
 
 class UserPage extends StatefulWidget {
-  const UserPage({super.key});
+  final UserDetails?
+  currentUser; // Make it optional to avoid breaking if not passed immediately, but ideally required
+  const UserPage({super.key, this.currentUser});
 
   @override
   State<UserPage> createState() => UserPageState();
@@ -327,6 +330,7 @@ class UserPageState extends State<UserPage> {
                       viewLayout: _viewLayout,
                       sortType: _sortType,
                       sortOrder: _sortOrder,
+                      currentUser: widget.currentUser,
                     ),
                   ),
                 ],
