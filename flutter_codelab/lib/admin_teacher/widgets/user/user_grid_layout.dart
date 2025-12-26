@@ -166,7 +166,6 @@ class UserGridLayout extends StatelessWidget {
       module: GridModule.user, // Ensure this key exists in your GridModule enum
       itemBuilder: _buildUserCardContent,
       onTap: onTap,
-      childAspectRatio: 0.85, // Adjust for User card height
     );
   }
 }
