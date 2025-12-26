@@ -40,7 +40,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return scheme.error;
+        return Colors.purple;
       case 'teacher':
         return scheme.tertiary;
       case 'student':
