@@ -553,75 +553,94 @@ class UserListContentState extends State<UserListContent> {
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: ListTile(
-                hoverColor: colorScheme.primary.withOpacity(0.08),
-                splashColor: colorScheme.primary.withOpacity(0.12),
-                mouseCursor: SystemMouseCursors.click,
-                leading: CircleAvatar(
-                  backgroundColor: _getRoleColor(user.roleName, colorScheme),
-                  foregroundColor: colorScheme.onPrimary,
-                  child: isSelected
-                      ? const Icon(Icons.check)
-                      : Text(
-                          user.name.isNotEmpty
-                              ? user.name[0].toUpperCase()
-                              : '?',
-                        ),
-                ),
-                title: Text(
-                  user.name,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text(user.email, style: textTheme.bodyMedium),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            user.roleName,
-                            style: textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          user.accountStatus.toUpperCase(),
-                          style: textTheme.labelSmall?.copyWith(
-                            color: user.accountStatus == 'active'
-                                ? Colors.green
-                                : colorScheme.error,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                isThreeLine: true,
-                // REMOVED onLongPress as requested by User
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
                 onTap: () {
                   if (isAdmin && _isSelectionMode) {
                     _toggleSelection(user.id);
                   } else {
-                    _navigateToDetail(user.id, user.name);
+                    _navigateToDetail(user.id.toString(), user.name);
                   }
                 },
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      // Centered Avatar
+                      CircleAvatar(
+                        backgroundColor: _getRoleColor(
+                          user.roleName,
+                          colorScheme,
+                        ),
+                        foregroundColor: colorScheme.onPrimary,
+                        child: isSelected
+                            ? const Icon(Icons.check)
+                            : Text(
+                                user.name.isNotEmpty
+                                    ? user.name[0].toUpperCase()
+                                    : '?',
+                              ),
+                      ),
+                      const SizedBox(width: 16),
+
+                      // Text Content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user.name,
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(user.email, style: textTheme.bodyMedium),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    user.roleName,
+                                    style: textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  user.accountStatus.toUpperCase(),
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: user.accountStatus == 'active'
+                                        ? Colors.green
+                                        : colorScheme.error,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Optional Chevron like Notes (or simple padding if preferred, but Notes usually has it)
+                      if (!_isSelectionMode)
+                        Icon(
+                          Icons.chevron_right,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           );
