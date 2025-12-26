@@ -284,6 +284,14 @@ class UserApi {
       throw Exception(msg);
     }
   }
+
+  // --- DELETE MULTIPLE USERS ---
+  Future<void> deleteUsers(List<dynamic> ids) async {
+    // Iterate and delete individually as per NoteApi implementation
+    for (final id in ids) {
+      await deleteUser(id.toString());
+    }
+  }
 }
 
 class ValidationException implements Exception {
