@@ -1,0 +1,64 @@
+##  3.2.1 Pembangunan Laman Web dengan Menggunakan Bahasa Penskripan Pelayan
+#### **1\. Konsep Pelanggan (Client) dan Pelayan (Server)**
+
+Model ini adalah asas kepada komunikasi Internet.
+
+* **Definisi Klien (Client):** Mesin atau proses yang memohon servis spesifik daripada pelayan. Dalam konteks web, **pelayar web (web browser)** bertindak sebagai klien.  
+* **Definisi Pelayan (Server):** Mesin atau proses yang memberikan servis kepada klien. **Pelayan web (web server)** bertindak sebagai pemberi servis.
+
+Analogi Restoran :
+
+* **Pelanggan Restoran (Klien):** Membuat pesanan makanan mengikut menu.  
+* **Pelayan Restoran (Server):** Mengambil pesanan, memprosesnya di dapur, dan menghantar semula makanan kepada pelanggan.
+
+---
+
+#### **2\. Apa itu Bahasa Penskripan Pelayan?**
+
+Bahasa penskripan pelayan adalah program yang dilaksanakan di sebelah pelayan (server-side) yang melatari pembangunan web.
+
+* **Fungsi Utama:**  
+  * Mengakses data daripada pangkalan data.  
+  * Menerima permintaan pengguna, mencari laman web yang sesuai, dan memindahkannya ke pelayar untuk diterjemahkan.  
+  * Digunakan untuk aplikasi seperti papan pesanan (message board) dan buku pelawat blog .  
+* **Analogi Rumah:** Bahasa penskripan pelayan diibaratkan seperti sistem pendawaian elektrik dan paip yang menyokong fungsi sesebuah rumah.
+
+**Kelebihan Penskripan Pelayan:**
+
+* **Tidak bergantung pada pelayar:** Tidak seperti penskripan klien, penskripan pelayan diproses sepenuhnya di server, jadi tiada isu pelayar tidak menyokong skrip tersebut .
+
+**Isu Keselamatan:**
+
+* Penskripan pelayan berisiko digunakan untuk menggodam jika tidak selamat.  
+* Laman web yang bagus menggunakan gabungan **penskripan klien DAN pelayan** untuk menyokong proses pengesahan demi keselamatan.
+
+---
+
+#### **3\. Contoh Bahasa Penskripan Pelayan**
+
+Terdapat pelbagai bahasa yang boleh digunakan untuk memanipulasi data dan berinteraksi dengan pelayan. Antaranya ialah:
+
+1. **PHP**  
+2. **ASP**  
+3. **Python**  
+4. **JavaScript** (boleh digunakan di sebelah pelayan)  
+5. **Perl**  
+   * *Info Tambahan Perl:* Perl banyak digunakan dalam bidang IT dan menjadi tulang belakang analisis bioinformatik serta biologi, terutamanya dalam Projek Genom Manusia.
+
+---
+
+#### **4\. Sejarah Ringkas**
+
+* **Tim Berners-Lee** telah membangunkan World Wide Web (WWW) semasa bekerja di CERN pada tahun 1990\.  
+* Beliau juga mencipta pelayar web yang pertama pada tahun yang sama.
+
+---
+
+#### **5\. Keperluan Laman Web**
+
+Laman web bertindak sebagai perantara yang menentukan cara pengguna berinteraksi dengan sistem.
+
+* **Contoh Interaksi:**  
+  * **Enjin Carian:** Pengguna memasukkan kata kunci untuk dapatkan maklumat.  
+  * **Syarikat Penerbangan:** Pengguna memasukkan destinasi dan tarikh untuk melihat harga tiket.  
+* Tanpa laman web, interaksi dengan sistem perbankan, media sosial, atau enjin carian adalah sukar.
