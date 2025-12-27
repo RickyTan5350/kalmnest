@@ -11,6 +11,7 @@ import 'package:flutter_codelab/api/file_api.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'run_code_page.dart';
 import 'quiz_widget.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
@@ -495,8 +496,12 @@ class _EditNotePageState extends State<EditNotePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            RunCodePage(initialCode: code, contextId: widget.currentTitle),
+        builder: (context) => RunCodePage(
+          initialCode: code,
+          contextId: widget.currentTitle,
+          topic: _selectedTopic ?? widget.currentTopic,
+          noteTitle: _titleController.text,
+        ),
       ),
     );
   }
@@ -928,12 +933,16 @@ class _EditNotePageState extends State<EditNotePage> {
           child: Scaffold(
             backgroundColor: colorScheme.surface,
             appBar: AppBar(
-              title: Text(
-                'Edit Note',
-                style: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                ),
+              title: BreadcrumbNavigation(
+                items: [
+                  BreadcrumbItem(label: 'Note'),
+                  BreadcrumbItem(label: _selectedTopic ?? widget.currentTopic),
+                  BreadcrumbItem(
+                    label: _titleController.text,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                  BreadcrumbItem(label: 'Edit'),
+                ],
               ),
               backgroundColor: colorScheme.surface,
               elevation: 0,

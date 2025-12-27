@@ -224,8 +224,10 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
       MaterialPageRoute(
         builder: (context) => RunCodePage(
           initialCode: code,
-          contextId: _currentTitle,
+          contextId: widget.noteTitle,
           initialFileName: fileName,
+          topic: widget.topic,
+          noteTitle: widget.noteTitle,
         ),
       ),
     );

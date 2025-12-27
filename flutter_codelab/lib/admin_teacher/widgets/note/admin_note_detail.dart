@@ -141,6 +141,8 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
           initialCode: code,
           contextId: _currentTitle,
           initialFileName: fileName,
+          topic: _currentTopic,
+          noteTitle: _currentTitle,
         ),
       ),
     );
