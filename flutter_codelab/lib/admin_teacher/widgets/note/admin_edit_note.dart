@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 
@@ -11,6 +12,7 @@ import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'run_code_page.dart';
+import 'quiz_widget.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 import 'package:flutter_codelab/theme.dart';
 
@@ -273,6 +275,137 @@ class _EditNotePageState extends State<EditNotePage> {
     }
   }
 
+  // --- QUIZ INSERTION LOGIC ---
+  Future<void> _insertQuiz() async {
+    String question = '';
+    List<String> options = ['', '']; // Start with 2 options
+    int correctIndex = 0;
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Insert Quiz'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(labelText: 'Question'),
+                      onChanged: (value) => question = value,
+                    ),
+                    const SizedBox(height: 10),
+                    const Text('Options:'),
+                    ...options.asMap().entries.map((entry) {
+                      int idx = entry.key;
+                      return Row(
+                        children: [
+                          Radio<int>(
+                            value: idx,
+                            groupValue: correctIndex,
+                            onChanged: (val) {
+                              setStateDialog(() => correctIndex = val!);
+                            },
+                          ),
+                          Expanded(
+                            child: TextField(
+                              decoration: InputDecoration(
+                                labelText: 'Option ${idx + 1}',
+                              ),
+                              controller:
+                                  TextEditingController(text: options[idx])
+                                    ..selection = TextSelection.collapsed(
+                                      offset: options[idx].length,
+                                    ),
+                              onChanged: (val) => options[idx] = val,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle),
+                            onPressed: options.length > 2
+                                ? () {
+                                    setStateDialog(() {
+                                      options.removeAt(idx);
+                                      if (correctIndex >= options.length) {
+                                        correctIndex = options.length - 1;
+                                      }
+                                    });
+                                  }
+                                : null,
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Option'),
+                      onPressed: () {
+                        setStateDialog(() {
+                          options.add('');
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    // Validation
+                    if (question.isEmpty || options.any((o) => o.isEmpty)) {
+                      return;
+                    }
+                    Navigator.pop(context, true);
+                  },
+                  child: const Text('Insert'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((result) {
+      if (result == true) {
+        final quizData = {
+          'question': question,
+          'options': options,
+          'correctIndex': correctIndex,
+        };
+        final jsonStr = const JsonEncoder.withIndent('  ').convert(quizData);
+        final codeBlock = '\n```quiz\n$jsonStr\n```\n';
+
+        final text = _contentController.text;
+        final selection = _contentController.selection;
+        String newString;
+        int newCursorPos;
+
+        if (selection.isValid && selection.start >= 0) {
+          newString = text.replaceRange(
+            selection.start,
+            selection.end,
+            codeBlock,
+          );
+          newCursorPos = selection.start + codeBlock.length;
+        } else {
+          newString = text + codeBlock;
+          newCursorPos = newString.length;
+        }
+
+        _contentController.value = TextEditingValue(
+          text: newString,
+          selection: TextSelection.collapsed(offset: newCursorPos),
+        );
+        setState(() {});
+      }
+    });
+  }
+
   void _removeFile(int index) {
     setState(() {
       _attachments.removeAt(index);
@@ -445,6 +578,28 @@ class _EditNotePageState extends State<EditNotePage> {
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 15),
       customWidgetBuilder: (element) {
         if (element.localName == 'pre') {
+          if (element.children.isNotEmpty &&
+              element.children.first.localName == 'code') {
+            final codeClass = element.children.first.attributes['class'] ?? '';
+
+            // 1. Check for Quiz
+            if (codeClass.contains('language-quiz')) {
+              final jsonStr = element.text;
+              try {
+                final quizData = jsonDecode(jsonStr);
+                return QuizWidget(
+                  question: quizData['question'],
+                  options: List<String>.from(quizData['options']),
+                  correctIndex: quizData['correctIndex'],
+                );
+              } catch (e) {
+                return Text(
+                  'Error parsing quiz: $e',
+                  style: const TextStyle(color: Colors.red),
+                );
+              }
+            }
+          }
           final codeText = element.text;
           // Use innerHtml to preserve highlighting spans, wrapped in pre to preserve whitespace
           final htmlContent =
@@ -914,6 +1069,29 @@ class _EditNotePageState extends State<EditNotePage> {
                                       }
                                     },
                                     onInsertCode: _insertCodeBlock,
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Quiz Button
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: TextButton.icon(
+                                      onPressed: _insertQuiz,
+                                      icon: Icon(
+                                        Icons.quiz,
+                                        color: colorScheme.primary,
+                                      ),
+                                      label: Text(
+                                        'Insert Quiz',
+                                        style: TextStyle(
+                                          color: colorScheme.primary,
+                                        ),
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        backgroundColor:
+                                            colorScheme.surfaceContainer,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(height: 16),
 

@@ -11,6 +11,8 @@ import 'package:path/path.dart' as p;
 import 'package:flutter_codelab/student/widgets/note/pdf_service.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'dart:convert';
+import 'package:flutter_codelab/admin_teacher/widgets/note/quiz_widget.dart';
 
 class StudentNoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -394,6 +396,25 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
           if (element.children.isNotEmpty &&
               element.children.first.localName == 'code') {
             final codeClass = element.children.first.attributes['class'] ?? '';
+
+            // 1. Check for Quiz
+            if (codeClass.contains('language-quiz')) {
+              final jsonStr = element.text;
+              try {
+                final quizData = jsonDecode(jsonStr);
+                return QuizWidget(
+                  question: quizData['question'],
+                  options: List<String>.from(quizData['options']),
+                  correctIndex: quizData['correctIndex'],
+                );
+              } catch (e) {
+                return Text(
+                  'Error parsing quiz: $e',
+                  style: const TextStyle(color: Colors.red),
+                );
+              }
+            }
+
             final match = RegExp(r':src=([^\s]+)').firstMatch(codeClass);
             if (match != null) {
               linkedFileName = match.group(1);

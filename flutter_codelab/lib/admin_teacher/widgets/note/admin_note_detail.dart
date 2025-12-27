@@ -13,6 +13,8 @@ import 'package:pdf/pdf.dart';
 import 'delete_note.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'quiz_widget.dart';
 
 class AdminNoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -523,7 +525,26 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
           if (element.children.isNotEmpty &&
               element.children.first.localName == 'code') {
             final codeClass = element.children.first.attributes['class'] ?? '';
-            // Search for :src=filename.ext
+
+            // 1. Check for Quiz
+            if (codeClass.contains('language-quiz')) {
+              final jsonStr = element.text;
+              try {
+                final quizData = jsonDecode(jsonStr);
+                return QuizWidget(
+                  question: quizData['question'],
+                  options: List<String>.from(quizData['options']),
+                  correctIndex: quizData['correctIndex'],
+                );
+              } catch (e) {
+                return Text(
+                  'Error parsing quiz: $e',
+                  style: const TextStyle(color: Colors.red),
+                );
+              }
+            }
+
+            // 2. Search for :src=filename.ext
             final match = RegExp(r':src=([^\s]+)').firstMatch(codeClass);
             if (match != null) {
               linkedFileName = match.group(1);
