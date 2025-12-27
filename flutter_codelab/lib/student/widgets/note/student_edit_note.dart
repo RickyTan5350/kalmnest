@@ -138,8 +138,12 @@ class _ViewNotePageState extends State<ViewNotePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            RunCodePage(initialCode: code, contextId: widget.currentTitle),
+        builder: (context) => RunCodePage(
+          initialCode: code,
+          contextId: widget.currentTitle,
+          topic: widget.currentTopic,
+          noteTitle: widget.currentTitle,
+        ),
       ),
     );
   }

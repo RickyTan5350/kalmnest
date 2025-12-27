@@ -8,6 +8,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import '../../../../constants/api_constants.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 
 class CodeFile {
   String name;
@@ -25,7 +26,12 @@ class RunCodePage extends StatefulWidget {
     required this.initialCode,
     this.contextId,
     this.initialFileName,
+    required this.topic,
+    required this.noteTitle,
   });
+
+  final String topic;
+  final String noteTitle;
 
   @override
   State<RunCodePage> createState() => _RunCodePageState();
@@ -1068,12 +1074,16 @@ class _RunCodePageState extends State<RunCodePage> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: Text(
-          'Code Editor',
-          style: TextStyle(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
+        title: BreadcrumbNavigation(
+          items: [
+            BreadcrumbItem(label: 'Note'),
+            BreadcrumbItem(label: widget.topic),
+            BreadcrumbItem(
+              label: widget.noteTitle,
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            BreadcrumbItem(label: 'Run Code'),
+          ],
         ),
         backgroundColor: colorScheme.surface,
         elevation: 0,
