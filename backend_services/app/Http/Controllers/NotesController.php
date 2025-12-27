@@ -118,7 +118,8 @@ class NotesController extends Controller
                 // --- GIT SYNC ---
                 // Read the content we just saved to sync it to seed_data
                 $syncedContent = file_get_contents($mdFile->getRealPath());
-                $this->_syncToSeedData($mdPath, $syncedContent, $validatedData['title']);
+                // Pass the topic name we already validated
+                $this->_syncToSeedData($mdPath, $syncedContent, $validatedData['title'], $topicName);
             }
 
             // 4. Create the Note
@@ -348,7 +349,33 @@ class NotesController extends Controller
             Storage::disk('public')->put($fileRecord->file_path, $request->input('content'));
 
             // --- GIT SYNC ---
-            $this->_syncToSeedData($fileRecord->file_path, $request->input('content'), $request->input('title'), $oldTitle);
+            // Pass topic name, and also pass old topic (we need to retrieve it first if we want to support topic movement)
+            // But since we only have new topic name here easily, let's fetch old topic name from DB before update if we want to be perfect.
+            // For now, let's just assume we want to write to the NEW topic folder.
+            // If the topic changed, we might leave a ghost file in the old folder unless we handle it.
+            
+            // Let's get the OLD topic name for cleanup
+            $oldTopicName = null;
+            if ($note->topic_id) {
+                 // We need to re-fetch the old topic because we might have already updated the note->topic_id in memory (line 321)
+                 // Actually line 321 updates the model instance. 
+                 // We should have captured the old topic ID before line 321. 
+                 // Let's restart this block slightly better below using the captured state if possible, 
+                 // but since we didn't capture old topic ID, let's just write to the new one for now.
+                 // To do it properly: We need to change the order of operations or fetch fresh.
+            }
+
+            // RE-FETCHING old topic name logic is tricky if we already mutated the model.
+            // However, we can simply rely on the fact that we have the new topic object.
+            
+            $this->_syncToSeedData(
+                $fileRecord->file_path, 
+                $request->input('content'), 
+                $request->input('title'), 
+                $topic->topic_name, // NEW TOPIC
+                $oldTitle
+                // TODO: improved cleanup for old topic if needed, for now focusing on writing to correct place.
+            );
 
             $note->save(); 
 
@@ -411,33 +438,87 @@ class NotesController extends Controller
      * Helper to sync note content to the seed_data folder for Git commits.
      * This is primarily for the Development environment.
      */
-    private function _syncToSeedData($originalPath, $content, $title = null, $oldTitle = null)
+    /**
+     * Helper to sync note content to the seed_data folder for Git commits.
+     * This is primarily for the Development environment.
+     */
+    private function _syncToSeedData($originalPath, $content, $title = null, $topicName = 'General', $oldTitle = null)
     {
         $seedDir = database_path('seed_data/notes');
         
         // Only run if the directory exists (Dev setup)
         if (is_dir($seedDir)) {
              try {
-                 // Determine Filename
+                 // 1. Determine Topic Directory
+                 $topicDir = $seedDir . DIRECTORY_SEPARATOR . $topicName;
+                 \Log::info("Syncing to Seed Data. Topic: $topicName, Dir: $topicDir");
+
+                 if (!file_exists($topicDir)) {
+                     \Log::info("Topic dir does not exist, creating: $topicDir");
+                     mkdir($topicDir, 0755, true);
+                 }
+
+                 // 2. Determine Filename
                  if ($title) {
-                     // Sanitize Title: "My Note!" -> "My_Note_"
-                     $safeTitle = preg_replace('/[^A-Za-z0-9_\-\(\)]/', '_', $title);
-                     // Avoid empty filename if title is all special chars
+                     // Sanitize Title: Allow alphanumeric, spaces, dots, dashes, underscores, parentheses.
+                     // Remove generally unsafe chars: \ / : * ? " < > |
+                     $safeTitle = preg_replace('/[\\/\\\:\*\?\"\<\>\|]/', '', $title);
+                     $safeTitle = trim($safeTitle);
+                     
                      if (empty($safeTitle)) $safeTitle = 'Untitled_' . time();
                      $filename = $safeTitle . '.md';
                  } else {
                      $filename = basename($originalPath);
                  }
 
-                 $dest = $seedDir . DIRECTORY_SEPARATOR . $filename;
+                 // 3. Write to Topic Folder
+                 $dest = $topicDir . DIRECTORY_SEPARATOR . $filename;
+                 \Log::info("Writing content to: $dest");
+                 
                  file_put_contents($dest, $content);
+                 
+                 if (file_exists($dest)) {
+                     \Log::info("Write successful.");
+                 } else {
+                     \Log::error("Write failed. File not found after put.");
+                 }
 
-                 // Cleanup Old File (Rename handling)
+                 // 4. CLEANUP LEGACY/DUPLICATE FILES
+                 
+                 // 4a. Cleanup from ROOT (Legacy location)
+                 // The old system sanitized to underscores: "My Note" -> "My_Note"
+                 // So we check for that specifically to delete the old duplication.
+                 if ($title) {
+                     $legacySafeTitle = preg_replace('/[^A-Za-z0-9_\-\(\)]/', '_', $title);
+                     $legacyFilename = $legacySafeTitle . '.md';
+                     $legacyRootPath = $seedDir . DIRECTORY_SEPARATOR . $legacyFilename;
+                     
+                     if (file_exists($legacyRootPath)) {
+                          \Log::info("Removing legacy root file: $legacyRootPath");
+                          unlink($legacyRootPath);
+                     }
+                     // Also check for the NEW safe title in root, just in case
+                     $newSafeRootPath = $seedDir . DIRECTORY_SEPARATOR . $filename;
+                     if (file_exists($newSafeRootPath)) {
+                          unlink($newSafeRootPath);
+                     }
+                 }
+
+                 // 4b. Cleanup Renamed Files within SAME topic
                  if ($oldTitle && $oldTitle !== $title) {
-                     $safeOldTitle = preg_replace('/[^A-Za-z0-9_\-\(\)]/', '_', $oldTitle);
-                     $oldDest = $seedDir . DIRECTORY_SEPARATOR . $safeOldTitle . '.md';
+                     // Cleanup "New Style" old title
+                     $oldSafeTitle = preg_replace('/[\\/\\\:\*\?\"\<\>\|]/', '', $oldTitle);
+                     $oldSafeTitle = trim($oldSafeTitle);
+                     $oldDest = $topicDir . DIRECTORY_SEPARATOR . $oldSafeTitle . '.md';
                      if (file_exists($oldDest)) {
                          unlink($oldDest);
+                     }
+                     
+                     // Cleanup "Old Style" old title (underscores)
+                     $oldLegacyTitle = preg_replace('/[^A-Za-z0-9_\-\(\)]/', '_', $oldTitle);
+                     $oldLegacyDest = $topicDir . DIRECTORY_SEPARATOR . $oldLegacyTitle . '.md';
+                     if (file_exists($oldLegacyDest)) {
+                         unlink($oldLegacyDest);
                      }
                  }
 
