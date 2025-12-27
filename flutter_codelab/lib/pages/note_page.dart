@@ -68,6 +68,14 @@ class _NotePageState extends State<NotePage> {
     }
   }
 
+  void _handleTopicChange(String newTopic) {
+    if (_topics.contains(newTopic)) {
+      setState(() {
+        _selectedTopic = newTopic;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CallbackShortcuts(
@@ -251,6 +259,7 @@ class _NotePageState extends State<NotePage> {
                             isGrid: _viewLayout == ViewLayout.grid,
                             sortType: _sortType,
                             sortOrder: _sortOrder,
+                            onTopicChanged: _handleTopicChange,
                           )
                         : AdminViewNotePage(
                             key: _adminKey,
@@ -261,6 +270,7 @@ class _NotePageState extends State<NotePage> {
                             query: _searchQuery,
                             sortType: _sortType,
                             sortOrder: _sortOrder,
+                            onTopicChanged: _handleTopicChange,
                           ),
                   ),
                 ],
