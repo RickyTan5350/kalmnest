@@ -27,7 +27,10 @@ class AdminViewNotePage extends StatefulWidget {
     required this.query,
     required this.sortType,
     required this.sortOrder,
+    this.onTopicChanged,
   });
+
+  final void Function(String)? onTopicChanged;
 
   @override
   State<AdminViewNotePage> createState() => AdminViewNotePageState();
@@ -463,10 +466,10 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
         itemKeys: _gridItemKeys,
 
         // 2. ADD THIS: Handle the tap event for Admin
-        onTap: (id) {
+        onTap: (id) async {
           final note = noteMap[id];
           if (note != null) {
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => AdminNoteDetailPage(
@@ -476,6 +479,9 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                 ),
               ),
             );
+            if (result is String && widget.onTopicChanged != null) {
+              widget.onTopicChanged!(result);
+            }
           }
         },
       );
@@ -553,12 +559,12 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12.0),
         onLongPress: () => _enterSelectionMode(item.noteId),
-        onTap: () {
+        onTap: () async {
           if (_isSelectionMode) {
             _toggleSelection(item.noteId);
           } else {
             // FIX: Use AdminNoteDetailPage
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => AdminNoteDetailPage(
@@ -569,6 +575,9 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                 ),
               ),
             );
+            if (result is String && widget.onTopicChanged != null) {
+              widget.onTopicChanged!(result);
+            }
           }
         },
         child: Padding(

@@ -13,6 +13,7 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'dart:convert';
 import 'package:flutter_codelab/admin_teacher/widgets/note/quiz_widget.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 
 class StudentNoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -497,12 +498,18 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
           child: Scaffold(
             backgroundColor: colorScheme.surface,
             appBar: AppBar(
-              title: Text(
-                _currentTitle,
-                style: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                ),
+              title: BreadcrumbNavigation(
+                items: [
+                  BreadcrumbItem(
+                    label: 'Note',
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                  BreadcrumbItem(
+                    label: _currentTopic,
+                    onTap: () => Navigator.of(context).pop(_currentTopic),
+                  ),
+                  BreadcrumbItem(label: _currentTitle),
+                ],
               ),
 
               backgroundColor: colorScheme.surface,

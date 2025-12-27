@@ -12,6 +12,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'delete_note.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'quiz_widget.dart';
@@ -637,12 +638,18 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         child: Scaffold(
           backgroundColor: colorScheme.surface,
           appBar: AppBar(
-            title: Text(
-              _currentTitle,
-              style: TextStyle(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
-              ),
+            title: BreadcrumbNavigation(
+              items: [
+                BreadcrumbItem(
+                  label: 'Note',
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+                BreadcrumbItem(
+                  label: _currentTopic,
+                  onTap: () => Navigator.of(context).pop(_currentTopic),
+                ),
+                BreadcrumbItem(label: _currentTitle),
+              ],
             ),
             backgroundColor: colorScheme.surface,
             iconTheme: IconThemeData(color: colorScheme.onSurface),
