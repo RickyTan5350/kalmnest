@@ -1,0 +1,46 @@
+##
+## Database Schema as UML Classes
+## Format similar to Person/Address example
+## Import into draw.io, then connect relationships manually
+##
+#
+## Label with class name, attributes section, and methods section
+#
+# label: <b>%name%</b><br>━━━━━━━━━━━━━━━━<br>%attributes%<br>━━━━━━━━━━━━━━━━<br>%methods%
+#
+## UML Class style
+#
+# style: label;whiteSpace=wrap;html=1;rounded=0;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fontStyle=1;fontSize=11;fontColor=#000000
+#
+## Pivot table style (different color)
+#
+# styles: {"pivot": "label;whiteSpace=wrap;html=1;rounded=0;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fontStyle=1;fontSize=11;fontColor=#000000"}
+#
+## Layout settings
+#
+# layout: auto
+# nodespacing: 120
+# levelspacing: 180
+# width: 200
+# height: auto
+#
+## Ignore styling columns
+#
+# ignore: fill,stroke,type,stylename
+#
+## ---- CSV below this line. First line are column names. ----
+name,attributes,methods,type,stylename,fill,stroke
+Role,-role_id: UUID (PK)<br>-role_name: String,+getRoleId(): UUID<br>+getRoleName(): String<br>+setRoleName(String): void,Core Table,,#dae8fc,#6c8ebf
+User,-user_id: UUID (PK)<br>-name: String<br>-email: String (UNIQUE)<br>-phone_no: String<br>-address: Text<br>-gender: String<br>-password: String<br>-account_status: Enum<br>-role_id: UUID (FK)<br>-remember_token: String<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getUserId(): UUID<br>+getName(): String<br>+getEmail(): String<br>+getRoleId(): UUID<br>+isActive(): boolean,Core Table,,#dae8fc,#6c8ebf
+Class,-class_id: UUID (PK)<br>-class_name: String(100)<br>-teacher_id: UUID (FK)<br>-description: Text<br>-admin_id: UUID (FK)<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getClassId(): UUID<br>+getClassName(): String<br>+getTeacherId(): UUID<br>+getAdminId(): UUID,Core Table,,#dae8fc,#6c8ebf
+Topic,-topic_id: UUID (PK)<br>-topic_name: String<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getTopicId(): UUID<br>+getTopicName(): String<br>+setTopicName(String): void,Core Table,,#dae8fc,#6c8ebf
+Note,-note_id: UUID (PK)<br>-title: String<br>-visibility: Boolean<br>-file_id: UUID (FK)<br>-topic_id: UUID (FK)<br>-created_by: UUID (FK)<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getNoteId(): UUID<br>+getTitle(): String<br>+isVisible(): boolean<br>+getCreatedBy(): UUID,Core Table,,#dae8fc,#6c8ebf
+File,-file_id: UUID (PK)<br>-file_path: String<br>-type: String<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getFileId(): UUID<br>+getFilePath(): String<br>+getType(): String,Core Table,,#dae8fc,#6c8ebf
+LevelType,-level_type_id: UUID (PK)<br>-level_type_name: String<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getLevelTypeId(): UUID<br>+getLevelTypeName(): String<br>+setLevelTypeName(String): void,Core Table,,#dae8fc,#6c8ebf
+Level,-level_id: UUID (PK)<br>-level_name: String<br>-level_type_id: UUID (FK)<br>-level_data: JSON<br>-win_condition: JSON<br>-created_by: UUID (FK)<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getLevelId(): UUID<br>+getLevelName(): String<br>+getLevelData(): JSON<br>+getWinCondition(): JSON,Core Table,,#dae8fc,#6c8ebf
+Achievement,-achievement_id: UUID (PK)<br>-achievement_name: String<br>-title: String<br>-description: Text<br>-associated_level: UUID<br>-created_by: UUID (FK)<br>-icon: String<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getAchievementId(): UUID<br>+getTitle(): String<br>+getDescription(): String<br>+getAssociatedLevel(): UUID,Core Table,,#dae8fc,#6c8ebf
+Feedback,-feedback_id: UUID (PK)<br>-student_id: UUID (FK)<br>-teacher_id: UUID (FK)<br>-topic: String<br>-comment: Text<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getFeedbackId(): UUID<br>+getStudentId(): UUID<br>+getTeacherId(): UUID<br>+getTopic(): String,Core Table,,#dae8fc,#6c8ebf
+ClassStudent,-class_id: UUID (PK,FK)<br>-student_id: UUID (PK,FK)<br>-enrolled_at: Timestamp,+getClassId(): UUID<br>+getStudentId(): UUID<br>+getEnrolledAt(): Timestamp,Pivot Table,pivot,#fff2cc,#d6b656
+ClassLevel,-class_level_id: UUID (PK)<br>-class_id: UUID (FK)<br>-level_id: UUID (FK)<br>-is_private: Boolean<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getClassLevelId(): UUID<br>+getClassId(): UUID<br>+getLevelId(): UUID<br>+isPrivate(): boolean,Pivot Table,pivot,#fff2cc,#d6b656
+AchievementUser,-id: UUID (PK)<br>-user_id: UUID (FK)<br>-achievement_id: UUID (FK)<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getId(): UUID<br>+getUserId(): UUID<br>+getAchievementId(): UUID,Pivot Table,pivot,#fff2cc,#d6b656
+NoteFile,-id: BigInt (PK)<br>-note_id: UUID (FK)<br>-file_id: UUID (FK)<br>-created_at: Timestamp<br>-updated_at: Timestamp,+getId(): BigInt<br>+getNoteId(): UUID<br>+getFileId(): UUID,Pivot Table,pivot,#fff2cc,#d6b656
