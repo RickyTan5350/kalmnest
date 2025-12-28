@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_student_detail_page.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
 
-/// Teacher view: All students in a class with search, pagination, and compact cards.
+/// Teacher view: All students in a class with search and scrollable list.
 class TeacherAllStudentsPage extends StatefulWidget {
   final String classId;
   final String className;
@@ -22,14 +24,15 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
   List<Map<String, dynamic>> _students = [];
   List<Map<String, dynamic>> _filteredStudents = [];
   final TextEditingController _searchController = TextEditingController();
-  int _currentPage = 1;
-  final int _perPage = 6;
-  int _totalPages = 1;
+  Map<String, dynamic>? _classData;
 
   // Statistics
   int _totalStudents = 0;
-  double _averageScore = 0.0;
-  double _quizzesCompleted = 0.0;
+  double _averageCompletionPercentage = 0.0;
+  int _totalQuizzesAssigned = 0;
+
+  // Student completion data
+  Map<String, Map<String, dynamic>> _studentCompletionMap = {};
 
   @override
   void initState() {
@@ -45,7 +48,6 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
 
   void _onSearchChanged() {
     if (!mounted) return;
-    // 0 letters -> show all, 1+ letters -> filter
     final query = _searchController.text.trim();
     setState(() {
       if (query.isEmpty) {
@@ -54,12 +56,9 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         final q = query.toLowerCase();
         _filteredStudents = _students.where((student) {
           final name = (student['name'] ?? '').toString().toLowerCase();
-          // Filter by name only
           return name.contains(q);
         }).toList();
       }
-      _currentPage = 1;
-      _applyPagination();
     });
   }
 
@@ -67,12 +66,55 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     if (!mounted) return;
     setState(() => _loading = true);
     try {
-      final data = await ClassApi.fetchClassById(widget.classId);
-      if (!mounted || data == null) return;
+      final classDataFuture = ClassApi.fetchClassById(widget.classId);
+      final completionDataFuture = ClassApi.getStudentCompletion(
+        widget.classId,
+      );
+      final quizCountFuture = ClassApi.getClassQuizCount(widget.classId);
+
+      final classData = await classDataFuture;
+      final completionResult = await completionDataFuture;
+      int quizCount = 0;
+      try {
+        quizCount = await quizCountFuture;
+      } catch (e) {
+        debugPrint('Error fetching quiz count: $e');
+      }
+
+      if (!mounted || classData == null) return;
 
       setState(() {
-        _students = List<Map<String, dynamic>>.from(data['students'] ?? []);
+        _classData = classData;
+        _students = List<Map<String, dynamic>>.from(
+          classData['students'] ?? [],
+        );
         _totalStudents = _students.length;
+
+        if (quizCount > 0) {
+          _totalQuizzesAssigned = quizCount;
+        } else if (completionResult['success'] == true) {
+          _totalQuizzesAssigned =
+              completionResult['total_quizzes_assigned'] ?? 0;
+        } else {
+          _totalQuizzesAssigned = 0;
+        }
+
+        if (completionResult['success'] == true) {
+          final completionList = List<Map<String, dynamic>>.from(
+            completionResult['data'] ?? [],
+          );
+
+          _studentCompletionMap = {};
+          for (var completion in completionList) {
+            final userId = completion['user_id']?.toString();
+            if (userId != null) {
+              _studentCompletionMap[userId] = completion;
+            }
+          }
+        } else {
+          _studentCompletionMap = {};
+        }
+
         _calculateStatistics();
 
         final query = _searchController.text.trim().toLowerCase();
@@ -81,64 +123,52 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         } else {
           _filteredStudents = _students.where((student) {
             final name = (student['name'] ?? '').toString().toLowerCase();
-            // Filter by name only
             return name.contains(query);
           }).toList();
         }
 
-        _applyPagination();
         _loading = false;
       });
     } catch (e) {
       debugPrint('Error fetching class data: $e');
       if (mounted) {
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _totalQuizzesAssigned = 0;
+        });
       }
     }
   }
 
   void _calculateStatistics() {
     if (_students.isEmpty) {
-      _averageScore = 0.0;
-      _quizzesCompleted = 0.0;
+      _averageCompletionPercentage = 0.0;
       return;
     }
 
-    double totalScore = 0.0;
-    int totalQuizzes = 0;
-    int completedQuizzes = 0;
+    double totalCompletion = 0.0;
+    int studentsWithData = 0;
 
     for (var student in _students) {
-      // Mock performance values until backend provides real data
-      final mockScore = 70.0 + (student.hashCode % 30); // 70-100
-      const mockTotalQuizzes = 18;
-      final mockCompleted = 13 + (student.hashCode % 6); // 13-18
+      final userId =
+          student['id']?.toString() ??
+          student['user_id']?.toString() ??
+          student['student_id']?.toString();
 
-      totalScore += mockScore;
-      totalQuizzes += mockTotalQuizzes;
-      completedQuizzes += mockCompleted;
+      if (userId != null && _studentCompletionMap.containsKey(userId)) {
+        final completionData = _studentCompletionMap[userId];
+        if (completionData != null) {
+          final completionPercentage =
+              completionData['completion_percentage'] ?? 0.0;
+          totalCompletion += completionPercentage;
+          studentsWithData++;
+        }
+      }
     }
 
-    _averageScore = totalScore / _students.length;
-    _quizzesCompleted = totalQuizzes == 0
-        ? 0
-        : (completedQuizzes / totalQuizzes) * 100;
-  }
-
-  void _applyPagination() {
-    _totalPages = (_filteredStudents.length / _perPage).ceil();
-    if (_totalPages == 0) _totalPages = 1;
-    if (_currentPage > _totalPages) _currentPage = 1;
-  }
-
-  List<Map<String, dynamic>> get _paginatedStudents {
-    if (_filteredStudents.isEmpty) return [];
-    final startIndex = (_currentPage - 1) * _perPage;
-    if (startIndex >= _filteredStudents.length) return [];
-    final endIndex = (startIndex + _perPage) > _filteredStudents.length
-        ? _filteredStudents.length
-        : (startIndex + _perPage);
-    return _filteredStudents.sublist(startIndex, endIndex);
+    _averageCompletionPercentage = studentsWithData > 0
+        ? totalCompletion / studentsWithData
+        : 0.0;
   }
 
   String _getInitials(String name) {
@@ -163,71 +193,150 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    if (_loading) {
+      return Scaffold(
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Get class color for AppBar
+    final classColor = ClassCustomization.getColorByName(_classData?['color']);
+    final color = classColor?.color ?? Theme.of(context).colorScheme.primary;
+
     return Scaffold(
-      backgroundColor: cs.surface,
-      body: _loading
-          ? Center(child: CircularProgressIndicator(color: cs.primary))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(cs, textTheme),
-                  const SizedBox(height: 24),
-                  _buildStatisticsSection(cs, textTheme),
-                  const SizedBox(height: 24),
-                  _buildSearchSection(cs),
-                  const SizedBox(height: 24),
-                  _filteredStudents.isEmpty
-                      ? _buildEmptyState(cs)
-                      : _buildStudentsGrid(cs),
-                  const SizedBox(height: 24),
-                  if (_filteredStudents.isNotEmpty) _buildPagination(cs),
-                ],
-              ),
+      appBar: AppBar(
+        title: BreadcrumbNavigation(
+          items: [
+            BreadcrumbItem(
+              label: 'Classes',
+              onTap: () {
+                // Navigate back twice to go to class list
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
             ),
+            BreadcrumbItem(
+              label: 'Details',
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            const BreadcrumbItem(label: 'All Students'),
+          ],
+        ),
+        backgroundColor: color.withOpacity(0.2),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() => _loading = true);
+              _fetchClassData();
+            },
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _fetchClassData();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header - Centered with icon, title, and class name
+              Center(
+                child: Column(
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        final classIcon = ClassCustomization.getIconByName(
+                          _classData?['icon'],
+                        );
+                        return CircleAvatar(
+                          radius: 40,
+                          backgroundColor: color.withOpacity(0.1),
+                          child: Icon(
+                            classIcon?.icon ?? Icons.school_rounded,
+                            color: color,
+                            size: 40,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'All Students',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Chip(
+                      label: Text(widget.className),
+                      backgroundColor: color.withOpacity(0.1),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Statistics Section
+              _buildStatisticsSection(),
+              const SizedBox(height: 32),
+
+              // Search Section
+              SizedBox(
+                width: 300,
+                child: SearchBar(
+                  controller: _searchController,
+                  hintText: "Search students...",
+                  padding: const WidgetStatePropertyAll<EdgeInsets>(
+                    EdgeInsets.symmetric(horizontal: 16.0),
+                  ),
+                  onChanged: (value) {
+                    _onSearchChanged();
+                  },
+                  leading: const Icon(Icons.search),
+                  trailing: [
+                    if (_searchController.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _filteredStudents = List.from(_students);
+                          });
+                        },
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Students List
+              if (_filteredStudents.isEmpty)
+                _buildEmptyState()
+              else
+                ..._filteredStudents.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final student = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: _buildStudentCard(student, index),
+                  );
+                }).toList(),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  /* ---------------- HEADER ---------------- */
-  Widget _buildHeader(ColorScheme cs, TextTheme textTheme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextButton.icon(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back, color: cs.primary),
-          label: Text(
-            'Back to Class',
-            style: textTheme.bodyMedium?.copyWith(color: cs.primary),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'All Students',
-          style: textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: cs.onSurface,
-          ),
-        ),
-        Text(
-          widget.className,
-          style: textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-        ),
-      ],
-    );
-  }
-
-  /* ---------------- STATS ---------------- */
-  Widget _buildStatisticsSection(ColorScheme cs, TextTheme textTheme) {
+  Widget _buildStatisticsSection() {
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
-            cs,
-            textTheme,
             'Total Students',
             '$_totalStudents',
             Icons.people,
@@ -236,20 +345,16 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            cs,
-            textTheme,
-            'Average Score',
-            _averageScore.toStringAsFixed(0),
-            Icons.trending_up,
+            'Completion Rate',
+            '${_averageCompletionPercentage.toStringAsFixed(1)}%',
+            Icons.check_circle,
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            cs,
-            textTheme,
-            'Quizzes Completed',
-            '${_quizzesCompleted.toStringAsFixed(0)}%',
+            'Quizzes Assigned',
+            '$_totalQuizzesAssigned',
             Icons.quiz,
           ),
         ),
@@ -258,370 +363,348 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
   }
 
   Widget _buildStatCard(
-    ColorScheme cs,
-    TextTheme textTheme,
     String label,
     String value,
     IconData icon,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant),
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
+          color: cs.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: cs.primary),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: cs.onSurface,
-            ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: Icon(
+                  icon,
+                  color: cs.onPrimaryContainer,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      value,
+                      style: textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      label,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Text(
-            label,
-            style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /* ---------------- SEARCH ---------------- */
-  Widget _buildSearchSection(ColorScheme cs) {
-    return TextField(
-      controller: _searchController,
-      onChanged: (_) => _onSearchChanged(),
-      decoration: InputDecoration(
-        hintText: 'Search students...',
-        prefixIcon: Icon(Icons.search, color: cs.onSurfaceVariant),
-        filled: true,
-        fillColor: cs.surfaceContainerHighest,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: cs.outlineVariant),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: cs.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: cs.primary, width: 2),
         ),
       ),
-    );
-  }
-
-  /* ---------------- GRID ---------------- */
-  Widget _buildStudentsGrid(ColorScheme cs) {
-    final width = MediaQuery.of(context).size.width;
-    // On narrow screens (mobile/portrait), switch to a single column
-    // and give each card more vertical space to avoid overflow.
-    final bool isNarrow = width < 800;
-    final int crossAxisCount = isNarrow ? 1 : 2;
-    final double aspectRatio = isNarrow ? 2.1 : 2.8;
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _paginatedStudents.length,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        // Wider cards on desktop/tablet, taller on mobile to prevent overflow
-        childAspectRatio: aspectRatio,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemBuilder: (_, index) =>
-          _buildStudentCard(cs, _paginatedStudents[index], index),
     );
   }
 
   Widget _buildStudentCard(
-    ColorScheme cs,
     Map<String, dynamic> student,
     int index,
   ) {
+    final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final name = student['name'] ?? 'Unknown';
     final email = student['email'] ?? '';
     final phone = student['phone_no'] ?? '+1 234 567 8901';
     final initials = _getInitials(name);
-    final score = 70 + (student.hashCode % 30); // mock until real data
-    final progress = 70 + (student.hashCode % 30); // mock until real data
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () {
-        // Try common key names for the student's user id
-        final dynamic rawId =
-            student['id'] ?? student['user_id'] ?? student['student_id'];
-        if (rawId == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cannot open student profile: missing student id.'),
+    final userId =
+        student['id']?.toString() ??
+        student['user_id']?.toString() ??
+        student['student_id']?.toString();
+    final completionData = userId != null
+        ? _studentCompletionMap[userId]
+        : null;
+    final completedQuizzes = completionData?['completed_quizzes'] ?? 0;
+    final totalQuizzes =
+        completionData?['total_quizzes'] ?? _totalQuizzesAssigned;
+    final completionPercentage =
+        completionData?['completion_percentage'] ?? 0.0;
+
+    return Card(
+      elevation: 1.0,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: cs.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.0),
+        onTap: () {
+          final dynamic rawId =
+              student['id'] ?? student['user_id'] ?? student['student_id'];
+          if (rawId == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Cannot open student profile: missing student id.'),
+              ),
+            );
+            return;
+          }
+
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => TeacherStudentDetailPage(
+                classId: widget.classId,
+                studentId: rawId.toString(),
+                studentName: name.toString(),
+                studentEmail: email.isNotEmpty ? email : null,
+              ),
             ),
           );
-          return;
-        }
-
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => UserDetailPage(
-              userId: rawId.toString(),
-              userName: name.toString(),
-            ),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cs.outlineVariant, width: 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: _getAvatarColor(index).withOpacity(0.18),
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.more_vert,
-                    color: cs.onSurfaceVariant,
-                    size: 18,
-                  ),
-                  onPressed: () {},
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              email,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              phone,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 10),
-            Divider(color: cs.outlineVariant, thickness: 0.6, height: 1),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Avg Score',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: _getAvatarColor(index).withOpacity(0.18),
+                    child: Text(
+                      initials,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _getAvatarColor(index),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Row(
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          score.toStringAsFixed(0),
-                          style: textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                          name,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                             color: cs.onSurface,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.trending_up,
-                          size: 14,
-                          color: Colors.green.shade400,
-                        ),
+                        if (email.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            email,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                        if (phone.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            phone,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Quizzes',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: cs.onSurfaceVariant,
+                      size: 20,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '15/18',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: cs.onSurface,
-                      ),
+                    tooltip: 'More options',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
                     ),
-                  ],
+                    onSelected: (value) {
+                      if (value == 'view') {
+                        final dynamic rawId =
+                            student['id'] ?? student['user_id'] ?? student['student_id'];
+                        if (rawId != null) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => TeacherStudentDetailPage(
+                                classId: widget.classId,
+                                studentId: rawId.toString(),
+                                studentName: name.toString(),
+                                studentEmail: email.isNotEmpty ? email : null,
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    itemBuilder: (BuildContext context) =>
+                        <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(
+                        value: 'view',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.visibility,
+                              size: 18,
+                              color: cs.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'View Details',
+                              style: textTheme.labelLarge?.copyWith(
+                                color: cs.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Divider(color: cs.outlineVariant, thickness: 0.6, height: 1),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Completion',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            '${completionPercentage.toStringAsFixed(0)}%',
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: cs.onSurface,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            completionPercentage >= 100
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked,
+                            size: 14,
+                            color: completionPercentage >= 100
+                                ? Colors.green.shade400
+                                : cs.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Quizzes',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$completedQuizzes/$totalQuizzes',
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Course Progress',
+                style: textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Course Progress',
-              style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 6),
-            LinearProgressIndicator(
-              value: progress / 100,
-              minHeight: 4,
-              backgroundColor: cs.outlineVariant,
-              valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ],
+              ),
+              const SizedBox(height: 6),
+              LinearProgressIndicator(
+                value: totalQuizzes > 0 ? completionPercentage / 100 : 0.0,
+                minHeight: 4,
+                backgroundColor: cs.outlineVariant,
+                valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /* ---------------- EMPTY ---------------- */
-  Widget _buildEmptyState(ColorScheme cs) {
+  Widget _buildEmptyState() {
+    final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     return Center(
-      child: Text(
-        'No students found',
-        style: textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
-      ),
-    );
-  }
-
-  /* ---------------- PAGINATION ---------------- */
-  Widget _buildPagination(ColorScheme cs) {
-    final textTheme = Theme.of(context).textTheme;
-    final startIndex = (_currentPage - 1) * _perPage + 1;
-    final endIndex = (_currentPage * _perPage) > _filteredStudents.length
-        ? _filteredStudents.length
-        : (_currentPage * _perPage);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Showing $startIndex to $endIndex of ${_filteredStudents.length} entries',
-          style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-        ),
-        Row(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
           children: [
-            _pageButton(
-              cs,
-              label: 'Previous',
-              enabled: _currentPage > 1,
-              onPressed: _currentPage > 1
-                  ? () => setState(() => _currentPage--)
-                  : null,
+            Icon(
+              Icons.people_outline,
+              size: 64,
+              color: cs.onSurfaceVariant.withOpacity(0.5),
             ),
-            const SizedBox(width: 8),
-            ..._buildPageNumberButtons(cs),
-            const SizedBox(width: 8),
-            _pageButton(
-              cs,
-              label: 'Next',
-              enabled: _currentPage < _totalPages,
-              onPressed: _currentPage < _totalPages
-                  ? () => setState(() => _currentPage++)
-                  : null,
+            const SizedBox(height: 16),
+            Text(
+              'No students found',
+              style: textTheme.titleLarge?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try adjusting your search criteria',
+              style: textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ],
-        ),
-      ],
-    );
-  }
-
-  List<Widget> _buildPageNumberButtons(ColorScheme cs) {
-    final buttons = <Widget>[];
-    int start = (_currentPage - 1).clamp(1, _totalPages);
-    int end = (_currentPage + 1).clamp(1, _totalPages);
-    if (start == 1 && end < 3 && _totalPages >= 3) end = 3;
-    if (end == _totalPages && start > 1 && _totalPages >= 3)
-      start = _totalPages - 2;
-
-    for (int i = start; i <= end; i++) {
-      buttons.add(
-        _pageButton(
-          cs,
-          label: '$i',
-          enabled: true,
-          active: i == _currentPage,
-          onPressed: () => setState(() => _currentPage = i),
-        ),
-      );
-      if (i != end) buttons.add(const SizedBox(width: 6));
-    }
-    return buttons;
-  }
-
-  Widget _pageButton(
-    ColorScheme cs, {
-    required String label,
-    required bool enabled,
-    bool active = false,
-    VoidCallback? onPressed,
-  }) {
-    final bg = active ? cs.primary : cs.surfaceContainerHighest;
-    final fg = active ? cs.onPrimary : cs.onSurface;
-    final textTheme = Theme.of(context).textTheme;
-    return TextButton(
-      onPressed: enabled ? onPressed : null,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        backgroundColor: enabled
-            ? bg
-            : cs.surfaceContainerHighest.withOpacity(0.6),
-        minimumSize: const Size(0, 0),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: active ? cs.primary : cs.outlineVariant),
-        ),
-      ),
-      child: Text(
-        label,
-        style: textTheme.bodySmall?.copyWith(
-          color: enabled ? fg : cs.onSurfaceVariant.withOpacity(0.7),
-          fontWeight: active ? FontWeight.bold : FontWeight.w500,
         ),
       ),
     );
