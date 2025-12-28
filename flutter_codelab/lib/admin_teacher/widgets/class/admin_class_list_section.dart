@@ -554,7 +554,7 @@ class _ClassListSectionState extends State<ClassListSection> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Class updated successfully'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
+           backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
