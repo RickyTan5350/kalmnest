@@ -37,6 +37,8 @@ class ClassApi {
     String? description,
     String? adminId,
     List<String>? studentIds,
+    String? icon,
+    String? color,
   }) async {
     final uri = Uri.parse('$base/classes');
     final body = {
@@ -45,6 +47,8 @@ class ClassApi {
       'description': description ?? '',
       'admin_id': adminId,
       'student_ids': studentIds,
+      'icon': icon,
+      'color': color,
     };
 
     try {

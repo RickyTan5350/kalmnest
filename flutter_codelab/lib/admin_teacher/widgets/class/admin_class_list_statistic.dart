@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/constants/class_constants.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_theme_extensions.dart';
 
 class StatItem {
   final String label;
@@ -82,44 +81,52 @@ class _StatCard extends StatelessWidget {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
-        side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
+          color: colorScheme.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(ClassConstants.defaultPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              stat.label,
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(ClassConstants.defaultPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                stat.label,
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            SizedBox(height: ClassConstants.defaultPadding * 0.375),
-            Text(
-              stat.value,
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            if (stat.change != null) ...[
               SizedBox(height: ClassConstants.defaultPadding * 0.375),
-              Row(
-                children: [
-                  Icon(Icons.trending_up, size: 16, color: colorScheme.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    stat.change!,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                ],
+              Text(
+                stat.value,
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+              if (stat.change != null) ...[
+                SizedBox(height: ClassConstants.defaultPadding * 0.375),
+                Row(
+                  children: [
+                    Icon(Icons.trending_up, size: 16, color: colorScheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      stat.change!,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

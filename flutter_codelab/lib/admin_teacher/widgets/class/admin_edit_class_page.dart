@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/constants/class_constants.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/class_theme_extensions.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_color_picker.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_icon_picker.dart';
 
 class EditClassPage extends StatefulWidget {
   final dynamic classData;
@@ -21,6 +23,8 @@ class _EditClassPageState extends State<EditClassPage> {
 
   String? _selectedTeacher;
   List<String?> _selectedStudents = [];
+  String _selectedColor = 'blue';
+  String _selectedIcon = 'school_rounded';
 
   // Data from backend
   List<Map<String, dynamic>> _teachers = [];
@@ -57,6 +61,10 @@ class _EditClassPageState extends State<EditClassPage> {
     descriptionController = TextEditingController(
       text: widget.classData['description'] ?? "",
     );
+
+    // Initialize color and icon from class data
+    _selectedColor = widget.classData['color'] ?? 'blue';
+    _selectedIcon = widget.classData['icon'] ?? 'school_rounded';
 
     // Store initial teacher ID to set after teachers are loaded
     final initialTeacherId = widget.classData['teacher_id'];
@@ -197,6 +205,8 @@ class _EditClassPageState extends State<EditClassPage> {
       "description": descriptionController.text.trim(),
       "admin_id": widget.classData["admin_id"],
       "student_ids": studentIds.isEmpty ? null : studentIds,
+      "icon": _selectedIcon,
+      "color": _selectedColor,
     };
 
     final result = await ClassApi.updateClass(
@@ -317,6 +327,24 @@ class _EditClassPageState extends State<EditClassPage> {
                     ),
                     validator: (v) =>
                         v!.trim().isEmpty ? "Class name required" : null,
+                  ),
+                  SizedBox(height: ClassConstants.formSpacing),
+
+                  // Color Picker
+                  ClassColorPicker(
+                    selectedColor: _selectedColor,
+                    onColorSelected: (color) {
+                      setState(() => _selectedColor = color);
+                    },
+                  ),
+                  SizedBox(height: ClassConstants.formSpacing),
+
+                  // Icon Picker
+                  ClassIconPicker(
+                    selectedIcon: _selectedIcon,
+                    onIconSelected: (icon) {
+                      setState(() => _selectedIcon = icon);
+                    },
                   ),
                   SizedBox(height: ClassConstants.formSpacing),
 
