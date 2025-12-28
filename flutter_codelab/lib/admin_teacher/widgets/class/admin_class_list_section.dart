@@ -743,6 +743,12 @@ class _ClassListSectionState extends State<ClassListSection> {
               : DateTime(0);
           result = dateA.compareTo(dateB);
           break;
+        case SortType.unlocked:
+          // Classes don't have unlocked status, fallback to alphabetical
+          final nameA = (a['class_name'] ?? '').toString().toLowerCase();
+          final nameB = (b['class_name'] ?? '').toString().toLowerCase();
+          result = nameA.compareTo(nameB);
+          break;
       }
       if (widget.sortOrder == SortOrder.descending) {
         result = -result;
