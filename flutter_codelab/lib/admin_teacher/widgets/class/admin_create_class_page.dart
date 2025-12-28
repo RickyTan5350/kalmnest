@@ -147,7 +147,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Class created successfully!'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
+           backgroundColor: Colors.green,
           ),
         );
         Navigator.pop(context, true); // Return true to trigger reload
