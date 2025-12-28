@@ -220,7 +220,7 @@ class _EditClassPageState extends State<EditClassPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Class updated successfully!'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
+          backgroundColor: Colors.green,
         ),
       );
       Navigator.pop(context, true);
