@@ -608,7 +608,7 @@ class _ClassListSectionState extends State<ClassListSection> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Class "${item['class_name']}" deleted successfully'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
+           backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
