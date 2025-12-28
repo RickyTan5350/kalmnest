@@ -1,0 +1,208 @@
+Role
+-role_id: UUID (PK)
+-role_name: String
+--
++getRoleId(): UUID
++getRoleName(): String
++setRoleName(String): void
+
+User
+-user_id: UUID (PK)
+-name: String
+-email: String (UNIQUE)
+-phone_no: String
+-address: Text
+-gender: String
+-password: String
+-account_status: Enum
+-role_id: UUID (FK)
+-remember_token: String
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getUserId(): UUID
++getName(): String
++getEmail(): String
++getPhoneNo(): String
++getAddress(): String
++getGender(): String
++getRoleId(): UUID
++getAccountStatus(): Enum
++isActive(): boolean
++setName(String): void
++setEmail(String): void
+
+Class
+-class_id: UUID (PK)
+-class_name: String(100)
+-teacher_id: UUID (FK)
+-description: Text
+-admin_id: UUID (FK)
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getClassId(): UUID
++getClassName(): String
++getTeacherId(): UUID
++getAdminId(): UUID
++getDescription(): String
++setClassName(String): void
++setDescription(String): void
+
+Topic
+-topic_id: UUID (PK)
+-topic_name: String
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getTopicId(): UUID
++getTopicName(): String
++setTopicName(String): void
+
+Note
+-note_id: UUID (PK)
+-title: String
+-visibility: Boolean
+-file_id: UUID (FK)
+-topic_id: UUID (FK)
+-created_by: UUID (FK)
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getNoteId(): UUID
++getTitle(): String
++isVisible(): boolean
++getFileId(): UUID
++getTopicId(): UUID
++getCreatedBy(): UUID
++setTitle(String): void
++setVisibility(Boolean): void
+
+File
+-file_id: UUID (PK)
+-file_path: String
+-type: String
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getFileId(): UUID
++getFilePath(): String
++getType(): String
++setFilePath(String): void
++setType(String): void
+
+LevelType
+-level_type_id: UUID (PK)
+-level_type_name: String
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getLevelTypeId(): UUID
++getLevelTypeName(): String
++setLevelTypeName(String): void
+
+Level
+-level_id: UUID (PK)
+-level_name: String
+-level_type_id: UUID (FK)
+-level_data: JSON
+-win_condition: JSON
+-created_by: UUID (FK)
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getLevelId(): UUID
++getLevelName(): String
++getLevelTypeId(): UUID
++getLevelData(): JSON
++getWinCondition(): JSON
++getWinCondition(): JSON
++getCreatedBy(): UUID
++setLevelName(String): void
++setLevelData(JSON): void
++setWinCondition(JSON): void
+
+Achievement
+-achievement_id: UUID (PK)
+-achievement_name: String
+-title: String
+-description: Text
+-associated_level: UUID
+-created_by: UUID (FK)
+-icon: String
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getAchievementId(): UUID
++getAchievementName(): String
++getTitle(): String
++getDescription(): String
++getAssociatedLevel(): UUID
++getCreatedBy(): UUID
++getIcon(): String
++setTitle(String): void
++setDescription(String): void
++setIcon(String): void
+
+Feedback
+-feedback_id: UUID (PK)
+-student_id: UUID (FK)
+-teacher_id: UUID (FK)
+-topic: String
+-comment: Text
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getFeedbackId(): UUID
++getStudentId(): UUID
++getTeacherId(): UUID
++getTopic(): String
++getComment(): String
++setTopic(String): void
++setComment(String): void
+
+ClassStudent
+-class_id: UUID (PK, FK)
+-student_id: UUID (PK, FK)
+-enrolled_at: Timestamp
+--
++getClassId(): UUID
++getStudentId(): UUID
++getEnrolledAt(): Timestamp
+
+ClassLevel
+-class_level_id: UUID (PK)
+-class_id: UUID (FK)
+-level_id: UUID (FK)
+-is_private: Boolean
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getClassLevelId(): UUID
++getClassId(): UUID
++getLevelId(): UUID
++isPrivate(): boolean
++setIsPrivate(Boolean): void
+
+AchievementUser
+-id: UUID (PK)
+-user_id: UUID (FK)
+-achievement_id: UUID (FK)
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getId(): UUID
++getUserId(): UUID
++getAchievementId(): UUID
+
+NoteFile
+-id: BigInt (PK)
+-note_id: UUID (FK)
+-file_id: UUID (FK)
+-created_at: Timestamp
+-updated_at: Timestamp
+--
++getId(): BigInt
++getNoteId(): UUID
++getFileId(): UUID
+
