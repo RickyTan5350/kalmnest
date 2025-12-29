@@ -12,6 +12,8 @@ class AdminAchievementDetailPage extends StatefulWidget {
   final double progress;
   final String? currentUserId; // NEW
   final bool isAdmin; // NEW
+  final String?
+  studentName; // NEW: For viewing a specific student's unlock details
 
   const AdminAchievementDetailPage({
     super.key,
@@ -19,6 +21,7 @@ class AdminAchievementDetailPage extends StatefulWidget {
     this.progress = 0.0,
     this.currentUserId,
     this.isAdmin = false,
+    this.studentName,
   });
 
   @override
@@ -364,6 +367,17 @@ class _AdminAchievementDetailPageState
                 'Last Updated',
                 _formatDate(_displayData.updatedAt),
               ),
+
+              if (widget.studentName != null &&
+                  _displayData.unlockedAt != null) ...[
+                const Divider(height: 30),
+                _buildSectionTitle(context, 'Student Progress'),
+                _buildInfoRow(
+                  context,
+                  'Unlocked by ${widget.studentName}',
+                  _formatDate(_displayData.unlockedAt),
+                ),
+              ],
             ],
           ),
         ),

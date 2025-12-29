@@ -3,6 +3,10 @@ import 'package:flutter_codelab/api/user_api.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'edit_user_dialog.dart';
+import 'package:flutter_codelab/api/achievement_api.dart';
+import 'package:flutter_codelab/models/achievement_data.dart';
+import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'admin_student_achievements_page.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String userId;
@@ -22,13 +26,16 @@ class UserDetailPage extends StatefulWidget {
 
 class _UserDetailPageState extends State<UserDetailPage> {
   final UserApi _userApi = UserApi();
+  final AchievementApi _achievementApi = AchievementApi();
   late Future<UserDetails> _userFuture;
+  Future<List<AchievementData>>? _achievementsFuture;
 
   @override
   void initState() {
     super.initState();
     _userFuture = _userApi.getUserDetails(widget.userId);
     _fetchUserDetails();
+    _fetchAchievements();
   }
 
   // Helper to get role color (matching your list logic)
@@ -48,6 +55,14 @@ class _UserDetailPageState extends State<UserDetailPage> {
   Future<void> _fetchUserDetails() async {
     setState(() {
       _userFuture = _userApi.getUserDetails(widget.userId);
+    });
+  }
+
+  Future<void> _fetchAchievements() async {
+    setState(() {
+      _achievementsFuture = _achievementApi.fetchUserAchievements(
+        widget.userId,
+      );
     });
   }
 
@@ -333,6 +348,20 @@ class _UserDetailPageState extends State<UserDetailPage> {
                           ? Colors.green
                           : colorScheme.error,
                     ),
+
+                    // --- Recent Achievements Section ---
+                    if (user.roleName.toLowerCase() == 'student') ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: Divider(
+                          height: 1,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outlineVariant.withOpacity(0.5),
+                        ),
+                      ),
+                      _buildRecentAchievements(context),
+                    ],
                   ],
                 ),
                 // Removed the extra SizedBox(height: 16) that was between the two original cards
@@ -424,6 +453,113 @@ class _UserDetailPageState extends State<UserDetailPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRecentAchievements(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.emoji_events_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "Recent Achievements",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            TextButton(
+              onPressed: () async {
+                final user = await _userFuture;
+                if (mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdminStudentAchievementsPage(
+                        userId: widget.userId,
+                        userName: user.name,
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text("View All"),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        FutureBuilder<List<AchievementData>>(
+          future: _achievementsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Text('Error loading achievements: ${snapshot.error}');
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: Text("No achievements unlocked yet.")),
+                ),
+              );
+            }
+
+            final achievements = snapshot.data!.take(3).toList();
+
+            return Column(
+              children: achievements.map((achievement) {
+                final icon = getAchievementIcon(achievement.icon);
+                final color = getAchievementColor(context, achievement.icon);
+                final dateStr = achievement.unlockedAt != null
+                    ? achievement.unlockedAt!.toString().split(' ')[0]
+                    : 'Unknown Date';
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(icon, size: 20, color: color),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              achievement.achievementTitle ?? "Achievement",
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Unlocked on $dateStr",
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
     );
   }
 }
