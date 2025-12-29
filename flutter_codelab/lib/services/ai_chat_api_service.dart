@@ -47,4 +47,42 @@ class AiChatApiService {
       rethrow;
     }
   }
+
+  /// Fetches all chat sessions for the current user.
+  Future<List<dynamic>> getSessions() async {
+    try {
+      final response = await _dio.get('/chat/sessions');
+      if (response.statusCode == 200) {
+        return response.data['sessions'] as List<dynamic>;
+      }
+      throw Exception('Failed to fetch chat history.');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Fetches all messages for a specific session.
+  Future<List<dynamic>> getSessionMessages(String sessionId) async {
+    try {
+      final response = await _dio.get('/chat/sessions/$sessionId/messages');
+      if (response.statusCode == 200) {
+        return response.data['messages'] as List<dynamic>;
+      }
+      throw Exception('Failed to fetch messages.');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Deletes a specific chat session.
+  Future<void> deleteSession(String sessionId) async {
+    try {
+      final response = await _dio.delete('/chat/sessions/$sessionId');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete session.');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

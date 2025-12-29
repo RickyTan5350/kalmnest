@@ -125,10 +125,38 @@ class FeedbackApiService {
     }
   }
 
-  /// Fetch all feedback created by the teacher
-  Future<List<Map<String, dynamic>>> getFeedback() async {
+  /// Fetch all topics
+  Future<List<Map<String, dynamic>>> getTopics() async {
     try {
-      final endpoint = '/feedback';
+      final endpoint = '/topics';
+      final hdrs = await getHeaders();
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
+        headers: hdrs,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        } else {
+          throw Exception(data['error'] ?? 'Failed to fetch topics');
+        }
+      } else {
+        throw Exception('Failed to fetch topics: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching topics: $e');
+    }
+  }
+
+  /// Fetch all feedback created by the teacher (with optional topic filter)
+  Future<List<Map<String, dynamic>>> getFeedback({String? topicId}) async {
+    try {
+      var endpoint = '/feedback';
+      if (topicId != null && topicId.isNotEmpty) {
+        endpoint += '?topic_id=$topicId';
+      }
 
       Map<String, String> hdrs = await getHeaders();
       print(
@@ -235,25 +263,26 @@ class FeedbackApiService {
     }
   }
 
+
   /// Create new feedback
   Future<Map<String, dynamic>> createFeedback({
     required String studentId,
-    required String topic,
+    required String topicId,
+    required String title,
     required String comment,
   }) async {
     try {
-      // Use public endpoint if no token provided (for testing)
       final endpoint = '/feedback';
-
       final body = jsonEncode({
         'student_id': studentId,
-        'topic': topic,
+        'topic_id': topicId,
+        'title': title,
         'comment': comment,
       });
 
       final hdrs = await getHeaders();
       print(
-        'FeedbackApiService POST ${ApiConstants.baseUrl}$endpoint headers: $hdrs',
+        'FeedbackApiService POST ${ApiConstants.baseUrl}$endpoint headers: ${_maskHeaders(hdrs)}',
       );
       final response = await http.post(
         Uri.parse('${ApiConstants.baseUrl}$endpoint'),
@@ -279,10 +308,6 @@ class FeedbackApiService {
         throw Exception('Validation error: ${data['errors']}');
       } else if (response.statusCode == 401) {
         throw Exception('Unauthorized. Please login again.');
-      } else if (response.statusCode == 404) {
-        throw Exception(
-          'Endpoint not found. Check API URL: ${ApiConstants.baseUrl}$endpoint',
-        );
       } else {
         throw Exception(
           'Failed to create feedback: ${response.statusCode} - ${response.body}',
@@ -296,7 +321,7 @@ class FeedbackApiService {
   Future<void> deleteFeedback(String feedbackId) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/feedback/$feedbackId');
     final hdrs = await getHeaders();
-    print('FeedbackApiService DELETE $url headers: $hdrs');
+    print('FeedbackApiService DELETE $url headers: ${_maskHeaders(hdrs)}');
     final response = await http.delete(url, headers: hdrs);
 
     if (response.statusCode != 200) {
@@ -306,21 +331,26 @@ class FeedbackApiService {
 
   Future<void> editFeedback({
     required String feedbackId,
-    required String topic,
+    required String topicId,
+    required String title,
     required String comment,
   }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/feedback/$feedbackId');
 
     final hdrs = await getHeaders();
-    print('FeedbackApiService PUT $url headers: $hdrs');
+    print('FeedbackApiService PUT $url headers: ${_maskHeaders(hdrs)}');
     final response = await http.put(
       url,
       headers: hdrs,
-      body: jsonEncode({'topic': topic, 'comment': comment}),
+      body: jsonEncode({
+        'topic_id': topicId,
+        'title': title,
+        'comment': comment,
+      }),
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to update feedback');
+      throw Exception('Failed to update feedback: ${response.body}');
     }
   }
 }

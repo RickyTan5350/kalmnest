@@ -19,7 +19,8 @@ class Feedback extends Model
         'feedback_id',
         'student_id',
         'teacher_id',
-        'topic',
+        'topic_id',
+        'title',
         'comment',
     ];
 
@@ -42,5 +43,13 @@ class Feedback extends Model
     public function teacher()
     {
         return $this->belongsTo(User::class, 'teacher_id', 'user_id');
+    }
+
+    /**
+     * Get the topic of this feedback
+     */
+    public function topic()
+    {
+        return $this->belongsTo(Topic::class, 'topic_id', 'topic_id');
     }
 }

@@ -175,5 +175,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Get feedback received by a specific student (requires auth)
     Route::get('/feedback/student/{studentId}', [FeedbackController::class, 'getStudentFeedback']);
+    
+    // AI Chatbot Routes
     Route::post('/chat', [GeminiController::class, 'getResponse']);
+    Route::get('/chat/sessions', [GeminiController::class, 'getSessions']);
+    Route::get('/chat/sessions/{sessionId}/messages', [GeminiController::class, 'getSessionMessages']);
+    Route::delete('/chat/sessions/{sessionId}', [GeminiController::class, 'deleteSession']);
+    Route::get('/topics', [\App\Http\Controllers\TopicController::class, 'index']);
 });

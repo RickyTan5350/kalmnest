@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             AchievementSeeder::class,
             NotesSeeder::class,
             AchievementUserSeeder::class,
+            FeedbackSeeder::class,
             TeacherProgressVerificationSeeder::class,
         ]);
     }

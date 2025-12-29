@@ -38,16 +38,20 @@ class CreateFeedbackDialog extends StatefulWidget {
 
 class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _topicController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
   final TextEditingController _feedbackController = TextEditingController();
   late final FeedbackApiService _apiService;
+  String? _selectedTopicId;
+  String? _selectedTopicName;
 
   String? _selectedStudent;
   String? _selectedStudentId;
   bool _isLoading = false;
   bool _isLoadingStudents = false;
+  bool _isLoadingTopics = false;
 
   List<Map<String, dynamic>> _students = [];
+  List<Map<String, dynamic>> _topics = [];
 
   @override
   void initState() {
@@ -55,6 +59,21 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     // Initialize FeedbackApiService WITH the auth token
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadStudents();
+    _loadTopics();
+  }
+
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+    try {
+      final topics = await _apiService.getTopics();
+      setState(() => _topics = topics);
+    } catch (e) {
+      print('Error loading topics: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingTopics = false);
+      }
+    }
   }
 
   Future<void> _loadStudents() async {
@@ -76,7 +95,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
 
   @override
   void dispose() {
-    _topicController.dispose();
+    _titleController.dispose();
     _feedbackController.dispose();
     super.dispose();
   }
@@ -91,6 +110,11 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
       return;
     }
 
+    if (_selectedTopicId == null) {
+      widget.showSnackBar(context, 'Please select a topic', Colors.red);
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -99,7 +123,8 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
       // Call the backend API to create feedback
       await _apiService.createFeedback(
         studentId: _selectedStudentId!,
-        topic: _topicController.text,
+        topicId: _selectedTopicId!,
+        title: _titleController.text,
         comment: _feedbackController.text,
       );
 
@@ -108,9 +133,11 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
         feedbackId: '',
         studentName: _selectedStudent!,
         studentId: _selectedStudentId!,
-        teacherName: 'Unknown', // Will be updated from API
-        teacherId: '', // Will be updated from API
-        topic: _topicController.text,
+        teacherName: 'Me', // Will be updated on refresh
+        teacherId: '',
+        topicId: _selectedTopicId!,
+        topicName: _selectedTopicName!,
+        title: _titleController.text,
         feedback: _feedbackController.text,
       );
 
@@ -170,7 +197,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return AlertDialog(
-      backgroundColor: const Color.fromARGB(255, 244, 246, 255),
+      backgroundColor: const Color.fromARGB(255, 242, 244, 251),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.all(24.0),
       content: SizedBox(
@@ -246,19 +273,67 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                       ),
                 const SizedBox(height: 16),
 
-                // Topic
+                const SizedBox(height: 16),
+
+                // Topic Dropdown
+                _isLoadingTopics
+                    ? const LinearProgressIndicator()
+                    : DropdownButtonFormField<String?>(
+                        value: _selectedTopicId,
+                        dropdownColor: const Color.fromARGB(255, 239, 243, 255),
+                        style: TextStyle(color: colorScheme.onSurface),
+                        decoration: _inputDecoration(
+                          labelText: 'Select Topic',
+                          icon: Icons.subject,
+                          colorScheme: colorScheme,
+                        ),
+                        hint: Text('Select a topic', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                        items: [
+                          if (_topics.isEmpty)
+                            DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('No topics available', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                            )
+                          else
+                            ..._topics.map<DropdownMenuItem<String?>>((topic) {
+                              final id = topic['topic_id']?.toString() ?? '';
+                              final name = topic['topic_name'] as String? ?? 'Unknown';
+                              return DropdownMenuItem<String?>(
+                                value: id,
+                                child: Text(name),
+                              );
+                            }),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedTopicId = value;
+                            if (value != null) {
+                                _selectedTopicName = _topics.firstWhere((t) => t['topic_id'].toString() == value)['topic_name'];
+                            }
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please select a topic';
+                          }
+                          return null;
+                        },
+                      ),
+                const SizedBox(height: 16),
+
+                // Title
                 TextFormField(
-                  controller: _topicController,
+                  controller: _titleController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Topic',
-                    hintText: 'e.g., Code Quality',
-                    icon: Icons.subject,
+                    labelText: 'Title',
+                    hintText: 'e.g., HTML Quiz Result',
+                    icon: Icons.title,
                     colorScheme: colorScheme,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a topic';
+                      return 'Please enter a title';
                     }
                     return null;
                   },

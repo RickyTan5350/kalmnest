@@ -2,73 +2,125 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Gemini\Laravel\Facades\Gemini;
-use Illuminate\Support\Facades\Log;
-use App\Models\ChatbotSession;
+use App\Http\Requests\GetGeminiResponseRequest;
 use App\Models\ChatbotMessage;
-use Illuminate\Support\Str;
+use App\Models\ChatbotSession;
+use App\Services\GeminiService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class GeminiController extends Controller
 {
+    protected GeminiService $geminiService;
+
+    public function __construct(GeminiService $geminiService)
+    {
+        $this->geminiService = $geminiService;
+    }
+
+    /**
+     * Get all chat sessions for the current user.
+     */
+    public function getSessions(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+            }
+
+            $sessions = ChatbotSession::where('user_id', $user->user_id)
+                ->orderBy('updated_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'sessions' => $sessions
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Get Chat Sessions Error: " . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => 'Could not fetch history.'], 500);
+        }
+    }
+
+    /**
+     * Get all messages for a specific session.
+     */
+    public function getSessionMessages(Request $request, $sessionId): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $session = ChatbotSession::where('chatbot_session_id', $sessionId)
+                ->where('user_id', $user->user_id)
+                ->firstOrFail();
+
+            $messages = ChatbotMessage::where('chatbot_session_id', $sessionId)
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'messages' => $messages
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Get Chat Messages Error: " . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => 'Could not fetch messages.'], 500);
+        }
+    }
+
+    /**
+     * Delete a chat session and its messages.
+     */
+    public function deleteSession(Request $request, $sessionId): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $session = ChatbotSession::where('chatbot_session_id', $sessionId)
+                ->where('user_id', $user->user_id)
+                ->firstOrFail();
+
+            $session->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Chat history cleared.'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Delete Chat Session Error: " . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => 'Could not clear history.'], 500);
+        }
+    }
+
     /**
      * Handles the incoming chat request from the Flutter app, sends it to Gemini,
      * and returns the AI's response.
      */
-    public function getResponse(Request $request)
+    public function getResponse(GetGeminiResponseRequest $request): JsonResponse
     {
-        $request->validate([
-            'message' => 'required|string|max:1000',
-            'session_id' => 'nullable|uuid',
-        ]);
-
         $userMessage = $request->input('message');
         $sessionId = $request->input('session_id');
         $user = $request->user();
 
         try {
             // 1. Get or Create Session
-            if (!$sessionId) {
-                $session = ChatbotSession::create([
-                    'id' => (string) Str::uuid(),
-                    'user_id' => $user->user_id,
-                    'title' => Str::limit($userMessage, 40),
-                ]);
-                $sessionId = $session->id;
-            } else {
-                $session = ChatbotSession::where('id', $sessionId)
-                    ->where('user_id', $user->user_id)
-                    ->firstOrFail();
-            }
+            $session = $this->geminiService->getOrCreateSession($user->user_id, $sessionId, $userMessage);
+            $sessionId = $session->chatbot_session_id;
 
             // 2. Store User Message
-            ChatbotMessage::create([
-                'chatbot_session_id' => $sessionId,
-                'role' => 'user',
-                'content' => $userMessage,
-            ]);
+            $currentUserMessage = $this->geminiService->storeMessage($sessionId, 'user', $userMessage);
 
-            // 3. Prepare History for Gemini
-            $history = ChatbotMessage::where('chatbot_session_id', $sessionId)
-                ->orderBy('created_at', 'asc')
-                ->get()
-                ->map(fn($msg) => [
-                    'role' => $msg->role, // 'user' or 'model'
-                    'parts' => [['text' => $msg->content]],
-                ])
-                ->toArray();
+            // 3. Interface with Gemini
+            $aiResponse = '(AI unavailable due to an internal error, but you can continue the conversation.)';
+            try {
+                $aiResponse = $this->geminiService->generateResponse($sessionId, $userMessage, $currentUserMessage->message_id);
+            } catch (\Throwable $e) {
+                // We catch but keep going to store the error message if needed, 
+                // or just leave the default fallback response.
+            }
 
-            // 4. Interface with Gemini using chat (multi-turn)
-            $chat = Gemini::generativeModel(model: 'gemini-3-pro-preview')->startChat(history: array_slice($history, 0, -1));
-            $result = $chat->sendMessage($userMessage);
-            $aiResponse = $result->text();
-
-            // 5. Store AI Response
-            ChatbotMessage::create([
-                'chatbot_session_id' => $sessionId,
-                'role' => 'model',
-                'content' => $aiResponse,
-            ]);
+            // 4. Store AI Response
+            $this->geminiService->storeMessage($sessionId, 'model', $aiResponse);
 
             return response()->json([
                 'status' => 'success',
@@ -76,12 +128,14 @@ class GeminiController extends Controller
                 'session_id' => $sessionId,
             ], 200);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Gemini Chat Error: " . $e->getMessage());
             return response()->json([
                 'status' => 'error',
-                'message' => 'Could not process the chat. Please try again later.'
-            ], 500);
+                'message' => 'Could not process the chat. Please try again later.',
+                'session_id' => $sessionId ?? null,
+                'ai_response' => '(AI unavailable due to an internal error, but you can continue the conversation.)'
+            ], 200);
         }
     }
 }

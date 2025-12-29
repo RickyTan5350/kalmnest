@@ -15,7 +15,8 @@ return new class extends Migration
             $table->uuid('feedback_id')->primary();
             $table->uuid('student_id');
             $table->uuid('teacher_id');
-            $table->string('topic');
+            $table->uuid('topic_id');
+            $table->string('title');
             $table->text('comment');
             $table->timestamps();
 
@@ -27,6 +28,11 @@ return new class extends Migration
         $table->foreign('teacher_id')
             ->references('user_id')
             ->on('users')
+            ->onDelete('cascade');
+
+        $table->foreign('topic_id')
+            ->references('topic_id')
+            ->on('topics')
             ->onDelete('cascade');
 
         });

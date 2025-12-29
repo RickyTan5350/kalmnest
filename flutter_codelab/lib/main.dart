@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'dart:io'; // For HttpOverrides
-
 import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
@@ -11,15 +10,12 @@ import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.d
 import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dart';
-
 import 'package:flutter_codelab/util.dart';
 import 'package:flutter_codelab/theme.dart';
-
+import 'package:flutter_codelab/destinations.dart';
 import 'package:flutter_codelab/models/user_data.dart';
-
 import 'package:flutter_codelab/pages/pages.dart';
 import 'package:flutter_codelab/pages/login_page.dart';
-
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 
@@ -194,126 +190,90 @@ class _FeedState extends State<Feed> {
   }
 
   void _onAddButtonPressed() {
-    // This switch statement checks the currently selected page
-    switch (selectedIndex) {
-      case 0: // This is the index for 'UserPage' (Index 0)
-        // CHECK if the current user is a Student OR a Teacher
+    final filteredDestinations = _getFilteredDestinations();
+    if (selectedIndex >= filteredDestinations.length) return;
+    
+    final currentLabel = filteredDestinations[selectedIndex].label;
+
+    switch (currentLabel) {
+      case 'User':
         if (widget.currentUser.isStudent || widget.currentUser.isTeacher) {
-          _showSnackBar(
-            context,
-            'You do not have permission to create user accounts.',
-            Theme.of(context).colorScheme.error,
-          );
+          _showSnackBar(context, 'You do not have permission to create user accounts.', Theme.of(context).colorScheme.error);
         } else {
-          // Only Admins can proceed to create a new user account
-          showCreateUserAccountDialog(
-            context: context,
-            showSnackBar: _showSnackBar,
-          );
+          showCreateUserAccountDialog(context: context, showSnackBar: _showSnackBar);
         }
         break;
-
-      case 1:
-        showCreateGamePage(
-          context: context,
-          showSnackBar: _showSnackBar,
-          userRole:
-              widget.currentUser.roleName, // <-- pass the current user role
-        );
-      case 2:
+      case 'Game':
+        showCreateGamePage(context: context, showSnackBar: _showSnackBar, userRole: widget.currentUser.roleName);
+        break;
+      case 'Note':
         if (widget.currentUser.isStudent) {
-          // 2. BLOCK: Show error message
-          _showSnackBar(
-            context,
-            'Students cannot add notes. This is for Admins only.',
-            Theme.of(context).colorScheme.error,
-          );
+          _showSnackBar(context, 'Students cannot add notes.', Theme.of(context).colorScheme.error);
         } else {
-          // 3. ALLOW: Open dialog if Admin
           showCreateNotesDialog(context: context, showSnackBar: _showSnackBar);
         }
         break;
-
-      case 3: // This is the index for 'ClassPage'
+      case 'Class':
         if (widget.currentUser.isAdmin) {
           _showCreateClassDialog();
         } else {
-          _showSnackBar(
-            context,
-            'You do not have access to this function',
-            Theme.of(context).colorScheme.error,
-          );
+          _showSnackBar(context, 'You do not have access to this function', Theme.of(context).colorScheme.error);
         }
         break;
-
-      case 4: // This is the index for 'AchievementPage'
+      case 'Achievement':
         if (widget.currentUser.isStudent) {
-          _showSnackBar(
-            context,
-            'You do not have access to this function',
-            Theme.of(context).colorScheme.error,
-          );
+          _showSnackBar(context, 'You do not have access to this function', Theme.of(context).colorScheme.error);
         } else {
-          showCreateAchievementDialog(
-            context: context,
-            showSnackBar: _showSnackBar,
-          );
+          showCreateAchievementDialog(context: context, showSnackBar: _showSnackBar);
         }
         break;
-      case 6: // This is the index for 'Feedback Page'
+      case 'Feedback':
         if (!widget.currentUser.isTeacher) {
-          _showSnackBar(
-            context,
-            'You do not have access to create feedback',
-            Theme.of(context).colorScheme.error,
-          );
+          _showSnackBar(context, 'You do not have access to create feedback', Theme.of(context).colorScheme.error);
         } else {
           showCreateFeedbackDialog(
             context: context,
             showSnackBar: _showSnackBar,
-            onFeedbackAdded: (feedback) {
-              // Optionally do something after feedback is added
-            },
+            onFeedbackAdded: (feedback) {},
             authToken: widget.currentUser.token ?? '',
           );
         }
         break;
       default:
-        print("No 'add' action for index $selectedIndex");
+        debugPrint("No 'add' action for $currentLabel");
     }
+  }
+
+  List<Destination> _getFilteredDestinations() {
+    return destinations.where((d) {
+      if (d.label == 'AI chat' && !widget.currentUser.isStudent) {
+        return false;
+      }
+      return true;
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- ADD THE COLOR AND PAGE VARIABLES HERE ---
     final colorScheme = Theme.of(context).colorScheme;
     final backgroundColor = Color.alphaBlend(
       colorScheme.primary.withAlpha(36),
       colorScheme.surface,
     );
-
+    final filteredDestinations = _getFilteredDestinations();
     final List<Widget> pages = [
-      const UserPage(), // Index 0
-      GamePage(userRole: widget.currentUser.roleName), // Index 1
+      const UserPage(),
+      GamePage(userRole: widget.currentUser.roleName),
       NotePage(currentUser: widget.currentUser),
-      ClassPage(
-        key: classPageGlobalKey,
-        currentUser: widget.currentUser,
-      ), //utter Index 3
-      AchievementPage(
-        showSnackBar: _showSnackBar,
-        currentUser: widget.currentUser,
-      ), // Index 4
-      AiChatPage(
-        currentUser: widget.currentUser,
-        authToken: widget.currentUser.token,
-      ), // Index 5
-      FeedbackPage(
-        authToken: widget.currentUser.token,
-        currentUser: widget.currentUser,
-      ), // Index 6
+      ClassPage(key: classPageGlobalKey, currentUser: widget.currentUser),
+      AchievementPage(showSnackBar: _showSnackBar, currentUser: widget.currentUser),
+      if (widget.currentUser.isStudent)
+        AiChatPage(currentUser: widget.currentUser, authToken: widget.currentUser.token),
+      FeedbackPage(authToken: widget.currentUser.token, currentUser: widget.currentUser),
     ];
     // --- END OF FIX ---
+
+    final isChatPage = filteredDestinations[selectedIndex].label == 'AI chat';
 
     return Scaffold(
       body: Row(
@@ -335,6 +295,8 @@ class _FeedState extends State<Feed> {
                 });
               },
               onAddButtonPressed: _onAddButtonPressed,
+              destinations: filteredDestinations,
+              showAddButton: !isChatPage,
             ),
           Expanded(
             child: Container(
@@ -347,15 +309,20 @@ class _FeedState extends State<Feed> {
                     currentUser: widget.currentUser,
                     onLogoutPressed: _handleLogout,
                   ),
-                  // Main Page Content (Expanded to fill the remaining space)
-                  Expanded(child: pages[selectedIndex]),
+                  // Main Page Content (Preserve state using IndexedStack)
+                  Expanded(
+                    child: IndexedStack(
+                      index: selectedIndex,
+                      children: pages,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ],
       ),
-      floatingActionButton: wideScreen
+      floatingActionButton: wideScreen || isChatPage
           ? null
           : FloatingActionButton(
               backgroundColor: colorScheme.tertiaryContainer,
@@ -372,6 +339,7 @@ class _FeedState extends State<Feed> {
                   selectedIndex = index;
                 });
               },
+              destinations: filteredDestinations,
             ),
     );
   }

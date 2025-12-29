@@ -21,7 +21,7 @@ class FeedbackService
         $userRole = $user->role->role_name ?? 'Student';
 
         // Create base query
-        $query = Feedback::with(['teacher', 'student']);
+        $query = Feedback::with(['teacher', 'student', 'topic']);
 
         // Role-based filtering
         if ($userRole === 'Admin') {
@@ -37,6 +37,10 @@ class FeedbackService
             $query->where('student_id', $user->user_id);
         }
 
+        if (isset($filters['topic_id'])) {
+            $query->where('topic_id', $filters['topic_id']);
+        }
+
         return $query->orderBy('created_at', 'desc')->get();
     }
 
@@ -49,7 +53,7 @@ class FeedbackService
     public function getStudentFeedback(string $studentId)
     {
         return Feedback::where('student_id', $studentId)
-            ->with('teacher')
+            ->with(['teacher', 'topic'])
             ->orderBy('created_at', 'desc')
             ->get();
     }
@@ -66,12 +70,13 @@ class FeedbackService
         $feedback = Feedback::create([
             'teacher_id' => $teacherId,
             'student_id' => $data['student_id'],
-            'topic' => $data['topic'],
+            'topic_id' => $data['topic_id'],
+            'title' => $data['title'],
             'comment' => $data['comment'],
         ]);
 
         // Load relations
-        $feedback->load('student', 'teacher');
+        $feedback->load('student', 'teacher', 'topic');
 
         return $feedback;
     }
@@ -88,11 +93,12 @@ class FeedbackService
         $feedback = Feedback::where('feedback_id', $feedbackId)->firstOrFail();
 
         $feedback->update([
-            'topic' => $data['topic'],
+            'topic_id' => $data['topic_id'],
+            'title' => $data['title'],
             'comment' => $data['comment'],
         ]);
 
-        $feedback->load('student', 'teacher');
+        $feedback->load('student', 'teacher', 'topic');
 
         return $feedback;
     }
@@ -122,7 +128,9 @@ class FeedbackService
             'feedback_id' => $feedback->feedback_id,
             'teacher_id' => $feedback->teacher_id,
             'teacher_name' => $feedback->teacher->name ?? 'Unknown',
-            'topic' => $feedback->topic,
+            'topic_id' => $feedback->topic_id,
+            'topic_name' => $feedback->topic->topic_name ?? 'Unknown',
+            'title' => $feedback->title,
             'feedback' => $feedback->comment,
             'created_at' => $feedback->created_at->toIso8601String(),
         ];

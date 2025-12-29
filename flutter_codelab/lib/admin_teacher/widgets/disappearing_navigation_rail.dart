@@ -11,7 +11,8 @@ class DisappearingNavigationRail extends StatelessWidget {
     required this.isExtended,
     required this.onMenuPressed,
     this.onAddButtonPressed,
-    // REMOVED: required this.onLogoutPressed,
+    required this.destinations,
+    this.showAddButton = true,
   });
 
   final Color backgroundColor;
@@ -20,7 +21,8 @@ class DisappearingNavigationRail extends StatelessWidget {
   final bool isExtended;
   final VoidCallback onMenuPressed;
   final VoidCallback? onAddButtonPressed;
-  // REMOVED: final VoidCallback onLogoutPressed;
+  final List<Destination> destinations;
+  final bool showAddButton;
 
   @override
   Widget build(BuildContext context) {
@@ -48,19 +50,21 @@ class DisappearingNavigationRail extends StatelessWidget {
             onPressed: onMenuPressed,
             icon: const Icon(Icons.menu),
           ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            // Use the FAB widget directly
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(
-                Radius.circular(15),
+          if (showAddButton) ...[
+            const SizedBox(height: 8),
+            FloatingActionButton(
+              // Use the FAB widget directly
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(
+                  Radius.circular(15),
+                ),
               ),
+              backgroundColor: colorScheme.tertiaryContainer,
+              foregroundColor: colorScheme.onTertiaryContainer,
+              onPressed: onAddButtonPressed,
+              child: const Icon(Icons.add),
             ),
-            backgroundColor: colorScheme.tertiaryContainer,
-            foregroundColor: colorScheme.onTertiaryContainer,
-            onPressed: onAddButtonPressed,
-            child: const Icon(Icons.add),
-          ),
+          ],
         ],
       ),
       groupAlignment: -0.95, // Adjust alignment to position destinations lower

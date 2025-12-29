@@ -37,7 +37,7 @@ class FeedbackController extends Controller
                 return $this->unauthorizedResponse();
             }
 
-            $filters = $request->only(['teacher_id']);
+            $filters = $request->only(['teacher_id', 'topic_id']);
             $feedbacks = $this->feedbackService->getFeedbacksByRole($user, $filters);
             $formattedFeedbacks = $this->feedbackService->formatFeedbackCollection($feedbacks);
 

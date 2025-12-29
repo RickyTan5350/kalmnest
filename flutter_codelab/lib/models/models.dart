@@ -1,3 +1,5 @@
+export 'feedback.dart';
+
 class Attachment {
   //single file attach to email
   const Attachment({required this.url});
@@ -42,26 +44,4 @@ class User {      //single user
   final Name name;
   final String avatarUrl; //web address for the user's profile picture
   final DateTime lastActive;
-}
-
-class FeedbackData {
-  final String feedbackId;
-  final String studentName;
-  final String studentId;
-  final String teacherName;
-  final String teacherId;
-  final String topic;
-  final String feedback;
-  final String? createdAt;
-
-  FeedbackData({
-    required this.feedbackId,
-    required this.studentName,
-    required this.studentId,
-    required this.teacherName,
-    required this.teacherId,
-    required this.topic,
-    required this.feedback,
-    this.createdAt,
-  });
 }

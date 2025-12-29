@@ -7,10 +7,12 @@ class DisappearingBottomNavigationBar extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     this.onDestinationSelected,
+    required this.destinations,
   });
 
   final int selectedIndex;
   final ValueChanged<int>? onDestinationSelected;
+  final List<Destination> destinations;
 
   @override
 
