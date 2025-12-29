@@ -47,20 +47,25 @@ class ProfileHeaderContent extends StatelessWidget {
         ),
 
         // Profile Avatar with initials
-        CircleAvatar(
-          radius: 16,
-          backgroundColor: _getRoleColor(currentUser.roleName, colorScheme),
-          foregroundColor: colorScheme.onPrimary,
-          child: Text(
-            currentUser.name.isNotEmpty
-                ? currentUser.name[0].toUpperCase()
-                : '?',
-            style: textTheme.titleMedium?.copyWith(
-              color: colorScheme.onPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
+        Builder(
+          builder: (context) {
+            final roleColor = _getRoleColor(currentUser.roleName, colorScheme);
+            return CircleAvatar(
+              radius: 16,
+              backgroundColor: roleColor.withOpacity(0.2),
+              foregroundColor: roleColor,
+              child: Text(
+                currentUser.name.isNotEmpty
+                    ? currentUser.name[0].toUpperCase()
+                    : '?',
+                style: textTheme.titleMedium?.copyWith(
+                  color: roleColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            );
+          },
         ),
 
         // Dropdown Arrow (matching the image style)
