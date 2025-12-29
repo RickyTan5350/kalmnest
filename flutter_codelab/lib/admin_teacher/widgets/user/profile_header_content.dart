@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
+import 'package:flutter_codelab/pages/help_support_pages.dart'; // ADDED
 
 class ProfileHeaderContent extends StatelessWidget {
   final UserDetails currentUser;
@@ -87,6 +88,54 @@ class ProfileHeaderContent extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // Help Menu
+          PopupMenuButton<String>(
+            offset: const Offset(0, 48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            tooltip: 'Help',
+            icon: Icon(Icons.help_outline, color: colorScheme.onSurfaceVariant),
+            onSelected: (String result) {
+              if (result == 'help_center') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const HelpCenterPage(),
+                  ),
+                );
+              } else if (result == 'faq') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const FaqPage()),
+                );
+              } else if (result == 'feedback') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const FeedbackPage()),
+                );
+              } else if (result == 'user_manual') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const UserManualPage(),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'help_center',
+                child: Text('Help Center'),
+              ),
+              const PopupMenuItem<String>(value: 'faq', child: Text('FAQ')),
+              const PopupMenuItem<String>(
+                value: 'feedback',
+                child: Text('Feedback'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'user_manual',
+                child: Text('User Manual'),
+              ),
+            ],
+          ),
+          const SizedBox(width: 16), // Spacing between help and profile
           // The PopupMenuButton replaces the InkWell and AlertDialog logic.
           // It uses the built profile display widget as its child.
           PopupMenuButton<String>(
