@@ -147,7 +147,7 @@ class AchievementController extends Controller
 
     public function getAchievementStudents($id)
     {
-        if (!$this->isAdminOrTeacher()) {
+        if (!$this->isAdminOrTeacher() && !$this->isStudent()) {
             return response()->json(['message' => 'Access Denied.'], 403);
         }
 
@@ -180,7 +180,7 @@ class AchievementController extends Controller
 
     public function getUserAchievements($userId)
     {
-        if (!$this->isAdminOrTeacher()) {
+        if (!$this->isAdminOrTeacher() && !$this->isStudent()) {
             return response()->json(['message' => 'Access Denied.'], 403);
         }
 

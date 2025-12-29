@@ -7,6 +7,8 @@ import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'admin_student_achievements_page.dart';
+import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/student/widgets/achievements/student_profile_achievements_page.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String userId;
@@ -29,18 +31,37 @@ class _UserDetailPageState extends State<UserDetailPage> {
   final AchievementApi _achievementApi = AchievementApi();
   late Future<UserDetails> _userFuture;
   Future<List<AchievementData>>? _achievementsFuture;
+  bool _isViewerStudent = false;
 
   @override
   void initState() {
     super.initState();
-    _userFuture = _userApi.getUserDetails(widget.userId);
     _fetchUserDetails();
-    _fetchAchievements();
+    _checkViewerRole();
+  }
+
+  Future<void> _checkViewerRole() async {
+    final userData = await AuthApi.getStoredUser();
+    if (userData != null && mounted) {
+      final role = userData['role'];
+      String roleName = '';
+      if (role is String) {
+        roleName = role;
+      } else if (role is Map) {
+        roleName = role['role_name'] ?? '';
+      }
+
+      if (roleName.toLowerCase() == 'student') {
+        setState(() {
+          _isViewerStudent = true;
+        });
+      }
+    }
   }
 
   // Helper to get role color (matching your list logic)
   Color _getRoleColor(String role, ColorScheme scheme) {
-    switch (role.toLowerCase()) {
+    switch (role.trim().toLowerCase()) {
       case 'admin':
         return scheme.error;
       case 'teacher':
@@ -56,6 +77,17 @@ class _UserDetailPageState extends State<UserDetailPage> {
     setState(() {
       _userFuture = _userApi.getUserDetails(widget.userId);
     });
+
+    // Only fetch achievements if the user is a student
+    _userFuture
+        .then((user) {
+          if (mounted && user.isStudent) {
+            _fetchAchievements();
+          }
+        })
+        .catchError((_) {
+          // Errors are handled by the FutureBuilder in the UI
+        });
   }
 
   Future<void> _fetchAchievements() async {
@@ -350,7 +382,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                     ),
 
                     // --- Recent Achievements Section ---
-                    if (user.roleName.toLowerCase() == 'student') ...[
+                    if (user.isStudent) ...[
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 16.0),
                         child: Divider(
@@ -482,15 +514,27 @@ class _UserDetailPageState extends State<UserDetailPage> {
               onPressed: () async {
                 final user = await _userFuture;
                 if (mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AdminStudentAchievementsPage(
-                        userId: widget.userId,
-                        userName: user.name,
+                  if (_isViewerStudent) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => StudentProfileAchievementsPage(
+                          userId: widget.userId,
+                          userName: user.name,
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminStudentAchievementsPage(
+                          userId: widget.userId,
+                          userName: user.name,
+                        ),
+                      ),
+                    );
+                  }
                 }
               },
               child: const Text("View All"),

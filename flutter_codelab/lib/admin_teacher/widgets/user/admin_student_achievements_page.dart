@@ -91,8 +91,7 @@ class _AdminStudentAchievementsPageState
                         builder: (context) => AdminAchievementDetailPage(
                           initialData: achievement,
                           studentName: widget.userName,
-                          // If we know the current admin ID, pass it here, but it's optional
-                          // isAdmin: true, // Assuming access to this page implies admin/teacher rights
+                          studentId: widget.userId,
                         ),
                       ),
                     );
