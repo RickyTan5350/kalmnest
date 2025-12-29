@@ -16,6 +16,7 @@ import 'run_code_page.dart';
 import 'quiz_widget.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 import 'package:flutter_codelab/theme.dart';
+import 'package:flutter_codelab/utils/brand_color_extension.dart';
 
 class EditNotePage extends StatefulWidget {
   final String noteId;
@@ -944,7 +945,9 @@ class _EditNotePageState extends State<EditNotePage> {
                   BreadcrumbItem(label: 'Edit'),
                 ],
               ),
-              backgroundColor: colorScheme.surface,
+              backgroundColor: context
+                  .getBrandColorForTopic(_selectedTopic ?? widget.currentTopic)
+                  .withOpacity(0.2),
               elevation: 0,
               iconTheme: IconThemeData(color: colorScheme.onSurface),
               actions: [
