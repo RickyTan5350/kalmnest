@@ -1,28 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import '../user/user_detail_page.dart';
 
-class AdminAchievementStudentsPage extends StatefulWidget {
+class StudentAchievementPeersPage extends StatefulWidget {
   final String achievementId;
   final String achievementName;
-  final String? excludedStudentId;
 
-  const AdminAchievementStudentsPage({
+  const StudentAchievementPeersPage({
     super.key,
     required this.achievementId,
     required this.achievementName,
-    this.excludedStudentId,
   });
 
   @override
-  State<AdminAchievementStudentsPage> createState() =>
-      _AdminAchievementStudentsPageState();
+  State<StudentAchievementPeersPage> createState() =>
+      _StudentAchievementPeersPageState();
 }
 
-class _AdminAchievementStudentsPageState
-    extends State<AdminAchievementStudentsPage> {
+class _StudentAchievementPeersPageState
+    extends State<StudentAchievementPeersPage> {
   final AchievementApi _api = AchievementApi();
   bool _isLoading = true;
   List<Map<String, dynamic>> _students = [];
@@ -65,22 +61,7 @@ class _AdminAchievementStudentsPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: BreadcrumbNavigation(
-          items: [
-            BreadcrumbItem(
-              label: 'Achievements',
-              onTap: () {
-                // Pop until we are back at the main list
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-            ),
-            BreadcrumbItem(
-              label: widget.achievementName,
-              onTap: () => Navigator.of(context).pop(), // Pop back to detail
-            ),
-            const BreadcrumbItem(label: 'Students'),
-          ],
-        ),
+        title: Text("Unlocked By"), // Simple title, no breadcrumbs
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -120,7 +101,7 @@ class _AdminAchievementStudentsPageState
 
     if (_students.isEmpty) {
       return const Center(
-        child: Text('No students have unlocked this achievement yet.'),
+        child: Text('No other students have unlocked this achievement yet.'),
       );
     }
 
@@ -135,7 +116,6 @@ class _AdminAchievementStudentsPageState
       groupedStudents[className]!.add(student);
     }
 
-    // Sort Class Names (Optional: "Other" at the end?)
     final sortedKeys = groupedStudents.keys.toList()..sort();
 
     return ListView.builder(
@@ -165,21 +145,11 @@ class _AdminAchievementStudentsPageState
             // List of Students in this Class
             ...studentsInClass.map((student) {
               final name = student['name'] ?? 'Unknown';
-              final email = student['email'] ?? 'No Email';
-              final userId = student['user_id'];
               final unlockedAt = student['unlocked_at'];
-              final isExcluded =
-                  widget.excludedStudentId != null &&
-                  userId.toString() == widget.excludedStudentId.toString();
 
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 4.0),
                 elevation: 1.0,
-                color: isExcluded
-                    ? Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest.withOpacity(0.5)
-                    : null,
                 shape: RoundedRectangleBorder(
                   side: BorderSide(
                     color: Theme.of(
@@ -190,7 +160,6 @@ class _AdminAchievementStudentsPageState
                   borderRadius: BorderRadius.circular(12.0),
                 ),
                 child: ListTile(
-                  enabled: !isExcluded,
                   leading: CircleAvatar(
                     backgroundColor: Theme.of(
                       context,
@@ -202,14 +171,10 @@ class _AdminAchievementStudentsPageState
                   ),
                   title: Text(
                     name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: isExcluded
-                          ? Theme.of(context).disabledColor
-                          : null,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w500),
                   ),
-                  subtitle: Text(email),
+                  // Removed Subtitle (Email) for privacy in student view if desired,
+                  // or keep it. I'll remove email for strict privacy.
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -218,66 +183,21 @@ class _AdminAchievementStudentsPageState
                         'Unlocked',
                         style: TextStyle(
                           fontSize: 10,
-                          color: isExcluded
-                              ? Theme.of(context).disabledColor
-                              : Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         _formatDate(unlockedAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isExcluded
-                              ? Theme.of(context).disabledColor
-                              : null,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
-                  onTap: () {
-                    if (isExcluded) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("Press back to view $name"),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    } else if (userId != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UserDetailPage(
-                            userId: userId,
-                            userName: name,
-                            breadcrumbs: [
-                              BreadcrumbItem(
-                                label: 'Achievements',
-                                onTap: () => Navigator.of(
-                                  context,
-                                ).popUntil((route) => route.isFirst),
-                              ),
-                              BreadcrumbItem(
-                                label: widget.achievementName,
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              BreadcrumbItem(
-                                label: 'Students',
-                                onTap: () => Navigator.of(context).pop(),
-                              ),
-                              BreadcrumbItem(label: name),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                  },
+                  onTap: null, // Read Only!
                 ),
               );
             }),
-            const SizedBox(height: 12.0), // Spacing after group
+            const SizedBox(height: 12.0),
           ],
         );
       },

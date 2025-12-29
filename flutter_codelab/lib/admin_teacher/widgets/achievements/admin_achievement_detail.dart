@@ -14,6 +14,7 @@ class AdminAchievementDetailPage extends StatefulWidget {
   final bool isAdmin; // NEW
   final String?
   studentName; // NEW: For viewing a specific student's unlock details
+  final String? studentId; // NEW: To identify the student context
 
   const AdminAchievementDetailPage({
     super.key,
@@ -22,6 +23,7 @@ class AdminAchievementDetailPage extends StatefulWidget {
     this.currentUserId,
     this.isAdmin = false,
     this.studentName,
+    this.studentId,
   });
 
   @override
@@ -275,6 +277,7 @@ class _AdminAchievementDetailPageState
                           achievementId: _displayData.achievementId!,
                           achievementName:
                               _displayData.achievementTitle ?? 'Achievement',
+                          excludedStudentId: widget.studentId,
                         ),
                       ),
                     );
