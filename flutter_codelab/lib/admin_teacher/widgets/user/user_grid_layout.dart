@@ -21,7 +21,7 @@ class UserGridLayout extends StatelessWidget {
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return scheme.error;
+        return Colors.purple;
       case 'teacher':
         return scheme.tertiary;
       case 'student':
@@ -166,7 +166,6 @@ class UserGridLayout extends StatelessWidget {
       module: GridModule.user, // Ensure this key exists in your GridModule enum
       itemBuilder: _buildUserCardContent,
       onTap: onTap,
-      childAspectRatio: 0.85, // Adjust for User card height
     );
   }
 }

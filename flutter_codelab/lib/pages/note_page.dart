@@ -24,7 +24,9 @@ class _NotePageState extends State<NotePage> {
   final List<String> _topics = ['All', 'HTML', 'CSS', 'JS', 'PHP'];
   String _selectedTopic = 'All';
   String _searchQuery = '';
-  ViewLayout _viewLayout = ViewLayout.grid;
+  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
+    LayoutPreferences.globalLayoutKey,
+  );
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
 
@@ -42,7 +44,9 @@ class _NotePageState extends State<NotePage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -112,7 +116,7 @@ class _NotePageState extends State<NotePage> {
                               final newLayout = val.first;
                               setState(() => _viewLayout = newLayout);
                               LayoutPreferences.saveLayout(
-                                'global_layout',
+                                LayoutPreferences.globalLayoutKey,
                                 newLayout,
                               );
                             },

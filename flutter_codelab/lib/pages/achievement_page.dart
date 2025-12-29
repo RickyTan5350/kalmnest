@@ -34,7 +34,9 @@ class _AchievementPageState extends State<AchievementPage> {
     'Locked',
   ]; // Added 'All'
   String _selectedTopic = 'All'; // Default to 'All'
-  ViewLayout _viewLayout = ViewLayout.grid;
+  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
+    LayoutPreferences.globalLayoutKey,
+  );
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
 
@@ -50,7 +52,9 @@ class _AchievementPageState extends State<AchievementPage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -121,7 +125,7 @@ class _AchievementPageState extends State<AchievementPage> {
                         final newLayout = newSelection.first;
                         setState(() => _viewLayout = newLayout);
                         LayoutPreferences.saveLayout(
-                          'global_layout',
+                          LayoutPreferences.globalLayoutKey,
                           newLayout,
                         );
                       },
