@@ -30,7 +30,9 @@ class _ClassPageState extends State<ClassPage> {
   int _reloadKey = 0;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  ViewLayout _viewLayout = ViewLayout.grid;
+  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
+    LayoutPreferences.globalLayoutKey,
+  );
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
   String? _selectedIconFilter; // null means "All"
@@ -43,7 +45,9 @@ class _ClassPageState extends State<ClassPage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -109,7 +113,7 @@ class _ClassPageState extends State<ClassPage> {
                       onLayoutChanged: (ViewLayout newLayout) {
                         setState(() => _viewLayout = newLayout);
                         LayoutPreferences.saveLayout(
-                          'global_layout',
+                          LayoutPreferences.globalLayoutKey,
                           newLayout,
                         );
                       },
@@ -165,7 +169,9 @@ class _ClassPageState extends State<ClassPage> {
                           child: OutlinedButton(
                             onPressed: () {
                               setState(() {
-                                _selectedIconFilter = isSelected ? null : classIcon.name;
+                                _selectedIconFilter = isSelected
+                                    ? null
+                                    : classIcon.name;
                               });
                             },
                             style: OutlinedButton.styleFrom(
@@ -190,10 +196,7 @@ class _ClassPageState extends State<ClassPage> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: Icon(
-                              classIcon.icon,
-                              size: 20,
-                            ),
+                            child: Icon(classIcon.icon, size: 20),
                           ),
                         ),
                       );
@@ -207,7 +210,8 @@ class _ClassPageState extends State<ClassPage> {
                     ),
                     // Color Filters (button style)
                     ...ClassCustomization.availableColors.map((classColor) {
-                      final isSelected = _selectedColorFilter == classColor.name;
+                      final isSelected =
+                          _selectedColorFilter == classColor.name;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
                         child: Tooltip(
@@ -215,7 +219,9 @@ class _ClassPageState extends State<ClassPage> {
                           child: OutlinedButton(
                             onPressed: () {
                               setState(() {
-                                _selectedColorFilter = isSelected ? null : classColor.name;
+                                _selectedColorFilter = isSelected
+                                    ? null
+                                    : classColor.name;
                               });
                             },
                             style: OutlinedButton.styleFrom(
@@ -392,17 +398,11 @@ class _ViewToggleButton extends StatelessWidget {
       segments: <ButtonSegment<ViewLayout>>[
         ButtonSegment<ViewLayout>(
           value: ViewLayout.list,
-          icon: Tooltip(
-            message: 'List view',
-            child: Icon(Icons.menu),
-          ),
+          icon: Tooltip(message: 'List view', child: Icon(Icons.menu)),
         ),
         ButtonSegment<ViewLayout>(
           value: ViewLayout.grid,
-          icon: Tooltip(
-            message: 'Grid view',
-            child: Icon(Icons.grid_view),
-          ),
+          icon: Tooltip(message: 'Grid view', child: Icon(Icons.grid_view)),
         ),
       ],
       selected: <ViewLayout>{currentLayout},
