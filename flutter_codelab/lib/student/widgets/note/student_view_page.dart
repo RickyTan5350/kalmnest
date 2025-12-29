@@ -318,9 +318,6 @@ class StudentViewPageState extends State<StudentViewPage> {
                   ],
                 ),
               ),
-
-              // 3. The Chevron Arrow (Same as Admin)
-              Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),

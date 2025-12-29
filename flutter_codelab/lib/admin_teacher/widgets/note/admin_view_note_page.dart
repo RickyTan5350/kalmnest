@@ -615,8 +615,6 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                   ],
                 ),
               ),
-              if (!_isSelectionMode)
-                Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),
