@@ -46,13 +46,13 @@ class _QuizWidgetState extends State<QuizWidget> {
   }
 
   Color _getBorderColor(int index) {
-      if (!_isAnswered) {
+    if (!_isAnswered) {
       return Colors.grey.shade300;
     }
-     if (index == widget.correctIndex) {
+    if (index == widget.correctIndex) {
       return Colors.green;
     }
-      if (index == _selectedIndex && index != widget.correctIndex) {
+    if (index == _selectedIndex && index != widget.correctIndex) {
       return Colors.red;
     }
     return Colors.grey.shade300;
@@ -72,7 +72,6 @@ class _QuizWidgetState extends State<QuizWidget> {
     return Icons.radio_button_unchecked;
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -83,12 +82,8 @@ class _QuizWidgetState extends State<QuizWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          
             const SizedBox(height: 10),
-            Text(
-              widget.question,
-              style: const TextStyle(fontSize: 16),
-            ),
+            Text(widget.question, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 20),
             ...List.generate(widget.options.length, (index) {
               return Padding(
@@ -106,7 +101,9 @@ class _QuizWidgetState extends State<QuizWidget> {
                       children: [
                         Icon(
                           _getOptionIcon(index),
-                           color: _getBorderColor(index) == Colors.grey.shade300 ? Colors.grey : _getBorderColor(index),
+                          color: _getBorderColor(index) == Colors.grey.shade300
+                              ? Colors.grey
+                              : _getBorderColor(index),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -114,8 +111,11 @@ class _QuizWidgetState extends State<QuizWidget> {
                             widget.options[index],
                             style: TextStyle(
                               fontSize: 15,
-                              color: _isAnswered && index != widget.correctIndex && index != _selectedIndex 
-                                  ? Colors.grey 
+                              color:
+                                  _isAnswered &&
+                                      index != widget.correctIndex &&
+                                      index != _selectedIndex
+                                  ? Colors.grey
                                   : Colors.black,
                             ),
                           ),
@@ -131,8 +131,8 @@ class _QuizWidgetState extends State<QuizWidget> {
                 padding: const EdgeInsets.only(top: 10.0),
                 child: Text(
                   _selectedIndex == widget.correctIndex
-                      ? "Correct! Well done."
-                      : "Incorrect. The correct answer is option ${widget.correctIndex + 1}.",
+                      ? "Betul! Tahniah."
+                      : "Salah. Jawapan betul ialah: ${widget.options[widget.correctIndex]}",
                   style: TextStyle(
                     color: _selectedIndex == widget.correctIndex
                         ? Colors.green
