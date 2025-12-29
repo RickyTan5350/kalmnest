@@ -28,8 +28,10 @@ class _AchievementPageState extends State<AchievementPage> {
     'CSS',
     'JS',
     'PHP',
-    'Level',
-    'Quiz'
+    'Quiz',
+    'Created by Me',
+    'Unlocked',
+    'Locked',
   ]; // Added 'All'
   String _selectedTopic = 'All'; // Default to 'All'
   ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
@@ -178,25 +180,39 @@ class _AchievementPageState extends State<AchievementPage> {
                       child: Wrap(
                         spacing: 10.0,
                         runSpacing: 10.0,
-                        children: _topics.map((topic) {
-                          final isSelected = _selectedTopic == topic;
-                          return FilterChip(
-                            label: Text(
-                              topic,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? colors.primary
-                                    : colors.onSurface,
-                              ),
-                            ),
-                            selected: isSelected,
-                            onSelected: (bool selected) {
-                              setState(() {
-                                _selectedTopic = selected ? topic : 'All';
-                              });
-                            },
-                          );
-                        }).toList(),
+                        children: _topics
+                            .where((topic) {
+                              if (widget.currentUser.isStudent) {
+                                // Student: Hide 'Created by Me'
+                                if (topic == 'Created by Me') return false;
+                              } else {
+                                // Teacher/Admin: Hide 'Unlocked', 'Locked'
+                                if (topic == 'Unlocked' || topic == 'Locked') {
+                                  return false;
+                                }
+                              }
+                              return true;
+                            })
+                            .map((topic) {
+                              final isSelected = _selectedTopic == topic;
+                              return FilterChip(
+                                label: Text(
+                                  topic,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? colors.primary
+                                        : colors.onSurface,
+                                  ),
+                                ),
+                                selected: isSelected,
+                                onSelected: (bool selected) {
+                                  setState(() {
+                                    _selectedTopic = selected ? topic : 'All';
+                                  });
+                                },
+                              );
+                            })
+                            .toList(),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -210,6 +226,8 @@ class _AchievementPageState extends State<AchievementPage> {
                             _sortType = SortType.alphabetical;
                           } else if (value == 'Date') {
                             _sortType = SortType.updated;
+                          } else if (value == 'Unlocked') {
+                            _sortType = SortType.unlocked;
                           } else if (value == 'Ascending') {
                             _sortOrder = SortOrder.ascending;
                           } else if (value == 'Descending') {
@@ -236,6 +254,13 @@ class _AchievementPageState extends State<AchievementPage> {
                               checked: _sortType == SortType.updated,
                               child: const Text('Date'),
                             ),
+                            // NEW: Unlocked sort (Visible only for students)
+                            if (widget.currentUser.isStudent)
+                              CheckedPopupMenuItem<String>(
+                                value: 'Unlocked',
+                                checked: _sortType == SortType.unlocked,
+                                child: const Text('Unlocked'),
+                              ),
                             const PopupMenuDivider(),
                             const PopupMenuItem<String>(
                               enabled: false,
@@ -280,7 +305,13 @@ class _AchievementPageState extends State<AchievementPage> {
                           searchText: _searchText,
                           selectedTopic: _selectedTopic == 'All'
                               ? null
-                              : _selectedTopic.toLowerCase(),
+                              : ([
+                                      'Created by Me',
+                                      'Unlocked',
+                                      'Locked',
+                                    ].contains(_selectedTopic)
+                                    ? _selectedTopic
+                                    : _selectedTopic.toLowerCase()),
                           key: _studentKey,
                           sortType: _sortType,
                           sortOrder: _sortOrder,
@@ -294,10 +325,17 @@ class _AchievementPageState extends State<AchievementPage> {
                           searchText: _searchText,
                           selectedTopic: _selectedTopic == 'All'
                               ? null
-                              : _selectedTopic.toLowerCase(),
+                              : ([
+                                      'Created by Me',
+                                      'Unlocked',
+                                      'Locked',
+                                    ].contains(_selectedTopic)
+                                    ? _selectedTopic
+                                    : _selectedTopic.toLowerCase()),
                           key: _adminKey,
                           sortType: _sortType,
                           sortOrder: _sortOrder,
+                          isAdmin: widget.currentUser.isAdmin, // NEW
                         ),
                 ),
               ],

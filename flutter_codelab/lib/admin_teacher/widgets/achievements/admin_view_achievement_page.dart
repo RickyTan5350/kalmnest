@@ -23,6 +23,7 @@ class AdminViewAchievementsPage extends StatefulWidget {
   final String? selectedTopic;
   final SortType sortType;
   final SortOrder sortOrder;
+  final bool isAdmin; // NEW
 
   const AdminViewAchievementsPage({
     super.key,
@@ -33,6 +34,7 @@ class AdminViewAchievementsPage extends StatefulWidget {
     this.selectedTopic,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
+    this.isAdmin = false, // NEW
   });
 
   @override
@@ -55,6 +57,7 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   Offset? _dragStart;
   Offset? _dragEnd;
   Set<String> _initialSelection = {};
+  final GlobalKey _selectionAreaKey = GlobalKey();
 
   // Helper to detect platform
   bool get _isDesktop {
@@ -138,20 +141,25 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
     // Start with what we had before dragging
     final Set<String> newSelection = Set.from(_initialSelection);
 
+    // Get the selection area (Stack) render object
+    final RenderBox? ancestor =
+        _selectionAreaKey.currentContext?.findRenderObject() as RenderBox?;
+    if (ancestor == null) return;
+
     for (final entry in _gridItemKeys.entries) {
       final String id = entry.key;
       final GlobalKey key = entry.value;
 
-      final RenderBox? renderBox =
+      final RenderBox? itemBox =
           key.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox == null) continue;
+      if (itemBox == null) continue;
 
-      // Get item's position relative to the Stack (context)
-      final Offset itemPosition = renderBox.localToGlobal(
+      // Get item's position relative to the Stack (ancestor)
+      final Offset itemPosition = itemBox.localToGlobal(
         Offset.zero,
-        ancestor: context.findRenderObject(),
+        ancestor: ancestor,
       );
-      final Rect itemRect = itemPosition & renderBox.size;
+      final Rect itemRect = itemPosition & itemBox.size;
 
       // Check if Blue Box touches Item Box
       if (selectionBox.overlaps(itemRect)) {
@@ -184,13 +192,86 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
   }
 
   // --- DELETE FUNCTION ---
+  // --- DELETE FUNCTION ---
   Future<void> _deleteSelectedAchievements() async {
+    final BuildContext scaffoldContext = context;
+
+    // Load current data to check permissions
+    final List<AchievementData> allAchievements = await _achievementsFuture;
+
+    // 1. Separate items by permission
+    final List<String> toDeleteIds = [];
+    final List<String> skippedIds = [];
+
+    for (var id in _selectedIds) {
+      final achievement = allAchievements.firstWhere(
+        (a) => a.achievementId == id,
+        orElse: () => AchievementData(achievementId: ''),
+      );
+
+      if (achievement.achievementId == null ||
+          achievement.achievementId!.isEmpty)
+        continue;
+
+      // Access Control Logic: Admin OR Creator
+      final isCreator =
+          achievement.creatorId != null &&
+          widget.userId.toString() == achievement.creatorId.toString();
+
+      if (widget.isAdmin || isCreator) {
+        toDeleteIds.add(id);
+      } else {
+        skippedIds.add(id);
+      }
+    }
+
+    if (!mounted) return;
+
+    if (toDeleteIds.isEmpty) {
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Access Denied'),
+          content: Text(
+            skippedIds.isEmpty
+                ? 'No valid items selected.'
+                : 'You do not have permission to delete the selected items. You can only delete achievements you created.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // 2. Confirmation Dialog
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Achievements?'),
-        content: Text(
-          'Are you sure you want to delete ${_selectedIds.length} selected achievement(s)? This action cannot be undone.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete ${toDeleteIds.length} achievement(s)? This action cannot be undone.',
+            ),
+            if (skippedIds.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Note: ${skippedIds.length} item(s) will be skipped because you did not create them.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(
@@ -210,36 +291,57 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
       ),
     );
 
-    if (!mounted) return;
-    final BuildContext scaffoldContext = context;
+    if (confirmed != true) return;
 
-    if (confirmed == true) {
-      setState(() {
-        _isDeleting = true;
-      });
+    if (!mounted) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    // 3. Partial Success Execution
+    int successCount = 0;
+    int failCount = 0;
+    List<String> successfullyDeletedIds = [];
+
+    for (final id in toDeleteIds) {
       try {
-        await _api.deleteAchievements(_selectedIds);
-        widget.showSnackBar(
-          scaffoldContext,
-          'Successfully deleted ${_selectedIds.length} achievement(s).',
-          Colors.green,
-        );
-        setState(() {
-          _selectedIds.clear();
-        });
-        _refreshData();
+        await _api.deleteAchievements({id});
+        successCount++;
+        successfullyDeletedIds.add(id);
       } catch (e) {
-        widget.showSnackBar(
-          scaffoldContext,
-          'Error deleting achievements: $e',
-          Colors.red,
-        );
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isDeleting = false;
-          });
-        }
+        print("Failed to delete achievement $id: $e");
+        failCount++;
+      }
+    }
+
+    // 4. Feedback & Cleanup
+    if (mounted) {
+      setState(() {
+        _isDeleting = false;
+        _selectedIds.removeWhere((id) => successfullyDeletedIds.contains(id));
+      });
+
+      String message;
+      if (failCount == 0 && skippedIds.isEmpty) {
+        message = 'Successfully deleted $successCount achievement(s).';
+      } else {
+        message =
+            'Deleted: $successCount, Failed: $failCount, Skipped: ${skippedIds.length}';
+      }
+
+      Color snackColor = (failCount > 0 || skippedIds.isNotEmpty)
+          ? Colors.orange
+          : Colors.green;
+
+      if (successCount == 0 && failCount > 0) {
+        snackColor = Colors.red;
+      }
+
+      widget.showSnackBar(scaffoldContext, message, snackColor);
+
+      if (successCount > 0) {
+        _refreshData();
       }
     }
   }
@@ -333,134 +435,187 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // _buildSelectionMenuBar() removed
-        Expanded(
-          child: FutureBuilder<List<AchievementData>>(
-            future: _achievementsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(child: Text("Error: ${snapshot.error}"));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text("No achievements found."));
-              }
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          if (_selectedIds.isNotEmpty) {
+            setState(() => _selectedIds.clear());
+          }
+        },
+        const SingleActivator(
+          LogicalKeyboardKey.keyC,
+          control: true,
+        ): () async {
+          if (_selectedIds.isNotEmpty) {
+            final List<AchievementData> allAchievements =
+                await _achievementsFuture;
+            final selectedItems = allAchievements
+                .where((a) => _selectedIds.contains(a.achievementId))
+                .map(
+                  (a) => "${a.achievementTitle} - ${a.achievementDescription}",
+                )
+                .join('\n');
 
-              List<AchievementData> originalData = snapshot.data!;
+            await Clipboard.setData(ClipboardData(text: selectedItems));
 
-              // --- FILTERING LOGIC ---
-              List<AchievementData> filteredData = filterAchievements(
-                achievements: originalData,
-                searchText: widget.searchText,
-                selectedTopic: widget.selectedTopic,
+            if (context.mounted) {
+              widget.showSnackBar(
+                context,
+                "Copied ${_selectedIds.length} item(s) to clipboard.",
+                Colors.green,
               );
-
-              // --- SORTING LOGIC ---
-              filteredData = sortAchievements(
-                achievements: filteredData,
-                sortType: widget.sortType,
-                sortOrder: widget.sortOrder,
-              );
-
-              if (filteredData.isEmpty) {
-                return const Center(
-                  child: Text("No achievements match your search or filter."),
-                );
-              }
-
-              final List<Map<String, dynamic>> uiData = _transformData(
-                filteredData,
-              );
-
-              // --- REPLACED Gesture Logic with WRAPPER ---
-              return SelectionGestureWrapper(
-                isDesktop: _isDesktop,
-                selectedIds: _selectedIds,
-                itemKeys: _gridItemKeys,
-
-                // Start "Selection Mode"
-                onLongPressStart: (details) {
-                  if (_isDesktop) {
-                    // WINDOWS: Prepare box selection
-                    _initialSelection = Set.from(_selectedIds);
-                    setState(() {
-                      _dragStart = details.localPosition;
-                      _dragEnd = details.localPosition;
-                    });
-                    _handleBoxSelect(details.localPosition);
-                  } else {
-                    // MOBILE: Select item under finger
-                    _dragProcessedIds.clear();
-                    _handleDragSelect(details.globalPosition);
+            }
+          }
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        child: Column(
+          children: [
+            // _buildSelectionMenuBar() removed
+            Expanded(
+              child: FutureBuilder<List<AchievementData>>(
+                future: _achievementsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
                   }
-                },
-
-                // Continue selection
-                onLongPressMoveUpdate: (details) {
-                  if (_isDesktop) {
-                    // WINDOWS: Update box size
-                    _handleBoxSelect(details.localPosition);
-                  } else {
-                    // MOBILE: Check for new items under finger
-                    _handleDragSelect(details.globalPosition);
+                  if (snapshot.hasError) {
+                    return Center(child: Text("Error: ${snapshot.error}"));
                   }
-                },
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text("No achievements found."));
+                  }
 
-                // Cleanup on release (ignoring details)
-                onLongPressEnd: (_) => _endDrag(),
+                  List<AchievementData> originalData = snapshot.data!;
 
-                child: Stack(
-                  children: [
-                    // Layer 1: The Grid Content
-                    CustomScrollView(
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              16.0,
-                              8.0,
-                              16.0,
-                              16.0,
-                            ),
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: _selectedIds.isNotEmpty
-                                  ? _buildSelectionHeader(
-                                      context,
-                                      uiData.length,
-                                    )
-                                  : _buildSortHeader(context, uiData.length),
-                            ),
-                          ),
+                  // --- FILTERING LOGIC ---
+                  List<AchievementData> filteredData = filterAchievements(
+                    achievements: originalData,
+                    searchText: widget.searchText,
+                    selectedTopic: widget.selectedTopic,
+                    currentUserId: widget.userId,
+                  );
+
+                  // --- SORTING LOGIC ---
+                  filteredData = sortAchievements(
+                    achievements: filteredData,
+                    sortType: widget.sortType,
+                    sortOrder: widget.sortOrder,
+                  );
+
+                  if (filteredData.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        "No achievements match your search or filter.",
+                      ),
+                    );
+                  }
+
+                  final List<Map<String, dynamic>> uiData = _transformData(
+                    filteredData,
+                  );
+
+                  // --- REPLACED Gesture Logic with WRAPPER ---
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // --- STICKY HEADER ---
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          16.0,
+                          8.0,
+                          16.0,
+                          16.0,
                         ),
-                        // Pass filteredData here
-                        _buildSliverContent(context, uiData, filteredData),
-                      ],
-                    ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: _selectedIds.isNotEmpty
+                              ? _buildSelectionHeader(context, uiData.length)
+                              : _buildSortHeader(context, uiData.length),
+                        ),
+                      ),
 
-                    // Layer 2: The Blue Selection Box (Desktop Only)
-                    if (_isDesktop && _dragStart != null && _dragEnd != null)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: CustomPaint(
-                            painter: SelectionBoxPainter(
-                              start: _dragStart,
-                              end: _dragEnd,
-                            ),
+                      // --- SCROLLABLE CONTENT ---
+                      Expanded(
+                        child: SelectionGestureWrapper(
+                          isDesktop: _isDesktop,
+                          selectedIds: _selectedIds,
+                          itemKeys: _gridItemKeys,
+
+                          // Start "Selection Mode"
+                          onLongPressStart: (details) {
+                            if (_isDesktop) {
+                              // WINDOWS: Prepare box selection
+                              _initialSelection = Set.from(_selectedIds);
+                              setState(() {
+                                _dragStart = details.localPosition;
+                                _dragEnd = details.localPosition;
+                              });
+                              _handleBoxSelect(details.localPosition);
+                            } else {
+                              // MOBILE: Select item under finger
+                              _dragProcessedIds.clear();
+                              _handleDragSelect(details.globalPosition);
+                            }
+                          },
+
+                          // Continue selection
+                          onLongPressMoveUpdate: (details) {
+                            if (_isDesktop) {
+                              // WINDOWS: Update box size
+                              _handleBoxSelect(details.localPosition);
+                            } else {
+                              // MOBILE: Check for new items under finger
+                              _handleDragSelect(details.globalPosition);
+                            }
+                          },
+
+                          // Cleanup on release (ignoring details)
+                          onLongPressEnd: (_) => _endDrag(),
+
+                          child: Stack(
+                            key:
+                                _selectionAreaKey, // Coordinate reference for drag
+                            children: [
+                              // Layer 1: The Grid Content
+                              CustomScrollView(
+                                slivers: [
+                                  // Pass filteredData here
+                                  _buildSliverContent(
+                                    context,
+                                    uiData,
+                                    filteredData,
+                                  ),
+                                ],
+                              ),
+
+                              // Layer 2: The Blue Selection Box (Desktop Only)
+                              if (_isDesktop &&
+                                  _dragStart != null &&
+                                  _dragEnd != null)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: CustomPaint(
+                                      painter: SelectionBoxPainter(
+                                        start: _dragStart,
+                                        end: _dragEnd,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
-                  ],
-                ),
-              );
-            },
-          ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -477,6 +632,8 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
         selectedIds: _selectedIds,
         onToggleSelection: _toggleSelection,
         itemKeys: _gridItemKeys,
+        currentUserId: widget.userId, // NEW
+        isAdmin: widget.isAdmin, // NEW
       );
     } else {
       // --- LIST VIEW ---
@@ -591,8 +748,11 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      AdminAchievementDetailPage(initialData: originalItem),
+                  builder: (context) => AdminAchievementDetailPage(
+                    initialData: originalItem,
+                    currentUserId: widget.userId, // NEW
+                    isAdmin: widget.isAdmin, // NEW
+                  ),
                 ),
               );
             }

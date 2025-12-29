@@ -57,10 +57,7 @@ class NoteGridLayout extends StatelessWidget {
         topicColor = brandColors?.php ?? Colors.indigo;
         topicIcon = Icons.php;
         break;
-      case 'backend':
-        topicColor = brandColors?.backend ?? Colors.purple;
-        topicIcon = Icons.storage;
-        break;
+
       default:
         topicColor = brandColors?.other ?? Colors.grey;
         topicIcon = Icons.folder_open;
@@ -107,7 +104,6 @@ class NoteGridLayout extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-              
                     const Spacer(),
                     if (item['updatedAt'] != null)
                       Padding(
