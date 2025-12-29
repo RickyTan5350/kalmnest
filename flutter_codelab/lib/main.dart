@@ -349,17 +349,15 @@ class _FeedState extends State<Feed> {
         key: userPageGlobalKey,
         currentUser: widget.currentUser,
       ), // Index 0
-      GamePage(userRole: widget.currentUser.roleName), // Index 1
-      const UserPage(), // Index 0
       GamePage(
         key: gamePageGlobalKey,
         userRole: widget.currentUser.roleName,
       ), // Index 1
-      NotePage(currentUser: widget.currentUser),
+      NotePage(currentUser: widget.currentUser), // Index 2
       ClassPage(
         key: classPageGlobalKey,
         currentUser: widget.currentUser,
-      ), //utter Index 3
+      ), // Index 3
       AchievementPage(
         showSnackBar: _showSnackBar,
         currentUser: widget.currentUser,
