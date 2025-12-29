@@ -1,5 +1,6 @@
 // lib/widgets/class_statistics_section.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class ClassStatisticsSection extends StatelessWidget {
   final int totalStudents;
@@ -21,12 +22,12 @@ class ClassStatisticsSection extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return Card(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         side: BorderSide(color: cs.outlineVariant, width: 1),
       ),
       elevation: 0,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(ClassConstants.defaultPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -34,7 +35,7 @@ class ClassStatisticsSection extends StatelessWidget {
               title,
               style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: ClassConstants.defaultPadding * 0.5),
             Text(
               value,
               style: textTheme.headlineSmall?.copyWith(
@@ -43,7 +44,7 @@ class ClassStatisticsSection extends StatelessWidget {
               ),
             ),
             if (subtitle.isNotEmpty) ...[
-              const SizedBox(height: 6),
+              SizedBox(height: ClassConstants.defaultPadding * 0.375),
               Text(
                 subtitle,
                 style: textTheme.bodySmall?.copyWith(
@@ -69,11 +70,11 @@ class ClassStatisticsSection extends StatelessWidget {
           Expanded(
             child: _statCard(context, 'Total Students', '$totalStudents', ''),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: ClassConstants.defaultPadding * 0.75),
           Expanded(
             child: _statCard(context, 'Total Quizzes', '$totalQuizzes', ''),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: ClassConstants.defaultPadding * 0.75),
         ],
       ),
     );

@@ -22,7 +22,7 @@ Future<void> uploadFile() async {
 
     // 3. Define your server endpoint
     // This is the URL your server is listening on
-    var uri = Uri.parse('http://backend_services.test/api/notes/upload');
+    var uri = Uri.parse('https://kalmnest.test/api/notes/upload');
 
     // 4. Create the multipart request
     var request = http.MultipartRequest('POST', uri);

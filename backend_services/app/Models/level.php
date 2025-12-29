@@ -17,7 +17,8 @@ class Level extends Model
         'level_name',
         'level_type_id',
         'level_data',
-        'win_condition'
+        'win_condition',
+        'created_by'
     ];
 
     protected function casts(): array
@@ -32,5 +33,19 @@ class Level extends Model
     public function level_type()
     {
         return $this->belongsTo(level_type::class, 'level_type_id', 'level_type_id');
+    }
+
+    // Relationship to classes (many-to-many through class_levels)
+    public function classes()
+    {
+        return $this->belongsToMany(ClassModel::class, 'class_levels', 'level_id', 'class_id')
+                    ->withPivot('is_private', 'created_at', 'updated_at')
+                    ->withTimestamps();
+    }
+
+    // Relationship to creator (user who created this level)
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by', 'user_id');
     }
 }

@@ -57,6 +57,7 @@ class StudentViewAchievementsPageState
         'icon': getAchievementIcon(iconValue),
         'color': getAchievementColor(context, iconValue),
         'preview': brief.achievementDescription,
+        'isUnlocked': brief.isUnlocked, // NEW
       };
     }).toList();
   }
@@ -140,7 +141,15 @@ class StudentViewAchievementsPageState
       ),
       child: InkWell(
         // --- 2. USE HANDLER IN GRID ---
-        onTap: () => _handleAchievementTap(originalItem),
+        onTap: item['isUnlocked'] == true
+            ? () => _handleAchievementTap(originalItem)
+            : () {
+                widget.showSnackBar(
+                  context,
+                  "Locked. Keep playing to unlock!",
+                  Colors.grey,
+                );
+              },
         child: Stack(
           children: [
             Positioned.fill(
@@ -148,7 +157,12 @@ class StudentViewAchievementsPageState
                 padding: const EdgeInsets.all(16.0),
                 child: FittedBox(
                   fit: BoxFit.contain,
-                  child: Icon(icon, color: color.withOpacity(0.1)),
+                  child: Icon(
+                    icon,
+                    color: item['isUnlocked'] == true
+                        ? color.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
+                  ),
                 ),
               ),
             ),
@@ -159,7 +173,11 @@ class StudentViewAchievementsPageState
                   padding: const EdgeInsets.fromLTRB(12.0, 12.0, 4.0, 8.0),
                   child: Row(
                     children: [
-                      Icon(icon, color: color, size: 18),
+                      Icon(
+                        icon,
+                        color: item['isUnlocked'] == true ? color : Colors.grey,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -168,11 +186,19 @@ class StudentViewAchievementsPageState
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Icon(
-                        Icons.check_circle,
-                        size: 20,
-                        color: Colors.green,
-                      ),
+                      const SizedBox(width: 8),
+                      // NEW: Show Lock Icon if locked
+                      item['isUnlocked'] == true
+                          ? const Icon(
+                              Icons.check_circle,
+                              size: 20,
+                              color: Colors.green,
+                            )
+                          : const Icon(
+                              Icons.lock,
+                              size: 20,
+                              color: Colors.grey,
+                            ),
                     ],
                   ),
                 ),
@@ -261,6 +287,7 @@ class StudentViewAchievementsPageState
             achievements: originalData,
             searchText: widget.searchText,
             selectedTopic: widget.selectedTopic,
+            currentUserId: widget.userId,
           );
 
           // --- SORTING LOGIC ---
@@ -321,7 +348,7 @@ class StudentViewAchievementsPageState
                                 child: Align(
                                   alignment: Alignment.centerLeft,
                                   child: Text(
-                                    "${uiData.length} Unlocked Achievements",
+                                    "${uiData.where((i) => i['isUnlocked'] == true).length} / ${uiData.length} Unlocked",
                                     style: Theme.of(
                                       context,
                                     ).textTheme.titleMedium,
@@ -388,17 +415,34 @@ class StudentViewAchievementsPageState
                           leading: CircleAvatar(
                             backgroundColor: transformedItem['color']
                                 .withOpacity(0.1),
-                            foregroundColor: transformedItem['color'],
+                            foregroundColor: item.isUnlocked
+                                ? transformedItem['color']
+                                : Colors.grey,
                             child: Icon(transformedItem['icon']),
                           ),
-                          title: Text(item.achievementTitle ?? "Achievement"),
-                          subtitle: Text(item.achievementDescription ?? ""),
-                          trailing: const Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
+                          title: Text(
+                            item.achievementTitle ?? "Achievement",
+                            style: TextStyle(
+                              color: item.isUnlocked ? null : Colors.grey,
+                            ),
                           ),
+                          subtitle: Text(item.achievementDescription ?? ""),
+                          trailing: item.isUnlocked
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                )
+                              : const Icon(Icons.lock, color: Colors.grey),
                           // --- 3. USE HANDLER IN LIST ---
-                          onTap: () => _handleAchievementTap(originalItem),
+                          onTap: item.isUnlocked
+                              ? () => _handleAchievementTap(originalItem)
+                              : () {
+                                  widget.showSnackBar(
+                                    context,
+                                    "Locked. Keep playing to unlock!",
+                                    Colors.grey,
+                                  );
+                                },
                         ),
                       );
                     },

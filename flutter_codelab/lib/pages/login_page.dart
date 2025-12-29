@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/models/user_data.dart'; // Using the UserDetails class from here
 import 'package:flutter_codelab/main.dart'; // Import the Feed structure
@@ -21,10 +23,57 @@ class _LoginPageState extends State<LoginPage> {
   bool _isPasswordVisible = false;
 
   @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_checkForJsonPaste);
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _checkForJsonPaste() {
+    if (!kDebugMode) return;
+    final text = _emailController.text.trim();
+    if (text.startsWith('{') && text.endsWith('}')) {
+      try {
+        final Map<String, dynamic> json = jsonDecode(text);
+        _populateFormFromJson(json);
+      } catch (e) {
+        // Not valid JSON, ignore
+      }
+    }
+  }
+
+  void _populateFormFromJson(Map<String, dynamic> json) {
+    String? getValue(List<String> keys) {
+      for (final key in keys) {
+        if (json.containsKey(key)) {
+          return json[key]?.toString();
+        }
+      }
+      return null;
+    }
+
+    final email = getValue(['email', 'username', 'user']);
+    final password = getValue(['password', 'pass', 'key']);
+
+    setState(() {
+      if (email != null) _emailController.text = email;
+      if (password != null) _passwordController.text = password;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Login details autofilled from JSON'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
   }
 
   // --- Login Logic Handler ---

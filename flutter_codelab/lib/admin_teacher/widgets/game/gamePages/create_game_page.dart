@@ -19,6 +19,7 @@ void showCreateGamePage({
   required String userRole,
   required void Function(BuildContext context, String message, Color color)
   showSnackBar,
+  Function(String? levelId)? onLevelCreated,
 }) {
   showDialog(
     context: context,
@@ -26,6 +27,7 @@ void showCreateGamePage({
       showSnackBar: showSnackBar,
       parentContext: context,
       userRole: userRole,
+      onLevelCreated: onLevelCreated,
     ),
   );
 }
@@ -38,12 +40,14 @@ class CreateGamePage extends StatefulWidget {
   showSnackBar;
   final BuildContext parentContext;
   final String userRole;
+  final Function(String? levelId)? onLevelCreated;
 
   const CreateGamePage({
     super.key,
     required this.showSnackBar,
     required this.parentContext,
     required this.userRole,
+    this.onLevelCreated,
   });
 
   @override
@@ -170,6 +174,11 @@ class _CreateGamePageState extends State<CreateGamePage> {
                             } catch (e) {
                               print("Error parsing game data: $e");
                             }
+                          }
+
+                          // Call callback with level ID if provided
+                          if (widget.onLevelCreated != null && newLevelId != null) {
+                            widget.onLevelCreated!(newLevelId);
                           }
 
                           // Ask to create achievement

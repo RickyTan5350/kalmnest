@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/api/game_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_quiz_detail_page.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
 import 'package:flutter_codelab/models/level.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 /// Full-page teacher view: all quizzes for a single class.
 ///
@@ -81,17 +86,131 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
   }
 
   Future<void> _handleCreateQuiz() async {
-    // Open create game page (Unity WebView)
-    // After creation, teacher can manually assign it using "Assign Quiz"
+    // First, ask teacher: How should this quiz be visible?
+    final isPrivate = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quiz Visibility'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'How should this quiz be visible after creation?',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: ClassConstants.defaultPadding),
+            ListTile(
+              leading: Icon(
+                Icons.lock,
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
+              title: const Text('Private'),
+              subtitle: const Text('Only visible to this class'),
+              onTap: () => Navigator.pop(context, true),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.public,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: const Text('Public'),
+              subtitle: const Text(
+                'Visible to everyone, can be assigned to other classes',
+              ),
+              onTap: () => Navigator.pop(context, false),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // If user cancelled, return
+    if (isPrivate == null) return;
+
+    // Use Completer to wait for level creation
+    final Completer<String?> levelIdCompleter = Completer<String?>();
+
+    // Now open create game page with callback
     showCreateGamePage(
       context: context,
       userRole: widget.roleName,
       showSnackBar: _showSnackBar,
+      onLevelCreated: (levelId) {
+        if (!levelIdCompleter.isCompleted) {
+          levelIdCompleter.complete(levelId);
+        }
+      },
     );
 
-    // Refresh quizzes after a delay
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) _fetchData();
+    // Wait for level creation (with timeout)
+    final createdLevelId = await levelIdCompleter.future.timeout(
+      const Duration(seconds: 60),
+      onTimeout: () => null,
+    );
+
+    // If we got the level ID, assign it immediately
+    if (createdLevelId != null && mounted) {
+      final result = await ClassApi.assignQuizToClass(
+        classId: widget.classId,
+        levelId: createdLevelId,
+        isPrivate: isPrivate,
+      );
+
+      if (mounted) {
+        if (result['success'] == true) {
+          _showSnackBar(
+            context,
+            'Quiz created and assigned successfully as ${isPrivate ? "Private" : "Public"}',
+            Theme.of(context).colorScheme.primary,
+          );
+          // Refresh the quiz list
+          _fetchData();
+        } else {
+          _showSnackBar(
+            context,
+            result['message'] ?? 'Failed to assign quiz',
+            Theme.of(context).colorScheme.error,
+          );
+        }
+      }
+    } else if (mounted) {
+      // Fallback: try to find the newly created level
+      await Future.delayed(const Duration(seconds: 2));
+      final allLevels = await GameAPI.fetchLevels(forceRefresh: true);
+
+      if (mounted && allLevels.isNotEmpty) {
+        // Get the most recently created level by current user
+        final newLevel = allLevels.firstWhere(
+          (level) => level.isCreatedByMe == true,
+          orElse: () => allLevels.first,
+        );
+
+        if (newLevel.levelId != null) {
+          final result = await ClassApi.assignQuizToClass(
+            classId: widget.classId,
+            levelId: newLevel.levelId!,
+            isPrivate: isPrivate,
+          );
+
+          if (mounted) {
+            if (result['success'] == true) {
+              _showSnackBar(
+                context,
+                'Quiz created and assigned successfully as ${isPrivate ? "Private" : "Public"}',
+                Theme.of(context).colorScheme.primary,
+              );
+              _fetchData();
+            } else {
+              _showSnackBar(
+                context,
+                result['message'] ?? 'Failed to assign quiz',
+                Theme.of(context).colorScheme.error,
+              );
+            }
+          }
+        }
+      }
+    }
   }
 
   Future<void> _handleAssignQuiz() async {
@@ -118,9 +237,47 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
     );
 
     if (selectedLevel != null) {
+      // Ask teacher: Private or Public?
+      final isPrivate = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Quiz Visibility'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('How should this quiz be visible?'),
+              SizedBox(height: ClassConstants.defaultPadding),
+              ListTile(
+                leading: Icon(
+                Icons.lock,
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
+                title: const Text('Private'),
+                subtitle: const Text('Only visible to this class'),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              ListTile(
+                leading: Icon(
+                Icons.public,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+                title: const Text('Public'),
+                subtitle: const Text(
+                  'Visible to everyone, can be assigned to other classes',
+                ),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (isPrivate == null) return; // User cancelled
+
       final result = await ClassApi.assignQuizToClass(
         classId: widget.classId,
         levelId: selectedLevel.levelId!,
+        isPrivate: isPrivate,
       );
 
       if (!mounted) return;
@@ -190,202 +347,334 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    // Get class color for AppBar
+    final classColor = ClassCustomization.getColorByName(_classData?['color']);
+    final color = classColor?.color ?? cs.primary;
+
     return Scaffold(
-      backgroundColor: cs.surface,
-      body: SafeArea(
-        child: _loading
-            ? Center(child: CircularProgressIndicator(color: cs.primary))
-            : Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: SingleChildScrollView(
+      appBar: AppBar(
+        title: BreadcrumbNavigation(
+          items: [
+            BreadcrumbItem(
+              label: 'Classes',
+              onTap: () {
+                // Navigate back to class list
+                Navigator.of(context).pop();
+              },
+            ),
+            BreadcrumbItem(
+              label: 'Details',
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            const BreadcrumbItem(label: 'All Quizzes'),
+          ],
+        ),
+        backgroundColor: color.withOpacity(0.2),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() => _loading = true);
+              _fetchData();
+            },
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _fetchData();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header - Centered with icon, title, and class name
+              Center(
+                child: Column(
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        final classIcon = ClassCustomization.getIconByName(
+                          _classData?['icon'],
+                        );
+                        return CircleAvatar(
+                          radius: 40,
+                          backgroundColor: color.withOpacity(0.1),
+                          child: Icon(
+                            classIcon?.icon ?? Icons.school_rounded,
+                            color: color,
+                            size: 40,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'All Quizzes',
+                      style: textTheme.headlineMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Chip(
+                      label: Text(_classData?['class_name'] ?? 'No Name'),
+                      backgroundColor: color.withOpacity(0.1),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Statistics Section - General Info style
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Text(
+                  'Statistics',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: cs.primary,
+                  ),
+                ),
+              ),
+              _buildInfoRow(
+                cs,
+                textTheme,
+                Icons.quiz,
+                'Total Quizzes',
+                '${_quizzes.length}',
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: _buildInfoRow(
+                  cs,
+                  textTheme,
+                  Icons.schedule,
+                  'Last Updated',
+                  _quizzes.isNotEmpty
+                      ? _formatDate(
+                          _quizzes.first['updated_at'] ??
+                              _quizzes.first['created_at'],
+                        )
+                      : 'Never',
+                ),
+              ),
+              const Divider(height: 30),
+              const SizedBox(height: 32),
+
+              // Search Section with Action Buttons
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: SearchBar(
+                      controller: _searchController,
+                      hintText: "Search quizzes...",
+                      padding: const WidgetStatePropertyAll<EdgeInsets>(
+                        EdgeInsets.symmetric(horizontal: 16.0),
+                      ),
+                      onChanged: (value) {
+                        setState(() => _searchQuery = value);
+                      },
+                      leading: const Icon(Icons.search),
+                      trailing: [
+                        if (_searchController.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              setState(() {
+                                _searchController.clear();
+                                _searchQuery = '';
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: _handleAssignQuiz,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Assign Quiz'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 0,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: _handleCreateQuiz,
+                    icon: const Icon(Icons.add_circle, size: 18),
+                    label: const Text('Create Quiz'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 0,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Quizzes List Card
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  side: BorderSide(
+                    color: cs.outline.withOpacity(0.3),
+                    width: 1.0,
+                  ),
+                ),
+                color: cs.surfaceContainerLow,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header + stats card
-                      Card(
-                        elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
+                      // Header row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _Header(
-                                className:
-                                    _classData?['class_name'] ?? 'No Name',
-                                classDescription:
-                                    _classData?['description'] ??
-                                    'No description',
+                              Text(
+                                'Quizzes',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: cs.onSurface,
+                                ),
                               ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _StatCard(
-                                      label: 'Total Quizzes',
-                                      value: '${_quizzes.length}',
-                                      icon: Icons.quiz,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _StatCard(
-                                      label: 'Last Updated',
-                                      value: _quizzes.isNotEmpty
-                                          ? _formatDate(
-                                              _quizzes.first['updated_at'] ??
-                                                  _quizzes.first['created_at'],
-                                            )
-                                          : 'Never',
-                                      icon: Icons.schedule,
-                                    ),
-                                  ),
-                                ],
+                              const SizedBox(height: 4),
+                              Text(
+                                '${_filteredQuizzes.length} quiz${_filteredQuizzes.length != 1 ? 'es' : ''} available',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-
                       const SizedBox(height: 16),
-
-                      // Quizzes card
-                      Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(color: cs.outlineVariant, width: 1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeader(
-                                title: 'Quizzes',
-                                subtitle: 'Browse and manage class quizzes',
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    FilledButton.icon(
-                                      onPressed: _handleAssignQuiz,
-                                      icon: const Icon(Icons.add),
-                                      label: const Text('Assign Quiz'),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    FilledButton.icon(
-                                      onPressed: _handleCreateQuiz,
-                                      icon: const Icon(Icons.add_circle),
-                                      label: const Text('Create Quiz'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: _searchController,
-                                onChanged: (value) {
-                                  setState(() => _searchQuery = value);
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'Search quizzes...',
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                  filled: true,
-                                  fillColor: cs.surfaceContainerHighest,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: cs.outlineVariant,
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: cs.outlineVariant,
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: cs.primary,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  suffixIcon: _searchQuery.isNotEmpty
-                                      ? IconButton(
-                                          icon: const Icon(Icons.clear),
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            setState(() => _searchQuery = '');
-                                          },
-                                        )
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              _filteredQuizzes.isEmpty
-                                  ? Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(32.0),
-                                        child: Column(
-                                          children: [
-                                            Icon(
-                                              Icons.quiz_outlined,
-                                              size: 64,
-                                              color: cs.onSurfaceVariant
-                                                  .withOpacity(0.5),
-                                            ),
-                                            const SizedBox(height: 16),
-                                            Text(
-                                              _searchQuery.isNotEmpty
-                                                  ? 'No quizzes match your search'
-                                                  : 'No quizzes assigned to this class',
-                                              style: textTheme.titleMedium
-                                                  ?.copyWith(
-                                                    color: cs.onSurfaceVariant,
-                                                  ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              _searchQuery.isNotEmpty
-                                                  ? 'Try adjusting your search query'
-                                                  : 'Create or assign a quiz to get started',
-                                              style: textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color: cs.onSurfaceVariant
-                                                        .withOpacity(0.7),
-                                                  ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                                  : Column(
-                                      children: _filteredQuizzes
-                                          .map(
-                                            (quiz) => _QuizItem(
-                                              quiz: quiz,
-                                              onRemove: () => _handleRemoveQuiz(
-                                                quiz['level_id'],
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                    ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      // Content
+                      if (_filteredQuizzes.isEmpty)
+                        _buildEmptyState(cs, textTheme)
+                      else
+                        ..._filteredQuizzes.map((quiz) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: _QuizItem(
+                              quiz: quiz,
+                              classId: widget.classId,
+                              onRemove: () => _handleRemoveQuiz(quiz['level_id']),
+                            ),
+                          );
+                        }).toList(),
                     ],
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(
+    ColorScheme cs,
+    TextTheme textTheme,
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: cs.onSurfaceVariant),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    color: valueColor ?? cs.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(ColorScheme cs, TextTheme textTheme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            Icon(
+              Icons.quiz_outlined,
+              size: 48,
+              color: cs.onSurfaceVariant.withOpacity(0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No quizzes yet',
+              style: textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Create or assign quizzes to get started',
+              style: textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -401,104 +690,17 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
   }
 }
 
-class _Header extends StatelessWidget {
-  final String className;
-  final String classDescription;
-
-  const _Header({required this.className, required this.classDescription});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextButton.icon(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back, color: cs.primary),
-          label: Text(
-            'Back to Class',
-            style: textTheme.bodyMedium?.copyWith(color: cs.primary),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'All Quizzes',
-          style: textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: cs.onSurface,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          className,
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: cs.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          classDescription,
-          style: textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: cs.primary),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: cs.onSurface,
-            ),
-          ),
-          Text(
-            label,
-            style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _QuizItem extends StatelessWidget {
   final Map<String, dynamic> quiz;
+  final String classId;
   final VoidCallback onRemove;
 
-  const _QuizItem({required this.quiz, required this.onRemove});
+  const _QuizItem({
+    required this.quiz,
+    required this.classId,
+    required this.onRemove,
+  });
 
   String _formatDate(dynamic date) {
     if (date == null) return 'Unknown';
@@ -520,72 +722,153 @@ class _QuizItem extends StatelessWidget {
         ? levelType['level_type_name'] ?? 'Unknown'
         : 'Unknown';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant, width: 1),
+    return Card(
+      elevation: 1.0,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: cs.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.quiz, color: cs.primary),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.0),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => TeacherQuizDetailPage(
+                classId: classId,
+                levelId: quiz['level_id'],
+                quizName: quiz['level_name'],
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: Icon(
+                  Icons.quiz,
+                  color: cs.onPrimaryContainer,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        quiz['level_name'] ?? 'No Name',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            quiz['level_name'] ?? 'No Name',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurface,
+                            ),
+                          ),
                         ),
+                        const SizedBox(width: 8),
+                        Chip(
+                          label: Text(
+                            levelTypeName,
+                            style: textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          backgroundColor: cs.primaryContainer.withOpacity(0.3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Uploaded: ${_formatDate(quiz['created_at'])}',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: cs.primaryContainer.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        levelTypeName,
-                        style: textTheme.labelSmall?.copyWith(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap to view student completion',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.primary,
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Uploaded: ${_formatDate(quiz['created_at'])}',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
+              ),
+              PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert,
+                  color: cs.onSurfaceVariant,
+                  size: 20,
                 ),
-              ],
-            ),
+                tooltip: 'More options',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 32,
+                  minHeight: 32,
+                ),
+                onSelected: (value) {
+                  if (value == 'remove') {
+                    onRemove();
+                  } else if (value == 'view') {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => TeacherQuizDetailPage(
+                          classId: classId,
+                          levelId: quiz['level_id'],
+                          quizName: quiz['level_name'],
+                        ),
+                      ),
+                    );
+                  }
+                },
+                itemBuilder: (BuildContext context) =>
+                    <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'view',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility, size: 20, color: cs.onSurface),
+                        const SizedBox(width: 12),
+                        const Text('View Details'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'remove',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline,
+                            size: 20, color: cs.error),
+                        const SizedBox(width: 12),
+                        Text('Remove',
+                            style: TextStyle(color: cs.error)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          IconButton(
-            onPressed: onRemove,
-            icon: Icon(Icons.delete_outline, color: cs.error),
-            tooltip: 'Remove from class',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -660,7 +943,7 @@ class _AssignQuizDialogState extends State<_AssignQuizDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ClassConstants.defaultPadding),
             TextField(
               controller: _searchController,
               onChanged: (value) => setState(() => _searchQuery = value),
@@ -678,7 +961,7 @@ class _AssignQuizDialogState extends State<_AssignQuizDialog> {
                     : null,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ClassConstants.defaultPadding),
             Expanded(
               child: _filteredLevels.isEmpty
                   ? Center(
@@ -690,7 +973,7 @@ class _AssignQuizDialogState extends State<_AssignQuizDialog> {
                             size: 48,
                             color: cs.onSurfaceVariant.withOpacity(0.5),
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: ClassConstants.defaultPadding),
                           Text(
                             'No quizzes available',
                             style: textTheme.bodyMedium?.copyWith(
@@ -728,47 +1011,3 @@ class _AssignQuizDialogState extends State<_AssignQuizDialog> {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget? trailing;
-
-  const _SectionHeader({
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (trailing != null) trailing!,
-      ],
-    );
-  }
-}
