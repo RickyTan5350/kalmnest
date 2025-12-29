@@ -392,12 +392,12 @@ class _UserDetailPageState extends State<UserDetailPage> {
             ),
             child: CircleAvatar(
               radius: 48,
-              backgroundColor: roleColor,
-              foregroundColor: colorScheme.onPrimary,
+              backgroundColor: roleColor.withOpacity(0.2),
+              foregroundColor: roleColor,
               child: Text(
                 user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
                 style: textTheme.displayMedium?.copyWith(
-                  color: colorScheme.onPrimary,
+                  color: roleColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),

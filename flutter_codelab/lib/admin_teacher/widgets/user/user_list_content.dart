@@ -519,9 +519,6 @@ class UserListContentState extends State<UserListContent> {
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
-    // Only allow selection if user is Admin
-    final bool isAdmin = widget.currentUser?.roleName.toLowerCase() == 'admin';
-
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       sliver: SliverList(
@@ -535,124 +532,141 @@ class UserListContentState extends State<UserListContent> {
             () => GlobalKey(),
           );
 
-          return Container(
+          return _buildUserListTile(
+            context: context,
+            user: user,
+            isSelected: isSelected,
             key: key,
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Card(
-              clipBehavior: Clip.hardEdge,
-              elevation: 0,
-              color: isSelected
-                  ? colorScheme.primaryContainer.withOpacity(0.3)
-                  : null,
-              shape: RoundedRectangleBorder(
-                side: BorderSide(
-                  color: isSelected
-                      ? colorScheme.primary
-                      : colorScheme.outlineVariant,
-                  width: isSelected ? 2 : 1,
+            onToggle: () => _toggleSelection(user.id),
+          );
+        }, childCount: users.length),
+      ),
+    );
+  }
+
+  Widget _buildUserListTile({
+    required BuildContext context,
+    required UserListItem user,
+    required bool isSelected,
+    required GlobalKey key,
+    required VoidCallback onToggle,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isAdmin = widget.currentUser?.roleName.toLowerCase() == 'admin';
+
+    // Determine Role Color
+    final roleColor = _getRoleColor(user.roleName, colorScheme);
+
+    return Container(
+      key: key,
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 4.0),
+        elevation: 1.0,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(
+            color: isSelected
+                ? colorScheme.primary
+                : colorScheme.outline.withOpacity(0.3),
+            width: isSelected ? 2.0 : 1.0,
+          ),
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16.0,
+            vertical: 2.0,
+          ),
+          leading: CircleAvatar(
+            backgroundColor: roleColor.withOpacity(0.2),
+            foregroundColor: roleColor,
+            child: Text(
+              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          title: Text(
+            user.name,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Text(
+                user.email,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
-                borderRadius: BorderRadius.circular(12),
               ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  if (isAdmin && _isSelectionMode) {
-                    _toggleSelection(user.id);
-                  } else {
-                    _navigateToDetail(user.id.toString(), user.name);
-                  }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      // Centered Avatar
-                      Builder(
-                        builder: (context) {
-                          final roleColor = _getRoleColor(
-                            user.roleName,
-                            colorScheme,
-                          );
-                          return CircleAvatar(
-                            backgroundColor: roleColor.withOpacity(0.2),
-                            foregroundColor: roleColor,
-                            child: isSelected
-                                ? const Icon(Icons.check)
-                                : Text(
-                                    user.name.isNotEmpty
-                                        ? user.name[0].toUpperCase()
-                                        : '?',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 16),
-
-                      // Text Content
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user.name,
-                              style: textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(user.email, style: textTheme.bodyMedium),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    user.roleName,
-                                    style: textTheme.labelSmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  user.accountStatus.toUpperCase(),
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: user.accountStatus == 'active'
-                                        ? Colors.green
-                                        : colorScheme.error,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Optional Chevron like Notes (or simple padding if preferred, but Notes usually has it)
-                      if (!_isSelectionMode)
-                        Icon(
-                          Icons.chevron_right,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                    ],
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: roleColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  user.roleName,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: roleColor,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            ),
-          );
-        }, childCount: users.length),
+            ],
+          ),
+          onTap: () {
+            if (isAdmin && _isSelectionMode) {
+              onToggle();
+            } else {
+              _navigateToDetail(user.id.toString(), user.name);
+            }
+          },
+          onLongPress: isAdmin ? onToggle : null,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. Status Chip (Always Visible)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: user.accountStatus == 'active'
+                      ? Colors.green.withOpacity(0.1)
+                      : colorScheme.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: user.accountStatus == 'active'
+                        ? Colors.green
+                        : colorScheme.error,
+                    width: 0.5,
+                  ),
+                ),
+                child: Text(
+                  user.accountStatus.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: user.accountStatus == 'active'
+                        ? Colors.green
+                        : colorScheme.error,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              // 2. Admin Options (If applicable)
+              if (isAdmin && !_isSelectionMode) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.more_vert),
+                  onPressed: () {
+                    // Placeholder for future menu options
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
