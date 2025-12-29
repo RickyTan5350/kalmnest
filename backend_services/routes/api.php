@@ -20,6 +20,10 @@ use App\Http\Requests\DeleteUserRequest;
 Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/user', [UserController::class, 'store']); // Registration
 
+// Password Reset
+Route::post('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'sendResetCode']);
+Route::post('/reset-password', [\App\Http\Controllers\PasswordResetController::class, 'resetPassword']);
+
 // --- 1. SPECIFIC ROUTES (MUST BE AT THE TOP) ---
 // These are public so your Flutter app can access them without a token.
 
@@ -96,6 +100,9 @@ Route::prefix('users')->group(function () {
         Route::get('/{id}/quizzes', [ClassController::class, 'getQuizzes']); // Get quizzes for a class
         Route::post('/{id}/quizzes', [ClassController::class, 'assignQuiz']); // Assign existing quiz to class
         Route::delete('/{classId}/quizzes/{levelId}', [ClassController::class, 'removeQuiz']); // Remove quiz from class
+        Route::get('/{id}/students/completion', [ClassController::class, 'getStudentCompletion']); // Get student completion data
+        Route::get('/{classId}/students/{studentId}/quizzes', [ClassController::class, 'getStudentQuizzes']); // Get student's quiz completion status
+        Route::get('/{classId}/quizzes/{levelId}/students', [ClassController::class, 'getQuizStudents']); // Get quiz's student completion status
     });
     
     // Class statistics
