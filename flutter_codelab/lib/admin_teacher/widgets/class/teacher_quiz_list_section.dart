@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_quiz_page.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class QuizListSection extends StatefulWidget {
   final String roleName;
@@ -68,11 +69,11 @@ class _QuizListSectionState extends State<QuizListSection> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         side: BorderSide(color: cs.outlineVariant, width: 1),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(ClassConstants.defaultPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -123,13 +124,13 @@ class _QuizListSectionState extends State<QuizListSection> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: ClassConstants.defaultPadding * 0.75),
 
             // Loading state
             if (_loading)
               const Center(
                 child: Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(ClassConstants.defaultPadding),
                   child: CircularProgressIndicator(),
                 ),
               )
@@ -137,7 +138,7 @@ class _QuizListSectionState extends State<QuizListSection> {
             else if (_quizzes.isEmpty)
               Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: EdgeInsets.all(ClassConstants.cardPadding),
                   child: Column(
                     children: [
                       Icon(
@@ -145,14 +146,14 @@ class _QuizListSectionState extends State<QuizListSection> {
                         size: 48,
                         color: cs.onSurfaceVariant.withOpacity(0.5),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: ClassConstants.defaultPadding * 0.75),
                       Text(
                         'No quizzes yet',
                         style: textTheme.bodyMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: ClassConstants.defaultPadding * 0.25),
                       Text(
                         'Create or assign quizzes to get started',
                         style: textTheme.bodySmall?.copyWith(
@@ -175,13 +176,13 @@ class _QuizListSectionState extends State<QuizListSection> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 6,
-                      horizontal: 4,
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: ClassConstants.defaultPadding * 0.375,
+                      horizontal: ClassConstants.defaultPadding * 0.25,
                     ),
                     tileColor: cs.surfaceContainerHighest,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                     ),
                     leading: Icon(Icons.quiz, color: cs.primary),
                     title: Text(
@@ -199,13 +200,13 @@ class _QuizListSectionState extends State<QuizListSection> {
                       ),
                     ),
                     trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: ClassConstants.defaultPadding * 0.625,
+                        vertical: ClassConstants.defaultPadding * 0.25,
                       ),
                       decoration: BoxDecoration(
                         color: cs.primaryContainer.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 1.67),
                       ),
                       child: Text(
                         levelTypeName,
@@ -237,7 +238,7 @@ class _QuizListSectionState extends State<QuizListSection> {
             // Show "View All" link if more than 3 quizzes
             if (_quizzes.length > 3)
               Padding(
-                padding: const EdgeInsets.only(top: 8.0),
+                padding: EdgeInsets.only(top: ClassConstants.defaultPadding * 0.5),
                 child: Center(
                   child: TextButton(
                     onPressed: () {

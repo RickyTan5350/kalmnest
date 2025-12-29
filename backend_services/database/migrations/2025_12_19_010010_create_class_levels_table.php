@@ -15,6 +15,7 @@ return new class extends Migration
             $table->uuid('class_level_id')->primary();
             $table->uuid('class_id');
             $table->uuid('level_id');
+            $table->boolean('is_private')->default(false);
             $table->timestamps();
 
             // Foreign key constraints

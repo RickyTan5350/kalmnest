@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class StatItem {
   final String label;
@@ -56,7 +57,9 @@ class _ClassStatisticsSectionState extends State<ClassStatisticsSection> {
       children: stats.map((stat) {
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: ClassConstants.defaultPadding * 0.5,
+            ),
             child: _StatCard(stat: stat),
           ),
         );
@@ -78,44 +81,52 @@ class _StatCard extends StatelessWidget {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
+          color: colorScheme.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              stat.label,
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(ClassConstants.defaultPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                stat.label,
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              stat.value,
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
+              SizedBox(height: ClassConstants.defaultPadding * 0.375),
+              Text(
+                stat.value,
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            if (stat.change != null) ...[
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.trending_up, size: 16, color: colorScheme.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    stat.change!,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.primary,
+              if (stat.change != null) ...[
+                SizedBox(height: ClassConstants.defaultPadding * 0.375),
+                Row(
+                  children: [
+                    Icon(Icons.trending_up, size: 16, color: colorScheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      stat.change!,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

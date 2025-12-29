@@ -1,0 +1,66 @@
+##
+## Database Schema CSV Import for Kalmnest Application
+## Import this into draw.io/diagrams.net to visualize the database schema
+##
+#
+## Node label with table name and type
+#
+# label: <b>%table_name%</b><br><i style="color:gray;font-size:10px;">%table_type%</i><br><span style="font-size:9px;">%key_attributes%</span>
+#
+## Node style for core tables
+#
+# style: label;whiteSpace=wrap;html=1;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;fontStyle=1;fontSize=12
+#
+## Style for pivot tables
+#
+# styles: {"pivot": "label;whiteSpace=wrap;html=1;rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;fontStyle=1;fontSize=12"}
+#
+## Connections - Foreign Key Relationships
+#
+# connect: {"from": "roles", "to": "users", "label": "role_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=0;"}
+# connect: {"from": "users", "to": "classes", "label": "teacher_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=0;"}
+# connect: {"from": "users", "to": "classes", "label": "admin_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=1;"}
+# connect: {"from": "users", "to": "notes", "label": "created_by", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=0;"}
+# connect: {"from": "users", "to": "levels", "label": "created_by", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=0;"}
+# connect: {"from": "users", "to": "achievements", "label": "created_by", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=0;"}
+# connect: {"from": "users", "to": "feedbacks", "label": "student_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=0;"}
+# connect: {"from": "users", "to": "feedbacks", "label": "teacher_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=1;"}
+# connect: {"from": "topics", "to": "notes", "label": "topic_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=0;"}
+# connect: {"from": "files", "to": "notes", "label": "file_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=0;"}
+# connect: {"from": "level_types", "to": "levels", "label": "level_type_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#6c8ebf;curved=1;dashed=0;"}
+# connect: {"from": "classes", "to": "class_student", "label": "class_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#d6b656;curved=1;dashed=0;"}
+# connect: {"from": "users", "to": "class_student", "label": "student_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#d6b656;curved=1;dashed=0;"}
+# connect: {"from": "classes", "to": "class_levels", "label": "class_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#d6b656;curved=1;dashed=0;"}
+# connect: {"from": "levels", "to": "class_levels", "label": "level_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#d6b656;curved=1;dashed=0;"}
+# connect: {"from": "users", "to": "achievement_user", "label": "user_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#d6b656;curved=1;dashed=0;"}
+# connect: {"from": "achievements", "to": "achievement_user", "label": "achievement_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#d6b656;curved=1;dashed=0;"}
+# connect: {"from": "notes", "to": "note_files", "label": "note_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#d6b656;curved=1;dashed=0;"}
+# connect: {"from": "files", "to": "note_files", "label": "file_id", "style": "endArrow=blockThin;endFill=1;fontSize=10;strokeColor=#d6b656;curved=1;dashed=0;"}
+#
+## Layout configuration
+#
+# layout: organic
+# nodespacing: 80
+# levelspacing: 150
+# edgespacing: 30
+#
+## Ignore metadata columns
+#
+# ignore: fill,stroke,table_type,key_attributes,description
+#
+## ---- CSV below this line. First line are column names. ----
+table_name,table_type,key_attributes,description,fill,stroke
+roles,Core Table,role_id (PK),User roles: Admin, Teacher, Student,#dae8fc,#6c8ebf
+users,Core Table,user_id (PK),All system users with authentication,#dae8fc,#6c8ebf
+classes,Core Table,class_id (PK),Class/Subject management,#dae8fc,#6c8ebf
+topics,Core Table,topic_id (PK),Learning topics/categories,#dae8fc,#6c8ebf
+notes,Core Table,note_id (PK),Educational notes and content,#dae8fc,#6c8ebf
+files,Core Table,file_id (PK),File attachments storage,#dae8fc,#6c8ebf
+level_types,Core Table,level_type_id (PK),Game level types: HTML, CSS, JS, PHP,#dae8fc,#6c8ebf
+levels,Core Table,level_id (PK),Game/Quiz levels with JSON data,#dae8fc,#6c8ebf
+achievements,Core Table,achievement_id (PK),Achievement system for users,#dae8fc,#6c8ebf
+feedbacks,Core Table,feedback_id (PK),Student feedback from teachers,#dae8fc,#6c8ebf
+class_student,Pivot Table,class_id + student_id (PK),Many-to-many: Classes ↔ Students,#fff2cc,#d6b656
+class_levels,Pivot Table,class_level_id (PK),Many-to-many: Classes ↔ Levels (with is_private),#fff2cc,#d6b656
+achievement_user,Pivot Table,id (PK),Many-to-many: Users ↔ Achievements,#fff2cc,#d6b656
+note_files,Pivot Table,id (PK),Many-to-many: Notes ↔ Files,#fff2cc,#d6b656

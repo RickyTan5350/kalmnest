@@ -40,11 +40,14 @@ class UserApi {
   Future<void> createUser(UserData data) async {
     final url = Uri.parse(_baseUrl);
 
+    http.Response? response;
+
     try {
-      final response = await http.post(
+      response = await http.post(
         url,
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json',
           // Only add Host header if NOT using a custom URL
           if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
         },
@@ -57,12 +60,12 @@ class UserApi {
       } else if (response.statusCode == validationErrorCode) {
         final errorBody = jsonDecode(response.body);
         final errors = errorBody['errors'] as Map<String, dynamic>;
-        String errorMessage = errors.values.expand((list) => list).join('\n');
-        throw Exception('$validationErrorCode: $errorMessage');
+        throw ValidationException(errors);
       } else {
         throw Exception('${response.statusCode}: Failed to create user.');
       }
     } catch (e) {
+      if (e is ValidationException) rethrow;
       throw Exception('Network Error: $e');
     }
   }
@@ -103,6 +106,7 @@ class UserApi {
         throw Exception('Failed to load users: ${response.statusCode}');
       }
     } catch (e) {
+      if (e.toString().contains('Failed to load users:')) rethrow;
       throw Exception('Network Error or Auth Error: $e');
     }
   }
@@ -126,6 +130,7 @@ class UserApi {
         throw Exception('Failed to load user details: ${response.statusCode}');
       }
     } catch (e) {
+      if (e.toString().contains('Failed to load user details:')) rethrow;
       throw Exception('Network Error or Auth Error: $e');
     }
   }
@@ -143,8 +148,10 @@ class UserApi {
       );
     }
 
+    http.Response? response;
+
     try {
-      final response = await http.delete(
+      response = await http.delete(
         url,
         // 2. Add the Authorization Header, using the dynamic $token variable
         headers: <String, String>{
@@ -173,6 +180,12 @@ class UserApi {
         );
       }
     } catch (e) {
+      if (e.toString().contains('403:') ||
+          e.toString().contains('404:') ||
+          (response != null &&
+              e.toString().startsWith('Exception: ${response.statusCode}'))) {
+        rethrow;
+      }
       // If a FormatException (from trying to decode HTML) happens here,
       // it means the server returned an unexpected format for a non-403 error.
       if (e is FormatException) {
@@ -180,7 +193,7 @@ class UserApi {
           'Network Error: Server returned an unexpected response format.',
         );
       }
-      rethrow;
+      throw Exception('Network Error: $e');
     }
   }
 
@@ -198,11 +211,14 @@ class UserApi {
       );
     }
 
+    http.Response? response;
+
     try {
-      final response = await http.put(
+      response = await http.put(
         url,
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json',
           'Authorization': 'Bearer $token',
           // Only add Host header if NOT using a custom URL
           if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
@@ -216,16 +232,30 @@ class UserApi {
       } else if (response.statusCode == validationErrorCode) {
         final errorBody = jsonDecode(response.body);
         final errors = errorBody['errors'] as Map<String, dynamic>;
-        String errorMessage = errors.values.expand((list) => list).join('\n');
-        throw Exception('$validationErrorCode: $errorMessage');
+        throw ValidationException(errors);
       } else {
-        // Includes 403 Forbidden or 404 Not Found
         throw Exception(
           '${response.statusCode}: Failed to update user. Server message: ${response.body}',
         );
       }
     } catch (e) {
+      if (e is ValidationException ||
+          e.toString().contains('$forbiddenErrorCode:') ||
+          (response != null &&
+              e.toString().startsWith('Exception: ${response.statusCode}'))) {
+        rethrow;
+      }
       throw Exception('Network Error: $e');
     }
+  }
+}
+
+class ValidationException implements Exception {
+  final Map<String, dynamic> errors;
+  ValidationException(this.errors);
+
+  @override
+  String toString() {
+    return 'ValidationException: $errors';
   }
 }

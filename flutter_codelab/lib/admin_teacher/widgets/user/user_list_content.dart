@@ -1,16 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/user_api.dart';
 import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/user_grid_layout.dart';
+import 'package:flutter_codelab/theme.dart'; // Ensure BrandColors or others if needed
 import 'user_detail_page.dart';
 
 class UserListContent extends StatefulWidget {
-  const UserListContent({super.key});
+  final String searchQuery;
+  final String? selectedRole;
+  final String? selectedStatus;
+  final ViewLayout viewLayout;
+  final SortType sortType;
+  final SortOrder sortOrder;
+
+  const UserListContent({
+    super.key,
+    required this.searchQuery,
+    required this.selectedRole,
+    required this.selectedStatus,
+    required this.viewLayout,
+    required this.sortType,
+    required this.sortOrder,
+  });
 
   @override
-  State<UserListContent> createState() => _UserListContentState();
+  State<UserListContent> createState() => UserListContentState();
 }
 
-class _UserListContentState extends State<UserListContent> {
+class UserListContentState extends State<UserListContent> {
   final UserApi _userApi = UserApi();
 
   // State variables
@@ -18,19 +37,29 @@ class _UserListContentState extends State<UserListContent> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Filter States
-  final TextEditingController _searchController = TextEditingController();
-  String? _selectedRole;
-  String? _selectedStatus;
-
-  // Filter Options
-  final List<String> _roles = ['Student', 'Teacher', 'Admin'];
-  final List<String> _statuses = ['active', 'inactive'];
+  // Selection Logic for Grid (Mock for now or fully implement if needed)
+  bool _isSelectionMode = false;
+  final Set<dynamic> _selectedIds = {};
+  final Map<dynamic, GlobalKey> _gridItemKeys = {};
 
   @override
   void initState() {
     super.initState();
     _fetchUsers();
+  }
+
+  @override
+  void didUpdateWidget(UserListContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.searchQuery != widget.searchQuery ||
+        oldWidget.selectedRole != widget.selectedRole ||
+        oldWidget.selectedStatus != widget.selectedStatus) {
+      _fetchUsers();
+    }
+  }
+
+  Future<void> refreshData() async {
+    await _fetchUsers();
   }
 
   Future<void> _fetchUsers() async {
@@ -42,9 +71,9 @@ class _UserListContentState extends State<UserListContent> {
 
     try {
       final users = await _userApi.getUsers(
-        search: _searchController.text,
-        roleName: _selectedRole,
-        accountStatus: _selectedStatus,
+        search: widget.searchQuery,
+        roleName: widget.selectedRole,
+        accountStatus: widget.selectedStatus,
       );
       if (mounted) {
         setState(() {
@@ -62,13 +91,38 @@ class _UserListContentState extends State<UserListContent> {
     }
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  // --- Sorting ---
+  List<UserListItem> _sortUsers(List<UserListItem> users) {
+    List<UserListItem> sortedList = List.from(users);
+    sortedList.sort((a, b) {
+      int comparison;
+      if (widget.sortType == SortType.alphabetical) {
+        comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      } else {
+        // Fallback to CreatedAt if available or Name if not.
+        // Assuming Name for now as UserListItem might not have Date exposed deeply
+        // If you have createdAt/updatedAt in UserListItem, use it.
+        // Checking UserListItem definition might be good, but safe fallback:
+        comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      }
+      return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
+    });
+    return sortedList;
   }
 
-  // Helper to get colors based on role
+  // --- Selection Helpers (Grid) ---
+  void _toggleSelection(dynamic id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) _isSelectionMode = false;
+      } else {
+        _selectedIds.add(id);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
@@ -87,229 +141,186 @@ class _UserListContentState extends State<UserListContent> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Text(
+          'Error: $_errorMessage',
+          style: TextStyle(color: colorScheme.error),
+        ),
+      );
+    }
+
+    if (_users.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: colorScheme.outline),
+            const SizedBox(height: 16),
+            Text('No users found', style: textTheme.titleMedium),
+          ],
+        ),
+      );
+    }
+
+    final sortedUsers = _sortUsers(_users);
+
     return Column(
       children: [
-        // --- 1. M3 Search Bar ---
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: SearchBar(
-            controller: _searchController,
-            hintText: 'Search users...',
-            padding: const WidgetStatePropertyAll<EdgeInsets>(
-              EdgeInsets.symmetric(horizontal: 16.0),
-            ),
-            leading: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
-            trailing: [
-              if (_searchController.text.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    _fetchUsers();
-                  },
-                ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _fetchUsers,
-                tooltip: 'Refresh',
-              ),
-              IconButton(
-                icon: Icon(Icons.arrow_forward, color: colorScheme.primary),
-                onPressed: _fetchUsers,
-              ),
-            ],
-            onSubmitted: (_) => _fetchUsers(),
-            elevation: const WidgetStatePropertyAll(1.0),
+        // Sort Header (Results Count)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
           ),
-        ),
-
-        // --- 2. M3 Filter Chips ---
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Filters:', style: textTheme.labelLarge),
-              const SizedBox(width: 12),
-
-              // Role Filters
-              ..._roles.map((role) {
-                final isSelected = _selectedRole == role;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: FilterChip(
-                    label: Text(role),
-                    selected: isSelected,
-                    onSelected: (bool selected) {
-                      setState(() {
-                        _selectedRole = selected ? role : null;
-                      });
-                      _fetchUsers();
-                    },
-                  ),
-                );
-              }),
-
-              SizedBox(
-                height: 24,
-                child: VerticalDivider(
-                  width: 24,
-                  color: colorScheme.outlineVariant,
-                ),
+              Text(
+                "${sortedUsers.length} Results",
+                style: textTheme.titleMedium,
               ),
-
-              // Status Filters
-              ..._statuses.map((status) {
-                final isSelected = _selectedStatus == status;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: FilterChip(
-                    label: Text(status.toUpperCase()),
-                    selected: isSelected,
-                    onSelected: (bool selected) {
-                      setState(() {
-                        _selectedStatus = selected ? status : null;
-                      });
-                      _fetchUsers();
-                    },
-                    avatar: isSelected
-                        ? const Icon(Icons.check, size: 18)
-                        : null,
-                  ),
-                );
-              }),
             ],
           ),
         ),
-        const SizedBox(height: 10),
-        const Divider(height: 1),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
 
-        // --- 3. User List ---
+        // List or Grid Content
         Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _errorMessage != null
-              ? Center(
-                  child: Text(
-                    'Error: $_errorMessage',
-                    style: TextStyle(color: colorScheme.error),
-                  ),
-                )
-              : _users.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.search_off,
-                        size: 64,
-                        color: colorScheme.outline,
-                      ),
-                      const SizedBox(height: 16),
-                      Text('No users found', style: textTheme.titleMedium),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: EdgeInsets.zero,
-                  itemCount: _users.length,
-                  itemBuilder: (context, index) {
-                    final user = _users[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      clipBehavior: Clip.hardEdge,
-                      elevation:
-                          0, // Reduced elevation for cleaner look inside the main card
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: colorScheme.outlineVariant),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        // --- Added Hover Effects ---
-                        hoverColor: colorScheme.primary.withOpacity(0.08),
-                        splashColor: colorScheme.primary.withOpacity(0.12),
-                        mouseCursor: SystemMouseCursors.click,
-
-                        leading: CircleAvatar(
-                          backgroundColor: _getRoleColor(
-                            user.roleName,
-                            colorScheme,
-                          ),
-                          foregroundColor: colorScheme.onPrimary,
-                          child: Text(
-                            user.name.isNotEmpty
-                                ? user.name[0].toUpperCase()
-                                : '?',
-                          ),
-                        ),
-                        title: Text(
-                          user.name,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(user.email, style: textTheme.bodyMedium),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    user.roleName,
-                                    style: textTheme.labelSmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  user.accountStatus.toUpperCase(),
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: user.accountStatus == 'active'
-                                        ? Colors.green
-                                        : colorScheme.error,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        isThreeLine: true,
-                        onTap: () async {
-                          // Use await to wait for the detail page to close
-                          final bool? deleted = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => UserDetailPage(
-                                userId: user.id,
-                                userName: user.name,
-                              ),
-                            ),
-                          );
-                          // If the result is true (meaning user was deleted), refresh the list
-                          if (deleted == true) {
-                            _fetchUsers();
-                          }
-                        },
-                      ),
-                    );
-                  },
-                ),
+          child: widget.viewLayout == ViewLayout.grid
+              ? _buildGridView(sortedUsers)
+              : _buildListView(sortedUsers, colorScheme, textTheme),
         ),
       ],
     );
+  }
+
+  Widget _buildGridView(List<UserListItem> users) {
+    final userMaps = users
+        .map(
+          (u) => {
+            'id': u.id,
+            'name': u.name,
+            'email': u.email,
+            'role': u.roleName,
+            'status': u.accountStatus,
+          },
+        )
+        .toList();
+
+    return CustomScrollView(
+      slivers: [
+        UserGridLayout(
+          users: userMaps,
+          selectedIds: _selectedIds,
+          onToggleSelection: _toggleSelection,
+          itemKeys: _gridItemKeys,
+          onTap: (id) => _navigateToDetail(
+            id.toString(),
+            users.firstWhere((u) => u.id == id).name,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListView(
+    List<UserListItem> users,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: users.length,
+      itemBuilder: (context, index) {
+        final user = users[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          clipBehavior: Clip.hardEdge,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: colorScheme.outlineVariant),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            hoverColor: colorScheme.primary.withOpacity(0.08),
+            splashColor: colorScheme.primary.withOpacity(0.12),
+            mouseCursor: SystemMouseCursors.click,
+            leading: CircleAvatar(
+              backgroundColor: _getRoleColor(user.roleName, colorScheme),
+              foregroundColor: colorScheme.onPrimary,
+              child: Text(
+                user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+              ),
+            ),
+            title: Text(
+              user.name,
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Text(user.email, style: textTheme.bodyMedium),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        user.roleName,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      user.accountStatus.toUpperCase(),
+                      style: textTheme.labelSmall?.copyWith(
+                        color: user.accountStatus == 'active'
+                            ? Colors.green
+                            : colorScheme.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            isThreeLine: true,
+            onTap: () => _navigateToDetail(user.id, user.name),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _navigateToDetail(String userId, String userName) async {
+    final bool? deleted = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            UserDetailPage(userId: userId, userName: userName),
+      ),
+    );
+    if (deleted == true) {
+      _fetchUsers();
+    }
   }
 }
