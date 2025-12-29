@@ -28,7 +28,9 @@ class _ClassPageState extends State<ClassPage> {
   int _reloadKey = 0;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  ViewLayout _viewLayout = ViewLayout.grid;
+  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
+    LayoutPreferences.globalLayoutKey,
+  );
 
   @override
   void initState() {
@@ -37,7 +39,9 @@ class _ClassPageState extends State<ClassPage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -114,7 +118,7 @@ class _ClassPageState extends State<ClassPage> {
                         final newLayout = newSelection.first;
                         setState(() => _viewLayout = newLayout);
                         LayoutPreferences.saveLayout(
-                          'global_layout',
+                          LayoutPreferences.globalLayoutKey,
                           newLayout,
                         );
                       },

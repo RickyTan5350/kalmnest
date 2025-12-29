@@ -28,7 +28,9 @@ class UserPageState extends State<UserPage> {
   String _searchQuery = '';
 
   // Layout & Sort States
-  ViewLayout _viewLayout = ViewLayout.grid;
+  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
+    LayoutPreferences.globalLayoutKey,
+  );
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
 
@@ -44,7 +46,9 @@ class UserPageState extends State<UserPage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('user_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -159,7 +163,7 @@ class UserPageState extends State<UserPage> {
                               final newLayout = val.first;
                               setState(() => _viewLayout = newLayout);
                               LayoutPreferences.saveLayout(
-                                'user_layout',
+                                LayoutPreferences.globalLayoutKey,
                                 newLayout,
                               );
                             },
