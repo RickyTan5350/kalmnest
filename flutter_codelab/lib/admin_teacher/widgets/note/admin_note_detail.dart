@@ -328,7 +328,11 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
       if (imageUrl != null) {
         try {
           // Download image bytes
+          debugPrint("DEBUG PDF: Downloading image: $imageUrl");
           final response = await http.get(Uri.parse(imageUrl));
+          debugPrint(
+            "DEBUG PDF: Image download status: ${response.statusCode}",
+          );
           if (response.statusCode == 200) {
             final imageBytes = response.bodyBytes;
             widgets.add(
@@ -592,6 +596,12 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
               '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
           return _buildCodeBlockUI(htmlBlock, codeText, null);
         }
+
+        if (element.localName == 'img') {
+          final src = element.attributes['src'];
+          debugPrint("DEBUG Admin HtmlWidget: Rendering Image with src: $src");
+        }
+
         if (element.attributes.containsKey('data-scroll-index')) {
           final GlobalKey key = GlobalKey();
           _matchKeys.add(key);
