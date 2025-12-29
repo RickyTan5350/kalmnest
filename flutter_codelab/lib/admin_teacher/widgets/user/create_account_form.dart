@@ -78,7 +78,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
       widget.showSnackBar(
         context,
         'Error: Password and confirmation must match.',
-        Colors.red,
+        Theme.of(context).colorScheme.error,
       );
       return;
     }

@@ -43,7 +43,9 @@ class _ClassPageState extends State<ClassPage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -109,7 +111,7 @@ class _ClassPageState extends State<ClassPage> {
                       onLayoutChanged: (ViewLayout newLayout) {
                         setState(() => _viewLayout = newLayout);
                         LayoutPreferences.saveLayout(
-                          'global_layout',
+                          LayoutPreferences.globalLayoutKey,
                           newLayout,
                         );
                       },

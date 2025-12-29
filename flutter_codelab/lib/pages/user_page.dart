@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/user/user_list_content.dart';
+import 'package:flutter_codelab/api/user_api.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 import 'package:flutter_codelab/enums/sort_enums.dart';
 import 'package:flutter_codelab/services/layout_preferences.dart';
 
 class UserPage extends StatefulWidget {
-  const UserPage({super.key});
+  final UserDetails?
+  currentUser; // Make it optional to avoid breaking if not passed immediately, but ideally required
+  const UserPage({super.key, this.currentUser});
 
   @override
-  State<UserPage> createState() => _UserPageState();
+  State<UserPage> createState() => UserPageState();
 }
 
-class _UserPageState extends State<UserPage> {
+final GlobalKey<UserPageState> userPageGlobalKey = GlobalKey<UserPageState>();
+
+class UserPageState extends State<UserPage> {
   // Filter States
   final List<String> _roles = ['All', 'Student', 'Teacher', 'Admin'];
   final List<String> _statuses = ['All Status', 'Active', 'Inactive'];
@@ -21,13 +28,16 @@ class _UserPageState extends State<UserPage> {
   String _searchQuery = '';
 
   // Layout & Sort States
-  ViewLayout _viewLayout = ViewLayout.grid;
+  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
+    LayoutPreferences.globalLayoutKey,
+  );
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
 
   final FocusNode _searchFocusNode = FocusNode();
   final GlobalKey<UserListContentState> _userListKey =
       GlobalKey<UserListContentState>();
+  final UserApi _userApi = UserApi();
 
   @override
   void initState() {
@@ -36,7 +46,9 @@ class _UserPageState extends State<UserPage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('user_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -56,6 +68,53 @@ class _UserPageState extends State<UserPage> {
 
   Future<void> _handleRefresh() async {
     _userListKey.currentState?.refreshData();
+  }
+
+  Future<void> importUsers() async {
+    try {
+      // 1. Pick the file
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        // 2. Show loading
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Importing users...'),
+            duration: Duration(days: 1), // Indefinite until dismissed
+          ),
+        );
+
+        final filePath = result.files.single.path!;
+        final fileName = result.files.single.name;
+
+        // 3. Call API
+        await _userApi.importUsers(filePath, fileName);
+
+        // 4. Success handling
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Users imported successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _handleRefresh(); // Refresh list via key
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Import Failed: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -104,7 +163,7 @@ class _UserPageState extends State<UserPage> {
                               final newLayout = val.first;
                               setState(() => _viewLayout = newLayout);
                               LayoutPreferences.saveLayout(
-                                'user_layout',
+                                LayoutPreferences.globalLayoutKey,
                                 newLayout,
                               );
                             },
@@ -116,24 +175,33 @@ class _UserPageState extends State<UserPage> {
                   const SizedBox(height: 16),
 
                   // --- Search Bar (Left Aligned) ---
-                  SizedBox(
-                    width: 300,
-                    child: SearchBar(
-                      focusNode: _searchFocusNode,
-                      hintText: "Search user...",
-                      padding: const WidgetStatePropertyAll<EdgeInsets>(
-                        EdgeInsets.symmetric(horizontal: 16.0),
-                      ),
-                      onChanged: (val) => setState(() => _searchQuery = val),
-                      leading: const Icon(Icons.search),
-                      trailing: [
-                        if (_searchQuery.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () => setState(() => _searchQuery = ''),
+                  // --- Search Bar & Import Button ---
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 300,
+                        child: SearchBar(
+                          focusNode: _searchFocusNode,
+                          hintText: "Search user...",
+                          padding: const WidgetStatePropertyAll<EdgeInsets>(
+                            EdgeInsets.symmetric(horizontal: 16.0),
                           ),
-                      ],
-                    ),
+                          onChanged: (val) =>
+                              setState(() => _searchQuery = val),
+                          leading: const Icon(Icons.search),
+                          trailing: [
+                            if (_searchQuery.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () =>
+                                    setState(() => _searchQuery = ''),
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      // Removed Import Button from here as it's now in the main FAB menu
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -266,6 +334,7 @@ class _UserPageState extends State<UserPage> {
                       viewLayout: _viewLayout,
                       sortType: _sortType,
                       sortOrder: _sortOrder,
+                      currentUser: widget.currentUser,
                     ),
                   ),
                 ],

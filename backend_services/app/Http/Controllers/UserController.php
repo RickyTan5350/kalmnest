@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\DeleteUserRequest;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\UsersImport;
+
 class UserController extends Controller
 {
     /**
@@ -396,6 +399,56 @@ public function destroy(User $user, DeleteUserRequest $request)
                 'error' => $e->getMessage(),
                 'data' => []
             ], 200);
+        }
+    }
+
+    public function import(Request $request)
+    {
+        try {
+            $request->validate([
+                'file' => 'required|file|mimes:xlsx,xls,csv',
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+        }
+        
+        // Ensure the file exists
+        if (!$request->hasFile('file')) {
+            return response()->json(['message' => 'No file uploaded'], 400);
+        }
+
+        // Perform the import
+        try {
+            Excel::import(new UsersImport, $request->file('file'));
+            
+            return response()->json([
+                'message' => 'User list imported successfully.'
+            ], 200);
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+             // Handle Validation Errors from the Excel file
+             $failures = $e->failures();
+             $messages = [];
+             foreach ($failures as $failure) {
+                 foreach ($failure->errors() as $error) {
+                     $messages[] = "Row " . $failure->row() . ": " . $error;
+                 }
+             }
+             
+             return response()->json([
+                 'message' => 'Validation failed for some rows.',
+                 'error_detail' => implode("\n", $messages)
+             ], 422);
+
+        } catch (\Exception $e) {
+            // Log the detailed error
+            \Illuminate\Support\Facades\Log::error("User Import Failed: " . $e->getMessage());
+            
+            // Return a generic error to the client
+            return response()->json([
+                'message' => 'File import failed. Please check the file format and structure.',
+                'error_detail' => $e->getMessage() 
+            ], 500);
         }
     }
 }

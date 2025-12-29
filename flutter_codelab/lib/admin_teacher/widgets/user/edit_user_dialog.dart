@@ -7,6 +7,7 @@ import 'package:flutter_codelab/models/user_data.dart';
 Future<bool?> showEditUserDialog({
   required BuildContext context,
   required UserDetails initialData,
+  bool isSelfEdit = false,
   required void Function(BuildContext context, String message, Color color)
   showSnackBar,
 }) {
@@ -15,6 +16,7 @@ Future<bool?> showEditUserDialog({
     builder: (BuildContext dialogContext) {
       return EditUserDialog(
         initialData: initialData,
+        isSelfEdit: isSelfEdit,
         showSnackBar: showSnackBar,
       );
     },
@@ -23,12 +25,14 @@ Future<bool?> showEditUserDialog({
 
 class EditUserDialog extends StatefulWidget {
   final UserDetails initialData;
+  final bool isSelfEdit;
   final void Function(BuildContext context, String message, Color color)
   showSnackBar;
 
   const EditUserDialog({
     super.key,
     required this.initialData,
+    this.isSelfEdit = false,
     required this.showSnackBar,
   });
 
@@ -136,9 +140,13 @@ class _EditUserDialogState extends State<EditUserDialog> {
           ? null
           : _addressController.text.trim(),
       'gender': _selectedGender,
-      'role_name': _selectedRole,
-      'account_status': _accountStatus ? 'active' : 'inactive',
     };
+
+    // Only allow updating Role and Status if NOT self-edit
+    if (!widget.isSelfEdit) {
+      updatePayload['role_name'] = _selectedRole;
+      updatePayload['account_status'] = _accountStatus ? 'active' : 'inactive';
+    }
 
     // Only include password if a new one was entered
     if (newPassword.isNotEmpty) {
@@ -203,17 +211,22 @@ class _EditUserDialogState extends State<EditUserDialog> {
     }
   }
 
-  // Input decoration helper (Copied from create_account_form.dart)
   InputDecoration _inputDecoration({
     required String labelText,
     required IconData icon,
     String? hintText,
     required ColorScheme colorScheme,
+    bool enabled = true,
   }) {
     return InputDecoration(
       labelText: labelText,
       hintText: hintText,
-      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
+      prefixIcon: Icon(
+        icon,
+        color: enabled
+            ? colorScheme.onSurfaceVariant
+            : colorScheme.onSurfaceVariant.withOpacity(0.5),
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.outline),
@@ -226,12 +239,19 @@ class _EditUserDialogState extends State<EditUserDialog> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.primary, width: 2),
       ),
-      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      labelStyle: TextStyle(
+        color: enabled
+            ? colorScheme.onSurfaceVariant
+            : colorScheme.onSurfaceVariant.withOpacity(0.5),
+      ),
       hintStyle: TextStyle(
         color: colorScheme.onSurfaceVariant.withOpacity(0.6),
       ),
-      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      fillColor: enabled
+          ? colorScheme.surfaceContainerHighest.withOpacity(0.3)
+          : colorScheme.surfaceContainerHighest.withOpacity(0.1),
       filled: true,
+      enabled: enabled,
     );
   }
 
@@ -447,12 +467,20 @@ class _EditUserDialogState extends State<EditUserDialog> {
                 // Role Dropdown
                 DropdownButtonFormField<String>(
                   value: _selectedRole,
+                  onChanged: widget.isSelfEdit
+                      ? null
+                      : (value) => setState(() => _selectedRole = value!),
                   dropdownColor: colorScheme.surfaceContainer,
-                  style: TextStyle(color: colorScheme.onSurface),
+                  style: TextStyle(
+                    color: widget.isSelfEdit
+                        ? colorScheme.onSurface.withOpacity(0.5)
+                        : colorScheme.onSurface,
+                  ),
                   decoration: _inputDecoration(
                     labelText: 'Role',
                     icon: Icons.badge,
                     colorScheme: colorScheme,
+                    enabled: !widget.isSelfEdit,
                   ),
                   items: _roles
                       .map(
@@ -460,7 +488,6 @@ class _EditUserDialogState extends State<EditUserDialog> {
                             DropdownMenuItem(value: value, child: Text(value)),
                       )
                       .toList(),
-                  onChanged: (value) => setState(() => _selectedRole = value!),
                   validator: (value) {
                     if (value == null || value.isEmpty)
                       return 'Please select a role';
@@ -484,11 +511,13 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       ),
                       Switch(
                         value: _accountStatus,
-                        onChanged: (bool value) {
-                          setState(() {
-                            _accountStatus = value;
-                          });
-                        },
+                        onChanged: widget.isSelfEdit
+                            ? null
+                            : (bool value) {
+                                setState(() {
+                                  _accountStatus = value;
+                                });
+                              },
                       ),
                       Text(
                         _accountStatus ? 'Active' : 'Inactive',

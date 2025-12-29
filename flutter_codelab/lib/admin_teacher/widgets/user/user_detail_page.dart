@@ -8,13 +8,18 @@ class UserDetailPage extends StatefulWidget {
   final String userId;
   final String userName; // Passed for the app bar title before loading
   final List<BreadcrumbItem>? breadcrumbs;
+  final bool isSelfProfile;
 
   const UserDetailPage({
     super.key,
     required this.userId,
     required this.userName,
     this.breadcrumbs,
+    this.isSelfProfile = false,
+    this.viewerRole = 'Student',
   });
+
+  final String viewerRole;
 
   @override
   State<UserDetailPage> createState() => _UserDetailPageState();
@@ -35,7 +40,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return scheme.error;
+        return Colors.purple;
       case 'teacher':
         return scheme.tertiary;
       case 'student':
@@ -55,6 +60,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final bool? refreshed = await showEditUserDialog(
       context: context,
       initialData: user,
+      isSelfEdit: widget.isSelfProfile,
       showSnackBar: (ctx, msg, color) {
         ScaffoldMessenger.of(
           ctx,
@@ -165,7 +171,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
           FutureBuilder<UserDetails>(
             future: _userFuture,
             builder: (context, snapshot) {
-              if (snapshot.hasData) {
+              if (snapshot.hasData &&
+                  (widget.viewerRole.toLowerCase() == 'admin' ||
+                      widget.isSelfProfile)) {
                 // Edit Button
                 return IconButton(
                   icon: const Icon(Icons.edit),
@@ -181,7 +189,10 @@ class _UserDetailPageState extends State<UserDetailPage> {
             future: _userFuture,
             builder: (context, snapshot) {
               // Only show delete button if the page has successfully loaded the user details
-              if (snapshot.hasData) {
+              // AND it is not the user's own profile
+              if (snapshot.hasData &&
+                  !widget.isSelfProfile &&
+                  widget.viewerRole.toLowerCase() == 'admin') {
                 return IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: _deleteUser,
