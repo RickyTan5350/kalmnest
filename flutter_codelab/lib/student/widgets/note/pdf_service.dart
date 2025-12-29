@@ -1,5 +1,6 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'dart:convert';
 import 'package:printing/printing.dart';
 import 'package:htmltopdfwidgets/htmltopdfwidgets.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -9,93 +10,198 @@ class PdfService {
     required String title,
     required String content,
   }) async {
-    final pdf = pw.Document();
+    try {
+      final pdf = pw.Document();
 
-    // 1. Load Fonts
-    final font = await PdfGoogleFonts.openSansRegular();
-    final fontBold = await PdfGoogleFonts.openSansBold();
+      // 1. Load Fonts
+      final font = await PdfGoogleFonts.openSansRegular();
+      final fontBold = await PdfGoogleFonts.openSansBold();
 
-    // 2. Convert Markdown -> HTML
-    String htmlContent = md.markdownToHtml(
-      content,
-      extensionSet: md.ExtensionSet.gitHubFlavored,
-    );
+      // 2. Pre-process Quiz Blocks
+      String processedContent = _processQuizBlocks(content);
 
-    // 3. Rename Tags to remove red highlights (Your previous fix)
-    htmlContent = htmlContent.replaceAllMapped(
-      RegExp(r'<pre[^>]*>'), 
-      (match) => '<div style="background-color: #f5f5f5; padding: 10px; border: 1px solid #cccccc; margin-bottom: 10px;">'
-    );
-    htmlContent = htmlContent.replaceAll('</pre>', '</div>');
-    
-    htmlContent = htmlContent.replaceAllMapped(
-      RegExp(r'<code[^>]*>'), 
-      (match) => '<span style="background-color: #f5f5f5; font-family: courier; color: #000000;">'
-    );
-    htmlContent = htmlContent.replaceAll('</code>', '</span>');
+      // 3. Convert Markdown -> HTML
+      String htmlContent = md.markdownToHtml(
+        processedContent,
+        extensionSet: md.ExtensionSet.gitHubFlavored,
+      );
 
-    htmlContent = htmlContent.replaceAllMapped(
-      RegExp(r'<a [^>]*>'), 
-      (match) => '<a style="color: #000000; text-decoration: underline;">'
-    );
+      // 4. Rename Tags to remove red highlights
+      htmlContent = htmlContent.replaceAllMapped(
+        RegExp(r'<pre[^>]*>'),
+        (match) =>
+            '<div style="background-color: #f5f5f5; padding: 10px; border: 1px solid #cccccc; margin-bottom: 10px;">',
+      );
+      htmlContent = htmlContent.replaceAll('</pre>', '</div>');
 
-    // 4. Wrap in a Div for Global Font Size
-    String styledHtml = """
-    <div style="font-size: 11pt; color: #000000;">
-      $htmlContent
-    </div>
-    """;
+      htmlContent = htmlContent.replaceAllMapped(
+        RegExp(r'<code[^>]*>'),
+        (match) =>
+            '<span style="background-color: #f5f5f5; font-family: courier; color: #000000;">',
+      );
+      htmlContent = htmlContent.replaceAll('</code>', '</span>');
 
-    // 5. Convert HTML -> PDF Widgets
-    final List<pw.Widget> widgets = await HTMLToPdf().convert(
-      styledHtml,
-    );
+      htmlContent = htmlContent.replaceAllMapped(
+        RegExp(r'<a [^>]*>'),
+        (match) => '<a style="color: #000000; text-decoration: underline;">',
+      );
 
-    // 6. Create the PDF Page
-    pdf.addPage(
-      pw.MultiPage(
-        theme: pw.ThemeData.withFont(
-          base: font,
-          bold: fontBold,
-        ),
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context context) {
-          return [
-             // Custom Title Header
-             pw.Header(
-              level: 0,
-              // FIX: Reduce bottom margin (Default is often too large)
-              margin: const pw.EdgeInsets.only(bottom: 8), 
-              child: pw.Text(
-                title,
-                style: pw.TextStyle(
-                  fontSize: 24,
-                  fontWeight: pw.FontWeight.bold,
-                  font: fontBold,
+      // 5. Convert HTML -> PDF Widgets
+      // FIX: Removed the outer <div> wrapper to allow better pagination splitting.
+      // We still try-catch this specific part just in case, but the outer catch handles everything too.
+      final List<pw.Widget> widgets = await HTMLToPdf().convert(htmlContent);
+
+      // 7. Create the PDF Page
+      pdf.addPage(
+        pw.MultiPage(
+          maxPages: 500, // Increase limit
+          theme: pw.ThemeData.withFont(
+            base: font,
+            bold: fontBold,
+          ), // Font size defaults to 12, which is fine
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return [
+              pw.Header(
+                level: 0,
+                margin: const pw.EdgeInsets.only(bottom: 8),
+                child: pw.Text(
+                  title,
+                  style: pw.TextStyle(
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                    font: fontBold,
+                  ),
                 ),
               ),
-            ),
-            
-            // FIX: Removed pw.SizedBox(height: 20) entirely!
+              ...widgets,
+            ];
+          },
+        ),
+      );
 
-            // Add all the converted widgets
-            ...widgets,
-          ];
-        },
-      ),
-    );
+      // 8. Generate Safe Filename
+      String safeFilename = title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+      if (!safeFilename.toLowerCase().endsWith('.pdf')) {
+        safeFilename += '.pdf';
+      }
 
-    // 7. Generate a Safe Filename
-    String safeFilename = title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
-    if (!safeFilename.toLowerCase().endsWith('.pdf')) {
-      safeFilename += '.pdf';
+      // 9. Save and Share
+      await Printing.sharePdf(bytes: await pdf.save(), filename: safeFilename);
+    } catch (e) {
+      // FALLBACK: Generate simple text PDF
+      try {
+        final fallbackPdf = pw.Document();
+        final font =
+            await PdfGoogleFonts.openSansRegular(); // Re-load just in case
+
+        fallbackPdf.addPage(
+          pw.MultiPage(
+            pageFormat: PdfPageFormat.a4,
+            build: (context) => [
+              pw.Paragraph(
+                text: "PDF Generation Error (Fallback Mode)",
+                style: pw.TextStyle(
+                  font: font,
+                  fontSize: 18,
+                  color: PdfColors.red,
+                ),
+              ),
+              pw.Paragraph(
+                text:
+                    "The complex formatting could not be rendered. Probaly due to TooManyPagesException from large code blocks.",
+                style: pw.TextStyle(
+                  font: font,
+                  fontSize: 10,
+                  color: PdfColors.grey,
+                ),
+              ),
+              pw.Paragraph(
+                text: "Error Details: $e",
+                style: pw.TextStyle(
+                  font: font,
+                  fontSize: 8,
+                  color: PdfColors.grey,
+                ),
+              ),
+              pw.Divider(),
+              pw.Paragraph(
+                text: content, // Raw markdown
+                style: pw.TextStyle(font: font, fontSize: 10),
+              ),
+            ],
+          ),
+        );
+
+        String safeFilename =
+            "Fallback_${title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')}.pdf";
+        await Printing.sharePdf(
+          bytes: await fallbackPdf.save(),
+          filename: safeFilename,
+        );
+      } catch (fallbackError) {
+        // If even fallback fails, we can't do much.
+        print("Critical error generating fallback PDF: $fallbackError");
+      }
     }
+  }
 
-    // 8. Save and Share
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: safeFilename,
-    );
+  String _processQuizBlocks(String content) {
+    // Regex to match ```quiz ... ```
+    final RegExp quizRegex = RegExp(r'```quiz\s*([\s\S]*?)\s*```');
+
+    return content.replaceAllMapped(quizRegex, (match) {
+      String jsonString = match.group(1) ?? "{}";
+      try {
+        final Map<String, dynamic> quizData = jsonDecode(jsonString);
+        String question = quizData['question'] ?? "No Question";
+        List<dynamic> options = quizData['options'] ?? [];
+        int correctIndex = quizData['correctIndex'] ?? -1;
+
+        // Build HTML for the Quiz
+        // We use a table for structural layout to simulate the card/box look
+        StringBuffer htmlBuffer = StringBuffer();
+
+        htmlBuffer.writeln(
+          '<div style="margin-bottom: 20px; padding: 15px; border: 1px solid #cccccc; background-color: #fafafa; border-radius: 8px;">',
+        );
+
+        // Question
+        htmlBuffer.writeln(
+          '<p style="font-weight: bold; font-size: 14pt; margin-bottom: 15px;">$question</p>',
+        );
+
+        // Options
+        for (int i = 0; i < options.length; i++) {
+          String optionText = options[i];
+          bool isCorrect = (i == correctIndex);
+
+          String borderColor = isCorrect ? "#4caf50" : "#e0e0e0";
+          String bgColor = isCorrect ? "#e8f5e9" : "#ffffff";
+          String textColor = isCorrect ? "#2e7d32" : "#000000";
+          String icon = isCorrect
+              ? "( / )"
+              : "( )"; // Text-based fallback for reliability
+
+          htmlBuffer.writeln(
+            '<div style="margin-bottom: 8px; padding: 10px; border: 1px solid $borderColor; background-color: $bgColor; border-radius: 5px;">',
+          );
+          htmlBuffer.writeln(
+            '<span style="color: $textColor;">$icon $optionText</span>',
+          );
+          htmlBuffer.writeln('</div>');
+        }
+
+        // Answer Key Footer
+
+        htmlBuffer.writeln('</div>'); // Close main container
+
+        return htmlBuffer.toString();
+      } catch (e) {
+        // Fallback if JSON parsing fails
+        return '<div style="color: red;">Error parsing quiz: $e</div>';
+      }
+    });
   }
 }
