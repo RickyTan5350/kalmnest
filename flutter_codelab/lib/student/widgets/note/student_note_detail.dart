@@ -236,8 +236,18 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
   // Helper to ensure absolute URLs
   String _processMarkdown(String content) {
+    debugPrint("DEBUG processMarkdown: Raw content length: ${content.length}");
     final domain = ApiConstants.domain;
-    return content.replaceAll('](/storage/', ']($domain/storage/');
+    final processed = content.replaceAll('](/storage/', ']($domain/storage/');
+
+    // Debug: Find image links
+    final imageRegex = RegExp(r'!\[.*?\]\((.*?)\)');
+    final matches = imageRegex.allMatches(processed);
+    for (final match in matches) {
+      debugPrint("DEBUG: Found processed image URL: ${match.group(1)}");
+    }
+
+    return processed;
   }
 
   // --- UI WIDGETS ---
@@ -452,6 +462,12 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
               '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
           return _buildCodeBlockUI(htmlBlock, codeText, null);
         }
+
+        if (element.localName == 'img') {
+          final src = element.attributes['src'];
+          debugPrint("DEBUG HtmlWidget: Rendering Image with src: $src");
+        }
+
         if (element.attributes.containsKey('data-scroll-index')) {
           final GlobalKey key = GlobalKey();
           _matchKeys.add(key);
