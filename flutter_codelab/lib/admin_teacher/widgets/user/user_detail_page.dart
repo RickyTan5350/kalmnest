@@ -673,66 +673,78 @@ class _UserDetailPageState extends State<UserDetailPage> {
           );
         }
 
-        final achievements = snapshot.data!.take(3).toList();
+        final achievements = snapshot.data!
+            .take(10)
+            .toList(); // Show more items for scrolling
 
-        return Column(
-          children: achievements.map((achievement) {
-            final icon = getAchievementIcon(achievement.icon);
-            final color = getAchievementColor(context, achievement.icon);
-            final dateStr = achievement.unlockedAt != null
-                ? achievement.unlockedAt!.toString().split(' ')[0]
-                : 'Unknown Date';
+        return SizedBox(
+          height: 160,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: achievements.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final achievement = achievements[index];
+              final icon = getAchievementIcon(achievement.icon);
+              final color = getAchievementColor(context, achievement.icon);
+              final dateStr = achievement.unlockedAt != null
+                  ? achievement.unlockedAt!.toString().split(' ')[0]
+                  : 'N/A';
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outlineVariant.withOpacity(0.4),
+              return Container(
+                width: 130,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outlineVariant.withOpacity(0.4),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(icon, size: 20, color: color),
+                      child: Icon(icon, size: 28, color: color),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            achievement.achievementTitle ?? "Achievement",
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Unlocked on $dateStr",
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                          ),
-                        ],
+                    const SizedBox(height: 12),
+                    Text(
+                      achievement.achievementTitle ?? "Achievement",
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      dateStr,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                        fontSize: 11,
                       ),
                     ),
                   ],
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            },
+          ),
         );
       },
     );
