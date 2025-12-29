@@ -567,19 +567,27 @@ class UserListContentState extends State<UserListContent> {
                   child: Row(
                     children: [
                       // Centered Avatar
-                      CircleAvatar(
-                        backgroundColor: _getRoleColor(
-                          user.roleName,
-                          colorScheme,
-                        ),
-                        foregroundColor: colorScheme.onPrimary,
-                        child: isSelected
-                            ? const Icon(Icons.check)
-                            : Text(
-                                user.name.isNotEmpty
-                                    ? user.name[0].toUpperCase()
-                                    : '?',
-                              ),
+                      Builder(
+                        builder: (context) {
+                          final roleColor = _getRoleColor(
+                            user.roleName,
+                            colorScheme,
+                          );
+                          return CircleAvatar(
+                            backgroundColor: roleColor.withOpacity(0.2),
+                            foregroundColor: roleColor,
+                            child: isSelected
+                                ? const Icon(Icons.check)
+                                : Text(
+                                    user.name.isNotEmpty
+                                        ? user.name[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          );
+                        },
                       ),
                       const SizedBox(width: 16),
 
