@@ -9,7 +9,7 @@ class DisappearingNavigationRail extends StatelessWidget {
     required this.selectedIndex,
     this.onDestinationSelected,
     required this.isExtended,
-    required this.onMenuPressed,
+    // REMOVED: required this.onMenuPressed,
     this.onAddButtonPressed,
     // REMOVED: required this.onLogoutPressed,
   });
@@ -18,7 +18,7 @@ class DisappearingNavigationRail extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int>? onDestinationSelected;
   final bool isExtended;
-  final VoidCallback onMenuPressed;
+  // REMOVED: final VoidCallback onMenuPressed;
   final VoidCallback? onAddButtonPressed;
   // REMOVED: final VoidCallback onLogoutPressed;
 
@@ -27,8 +27,9 @@ class DisappearingNavigationRail extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     // The destinations no longer need the placeholder for the add button.
-    final List<NavigationRailDestination> allDestinations =
-    destinations.map((d) {
+    final List<NavigationRailDestination> allDestinations = destinations.map((
+      d,
+    ) {
       return NavigationRailDestination(
         icon: Icon(d.icon),
         selectedIcon: Icon(d.selectedIcon),
@@ -44,17 +45,12 @@ class DisappearingNavigationRail extends StatelessWidget {
       // Use the 'leading' property for the top-aligned buttons.
       leading: Column(
         children: [
-          IconButton(
-            onPressed: onMenuPressed,
-            icon: const Icon(Icons.menu),
-          ),
+          // REMOVED: Menu Icon Button
           const SizedBox(height: 8),
           FloatingActionButton(
             // Use the FAB widget directly
             shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(
-                Radius.circular(15),
-              ),
+              borderRadius: BorderRadius.all(Radius.circular(15)),
             ),
             backgroundColor: colorScheme.tertiaryContainer,
             foregroundColor: colorScheme.onTertiaryContainer,

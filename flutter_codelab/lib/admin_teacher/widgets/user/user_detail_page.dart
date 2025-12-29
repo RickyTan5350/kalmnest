@@ -15,6 +15,7 @@ class UserDetailPage extends StatefulWidget {
   final String userName; // Passed for the app bar title before loading
   final List<BreadcrumbItem>? breadcrumbs;
   final bool isSelfProfile;
+  final String viewerRole;
 
   const UserDetailPage({
     super.key,
@@ -24,8 +25,6 @@ class UserDetailPage extends StatefulWidget {
     this.isSelfProfile = false,
     this.viewerRole = 'Student',
   });
-
-  final String viewerRole;
 
   @override
   State<UserDetailPage> createState() => _UserDetailPageState();
@@ -64,15 +63,21 @@ class _UserDetailPageState extends State<UserDetailPage> {
     }
   }
 
-  // Helper to get role color (matching your list logic)
+  // Helper to get role color
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.trim().toLowerCase()) {
       case 'admin':
-        return Colors.purple;
+        return scheme.brightness == Brightness.dark
+            ? Colors.pinkAccent
+            : Colors.pink;
       case 'teacher':
-        return scheme.tertiary;
+        return scheme.brightness == Brightness.dark
+            ? Colors.orangeAccent
+            : Colors.orange;
       case 'student':
-        return scheme.primary;
+        return scheme.brightness == Brightness.dark
+            ? Colors.lightBlueAccent
+            : Colors.blue;
       default:
         return scheme.secondary;
     }
@@ -115,7 +120,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
       },
     );
 
-    // If dialog returned true, data was updated, so refresh the view
     if (refreshed == true) {
       _fetchUserDetails();
     }
@@ -149,19 +153,16 @@ class _UserDetailPageState extends State<UserDetailPage> {
     return confirmed ?? false;
   }
 
-  // --- NEW: Deletion Logic ---
   Future<void> _deleteUser() async {
     final bool confirmed = await _confirmDelete();
     if (!confirmed) return;
 
     if (!mounted) return;
-    // Capture context before async gap to show SnackBar
     final BuildContext scaffoldContext = context;
 
     try {
       await _userApi.deleteUser(widget.userId);
 
-      // Show success message
       ScaffoldMessenger.of(scaffoldContext).showSnackBar(
         SnackBar(
           content: Text('Successfully deleted user: ${widget.userName}'),
@@ -169,7 +170,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
         ),
       );
 
-      // Pop the details page and pass 'true' to signal success to the parent list view
       if (mounted) {
         Navigator.of(context).pop(true);
       }
@@ -182,13 +182,11 @@ class _UserDetailPageState extends State<UserDetailPage> {
         const String deniedMessage =
             'Access Denied: Only Administrators can delete user accounts.';
 
-        // Explicitly check for the 403 error string and provide a friendly message
         if (cleanError.contains('403:')) {
           cleanError = deniedMessage;
           isDeniedError = true;
         }
 
-        // Determine the final message: remove the prefix only for the denial error
         final String snackBarText = isDeniedError
             ? cleanError
             : 'Error deleting user: $cleanError';
@@ -214,6 +212,8 @@ class _UserDetailPageState extends State<UserDetailPage> {
             ? BreadcrumbNavigation(items: widget.breadcrumbs!)
             : Text(widget.userName),
         centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           FutureBuilder<UserDetails>(
             future: _userFuture,
@@ -221,11 +221,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
               if (snapshot.hasData &&
                   (widget.viewerRole.toLowerCase() == 'admin' ||
                       widget.isSelfProfile)) {
-                // Edit Button
                 return IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () =>
-                      _editUser(snapshot.data!), // Pass the loaded user data
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _editUser(snapshot.data!),
                   tooltip: 'Edit User Profile',
                 );
               }
@@ -235,8 +233,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
           FutureBuilder<UserDetails>(
             future: _userFuture,
             builder: (context, snapshot) {
-              // Only show delete button if the page has successfully loaded the user details
-              // AND it is not the user's own profile
               if (snapshot.hasData &&
                   !widget.isSelfProfile &&
                   widget.viewerRole.toLowerCase() == 'admin') {
@@ -246,12 +242,12 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   tooltip: 'Delete User Account',
                 );
               }
-              // Hide while loading or on error
               return const SizedBox.shrink();
             },
           ),
         ],
       ),
+      extendBodyBehindAppBar: false,
       body: FutureBuilder<UserDetails>(
         future: _userFuture,
         builder: (context, snapshot) {
@@ -279,135 +275,98 @@ class _UserDetailPageState extends State<UserDetailPage> {
           final user = snapshot.data!;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 16.0,
+            ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // --- Header Section (Avatar & Role) ---
-                Center(
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: _getRoleColor(
-                          user.roleName,
-                          colorScheme,
-                        ),
-                        foregroundColor: colorScheme.onPrimary,
-                        child: Text(
-                          user.name.isNotEmpty
-                              ? user.name[0].toUpperCase()
-                              : '?',
-                          style: textTheme.displayMedium?.copyWith(
-                            color: colorScheme.onPrimary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        user.name,
-                        style: textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.secondaryContainer,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          user.roleName,
-                          style: textTheme.labelLarge?.copyWith(
-                            color: colorScheme.onSecondaryContainer,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildProfileHeader(context, user),
+
                 const SizedBox(height: 32),
 
-                // --- Details Card (Combined) ---
-                _buildDetailSection(
+                _buildSectionHeader(
                   context,
-                  title: "User Profile Details", // Combined title
-                  icon:
-                      Icons.person_outline, // Generic icon for profile details
-                  children: [
-                    // Contact Information
-                    _buildInfoRow(
-                      context,
-                      Icons.email_outlined,
-                      "Email",
-                      user.email,
-                    ),
-                    _buildInfoRow(
-                      context,
-                      Icons.phone_outlined,
-                      "Phone",
-                      user.phoneNo,
-                    ),
-                    _buildInfoRow(
-                      context,
-                      Icons.location_on_outlined,
-                      "Address",
-                      user.address,
-                    ),
-
-                    // Added a subtle divider to separate the two original logical groups
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Divider(
-                        height: 1,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.outlineVariant.withOpacity(0.5),
-                      ),
-                    ),
-
-                    // Personal Details
-                    _buildInfoRow(
-                      context,
-                      Icons.transgender,
-                      "Gender",
-                      user.gender,
-                    ),
-                    _buildInfoRow(
-                      context,
-                      Icons.calendar_today,
-                      "Joined Date",
-                      user.joinedDate.split('T')[0],
-                    ), // Simple date formatting
-                    _buildInfoRow(
-                      context,
-                      Icons.info_outline,
-                      "Account Status",
-                      user.accountStatus.toUpperCase(),
-                      valueColor: user.accountStatus == 'active'
-                          ? Colors.green
-                          : colorScheme.error,
-                    ),
-
-                    // --- Recent Achievements Section ---
-                    if (user.isStudent) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        child: Divider(
-                          height: 1,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.outlineVariant.withOpacity(0.5),
-                        ),
-                      ),
-                      _buildRecentAchievements(context),
-                    ],
-                  ],
+                  "Personal Information",
+                  Icons.person_outline,
                 ),
-                // Removed the extra SizedBox(height: 16) that was between the two original cards
+                const SizedBox(height: 12),
+                _buildDetailCard(context, [
+                  _buildInfoRow(
+                    context,
+                    Icons.email_outlined,
+                    "Email",
+                    user.email,
+                  ),
+                  _buildDivider(context),
+                  _buildInfoRow(
+                    context,
+                    Icons.phone_outlined,
+                    "Phone",
+                    user.phoneNo,
+                  ),
+                  _buildDivider(context),
+                  _buildInfoRow(
+                    context,
+                    Icons.location_on_outlined,
+                    "Address",
+                    user.address,
+                  ),
+                  _buildDivider(context),
+                  _buildInfoRow(
+                    context,
+                    Icons.transgender,
+                    "Gender",
+                    user.gender,
+                  ),
+                ]),
+
+                if (user.isStudent) ...[
+                  const SizedBox(height: 24),
+                  _buildSectionHeader(
+                    context,
+                    "Recent Achievements",
+                    Icons.emoji_events_outlined,
+                    trailing: TextButton(
+                      onPressed: () async {
+                        final user = await _userFuture;
+                        if (mounted) {
+                          if (_isViewerStudent) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    StudentProfileAchievementsPage(
+                                      userId: widget.userId,
+                                      userName: user.name,
+                                    ),
+                              ),
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    AdminStudentAchievementsPage(
+                                      userId: widget.userId,
+                                      userName: user.name,
+                                    ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: const Text("View All"),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildRecentAchievements(context),
+                ],
+                const SizedBox(height: 40),
               ],
             ),
           );
@@ -416,40 +375,220 @@ class _UserDetailPageState extends State<UserDetailPage> {
     );
   }
 
-  Widget _buildDetailSection(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(12),
+  Widget _buildProfileHeader(BuildContext context, UserDetails user) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final roleColor = _getRoleColor(user.roleName, colorScheme);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24.0),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: roleColor.withOpacity(0.5), width: 2),
+            ),
+            child: CircleAvatar(
+              radius: 48,
+              backgroundColor: roleColor.withOpacity(0.2),
+              foregroundColor: roleColor,
+              child: Text(
+                user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                style: textTheme.displayMedium?.copyWith(
+                  color: roleColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            user.name,
+            style: textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          // Role, Status, and Joined Date metadata row
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: roleColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  user.roleName.toUpperCase(),
+                  style: textTheme.labelLarge?.copyWith(
+                    color: roleColor,
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: user.accountStatus == 'active'
+                      ? Colors.green.withOpacity(0.1)
+                      : colorScheme.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: user.accountStatus == 'active'
+                        ? Colors.green.withOpacity(0.3)
+                        : colorScheme.error.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      user.accountStatus == 'active'
+                          ? Icons.check_circle_outline
+                          : Icons.error_outline,
+                      size: 14,
+                      color: user.accountStatus == 'active'
+                          ? Colors.green
+                          : colorScheme.error,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      user.accountStatus.toUpperCase(),
+                      style: textTheme.labelSmall?.copyWith(
+                        color: user.accountStatus == 'active'
+                            ? Colors.green
+                            : colorScheme.error,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  // color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withOpacity(0.5),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 14,
+                      color: colorScheme.outline,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      "Joined ${user.joinedDate.split('T')[0]}",
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title,
+    IconData icon, {
+    Widget? trailing,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const Divider(height: 24),
-            ...children,
           ],
         ),
+        if (trailing != null) trailing,
+      ],
+    );
+  }
+
+  Widget _buildDetailCard(BuildContext context, List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+        child: Column(children: children),
+      ),
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Divider(
+      height: 1,
+      color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
+    );
+  }
+
+  Widget _buildIconContainer(BuildContext context, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
     );
   }
 
@@ -461,15 +600,11 @@ class _UserDetailPageState extends State<UserDetailPage> {
     Color? valueColor,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+          _buildIconContainer(context, icon),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -479,16 +614,17 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   label,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.outline,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: valueColor,
-                    fontWeight: valueColor != null
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    color:
+                        valueColor ?? Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 15,
                   ),
                 ),
               ],
@@ -500,121 +636,123 @@ class _UserDetailPageState extends State<UserDetailPage> {
   }
 
   Widget _buildRecentAchievements(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
+    return FutureBuilder<List<AchievementData>>(
+      future: _achievementsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return SizedBox(
+            height: 100,
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        } else if (snapshot.hasError) {
+          return Text('Error loading achievements: ${snapshot.error}');
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withOpacity(0.5),
+                style: BorderStyle.solid,
+              ),
+            ),
+            child: Column(
               children: [
                 Icon(
                   Icons.emoji_events_outlined,
-                  color: Theme.of(context).colorScheme.primary,
+                  size: 32,
+                  color: Theme.of(context).colorScheme.outline,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(height: 8),
                 Text(
-                  "Recent Achievements",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  "No achievements yet",
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
                   ),
                 ),
               ],
             ),
-            TextButton(
-              onPressed: () async {
-                final user = await _userFuture;
-                if (mounted) {
-                  if (_isViewerStudent) {
-                    Navigator.push(
+          );
+        }
+
+        final achievements = snapshot.data!
+            .take(10)
+            .toList(); // Show more items for scrolling
+
+        return SizedBox(
+          height: 160,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: achievements.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final achievement = achievements[index];
+              final icon = getAchievementIcon(achievement.icon);
+              final color = getAchievementColor(context, achievement.icon);
+              final dateStr = achievement.unlockedAt != null
+                  ? achievement.unlockedAt!.toString().split(' ')[0]
+                  : 'N/A';
+
+              return Container(
+                width: 130,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => StudentProfileAchievementsPage(
-                          userId: widget.userId,
-                          userName: user.name,
-                        ),
+                    ).colorScheme.outlineVariant.withOpacity(0.4),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        shape: BoxShape.circle,
                       ),
-                    );
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AdminStudentAchievementsPage(
-                          userId: widget.userId,
-                          userName: user.name,
-                        ),
+                      child: Icon(icon, size: 28, color: color),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      achievement.achievementTitle ?? "Achievement",
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
-                    );
-                  }
-                }
-              },
-              child: const Text("View All"),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        FutureBuilder<List<AchievementData>>(
-          future: _achievementsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Text('Error loading achievements: ${snapshot.error}');
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Center(child: Text("No achievements unlocked yet.")),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      dateStr,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               );
-            }
-
-            final achievements = snapshot.data!.take(3).toList();
-
-            return Column(
-              children: achievements.map((achievement) {
-                final icon = getAchievementIcon(achievement.icon);
-                final color = getAchievementColor(context, achievement.icon);
-                final dateStr = achievement.unlockedAt != null
-                    ? achievement.unlockedAt!.toString().split(' ')[0]
-                    : 'Unknown Date';
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(icon, size: 20, color: color),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              achievement.achievementTitle ?? "Achievement",
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Unlocked on $dateStr",
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.outline,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            );
-          },
-        ),
-      ],
+            },
+          ),
+        );
+      },
     );
   }
 }

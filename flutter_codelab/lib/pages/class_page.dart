@@ -84,7 +84,10 @@ class _ClassPageState extends State<ClassPage> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(
+      padding: const EdgeInsets.fromLTRB(
+        2.0,
+        2.0,
+        16.0,
         16.0,
       ), // Outer padding (same as AchievementPage)
       child: Card(
