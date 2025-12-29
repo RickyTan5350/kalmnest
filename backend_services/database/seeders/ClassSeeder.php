@@ -41,53 +41,54 @@ class ClassSeeder extends Seeder
 
         $classes = [];
 
-        // Class 1: PHP Programming
-        $class1Id = (string) Str::uuid();
-        $classes[] = [
-            'class_id' => $class1Id,
-            'class_name' => 'PHP Programming',
-            'teacher_id' => $teachers[0]->user_id,
-            'description' => 'Learn core PHP concepts including syntax, control structures, functions, and backend development.',
-            'admin_id' => $admin->user_id,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
+       // Class 1: 5 HIKMAH
+$class1Id = (string) Str::uuid();
+$classes[] = [
+    'class_id' => $class1Id,
+    'class_name' => '5 HIKMAH',
+    'teacher_id' => $teachers[0]->user_id,
+    'description' => 'This class focuses on learning HTML fundamentals, including page structure, semantic elements, and basic web layout.',
+    'admin_id' => $admin->user_id,
+    'created_at' => now(),
+    'updated_at' => now(),
+];
 
-        // Class 2: JavaScript Programming
-        $class2Id = (string) Str::uuid();
-        $classes[] = [
-            'class_id' => $class2Id,
-            'class_name' => 'JavaScript Programming',
-            'teacher_id' => $teachers->count() > 1 ? $teachers[1]->user_id : $teachers[0]->user_id,
-            'description' => 'Covers JavaScript fundamentals, DOM manipulation, events, and modern ES6 features.',
-            'admin_id' => $admin->user_id,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
+// Class 2: 5 AMANAH
+$class2Id = (string) Str::uuid();
+$classes[] = [
+    'class_id' => $class2Id,
+    'class_name' => '5 AMANAH',
+    'teacher_id' => $teachers->count() > 1 ? $teachers[1]->user_id : $teachers[0]->user_id,
+    'description' => 'Students learn HTML and CSS to build well-structured and visually styled web pages, including layouts and responsive design.',
+    'admin_id' => $admin->user_id,
+    'created_at' => now(),
+    'updated_at' => now(),
+];
 
-        // Class 3: HTML Fundamentals
-        $class3Id = (string) Str::uuid();
-        $classes[] = [
-            'class_id' => $class3Id,
-            'class_name' => 'HTML Fundamentals',
-            'teacher_id' => $teachers[0]->user_id,
-            'description' => 'Introduction to HTML structure, semantic elements, forms, and web page layout.',
-            'admin_id' => $admin->user_id,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
+// Class 3: 5 ARIF
+$class3Id = (string) Str::uuid();
+$classes[] = [
+    'class_id' => $class3Id,
+    'class_name' => '5 ARIF',
+    'teacher_id' => $teachers[0]->user_id,
+    'description' => 'This class covers HTML, CSS, and JavaScript, focusing on interactive web pages, DOM manipulation, and basic frontend logic.',
+    'admin_id' => $admin->user_id,
+    'created_at' => now(),
+    'updated_at' => now(),
+];
 
-        // Class 4: CSS Styling
-        $class4Id = (string) Str::uuid();
-        $classes[] = [
-            'class_id' => $class4Id,
-            'class_name' => 'CSS Styling',
-            'teacher_id' => $teachers[0]->user_id,
-            'description' => 'Learn CSS for styling websites, including layouts, flexbox, grid, and responsive design.',
-            'admin_id' => $admin->user_id,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
+// Class 4: 5 BESTARI
+$class4Id = (string) Str::uuid();
+$classes[] = [
+    'class_id' => $class4Id,
+    'class_name' => '5 BESTARI',
+    'teacher_id' => $teachers[0]->user_id,
+    'description' => 'An advanced class that teaches full web development using HTML, CSS, JavaScript, and PHP, including backend concepts and databases.',
+    'admin_id' => $admin->user_id,
+    'created_at' => now(),
+    'updated_at' => now(),
+];
+
 
         DB::table('classes')->insert($classes);
 

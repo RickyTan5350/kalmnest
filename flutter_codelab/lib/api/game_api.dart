@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:flutter_codelab/models/level.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
@@ -29,7 +30,21 @@ class GameAPI {
   /// ------------------------------------------------------------
   /// FETCH ALL LEVELS (OPTIONALLY FILTER BY TOPIC)
   /// ------------------------------------------------------------
-  static List<LevelModel>? _cachedLevels;
+  // Cache per user (using user ID from token)
+  static Map<String, List<LevelModel>?> _cachedLevelsByUser = {};
+
+  /// Clear cache for all users (useful when game is created/updated)
+  static void clearCache() {
+    _cachedLevelsByUser.clear();
+  }
+
+  /// Get cache key from current user token
+  static Future<String?> _getCacheKey() async {
+    final token = await AuthApi.getToken();
+    if (token == null) return null;
+    // Use a simple hash of token as cache key (or extract user ID if available)
+    return token.substring(0, math.min(20, token.length));
+  }
 
   /// ------------------------------------------------------------
   /// FETCH ALL LEVELS (OPTIONALLY FILTER BY TOPIC)
@@ -39,9 +54,20 @@ class GameAPI {
     bool forceRefresh = false,
   }) async {
     try {
+      final cacheKey = await _getCacheKey();
+      
+      // Clear cache if force refresh
+      if (forceRefresh) {
+        if (cacheKey != null) {
+          _cachedLevelsByUser[cacheKey] = null;
+        } else {
+          _cachedLevelsByUser.clear();
+        }
+      }
+      
       // Return cached levels if available and not forced to refresh
-      if (!forceRefresh && _cachedLevels != null && topic == null) {
-        return _cachedLevels!;
+      if (!forceRefresh && cacheKey != null && _cachedLevelsByUser[cacheKey] != null && topic == null) {
+        return _cachedLevelsByUser[cacheKey]!;
       }
 
       final query = (topic != null && topic != "All") ? "?topic=$topic" : "";
@@ -57,8 +83,8 @@ class GameAPI {
             .toList();
 
         // Cache the result if we fetched all levels (no topic filter)
-        if (topic == null) {
-          _cachedLevels = levels;
+        if (topic == null && cacheKey != null) {
+          _cachedLevelsByUser[cacheKey] = levels;
         }
         return levels;
       }
@@ -116,6 +142,9 @@ class GameAPI {
 
       // Consider all 2xx status codes as success
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Clear cache when level is created
+        clearCache();
+        
         try {
           final Map<String, dynamic> jsonData = jsonDecode(response.body);
 
@@ -172,6 +201,8 @@ class GameAPI {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        // Clear cache when level is updated
+        clearCache();
         return ApiResponse(
           success: true,
           message: "Level updated successfully",
@@ -198,6 +229,8 @@ class GameAPI {
       final response = await http.delete(url, headers: headers);
 
       if (response.statusCode == 200) {
+        // Clear cache when level is deleted
+        clearCache();
         return ApiResponse(
           success: true,
           message: "Level deleted successfully",

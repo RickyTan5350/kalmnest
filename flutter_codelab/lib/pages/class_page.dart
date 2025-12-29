@@ -10,6 +10,8 @@ import 'package:flutter_codelab/student/widgets/class/student_class_list_section
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 import 'package:flutter_codelab/services/layout_preferences.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
 
 // Global key to access ClassPage state for reloading from main.dart
 final GlobalKey<_ClassPageState> classPageGlobalKey =
@@ -29,6 +31,10 @@ class _ClassPageState extends State<ClassPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   ViewLayout _viewLayout = ViewLayout.grid;
+  SortType _sortType = SortType.alphabetical;
+  SortOrder _sortOrder = SortOrder.ascending;
+  String? _selectedIconFilter; // null means "All"
+  String? _selectedColorFilter; // null means "All"
 
   @override
   void initState() {
@@ -98,20 +104,9 @@ class _ClassPageState extends State<ClassPage> {
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(color: colors.onSurface),
                     ),
-                    SegmentedButton<ViewLayout>(
-                      segments: const <ButtonSegment<ViewLayout>>[
-                        ButtonSegment<ViewLayout>(
-                          value: ViewLayout.list,
-                          icon: Icon(Icons.menu),
-                        ),
-                        ButtonSegment<ViewLayout>(
-                          value: ViewLayout.grid,
-                          icon: Icon(Icons.grid_view),
-                        ),
-                      ],
-                      selected: <ViewLayout>{_viewLayout},
-                      onSelectionChanged: (Set<ViewLayout> newSelection) {
-                        final newLayout = newSelection.first;
+                    _ViewToggleButton(
+                      currentLayout: _viewLayout,
+                      onLayoutChanged: (ViewLayout newLayout) {
                         setState(() => _viewLayout = newLayout);
                         LayoutPreferences.saveLayout(
                           'global_layout',
@@ -156,6 +151,176 @@ class _ClassPageState extends State<ClassPage> {
 
                 const SizedBox(height: 16),
 
+                // Filter and Sort Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Icon Filters (button style)
+                    ...ClassCustomization.availableIcons.map((classIcon) {
+                      final isSelected = _selectedIconFilter == classIcon.name;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Tooltip(
+                          message: classIcon.displayName,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedIconFilter = isSelected ? null : classIcon.name;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: isSelected
+                                  ? colors.primaryContainer
+                                  : colors.surface,
+                              foregroundColor: isSelected
+                                  ? colors.onPrimaryContainer
+                                  : colors.onSurface,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? colors.primary
+                                    : colors.outline.withOpacity(0.5),
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              minimumSize: const Size(48, 40),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Icon(
+                              classIcon.icon,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    // Separator
+                    Container(
+                      width: 1,
+                      height: 24,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      color: colors.outline.withOpacity(0.3),
+                    ),
+                    // Color Filters (button style)
+                    ...ClassCustomization.availableColors.map((classColor) {
+                      final isSelected = _selectedColorFilter == classColor.name;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Tooltip(
+                          message: classColor.displayName,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedColorFilter = isSelected ? null : classColor.name;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: isSelected
+                                  ? classColor.color.withOpacity(0.2)
+                                  : colors.surface,
+                              foregroundColor: isSelected
+                                  ? classColor.color
+                                  : colors.onSurface,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? classColor.color
+                                    : colors.outline.withOpacity(0.5),
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              minimumSize: const Size(48, 40),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: classColor.color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    const Spacer(),
+                    // Filter Icon (Sort)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.filter_list),
+                      tooltip: 'Sort Options',
+                      onSelected: (value) {
+                        setState(() {
+                          if (value == 'Name') {
+                            _sortType = SortType.alphabetical;
+                          } else if (value == 'Date') {
+                            _sortType = SortType.updated;
+                          } else if (value == 'Ascending') {
+                            _sortOrder = SortOrder.ascending;
+                          } else if (value == 'Descending') {
+                            _sortOrder = SortOrder.descending;
+                          }
+                        });
+                      },
+                      itemBuilder: (BuildContext context) =>
+                          <PopupMenuEntry<String>>[
+                            const PopupMenuItem<String>(
+                              enabled: false,
+                              child: Text(
+                                'Sort By',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Name',
+                              checked: _sortType == SortType.alphabetical,
+                              child: const Text('Name'),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Date',
+                              checked: _sortType == SortType.updated,
+                              child: const Text('Date'),
+                            ),
+                            const PopupMenuDivider(),
+                            const PopupMenuItem<String>(
+                              enabled: false,
+                              child: Text(
+                                'Order',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Ascending',
+                              checked: _sortOrder == SortOrder.ascending,
+                              child: const Text('Ascending'),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Descending',
+                              checked: _sortOrder == SortOrder.descending,
+                              child: const Text('Descending'),
+                            ),
+                          ],
+                    ),
+                    const SizedBox(width: 4),
+                    // Refresh Icon
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: reloadClassList,
+                      tooltip: "Refresh List",
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
                 // Statistics section (only for admin)
                 if (role == 'admin') ...[
                   ClassStatisticsSection(key: ValueKey('stats_$_reloadKey')),
@@ -180,6 +345,10 @@ class _ClassPageState extends State<ClassPage> {
         onReload: reloadClassList,
         searchQuery: _searchQuery,
         layout: _viewLayout,
+        sortType: _sortType,
+        sortOrder: _sortOrder,
+        iconFilter: _selectedIconFilter,
+        colorFilter: _selectedColorFilter,
       );
     }
     if (role == 'teacher') {
@@ -188,6 +357,10 @@ class _ClassPageState extends State<ClassPage> {
         roleName: 'teacher',
         searchQuery: _searchQuery,
         layout: _viewLayout,
+        sortType: _sortType,
+        sortOrder: _sortOrder,
+        iconFilter: _selectedIconFilter,
+        colorFilter: _selectedColorFilter,
       );
     }
     return student.ClassListSection(
@@ -195,6 +368,47 @@ class _ClassPageState extends State<ClassPage> {
       roleName: 'student',
       searchQuery: _searchQuery,
       layout: _viewLayout,
+      sortType: _sortType,
+      sortOrder: _sortOrder,
+      iconFilter: _selectedIconFilter,
+      colorFilter: _selectedColorFilter,
+    );
+  }
+}
+
+// Custom view toggle button with tooltips
+class _ViewToggleButton extends StatelessWidget {
+  final ViewLayout currentLayout;
+  final Function(ViewLayout) onLayoutChanged;
+
+  const _ViewToggleButton({
+    required this.currentLayout,
+    required this.onLayoutChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<ViewLayout>(
+      segments: <ButtonSegment<ViewLayout>>[
+        ButtonSegment<ViewLayout>(
+          value: ViewLayout.list,
+          icon: Tooltip(
+            message: 'List view',
+            child: Icon(Icons.menu),
+          ),
+        ),
+        ButtonSegment<ViewLayout>(
+          value: ViewLayout.grid,
+          icon: Tooltip(
+            message: 'Grid view',
+            child: Icon(Icons.grid_view),
+          ),
+        ),
+      ],
+      selected: <ViewLayout>{currentLayout},
+      onSelectionChanged: (Set<ViewLayout> newSelection) {
+        onLayoutChanged(newSelection.first);
+      },
     );
   }
 }
