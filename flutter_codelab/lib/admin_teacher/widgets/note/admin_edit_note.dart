@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
@@ -67,6 +68,8 @@ class _EditNotePageState extends State<EditNotePage> {
   bool _isHoveringInput = false;
   final ScrollController _inputScrollController = ScrollController();
   List<GlobalKey> _matchKeys = [];
+  Timer? _quizHoverTimer;
+  bool _showQuizPopup = false;
 
   @override
   void initState() {
@@ -108,7 +111,9 @@ class _EditNotePageState extends State<EditNotePage> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
+
     _pageFocusNode.dispose();
+    _quizHoverTimer?.cancel();
     super.dispose();
   }
 
@@ -910,6 +915,40 @@ class _EditNotePageState extends State<EditNotePage> {
     );
   }
 
+  Widget _buildHoverQuizPopup(ColorScheme colorScheme) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 150),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: InkWell(
+        onTap: _insertQuiz,
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.quiz, size: 16, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Insert Quiz',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -1212,11 +1251,26 @@ class _EditNotePageState extends State<EditNotePage> {
                                 ),
                                 Expanded(
                                   child: MouseRegion(
-                                    onEnter: (_) =>
-                                        setState(() => _isHoveringInput = true),
-                                    onExit: (_) => setState(
-                                      () => _isHoveringInput = false,
-                                    ),
+                                    onEnter: (_) {
+                                      setState(() => _isHoveringInput = true);
+                                      _quizHoverTimer = Timer(
+                                        const Duration(seconds: 2),
+                                        () {
+                                          if (mounted && _isHoveringInput) {
+                                            setState(
+                                              () => _showQuizPopup = true,
+                                            );
+                                          }
+                                        },
+                                      );
+                                    },
+                                    onExit: (_) {
+                                      _quizHoverTimer?.cancel();
+                                      setState(() {
+                                        _isHoveringInput = false;
+                                        _showQuizPopup = false;
+                                      });
+                                    },
                                     child: Stack(
                                       children: [
                                         TextFormField(
@@ -1248,6 +1302,14 @@ class _EditNotePageState extends State<EditNotePage> {
                                             top: _getCursorVerticalPosition(),
                                             right: 16,
                                             child: _buildHoverFileInserter(
+                                              colorScheme,
+                                            ),
+                                          ),
+                                        if (_showQuizPopup)
+                                          Positioned(
+                                            top: _getCursorVerticalPosition(),
+                                            left: 16,
+                                            child: _buildHoverQuizPopup(
                                               colorScheme,
                                             ),
                                           ),

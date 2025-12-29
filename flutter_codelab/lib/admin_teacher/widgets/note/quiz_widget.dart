@@ -83,10 +83,7 @@ class _QuizWidgetState extends State<QuizWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Latihan",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+          
             const SizedBox(height: 10),
             Text(
               widget.question,
