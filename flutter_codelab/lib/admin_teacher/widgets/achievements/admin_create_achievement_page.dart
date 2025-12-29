@@ -1,5 +1,6 @@
 import 'dart:convert'; // Required for jsonDecode
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
@@ -65,6 +66,14 @@ class _AdminCreateAchievementDialogState
       TextEditingController();
   final TextEditingController _levelDisplayController = TextEditingController();
 
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _titleFocus = FocusNode();
+  final FocusNode _descFocus = FocusNode();
+
+  AutovalidateMode _nameMode = AutovalidateMode.disabled;
+  AutovalidateMode _titleMode = AutovalidateMode.disabled;
+  AutovalidateMode _descMode = AutovalidateMode.disabled;
+
   List<AchievementData> _existingAchievements = [];
 
   // State variables for individual field errors
@@ -97,6 +106,24 @@ class _AdminCreateAchievementDialogState
     _fetchExistingAchievements();
     _fetchLevels();
 
+    _nameFocus.addListener(() {
+      if (!_nameFocus.hasFocus) {
+        setState(() => _nameMode = AutovalidateMode.onUserInteraction);
+      }
+    });
+
+    _titleFocus.addListener(() {
+      if (!_titleFocus.hasFocus) {
+        setState(() => _titleMode = AutovalidateMode.onUserInteraction);
+      }
+    });
+
+    _descFocus.addListener(() {
+      if (!_descFocus.hasFocus) {
+        setState(() => _descMode = AutovalidateMode.onUserInteraction);
+      }
+    });
+
     if (widget.initialName != null) {
       _achievementNameController.text = widget.initialName!;
     }
@@ -113,6 +140,7 @@ class _AdminCreateAchievementDialogState
     // Clear errors when the user starts typing
     _achievementNameController.addListener(() {
       if (_nameError != null) setState(() => _nameError = null);
+      _checkForJsonPaste();
     });
     _achievementTitleController.addListener(() {
       if (_titleError != null) setState(() => _titleError = null);
@@ -161,6 +189,9 @@ class _AdminCreateAchievementDialogState
     _achievementDescriptionController.dispose();
     _achievementTitleController.dispose();
     _levelDisplayController.dispose();
+    _nameFocus.dispose();
+    _titleFocus.dispose();
+    _descFocus.dispose();
     super.dispose();
   }
 
@@ -244,6 +275,72 @@ class _AdminCreateAchievementDialogState
         _selectedLevel = result.levelId;
         _levelDisplayController.text = result.levelName ?? '';
       });
+    }
+  }
+
+  void _checkForJsonPaste() {
+    if (!kDebugMode) return;
+    final text = _achievementNameController.text.trim();
+    if (text.startsWith('{') && text.endsWith('}')) {
+      try {
+        final Map<String, dynamic> json = jsonDecode(text);
+        _populateFormFromJson(json);
+      } catch (e) {
+        // Not valid JSON, ignore
+      }
+    }
+  }
+
+  void _populateFormFromJson(Map<String, dynamic> json) {
+    String? getValue(List<String> keys) {
+      for (final key in keys) {
+        if (json.containsKey(key)) {
+          return json[key]?.toString();
+        }
+      }
+      return null;
+    }
+
+    final name = getValue(['achievementName', 'name']);
+    final title = getValue(['achievementTitle', 'title']);
+    final description = getValue([
+      'achievementDescription',
+      'description',
+      'desc',
+    ]);
+    // final icon = getValue(['icon', 'iconName']);
+    // final levelId = getValue(['levelId', 'level_id']);
+
+    setState(() {
+      if (name != null) _achievementNameController.text = name;
+      if (title != null) _achievementTitleController.text = title;
+      if (description != null) {
+        _achievementDescriptionController.text = description;
+      }
+
+      // if (icon != null) {
+      //   final isValidIcon = iconOptions.any((opt) => opt['value'] == icon);
+      //   if (isValidIcon) {
+      //     _selectedIcon = icon;
+      //     _selectedLevel = null;
+      //     _levelDisplayController.clear();
+      //   }
+      // }
+
+      // if (levelId != null) {
+      //   _selectedLevel = levelId;
+      //   final match = _levels.firstWhere(
+      //     (l) => l.levelId == levelId,
+      //     orElse: () => LevelModel(levelId: '', levelName: ''),
+      //   );
+      //   if (match.levelId?.isNotEmpty ?? false) {
+      //     _levelDisplayController.text = match.levelName ?? '';
+      //   }
+      // }
+    });
+
+    if (mounted) {
+      widget.showSnackBar(context, 'Form autofilled from JSON', Colors.blue);
     }
   }
 
@@ -433,7 +530,7 @@ class _AdminCreateAchievementDialogState
               child: SingleChildScrollView(
                 child: Form(
                   key: _formKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  // autovalidateMode: AutovalidateMode.onUserInteraction, // Managed individually
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -448,6 +545,8 @@ class _AdminCreateAchievementDialogState
                       // Achievement Name
                       TextFormField(
                         controller: _achievementNameController,
+                        focusNode: _nameFocus,
+                        autovalidateMode: _nameMode,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Achievement Name',
@@ -481,6 +580,8 @@ class _AdminCreateAchievementDialogState
                       // Title
                       TextFormField(
                         controller: _achievementTitleController,
+                        focusNode: _titleFocus,
+                        autovalidateMode: _titleMode,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Achievement Title',
@@ -513,6 +614,8 @@ class _AdminCreateAchievementDialogState
                       // Description
                       TextFormField(
                         controller: _achievementDescriptionController,
+                        focusNode: _descFocus,
+                        autovalidateMode: _descMode,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Achievement Description',

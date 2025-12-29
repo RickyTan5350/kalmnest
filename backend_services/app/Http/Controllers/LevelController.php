@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Level;
+use App\Models\ClassModel;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\level_type;
 use Illuminate\Http\Request;
 use Exception;
@@ -12,13 +15,24 @@ use Exception;
 class LevelController extends Controller
 {
     /**
-     * Display all levels, optionally filtered by type
+     * Display all levels, optionally filtered by type and visibility
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
         $topic = $request->query('topic');
 
-        $query = Level::with('level_type');
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+        $query = Level::with(['level_type', 'classes' => function($q) {
+            $q->select('class_levels.level_id', 'class_levels.is_private', 'classes.class_id')
+              ->withPivot('is_private');
+        }]);
 
         if ($topic && $topic != 'All') {
             $query->whereHas('level_type', function ($q) use ($topic) {
@@ -26,7 +40,40 @@ class LevelController extends Controller
             });
         }
 
-        $levels = $query->get()->map(function ($level) {
+        // Filter based on role and visibility
+        if ($roleName === 'student') {
+            // Students: ONLY see public games in game page (private games only accessible through class)
+            $query->whereDoesntHave('classes', function($subQ) {
+                $subQ->where('class_levels.is_private', true);
+            });
+        } elseif ($roleName === 'teacher') {
+            // Teachers: See public games OR private games they created
+            $query->where(function($q) use ($user) {
+                // Public games (not assigned as private in any class)
+                $q->whereDoesntHave('classes', function($subQ) {
+                    $subQ->where('class_levels.is_private', true);
+                })
+                // OR private games created by this teacher (only show to creator)
+                ->orWhere(function($orQ) use ($user) {
+                    $orQ->where('created_by', $user->user_id)
+                        ->whereHas('classes', function($subQ) {
+                            $subQ->where('class_levels.is_private', true);
+                        });
+                });
+            });
+        }
+        // Admin: See all games (no filter)
+
+        $levels = $query->get()->map(function ($level) use ($user) {
+            // Determine if this level is private (has at least one private assignment)
+            // Check if any class assignment has is_private = true
+            $isPrivate = DB::table('class_levels')
+                ->where('level_id', $level->level_id)
+                ->where('is_private', true)
+                ->exists();
+            
+            $isCreatedByMe = $level->created_by === $user->user_id;
+
             return [
                 'level_id' => $level->level_id,
                 'level_name' => $level->level_name,
@@ -34,6 +81,9 @@ class LevelController extends Controller
                     'level_type_id' => $level->level_type->level_type_id,
                     'level_type_name' => $level->level_type->level_type_name,
                 ] : null,
+                'is_private' => $isPrivate,
+                'is_created_by_me' => $isCreatedByMe,
+                'status' => $isPrivate ? 'private' : 'public',
             ];
         });
 
@@ -88,6 +138,19 @@ class LevelController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+        // Only teachers and admins can create games
+        if ($roleName !== 'teacher' && $roleName !== 'admin') {
+            return response()->json(['error' => 'Unauthorized. Only teachers and admins can create games.'], 403);
+        }
+
         $request->validate([
             'level_name' => 'required|string|filled',
             'level_type_name' => 'required|string',
@@ -132,6 +195,7 @@ class LevelController extends Controller
             'level_type_id' => $levelType->level_type_id,
             'level_data' => json_encode($finalLevelData, JSON_PRETTY_PRINT),
             'win_condition' => json_encode($finalWinData, JSON_PRETTY_PRINT),
+            'created_by' => $user->user_id,
         ];
 
 

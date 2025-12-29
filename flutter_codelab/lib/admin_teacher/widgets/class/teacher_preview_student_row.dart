@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/student.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class StudentPreviewRow extends StatelessWidget {
   final List<Student> students;
@@ -14,30 +15,34 @@ class StudentPreviewRow extends StatelessWidget {
   Widget _studentCard(BuildContext context, Student student) {
     return Container(
       width: 160,
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.75),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD1E5EA)),
-        color: const Color(0xFFE7F9FF),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: const Color(0xFFCFEFF7),
+            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             child: Text(
               student.name,
-              style: const TextStyle(
-                color: Color(0xFF004B63),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: ClassConstants.defaultPadding * 0.625),
           Expanded(
             child: Text(
               student.fullName,
-              style: const TextStyle(color: Color(0xFF004B63), fontSize: 13),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -50,28 +55,34 @@ class StudentPreviewRow extends StatelessWidget {
   Widget _othersCard(BuildContext context, int extra) {
     return InkWell(
       onTap: onViewAll,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
       child: Container(
         width: 160,
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.75),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Colors.grey.shade200,
-          border: Border.all(color: Colors.grey.shade400),
+          borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: Colors.grey.shade700,
-              child: const Icon(Icons.group, color: Colors.white, size: 18),
+              backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+              child: Icon(
+                Icons.group,
+                color: Theme.of(context).colorScheme.onSecondaryContainer,
+                size: 18,
+              ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: ClassConstants.defaultPadding * 0.625),
             Expanded(
               child: Text(
                 "$extra more",
-                style: TextStyle(
-                  color: Colors.grey.shade800,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -86,19 +97,23 @@ class StudentPreviewRow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (students.isEmpty) {
       return Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(ClassConstants.defaultPadding),
           child: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.grey.shade600),
-              const SizedBox(width: 12),
+              Icon(
+                Icons.info_outline,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              SizedBox(width: ClassConstants.defaultPadding * 0.75),
               Expanded(
                 child: Text(
                   'No students have been enrolled in this class yet.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -113,9 +128,11 @@ class StudentPreviewRow extends StatelessWidget {
     final extra = students.length - shown.length;
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.75),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -130,12 +147,12 @@ class StudentPreviewRow extends StatelessWidget {
                       'Students',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: ClassConstants.defaultPadding * 0.25),
                     Text(
                       'List of enrolled students',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -150,7 +167,7 @@ class StudentPreviewRow extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 12),
+            SizedBox(height: ClassConstants.defaultPadding * 0.75),
 
             // Horizontal scroll of student cards + others card
             SingleChildScrollView(
@@ -159,14 +176,18 @@ class StudentPreviewRow extends StatelessWidget {
                 children: [
                   ...shown.map(
                     (s) => Padding(
-                      padding: const EdgeInsets.only(right: 12),
+                      padding: EdgeInsets.only(
+                        right: ClassConstants.defaultPadding * 0.75,
+                      ),
                       child: _studentCard(context, s),
                     ),
                   ),
 
                   if (extra > 0)
                     Padding(
-                      padding: const EdgeInsets.only(right: 12),
+                      padding: EdgeInsets.only(
+                        right: ClassConstants.defaultPadding * 0.75,
+                      ),
                       child: _othersCard(context, extra),
                     ),
                 ],
