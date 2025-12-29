@@ -576,9 +576,14 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                 : Stack(
                     children: [
                       Positioned.fill(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16.0),
-                          child: _buildHighlightedHtml(colorScheme),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 900),
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(16.0),
+                              child: _buildHighlightedHtml(colorScheme),
+                            ),
+                          ),
                         ),
                       ),
                       if (_isSearching)
