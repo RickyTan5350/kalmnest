@@ -34,6 +34,7 @@ class UserPageState extends State<UserPage> {
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
 
+  final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final GlobalKey<UserListContentState> _userListKey =
       GlobalKey<UserListContentState>();
@@ -58,6 +59,7 @@ class UserPageState extends State<UserPage> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
@@ -181,6 +183,7 @@ class UserPageState extends State<UserPage> {
                       SizedBox(
                         width: 300,
                         child: SearchBar(
+                          controller: _searchController,
                           focusNode: _searchFocusNode,
                           hintText: "Search user...",
                           padding: const WidgetStatePropertyAll<EdgeInsets>(
@@ -193,8 +196,10 @@ class UserPageState extends State<UserPage> {
                             if (_searchQuery.isNotEmpty)
                               IconButton(
                                 icon: const Icon(Icons.clear),
-                                onPressed: () =>
-                                    setState(() => _searchQuery = ''),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
                               ),
                           ],
                         ),
