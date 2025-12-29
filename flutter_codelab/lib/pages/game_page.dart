@@ -20,7 +20,7 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage> {
   final List<String> _topics = ['All', 'HTML', 'CSS', 'JS', 'PHP', 'Quiz'];
   String _selectedTopic = 'All';
-  
+
   // Visibility filter (only for teachers/admins)
   final List<String> _visibilityFilters = ['All', 'Public', 'Private'];
   String _selectedVisibility = 'All';
@@ -52,7 +52,10 @@ class _GamePageState extends State<GamePage> {
 
   Future<void> fetchLevels({String? topic, bool forceRefresh = false}) async {
     setState(() => _loading = true);
-    final levels = await GameAPI.fetchLevels(topic: topic, forceRefresh: forceRefresh);
+    final levels = await GameAPI.fetchLevels(
+      topic: topic,
+      forceRefresh: forceRefresh,
+    );
     if (!mounted) return;
 
     setState(() {
@@ -64,17 +67,19 @@ class _GamePageState extends State<GamePage> {
 
   List<LevelModel> _applyFilters(List<LevelModel> levels) {
     var filtered = levels;
-    
+
     // Apply visibility filter (only for teachers/admins)
     final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
     if (!isStudent && _selectedVisibility != 'All') {
       if (_selectedVisibility == 'Public') {
-        filtered = filtered.where((level) => !(level.isPrivate ?? false)).toList();
+        filtered = filtered
+            .where((level) => !(level.isPrivate ?? false))
+            .toList();
       } else if (_selectedVisibility == 'Private') {
         filtered = filtered.where((level) => level.isPrivate == true).toList();
       }
     }
-    
+
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered
@@ -85,7 +90,7 @@ class _GamePageState extends State<GamePage> {
           )
           .toList();
     }
-    
+
     return filtered;
   }
 
@@ -128,14 +133,13 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -205,7 +209,7 @@ class _GamePageState extends State<GamePage> {
                     );
                   }).toList(),
                 ),
-                
+
                 // VISIBILITY FILTER (Only for teachers/admins)
                 if (!isStudent) ...[
                   const SizedBox(height: 12),
@@ -220,15 +224,24 @@ class _GamePageState extends State<GamePage> {
                         spacing: 8.0,
                         runSpacing: 8.0,
                         children: _visibilityFilters.map((visibility) {
-                          final bool selected = _selectedVisibility == visibility;
+                          final bool selected =
+                              _selectedVisibility == visibility;
                           return FilterChip(
                             label: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (visibility == 'Private')
-                                  const Icon(Icons.lock, size: 16, color: Colors.orange)
+                                  const Icon(
+                                    Icons.lock,
+                                    size: 16,
+                                    color: Colors.orange,
+                                  )
                                 else if (visibility == 'Public')
-                                  const Icon(Icons.public, size: 16, color: Colors.blue),
+                                  const Icon(
+                                    Icons.public,
+                                    size: 16,
+                                    color: Colors.blue,
+                                  ),
                                 const SizedBox(width: 4),
                                 Text(visibility),
                               ],
@@ -285,7 +298,9 @@ class _GamePageState extends State<GamePage> {
                                       decoration: BoxDecoration(
                                         color: Colors.orange.withOpacity(0.2),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.orange),
+                                        border: Border.all(
+                                          color: Colors.orange,
+                                        ),
                                       ),
                                       child: const Row(
                                         mainAxisSize: MainAxisSize.min,
@@ -371,7 +386,10 @@ class _GamePageState extends State<GamePage> {
                                               userRole: widget.userRole,
                                             );
 
-                                            fetchLevels(topic: _selectedTopic, forceRefresh: true);
+                                            fetchLevels(
+                                              topic: _selectedTopic,
+                                              forceRefresh: true,
+                                            );
                                           },
                                         ),
                                         IconButton(

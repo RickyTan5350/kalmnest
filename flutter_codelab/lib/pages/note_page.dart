@@ -85,7 +85,7 @@ class _NotePageState extends State<NotePage> {
       child: Focus(
         autofocus: true,
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
           child: Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),

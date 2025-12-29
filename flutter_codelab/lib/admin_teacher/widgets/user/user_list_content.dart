@@ -222,11 +222,17 @@ class UserListContentState extends State<UserListContent> {
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return Colors.purple;
+        return scheme.brightness == Brightness.dark
+            ? Colors.pinkAccent
+            : Colors.pink;
       case 'teacher':
-        return scheme.tertiary;
+        return scheme.brightness == Brightness.dark
+            ? Colors.orangeAccent
+            : Colors.orange;
       case 'student':
-        return scheme.primary;
+        return scheme.brightness == Brightness.dark
+            ? Colors.lightBlueAccent
+            : Colors.blue;
       default:
         return scheme.secondary;
     }
