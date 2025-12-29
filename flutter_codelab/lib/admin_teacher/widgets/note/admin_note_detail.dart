@@ -13,6 +13,7 @@ import 'package:pdf/pdf.dart';
 import 'delete_note.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/utils/brand_color_extension.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'quiz_widget.dart';
@@ -653,7 +654,9 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
                 BreadcrumbItem(label: _currentTitle),
               ],
             ),
-            backgroundColor: colorScheme.surface,
+            backgroundColor: context
+                .getBrandColorForTopic(_currentTopic)
+                .withOpacity(0.2),
             iconTheme: IconThemeData(color: colorScheme.onSurface),
             elevation: 0,
             actions: [

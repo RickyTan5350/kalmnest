@@ -1085,7 +1085,9 @@ class _RunCodePageState extends State<RunCodePage> {
             BreadcrumbItem(label: 'Run Code'),
           ],
         ),
-        backgroundColor: colorScheme.surface,
+        backgroundColor: context
+            .getBrandColorForTopic(widget.topic)
+            .withOpacity(0.2),
         elevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
         actions: [

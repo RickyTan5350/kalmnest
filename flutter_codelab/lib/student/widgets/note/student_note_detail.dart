@@ -14,6 +14,7 @@ import 'package:markdown/markdown.dart' as md;
 import 'dart:convert';
 import 'package:flutter_codelab/admin_teacher/widgets/note/quiz_widget.dart';
 import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/utils/brand_color_extension.dart';
 
 class StudentNoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -514,7 +515,9 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                 ],
               ),
 
-              backgroundColor: colorScheme.surface,
+              backgroundColor: context
+                  .getBrandColorForTopic(_currentTopic)
+                  .withOpacity(0.2),
               iconTheme: IconThemeData(color: colorScheme.onSurface),
               elevation: 0,
               actions: [
