@@ -7,3 +7,6 @@ flutter_codelab/.flutter-plugins-dependencies
 flutter_codelab/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 flutter_codelab/android/local.properties
 flutter_codelab/ios/Runner/GeneratedPluginRegistrant.h
+flutter_codelab/.dart_tool/package_config.json
+flutter_codelab/.flutter-plugins-dependencies
+flutter_codelab/android/local.properties
