@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/user_api.dart';
 import 'package:flutter_codelab/utils/formatters.dart';
 import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 // Utility function to show the dialog
 Future<bool?> showEditUserDialog({
@@ -104,6 +105,34 @@ class _EditUserDialogState extends State<EditUserDialog> {
     super.dispose();
   }
 
+  String _getLocalizedGender(String gender) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (gender.toLowerCase()) {
+      case 'male':
+        return l10n.male;
+      case 'female':
+        return l10n.female;
+      case 'other':
+        return l10n.other;
+      default:
+        return gender;
+    }
+  }
+
+  String _getLocalizedRole(String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role.toLowerCase()) {
+      case 'student':
+        return l10n.student;
+      case 'teacher':
+        return l10n.teacher;
+      case 'admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -119,7 +148,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
         newPassword != _passwordConfirmationController.text.trim()) {
       widget.showSnackBar(
         context,
-        'Error: New password and confirmation must match.',
+        AppLocalizations.of(context)!.passwordsMatchError,
         Colors.red,
       );
       return;
@@ -159,7 +188,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
       if (mounted) {
         widget.showSnackBar(
           context,
-          'User profile successfully updated!',
+          AppLocalizations.of(context)!.userProfileUpdated,
           Colors.green,
         );
         // Pop dialog and return 'true' to signal a successful update/refresh needed
@@ -189,11 +218,13 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
         if (errorString.contains('403:')) {
           // Explicit message for 403 Forbidden
-          displayMessage =
-              'Access Denied: Only Administrators can modify user profiles.';
+          displayMessage = AppLocalizations.of(
+            context,
+          )!.accessDeniedAdminModify;
         } else {
-          displayMessage =
-              'Error updating profile: ${errorString.replaceAll('Exception: ', '')}';
+          displayMessage = AppLocalizations.of(
+            context,
+          )!.errorUpdatingProfile(errorString.replaceAll('Exception: ', ''));
         }
 
         widget.showSnackBar(
@@ -272,7 +303,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Edit User Profile',
+                  AppLocalizations.of(context)!.editUserProfile,
                   style: TextStyle(
                     color: colorScheme.onSurface,
                     fontSize: 20,
@@ -286,7 +317,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _nameController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Name',
+                    labelText: AppLocalizations.of(context)!.name,
                     icon: Icons.person,
                     colorScheme: colorScheme,
                   ),
@@ -295,7 +326,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       return _serverErrors['name'];
                     }
                     if (value == null || value.isEmpty)
-                      return 'Please enter a name';
+                      return AppLocalizations.of(context)!.pleaseEnterName;
                     return null;
                   },
                   onChanged: (value) {
@@ -311,7 +342,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _emailController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Email',
+                    labelText: AppLocalizations.of(context)!.email,
                     icon: Icons.email,
                     colorScheme: colorScheme,
                   ),
@@ -321,12 +352,12 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       return _serverErrors['email'];
                     }
                     if (value == null || value.isEmpty)
-                      return 'Please enter an email';
+                      return AppLocalizations.of(context)!.pleaseEnterEmail;
                     final emailRegex = RegExp(
                       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
                     );
                     if (!emailRegex.hasMatch(value)) {
-                      return 'Enter a valid email address';
+                      return AppLocalizations.of(context)!.enterValidEmail;
                     }
                     return null;
                   },
@@ -343,7 +374,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'New Password',
+                    labelText: AppLocalizations.of(context)!.newPassword,
                     icon: Icons.lock,
                     colorScheme: colorScheme,
                   ),
@@ -353,7 +384,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       return _serverErrors['password'];
                     }
                     if (value != null && value.isNotEmpty && value.length < 8)
-                      return 'Password must be at least 8 characters';
+                      return AppLocalizations.of(context)!.passwordLengthError;
                     return null;
                   },
                   onChanged: (value) {
@@ -369,7 +400,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _passwordConfirmationController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Confirm New Password',
+                    labelText: AppLocalizations.of(context)!.confirmNewPassword,
                     icon: Icons.lock_open,
                     colorScheme: colorScheme,
                   ),
@@ -377,10 +408,12 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   validator: (value) {
                     if (_passwordController.text.isNotEmpty &&
                         (value == null || value.isEmpty)) {
-                      return 'Please confirm the new password';
+                      return AppLocalizations.of(
+                        context,
+                      )!.confirmPasswordRequired;
                     }
                     if (value != _passwordController.text)
-                      return 'Passwords do not match';
+                      return AppLocalizations.of(context)!.passwordsDoNotMatch;
                     return null;
                   },
                 ),
@@ -391,7 +424,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _phoneNoController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Phone No',
+                    labelText: AppLocalizations.of(context)!.phone,
                     icon: Icons.phone,
                     colorScheme: colorScheme,
                     hintText: 'e.g. 012-3456789',
@@ -403,12 +436,12 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       return _serverErrors['phone_no'];
                     }
                     if (value == null || value.isEmpty)
-                      return 'Please enter a phone number';
+                      return AppLocalizations.of(context)!.pleaseEnterPhone;
                     final phoneRegex = RegExp(
                       r'^(\+?6?0)[0-9]{1,2}-?[0-9]{7,8}$',
                     );
                     if (!phoneRegex.hasMatch(value)) {
-                      return 'Enter a valid Malaysian phone number';
+                      return AppLocalizations.of(context)!.enterValidPhone;
                     }
                     return null;
                   },
@@ -425,14 +458,14 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   controller: _addressController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Address',
+                    labelText: AppLocalizations.of(context)!.address,
                     icon: Icons.location_on,
                     colorScheme: colorScheme,
                   ),
                   maxLines: 2,
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please enter an address';
+                      return AppLocalizations.of(context)!.pleaseEnterAddress;
                     return null;
                   },
                 ),
@@ -444,21 +477,23 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Gender',
+                    labelText: AppLocalizations.of(context)!.genderLabel,
                     icon: Icons.people,
                     colorScheme: colorScheme,
                   ),
                   items: _genders
                       .map(
-                        (value) =>
-                            DropdownMenuItem(value: value, child: Text(value)),
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(_getLocalizedGender(value)),
+                        ),
                       )
                       .toList(),
                   onChanged: (value) =>
                       setState(() => _selectedGender = value!),
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please select a gender';
+                      return AppLocalizations.of(context)!.pleaseSelectGender;
                     return null;
                   },
                 ),
@@ -477,20 +512,22 @@ class _EditUserDialogState extends State<EditUserDialog> {
                         : colorScheme.onSurface,
                   ),
                   decoration: _inputDecoration(
-                    labelText: 'Role',
+                    labelText: AppLocalizations.of(context)!.roleLabel,
                     icon: Icons.badge,
                     colorScheme: colorScheme,
                     enabled: !widget.isSelfEdit,
                   ),
                   items: _roles
                       .map(
-                        (value) =>
-                            DropdownMenuItem(value: value, child: Text(value)),
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(_getLocalizedRole(value)),
+                        ),
                       )
                       .toList(),
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please select a role';
+                      return AppLocalizations.of(context)!.pleaseSelectRole;
                     return null;
                   },
                 ),
@@ -503,7 +540,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Account Status:',
+                        '${AppLocalizations.of(context)!.accountStatusLabel}:',
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 16,
@@ -520,7 +557,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                               },
                       ),
                       Text(
-                        _accountStatus ? 'Active' : 'Inactive',
+                        _accountStatus
+                            ? AppLocalizations.of(context)!.active
+                            : AppLocalizations.of(context)!.inactive,
                         style: TextStyle(color: colorScheme.onSurface),
                       ),
                     ],
@@ -535,7 +574,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
                       child: Text(
-                        'Cancel',
+                        AppLocalizations.of(context)!.cancel,
                         style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),
                     ),
@@ -564,7 +603,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                                 ),
                               ),
                             )
-                          : const Text('Save Changes'),
+                          : Text(AppLocalizations.of(context)!.saveChanges),
                     ),
                   ],
                 ),
