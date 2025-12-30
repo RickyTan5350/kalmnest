@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 void main() {
   testWidgets('Localization test for English and Malay', (
