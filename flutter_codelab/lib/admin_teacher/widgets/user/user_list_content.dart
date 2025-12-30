@@ -1,16 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/user_api.dart';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/api/user_api.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/admin_teacher/widgets/user/user_grid_layout.dart';
+import 'package:flutter/services.dart';
+import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:code_play/admin_teacher/services/selection_box_painter.dart';
 import 'user_detail_page.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class UserListContent extends StatefulWidget {
-  const UserListContent({super.key});
+  final String searchQuery;
+  final String? selectedRole;
+  final String? selectedStatus;
+  final ViewLayout viewLayout;
+  final SortType sortType;
+  final SortOrder sortOrder;
+  final UserDetails? currentUser;
+
+  const UserListContent({
+    super.key,
+    required this.searchQuery,
+    required this.selectedRole,
+    required this.selectedStatus,
+    required this.viewLayout,
+    required this.sortType,
+    required this.sortOrder,
+    this.currentUser,
+  });
 
   @override
-  State<UserListContent> createState() => _UserListContentState();
+  State<UserListContent> createState() => UserListContentState();
 }
 
-class _UserListContentState extends State<UserListContent> {
+class UserListContentState extends State<UserListContent> {
   final UserApi _userApi = UserApi();
 
   // State variables
@@ -18,19 +42,121 @@ class _UserListContentState extends State<UserListContent> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Filter States
-  final TextEditingController _searchController = TextEditingController();
-  String? _selectedRole;
-  String? _selectedStatus;
+  // Selection Logic
+  bool _isSelectionMode = false;
+  final Set<dynamic> _selectedIds = {};
+  final Map<dynamic, GlobalKey> _gridItemKeys = {};
 
-  // Filter Options
-  final List<String> _roles = ['Student', 'Teacher', 'Admin'];
-  final List<String> _statuses = ['active', 'inactive'];
+  // --- Selection State (Hybrid) ---
+  final Set<dynamic> _dragProcessedIds = {};
+  Offset? _dragStart;
+  Offset? _dragEnd;
+  Set<dynamic> _initialSelection = {};
+
+  bool get _isDesktop {
+    final p = Theme.of(context).platform;
+    return p == TargetPlatform.windows ||
+        p == TargetPlatform.linux ||
+        p == TargetPlatform.macOS;
+  }
+
+  // --- Drag Selection Handlers ---
+  void _handleDragSelect(Offset position) {
+    if ((widget.currentUser?.roleName.toLowerCase() ?? '') != 'admin') return;
+
+    if (!_isSelectionMode) {
+      setState(() => _isSelectionMode = true);
+    }
+    for (final entry in _gridItemKeys.entries) {
+      final dynamic id = entry.key;
+      final GlobalKey key = entry.value;
+
+      final RenderBox? renderBox =
+          key.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        final localPosition = renderBox.globalToLocal(position);
+        if (renderBox.size.contains(localPosition)) {
+          if (!_dragProcessedIds.contains(id)) {
+            _toggleSelection(id);
+            _dragProcessedIds.add(id);
+            HapticFeedback.selectionClick();
+          }
+        }
+      }
+    }
+  }
+
+  void _handleBoxSelect(Offset currentPosition) {
+    if ((widget.currentUser?.roleName.toLowerCase() ?? '') != 'admin') return;
+
+    setState(() {
+      _dragEnd = currentPosition;
+      if (!_isSelectionMode) _isSelectionMode = true;
+    });
+
+    if (_dragStart == null) return;
+
+    final Rect selectionBox = Rect.fromPoints(_dragStart!, _dragEnd!);
+    final Set<dynamic> newSelection = Set.from(_initialSelection);
+
+    for (final entry in _gridItemKeys.entries) {
+      final dynamic id = entry.key;
+      final GlobalKey key = entry.value;
+
+      final RenderBox? renderBox =
+          key.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox == null) continue;
+
+      final Offset itemPosition = renderBox.localToGlobal(
+        Offset.zero,
+        ancestor: context.findRenderObject(),
+      );
+      final Rect itemRect = itemPosition & renderBox.size;
+
+      if (selectionBox.overlaps(itemRect)) {
+        newSelection.add(id);
+      } else if (!_initialSelection.contains(id)) {
+        newSelection.remove(id);
+      }
+    }
+
+    if (_selectedIds.length != newSelection.length ||
+        !_selectedIds.containsAll(newSelection)) {
+      setState(() {
+        _selectedIds.clear();
+        _selectedIds.addAll(newSelection);
+      });
+    }
+  }
+
+  void _endDrag() {
+    if (_isDesktop) {
+      setState(() {
+        _dragStart = null;
+        _dragEnd = null;
+      });
+    }
+    _dragProcessedIds.clear();
+  }
 
   @override
   void initState() {
     super.initState();
     _fetchUsers();
+  }
+
+  @override
+  void didUpdateWidget(UserListContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.searchQuery != widget.searchQuery ||
+        oldWidget.selectedRole != widget.selectedRole ||
+        oldWidget.selectedStatus != widget.selectedStatus) {
+      _fetchUsers();
+    }
+  }
+
+  Future<void> refreshData() async {
+    await _fetchUsers();
   }
 
   Future<void> _fetchUsers() async {
@@ -42,9 +168,9 @@ class _UserListContentState extends State<UserListContent> {
 
     try {
       final users = await _userApi.getUsers(
-        search: _searchController.text,
-        roleName: _selectedRole,
-        accountStatus: _selectedStatus,
+        search: widget.searchQuery,
+        roleName: widget.selectedRole,
+        accountStatus: widget.selectedStatus,
       );
       if (mounted) {
         setState(() {
@@ -62,17 +188,38 @@ class _UserListContentState extends State<UserListContent> {
     }
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  // --- Sorting ---
+  List<UserListItem> _sortUsers(List<UserListItem> users) {
+    List<UserListItem> sortedList = List.from(users);
+    sortedList.sort((a, b) {
+      int comparison;
+      if (widget.sortType == SortType.alphabetical) {
+        comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      } else {
+        comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      }
+      return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
+    });
+    return sortedList;
   }
 
-  // Helper to get colors based on role
+  // --- Selection Helpers ---
+  void _toggleSelection(dynamic id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) _isSelectionMode = false;
+      } else {
+        _selectedIds.add(id);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return scheme.error;
+        return Colors.purple;
       case 'teacher':
         return scheme.tertiary;
       case 'student':
@@ -82,175 +229,404 @@ class _UserListContentState extends State<UserListContent> {
     }
   }
 
+  String _getLocalizedRole(String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role.toLowerCase()) {
+      case 'student':
+        return l10n.student;
+      case 'teacher':
+        return l10n.teacher;
+      case 'admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
+  String _getLocalizedStatus(String status) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (status.toLowerCase()) {
+      case 'active':
+        return l10n.active;
+      case 'inactive':
+        return l10n.inactive;
+      default:
+        return status;
+    }
+  }
+
+  // --- Bulk Delete Logic ---
+  void _deleteSelectedUsers() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.deleteUsers),
+        content: Text(
+          AppLocalizations.of(
+            context,
+          )!.deleteUsersConfirmation(_selectedIds.length),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(AppLocalizations.of(context)!.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(AppLocalizations.of(context)!.delete),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.deletingUsers)),
+      );
+
+      try {
+        await _userApi.deleteUsers(_selectedIds.toList());
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.deletedUsersSuccess(_selectedIds.length),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        _selectedIds.clear();
+        _isSelectionMode = false;
+        refreshData();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.errorDeletingUsers(e.toString().replaceAll('Exception: ', '')),
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  // --- Header Widgets ---
+  Widget _buildSelectionHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                AppLocalizations.of(
+                  context,
+                )!.selectedCount(_selectedIds.length),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ],
+          ),
+          IconButton(
+            icon: Icon(Icons.delete_outline, color: colorScheme.error),
+            onPressed: _deleteSelectedUsers,
+            tooltip: AppLocalizations.of(context)!.deleteSelectedUsers,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSortHeader(
+    BuildContext context,
+    int count,
+    TextTheme textTheme,
+    ColorScheme colorScheme,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            height: 40,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                AppLocalizations.of(context)!.resultsCount(count),
+                style: textTheme.titleMedium,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Column(
-      children: [
-        // --- 1. M3 Search Bar ---
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: SearchBar(
-            controller: _searchController,
-            hintText: 'Search users...',
-            padding: const WidgetStatePropertyAll<EdgeInsets>(
-              EdgeInsets.symmetric(horizontal: 16.0),
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Text(
+          'Error: $_errorMessage',
+          style: TextStyle(color: colorScheme.error),
+        ),
+      );
+    }
+
+    if (_users.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: colorScheme.outline),
+            const SizedBox(height: 16),
+            Text(
+              AppLocalizations.of(context)!.noUsersFound,
+              style: textTheme.titleMedium,
             ),
-            leading: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
-            trailing: [
-              if (_searchController.text.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    _fetchUsers();
-                  },
-                ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _fetchUsers,
-                tooltip: 'Refresh',
-              ),
-              IconButton(
-                icon: Icon(Icons.arrow_forward, color: colorScheme.primary),
-                onPressed: _fetchUsers,
-              ),
-            ],
-            onSubmitted: (_) => _fetchUsers(),
-            elevation: const WidgetStatePropertyAll(1.0),
-          ),
+          ],
         ),
+      );
+    }
 
-        // --- 2. M3 Filter Chips ---
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              Text('Filters:', style: textTheme.labelLarge),
-              const SizedBox(width: 12),
+    final sortedUsers = _sortUsers(_users);
 
-              // Role Filters
-              ..._roles.map((role) {
-                final isSelected = _selectedRole == role;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: FilterChip(
-                    label: Text(role),
-                    selected: isSelected,
-                    onSelected: (bool selected) {
-                      setState(() {
-                        _selectedRole = selected ? role : null;
-                      });
-                      _fetchUsers();
-                    },
+    return PopScope(
+      canPop: !_isSelectionMode,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isSelectionMode) {
+          _exitSelectionMode();
+        }
+      },
+      child: SelectionGestureWrapper(
+        isDesktop: _isDesktop,
+        selectedIds: _selectedIds.map((e) => e.toString()).toSet(),
+        itemKeys: _gridItemKeys.map((k, v) => MapEntry(k.toString(), v)),
+        onLongPressStart: (details) {
+          if ((widget.currentUser?.roleName.toLowerCase() ?? '') != 'admin')
+            return;
+
+          if (_isDesktop) {
+            _initialSelection = Set.from(_selectedIds);
+            setState(() {
+              _dragStart = details.localPosition;
+              _dragEnd = details.localPosition;
+            });
+            _handleBoxSelect(details.localPosition);
+          } else {
+            _dragProcessedIds.clear();
+            _handleDragSelect(details.globalPosition);
+          }
+        },
+        onLongPressMoveUpdate: (details) {
+          if ((widget.currentUser?.roleName.toLowerCase() ?? '') != 'admin')
+            return;
+
+          if (_isDesktop) {
+            _handleBoxSelect(details.localPosition);
+          } else {
+            _handleDragSelect(details.globalPosition);
+          }
+        },
+        onLongPressEnd: (_) => _endDrag(),
+        child: Stack(
+          children: [
+            CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _isSelectionMode
+                          ? _buildSelectionHeader(context)
+                          : _buildSortHeader(
+                              context,
+                              sortedUsers.length,
+                              textTheme,
+                              colorScheme,
+                            ),
+                    ),
                   ),
-                );
-              }),
-
-              SizedBox(
-                height: 24,
-                child: VerticalDivider(
-                  width: 24,
-                  color: colorScheme.outlineVariant,
+                ),
+                widget.viewLayout == ViewLayout.grid
+                    ? _buildSliverGrid(sortedUsers)
+                    : _buildSliverList(sortedUsers, colorScheme, textTheme),
+              ],
+            ),
+            if (_isDesktop && _dragStart != null && _dragEnd != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: SelectionBoxPainter(
+                      start: _dragStart,
+                      end: _dragEnd,
+                    ),
+                  ),
                 ),
               ),
-
-              // Status Filters
-              ..._statuses.map((status) {
-                final isSelected = _selectedStatus == status;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: FilterChip(
-                    label: Text(status.toUpperCase()),
-                    selected: isSelected,
-                    onSelected: (bool selected) {
-                      setState(() {
-                        _selectedStatus = selected ? status : null;
-                      });
-                      _fetchUsers();
-                    },
-                    avatar: isSelected
-                        ? const Icon(Icons.check, size: 18)
-                        : null,
-                  ),
-                );
-              }),
-            ],
-          ),
+          ],
         ),
-        const SizedBox(height: 10),
-        const Divider(height: 1),
-        const SizedBox(height: 10),
+      ),
+    );
+  }
 
-        // --- 3. User List ---
-        Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _errorMessage != null
-              ? Center(
-                  child: Text(
-                    'Error: $_errorMessage',
-                    style: TextStyle(color: colorScheme.error),
-                  ),
-                )
-              : _users.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildSliverGrid(List<UserListItem> users) {
+    final bool isAdmin = widget.currentUser?.roleName.toLowerCase() == 'admin';
+
+    final userMaps = users
+        .map(
+          (u) => {
+            'id': u.id,
+            'name': u.name,
+            'email': u.email,
+            'role': u.roleName,
+            'status': u.accountStatus,
+          },
+        )
+        .toList();
+
+    return UserGridLayout(
+      users: userMaps,
+      selectedIds: _selectedIds,
+      onToggleSelection: isAdmin ? _toggleSelection : (id) {},
+      itemKeys: _gridItemKeys,
+      onTap: (id) {
+        if (isAdmin && _isSelectionMode) {
+          _toggleSelection(id);
+        } else {
+          _navigateToDetail(
+            id.toString(),
+            users.firstWhere((u) => u.id == id).name,
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildSliverList(
+    List<UserListItem> users,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final bool isAdmin = widget.currentUser?.roleName.toLowerCase() == 'admin';
+
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final user = users[index];
+          final isSelected = _selectedIds.contains(user.id);
+
+          final GlobalKey key = _gridItemKeys.putIfAbsent(
+            user.id,
+            () => GlobalKey(),
+          );
+
+          return Container(
+            key: key,
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Card(
+              clipBehavior: Clip.hardEdge,
+              elevation: 0,
+              color: isSelected
+                  ? colorScheme.primaryContainer.withOpacity(0.3)
+                  : null,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.outlineVariant,
+                  width: isSelected ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  if (isAdmin && _isSelectionMode) {
+                    _toggleSelection(user.id);
+                  } else {
+                    _navigateToDetail(user.id.toString(), user.name);
+                  }
+                },
+                onLongPress: isAdmin ? () => _toggleSelection(user.id) : null,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
                     children: [
-                      Icon(
-                        Icons.search_off,
-                        size: 64,
-                        color: colorScheme.outline,
-                      ),
-                      const SizedBox(height: 16),
-                      Text('No users found', style: textTheme.titleMedium),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: EdgeInsets.zero,
-                  itemCount: _users.length,
-                  itemBuilder: (context, index) {
-                    final user = _users[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      clipBehavior: Clip.hardEdge,
-                      elevation:
-                          0, // Reduced elevation for cleaner look inside the main card
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: colorScheme.outlineVariant),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        // --- Added Hover Effects ---
-                        hoverColor: colorScheme.primary.withOpacity(0.08),
-                        splashColor: colorScheme.primary.withOpacity(0.12),
-                        mouseCursor: SystemMouseCursors.click,
-
-                        leading: CircleAvatar(
-                          backgroundColor: _getRoleColor(
-                            user.roleName,
-                            colorScheme,
-                          ),
-                          foregroundColor: colorScheme.onPrimary,
-                          child: Text(
-                            user.name.isNotEmpty
-                                ? user.name[0].toUpperCase()
-                                : '?',
-                          ),
+                      CircleAvatar(
+                        backgroundColor: _getRoleColor(
+                          user.roleName,
+                          colorScheme,
                         ),
-                        title: Text(
-                          user.name,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Column(
+                        foregroundColor: colorScheme.onPrimary,
+                        child: isSelected
+                            ? const Icon(Icons.check)
+                            : Text(
+                                user.name.isNotEmpty
+                                    ? user.name[0].toUpperCase()
+                                    : '?',
+                              ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              user.name,
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 4),
                             Text(user.email, style: textTheme.bodyMedium),
                             const SizedBox(height: 6),
@@ -267,7 +643,7 @@ class _UserListContentState extends State<UserListContent> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    user.roleName,
+                                    _getLocalizedRole(user.roleName),
                                     style: textTheme.labelSmall?.copyWith(
                                       color: colorScheme.onSurfaceVariant,
                                     ),
@@ -275,7 +651,9 @@ class _UserListContentState extends State<UserListContent> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  user.accountStatus.toUpperCase(),
+                                  _getLocalizedStatus(
+                                    user.accountStatus,
+                                  ).toUpperCase(),
                                   style: textTheme.labelSmall?.copyWith(
                                     color: user.accountStatus == 'active'
                                         ? Colors.green
@@ -287,29 +665,39 @@ class _UserListContentState extends State<UserListContent> {
                             ),
                           ],
                         ),
-                        isThreeLine: true,
-                        onTap: () async {
-                          // Use await to wait for the detail page to close
-                          final bool? deleted = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => UserDetailPage(
-                                userId: user.id,
-                                userName: user.name,
-                              ),
-                            ),
-                          );
-                          // If the result is true (meaning user was deleted), refresh the list
-                          if (deleted == true) {
-                            _fetchUsers();
-                          }
-                        },
                       ),
-                    );
-                  },
+                      if (!_isSelectionMode)
+                        Icon(
+                          Icons.chevron_right,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                    ],
+                  ),
                 ),
-        ),
-      ],
+              ),
+            ),
+          );
+        }, childCount: users.length),
+      ),
     );
   }
+
+  Future<void> _navigateToDetail(String userId, String userName) async {
+    final bool isSelf = widget.currentUser?.id == userId;
+    final bool? deleted = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserDetailPage(
+          userId: userId,
+          userName: userName,
+          viewerRole: widget.currentUser?.roleName ?? 'Student',
+          isSelfProfile: isSelf,
+        ),
+      ),
+    );
+    if (deleted == true) {
+      _fetchUsers();
+    }
+  }
 }
+

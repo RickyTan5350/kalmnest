@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/feedback_api.dart';
-import 'package:flutter_codelab/models/models.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart' as create_fb;
-import 'package:flutter_codelab/admin_teacher/widgets/feedback/edit_feedback.dart' as edit_fb;
-import 'package:flutter_codelab/student/widgets/feedback/student_view_feedback_page.dart';
+import 'package:code_play/api/feedback_api.dart';
+import 'package:code_play/models/models.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart' as create_fb;
+import 'package:code_play/admin_teacher/widgets/feedback/edit_feedback.dart' as edit_fb;
+import 'package:code_play/student/widgets/feedback/student_view_feedback_page.dart';
 class FeedbackPage extends StatefulWidget {
   final String? authToken;
   final UserDetails? currentUser;
@@ -508,3 +508,4 @@ class _FeedbackCard extends StatelessWidget {
     );
   }
 }
+

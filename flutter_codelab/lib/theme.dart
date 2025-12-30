@@ -351,7 +351,7 @@ class MaterialTheme {
         css: const Color(0xFF4CAF50), // Green
         javascript: const Color(0xFFFFEB3B), // Yellow
         php: const Color(0xFF2196F3), // Blue
-        backend: const Color(0xFF673AB7), // DeepPurple
+
         other: const Color(0xFF9E9E9E), // Grey
       ),
     ],
@@ -402,7 +402,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
     required this.css,
     required this.javascript,
     required this.php,
-    required this.backend,
+
     required this.other,
   });
 
@@ -410,7 +410,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
   final Color css;
   final Color javascript;
   final Color php;
-  final Color backend;
+
   final Color other;
 
   @override
@@ -419,7 +419,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
     Color? css,
     Color? javascript,
     Color? php,
-    Color? backend,
+
     Color? other,
   }) {
     return BrandColors(
@@ -427,7 +427,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
       css: css ?? this.css,
       javascript: javascript ?? this.javascript,
       php: php ?? this.php,
-      backend: backend ?? this.backend,
+
       other: other ?? this.other,
     );
   }
@@ -442,7 +442,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
       css: Color.lerp(css, other.css, t)!,
       javascript: Color.lerp(javascript, other.javascript, t)!,
       php: Color.lerp(php, other.php, t)!,
-      backend: Color.lerp(backend, other.backend, t)!,
+
       other: Color.lerp(this.other, other.other, t)!,
     );
   }

@@ -1,0 +1,8 @@
+<html>
+<body>
+    <h1> Halaman PHP saya yang pertama </h1>
+    <?php
+        echo "Selamat Datang";
+    ?>
+</body>
+</html>

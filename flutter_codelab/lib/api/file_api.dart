@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 class FileApi {
   // Use 10.0.2.2 for Android Emulator, or your machine's IP for real devices.
@@ -13,8 +13,9 @@ class FileApi {
   /// 1. IMMEDIATE UPLOAD: Uploads a single file and returns ID + URL
   /// Returns a Map: {'id': 'uuid...', 'url': 'http://.../storage/img.png'}
   Future<Map<String, dynamic>?> uploadSingleAttachment(
-    PlatformFile file,
-  ) async {
+    PlatformFile file, {
+    String? folderName,
+  }) async {
     if (file.path == null) return null;
 
     var uri = Uri.parse('$_baseUrl/files/upload-independent');
@@ -22,6 +23,10 @@ class FileApi {
 
     // --- FIX: Tell the server we want JSON, not HTML ---
     request.headers['Accept'] = 'application/json';
+
+    if (folderName != null && folderName.trim().isNotEmpty) {
+      request.fields['folder'] = folderName.trim();
+    }
 
     request.files.add(
       await http.MultipartFile.fromPath(
@@ -107,3 +112,4 @@ class FileApi {
     }
   }
 }
+

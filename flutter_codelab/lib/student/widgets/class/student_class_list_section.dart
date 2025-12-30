@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/student/widgets/class/student_view_class_page.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/student/widgets/class/student_view_class_page.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/enums/sort_enums.dart';
 
 // Class List Item Widget for Student (no edit/delete buttons)
 class _ClassListItem extends StatefulWidget {
@@ -26,8 +28,6 @@ class _ClassListItem extends StatefulWidget {
 }
 
 class _ClassListItemState extends State<_ClassListItem> {
-  bool _isHovered = false;
-
   // Get teacher name from item
   String get _teacherName {
     if (widget.item['teacher'] != null) {
@@ -52,147 +52,102 @@ class _ClassListItemState extends State<_ClassListItem> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        MouseRegion(
-          onEnter: (_) => setState(() => _isHovered = true),
-          onExit: (_) => setState(() => _isHovered = false),
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              decoration: BoxDecoration(
-                color: _isHovered
-                    ? widget.colorScheme.surfaceContainerHighest.withOpacity(0.6)
-                    : widget.colorScheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _isHovered
-                      ? widget.colorScheme.primary.withOpacity(0.3)
-                      : Colors.transparent,
-                  width: 1,
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      elevation: 1.0,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: widget.colorScheme.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: widget.colorScheme.primaryContainer,
+                  foregroundColor: widget.colorScheme.onPrimaryContainer,
+                  child: Icon(Icons.school_rounded, size: 20),
                 ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Class Icon
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: widget.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.school_rounded,
-                      size: 20,
-                      color: widget.colorScheme.onPrimaryContainer,
-                    ),
+                title: Text(
+                  widget.item['class_name'] ?? 'No Name',
+                  style: widget.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: widget.colorScheme.onSurface,
                   ),
-                  const SizedBox(width: 12),
-                  // Class Information
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Class Name
-                        Text(
-                          widget.item['class_name'] ?? 'No Name',
-                          style: widget.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: widget.colorScheme.onSurface,
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.item['description'] != null &&
+                        widget.item['description'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, bottom: 4),
+                        child: Text(
+                          widget.item['description'],
+                          style: widget.textTheme.bodySmall?.copyWith(
+                            color: widget.colorScheme.onSurfaceVariant,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
-                        // Class Description (single line)
-                        if (widget.item['description'] != null &&
-                            widget.item['description'].toString().isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              widget.item['description'],
-                              style: widget.textTheme.bodySmall?.copyWith(
-                                color: widget.colorScheme.onSurfaceVariant,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        const SizedBox(height: 4),
-                        // Teacher and Student Info Row
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 4,
+                      ),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Assigned Teacher
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.person_outline,
-                                  size: 14,
-                                  color: widget.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _hasTeacher ? _teacherName : 'No teacher',
-                                  style: widget.textTheme.labelSmall?.copyWith(
-                                    color: _hasTeacher
-                                        ? widget.colorScheme.onSurfaceVariant
-                                        : widget.colorScheme.error,
-                                    fontStyle: _hasTeacher
-                                        ? FontStyle.normal
-                                        : FontStyle.italic,
-                                  ),
-                                ),
-                              ],
+                            Icon(
+                              Icons.person_outline,
+                              size: 14,
+                              color: widget.colorScheme.primary,
                             ),
-                            // Enrolled Students
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.people_outline,
-                                  size: 14,
-                                  color: widget.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _studentCount > 0
-                                      ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                                      : 'No students',
-                                  style: widget.textTheme.labelSmall?.copyWith(
-                                    color: _studentCount > 0
-                                        ? widget.colorScheme.onSurfaceVariant
-                                        : widget.colorScheme.error,
-                                    fontStyle: _studentCount > 0
-                                        ? FontStyle.normal
-                                        : FontStyle.italic,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(width: 4),
+                            Text(
+                              _hasTeacher ? _teacherName : 'No teacher',
+                              style: widget.textTheme.labelSmall?.copyWith(
+                                color: _hasTeacher
+                                    ? widget.colorScheme.onSurfaceVariant
+                                    : widget.colorScheme.error,
+                                fontStyle: _hasTeacher
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.people_outline,
+                              size: 14,
+                              color: widget.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _studentCount > 0
+                                  ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
+                                  : 'No students',
+                              style: widget.textTheme.labelSmall?.copyWith(
+                                color: _studentCount > 0
+                                    ? widget.colorScheme.onSurfaceVariant
+                                    : widget.colorScheme.error,
+                                fontStyle: _studentCount > 0
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                onTap: widget.onTap,
               ),
-            ),
-          ),
-        ),
-        if (!widget.isLast)
-          Divider(
-            height: 1,
-            color: widget.colorScheme.outlineVariant.withOpacity(0.4),
-          ),
-      ],
     );
   }
 }
@@ -237,13 +192,17 @@ class _ClassGridCard extends StatelessWidget {
       elevation: 1.0,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: colorScheme.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(ClassConstants.defaultPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -256,7 +215,9 @@ class _ClassGridCard extends StatelessWidget {
                     height: 48,
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(
+                        ClassConstants.cardBorderRadius * 0.67,
+                      ),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -308,8 +269,9 @@ class _ClassGridCard extends StatelessWidget {
                         color: _hasTeacher
                             ? colorScheme.onSurfaceVariant
                             : colorScheme.error,
-                        fontStyle:
-                            _hasTeacher ? FontStyle.normal : FontStyle.italic,
+                        fontStyle: _hasTeacher
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -335,8 +297,9 @@ class _ClassGridCard extends StatelessWidget {
                         color: _studentCount > 0
                             ? colorScheme.onSurfaceVariant
                             : colorScheme.error,
-                        fontStyle:
-                            _studentCount > 0 ? FontStyle.normal : FontStyle.italic,
+                        fontStyle: _studentCount > 0
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -356,13 +319,16 @@ class ClassListSection extends StatefulWidget {
   final String roleName;
   final String searchQuery;
   final ViewLayout layout;
-
+  final SortType sortType;
+  final SortOrder sortOrder;
   const ClassListSection({
     super.key,
     required this.roleName,
     this.searchQuery = '',
     required this.layout,
-  });
+    this.sortType = SortType.alphabetical,
+    this.sortOrder = SortOrder.ascending,
+  }) : super(key: key);
 
   @override
   State<ClassListSection> createState() => _ClassListSectionState();
@@ -382,9 +348,18 @@ class _ClassListSectionState extends State<ClassListSection> {
   @override
   void didUpdateWidget(ClassListSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.searchQuery != widget.searchQuery ||
-        oldWidget.layout != widget.layout) {
-      loadClasses();
+    if (        oldWidget.searchQuery != widget.searchQuery ||
+        oldWidget.layout != widget.layout ||
+        oldWidget.sortType != widget.sortType ||
+        oldWidget.sortOrder != widget.sortOrder) {
+      if (oldWidget.searchQuery != widget.searchQuery ||
+          oldWidget.sortType != widget.sortType ||
+          oldWidget.sortOrder != widget.sortOrder) {
+        // Just re-filter and sort, don't reload from API
+        _applyFiltersAndSort();
+      } else {
+        loadClasses();
+      }
     }
   }
 
@@ -407,6 +382,9 @@ class _ClassListSectionState extends State<ClassListSection> {
         }).toList();
       }
 
+      // Apply sorting
+      filtered = _sortClasses(filtered);
+
       if (mounted) {
         setState(() {
           classList = allClasses;
@@ -427,6 +405,63 @@ class _ClassListSectionState extends State<ClassListSection> {
     }
   }
 
+  void _applyFiltersAndSort() {
+    // Apply search filter
+    List<dynamic> filtered = classList;
+    if (widget.searchQuery.isNotEmpty) {
+      final query = widget.searchQuery.toLowerCase();
+      filtered = classList.where((classItem) {
+        final className = (classItem['class_name'] ?? '')
+            .toString()
+            .toLowerCase();
+        return className.contains(query);
+      }).toList();
+    }
+
+    // Apply sorting
+    filtered = _sortClasses(filtered);
+
+    if (mounted) {
+      setState(() {
+        filteredList = filtered;
+      });
+    }
+  }
+
+  List<dynamic> _sortClasses(List<dynamic> classes) {
+    final sortedList = List<dynamic>.from(classes);
+    sortedList.sort((a, b) {
+      int result = 0;
+      switch (widget.sortType) {
+        case SortType.alphabetical:
+          final nameA = (a['class_name'] ?? '').toString().toLowerCase();
+          final nameB = (b['class_name'] ?? '').toString().toLowerCase();
+          result = nameA.compareTo(nameB);
+          break;
+        case SortType.updated:
+          final dateA = a['created_at'] != null
+              ? DateTime.tryParse(a['created_at'].toString()) ?? DateTime(0)
+              : DateTime(0);
+          final dateB = b['created_at'] != null
+              ? DateTime.tryParse(b['created_at'].toString()) ?? DateTime(0)
+              : DateTime(0);
+          result = dateA.compareTo(dateB);
+          break;
+        case SortType.unlocked:
+          // Classes don't have unlocked status, fallback to alphabetical
+          final nameA = (a['class_name'] ?? '').toString().toLowerCase();
+          final nameB = (b['class_name'] ?? '').toString().toLowerCase();
+          result = nameA.compareTo(nameB);
+          break;
+      }
+      if (widget.sortOrder == SortOrder.descending) {
+        result = -result;
+      }
+      return result;
+    });
+    return sortedList;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -437,112 +472,162 @@ class _ClassListSectionState extends State<ClassListSection> {
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : filteredList.isEmpty
-              ? Center(
+          ? Center(
+              child: Padding(
+                padding: EdgeInsets.all(ClassConstants.defaultPadding * 2),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.school_outlined,
+                      size: 64,
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    ),
+                    SizedBox(height: ClassConstants.defaultPadding),
+                    Text(
+                      'No classes found',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    SizedBox(height: ClassConstants.defaultPadding * 0.5),
+                    Text(
+                      widget.searchQuery.isNotEmpty
+                          ? 'Try adjusting your search query'
+                          : 'You are not enrolled in any classes yet',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : widget.layout == ViewLayout.grid
+          ? CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.school_outlined,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No classes found',
-                          style: textTheme.titleMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            height: 40,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "${filteredList.length} Results",
+                                style: textTheme.titleMedium,
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.searchQuery.isNotEmpty
-                              ? 'Try adjusting your search query'
-                              : 'You are not enrolled in any classes yet',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                )
-              : widget.layout == ViewLayout.grid
-                  ? CustomScrollView(
-                      slivers: [
-                        SliverPadding(
-                          padding: const EdgeInsets.all(8.0),
-                          sliver: SliverGrid(
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
+                  sliver: SliverGrid(
                             gridDelegate:
                                 const SliverGridDelegateWithMaxCrossAxisExtent(
                               maxCrossAxisExtent: 250.0,
-                              mainAxisSpacing: 12.0,
-                              crossAxisSpacing: 12.0,
+                              mainAxisSpacing: ClassConstants.defaultPadding * 0.75,
+                              crossAxisSpacing: ClassConstants.defaultPadding * 0.75,
                               childAspectRatio: 0.85,
                             ),
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final item = filteredList[index];
-                                return _ClassGridCard(
-                                  item: item,
-                                  roleName: widget.roleName,
-                                  colorScheme: colorScheme,
-                                  textTheme: textTheme,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ClassDetailPage(
-                                          classId: item['class_id'].toString(),
-                                          roleName: widget.roleName,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                              childCount: filteredList.length,
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final item = filteredList[index];
+                      return _ClassGridCard(
+                        item: item,
+                        roleName: widget.roleName,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ClassDetailPage(
+                                classId: item['class_id'].toString(),
+                                roleName: widget.roleName,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }, childCount: filteredList.length),
+                  ),
+                ),
+              ],
+            )
+          : CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            height: 40,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "${filteredList.length} Results",
+                                style: textTheme.titleMedium,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    )
-                  : CustomScrollView(
-                      slivers: [
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final item = filteredList[index];
-                                final isLast = index == filteredList.length - 1;
-                                return _ClassListItem(
-                                  item: item,
-                                  isLast: isLast,
-                                  roleName: widget.roleName,
-                                  colorScheme: colorScheme,
-                                  textTheme: textTheme,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ClassDetailPage(
-                                          classId: item['class_id'].toString(),
-                                          roleName: widget.roleName,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                              childCount: filteredList.length,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ClassConstants.defaultPadding * 0.5,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final item = filteredList[index];
+                      final isLast = index == filteredList.length - 1;
+                      return _ClassListItem(
+                        item: item,
+                        isLast: isLast,
+                        roleName: widget.roleName,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ClassDetailPage(
+                                classId: item['class_id'].toString(),
+                                roleName: widget.roleName,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }, childCount: filteredList.length),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
