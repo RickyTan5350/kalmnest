@@ -154,8 +154,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
     final textTheme = Theme.of(context).textTheme;
 
     // Get class color for AppBar
-    final classColor = ClassCustomization.getColorByName(_classData?['color']);
-    final color = classColor?.color ?? cs.primary;
+    final color = cs.primary;
 
     final quizName = _quiz?['level_name'] ?? widget.quizName ?? 'Quiz';
     final levelType = _quiz?['level_type'];

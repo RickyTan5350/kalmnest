@@ -58,10 +58,8 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
       );
     }
 
-    final classColor = ClassCustomization.getColorByName(classData?['color']);
-    final classIcon = ClassCustomization.getIconByName(classData?['icon']);
-    final color = classColor?.color ?? Theme.of(context).colorScheme.primary;
-    final icon = classIcon?.icon ?? Icons.school_rounded;
+    final color = Theme.of(context).colorScheme.primary;
+    final icon = Icons.school_rounded;
 
     return Scaffold(
       appBar: AppBar(

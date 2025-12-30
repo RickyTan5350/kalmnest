@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_class_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/admin_edit_class_page.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 import 'package:flutter_codelab/constants/class_constants.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
 import 'package:flutter_codelab/enums/sort_enums.dart';
 
-// Class List Item Widget for Teacher/Student (no edit/delete buttons)
+// Class List Item Widget
 class _ClassListItem extends StatefulWidget {
   final dynamic item;
   final bool isLast;
@@ -14,6 +14,8 @@ class _ClassListItem extends StatefulWidget {
   final ColorScheme colorScheme;
   final TextTheme textTheme;
   final VoidCallback onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _ClassListItem({
     required this.item,
@@ -22,6 +24,8 @@ class _ClassListItem extends StatefulWidget {
     required this.colorScheme,
     required this.textTheme,
     required this.onTap,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -64,25 +68,10 @@ class _ClassListItemState extends State<_ClassListItem> {
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: ListTile(
-                leading: Builder(
-                  builder: (context) {
-                    final classColor = ClassCustomization.getColorByName(
-                      widget.item['color'],
-                    );
-                    final classIcon = ClassCustomization.getIconByName(
-                      widget.item['icon'],
-                    );
-                    return CircleAvatar(
-                      backgroundColor: classColor?.color.withOpacity(0.1) ??
-                          widget.colorScheme.primaryContainer,
-                      foregroundColor: classColor?.color ??
-                          widget.colorScheme.onPrimaryContainer,
-                      child: Icon(
-                        classIcon?.icon ?? Icons.school_rounded,
-                        size: 20,
-                      ),
-                    );
-                  },
+                leading: CircleAvatar(
+                  backgroundColor: widget.colorScheme.primaryContainer,
+                  foregroundColor: widget.colorScheme.onPrimaryContainer,
+                  child: Icon(Icons.school_rounded, size: 20),
                 ),
                 title: Text(
                   widget.item['class_name'] ?? 'No Name',
@@ -162,6 +151,43 @@ class _ClassListItemState extends State<_ClassListItem> {
                     ),
                   ],
                 ),
+                trailing: widget.roleName.toLowerCase() == 'admin'
+                    ? PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: widget.colorScheme.onSurfaceVariant,
+                        ),
+                        onSelected: (value) {
+                          if (value == 'edit' && widget.onEdit != null) {
+                            widget.onEdit!();
+                          } else if (value == 'delete' && widget.onDelete != null) {
+                            widget.onDelete!();
+                          }
+                        },
+                        itemBuilder: (BuildContext context) => [
+                          PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, size: 20, color: widget.colorScheme.onSurface),
+                                const SizedBox(width: 8),
+                                const Text('Edit'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline, size: 20, color: widget.colorScheme.error),
+                                const SizedBox(width: 8),
+                                Text('Delete', style: TextStyle(color: widget.colorScheme.error)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : null,
                 onTap: widget.onTap,
               ),
     );
@@ -175,6 +201,8 @@ class _ClassGridCard extends StatelessWidget {
   final ColorScheme colorScheme;
   final TextTheme textTheme;
   final VoidCallback onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _ClassGridCard({
     required this.item,
@@ -182,6 +210,8 @@ class _ClassGridCard extends StatelessWidget {
     required this.colorScheme,
     required this.textTheme,
     required this.onTap,
+    this.onEdit,
+    this.onDelete,
   });
 
   String get _teacherName {
@@ -230,24 +260,15 @@ class _ClassGridCard extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                    color: (() {
-                      final classColor = ClassCustomization.getColorByName(item['color']);
-                      return classColor?.color.withOpacity(0.2) ?? colorScheme.primaryContainer;
-                    })(),
-                    borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
+                    ),
+                    child: Icon(
+                      Icons.school_rounded,
+                      size: 24,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
                   ),
-                  child: Icon(
-                    (() {
-                      final classIcon = ClassCustomization.getIconByName(item['icon']);
-                      return classIcon?.icon ?? Icons.school_rounded;
-                    })(),
-                    size: 24,
-                    color: (() {
-                      final classColor = ClassCustomization.getColorByName(item['color']);
-                      return classColor?.color ?? colorScheme.onPrimaryContainer;
-                    })(),
-                  ),
-                ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -260,6 +281,43 @@ class _ClassGridCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (roleName.toLowerCase() == 'admin')
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert,
+                        color: colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                      onSelected: (value) {
+                        if (value == 'edit' && onEdit != null) {
+                          onEdit!();
+                        } else if (value == 'delete' && onDelete != null) {
+                          onDelete!();
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem<String>(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, size: 20, color: colorScheme.onSurface),
+                              const SizedBox(width: 8),
+                              const Text('Edit'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
+                              const SizedBox(width: 8),
+                              Text('Delete', style: TextStyle(color: colorScheme.error)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
               SizedBox(height: ClassConstants.defaultPadding * 0.75),
@@ -344,9 +402,8 @@ class ClassListSection extends StatefulWidget {
   final ViewLayout layout;
   final SortType sortType;
   final SortOrder sortOrder;
-  final String? iconFilter;
-  final String? colorFilter;
-
+  final VoidCallback? onReload;
+  
   const ClassListSection({
     Key? key,
     required this.roleName,
@@ -354,8 +411,7 @@ class ClassListSection extends StatefulWidget {
     required this.layout,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
-    this.iconFilter,
-    this.colorFilter,
+    this.onReload,
   }) : super(key: key);
 
   @override
@@ -376,17 +432,13 @@ class _ClassListSectionState extends State<ClassListSection> {
   @override
   void didUpdateWidget(ClassListSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.searchQuery != widget.searchQuery ||
+    if (        oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
-        oldWidget.sortOrder != widget.sortOrder ||
-        oldWidget.iconFilter != widget.iconFilter ||
-        oldWidget.colorFilter != widget.colorFilter) {
+        oldWidget.sortOrder != widget.sortOrder) {
       if (oldWidget.searchQuery != widget.searchQuery ||
           oldWidget.sortType != widget.sortType ||
-          oldWidget.sortOrder != widget.sortOrder ||
-          oldWidget.iconFilter != widget.iconFilter ||
-          oldWidget.colorFilter != widget.colorFilter) {
+          oldWidget.sortOrder != widget.sortOrder) {
         // Just re-filter and sort, don't reload from API
         _applyFiltersAndSort();
       } else {
@@ -411,22 +463,6 @@ class _ClassListSectionState extends State<ClassListSection> {
               .toString()
               .toLowerCase();
           return className.contains(query);
-        }).toList();
-      }
-
-      // Apply icon filter
-      if (widget.iconFilter != null) {
-        filtered = filtered.where((classItem) {
-          final classIcon = classItem['icon']?.toString();
-          return classIcon == widget.iconFilter;
-        }).toList();
-      }
-
-      // Apply color filter
-      if (widget.colorFilter != null) {
-        filtered = filtered.where((classItem) {
-          final classColor = classItem['color']?.toString();
-          return classColor == widget.colorFilter;
         }).toList();
       }
 
@@ -463,22 +499,6 @@ class _ClassListSectionState extends State<ClassListSection> {
             .toString()
             .toLowerCase();
         return className.contains(query);
-      }).toList();
-    }
-
-    // Apply icon filter
-    if (widget.iconFilter != null) {
-      filtered = filtered.where((classItem) {
-        final classIcon = classItem['icon']?.toString();
-        return classIcon == widget.iconFilter;
-      }).toList();
-    }
-
-    // Apply color filter
-    if (widget.colorFilter != null) {
-      filtered = filtered.where((classItem) {
-        final classColor = classItem['color']?.toString();
-        return classColor == widget.colorFilter;
       }).toList();
     }
 
@@ -526,6 +546,89 @@ class _ClassListSectionState extends State<ClassListSection> {
     return sortedList;
   }
 
+  void _onEditClass(dynamic item) async {
+    final updated = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => EditClassPage(classData: item)),
+    );
+
+    if (updated == true) {
+      loadClasses(); // refresh after edit
+      // Trigger reload callback if provided
+      if (widget.onReload != null) {
+        widget.onReload!();
+      }
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Class updated successfully'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  void _onDeleteClass(dynamic item) async {
+    final confirm = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Class'),
+          content: Text(
+            'Are you sure you want to delete "${item['class_name']}"? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      final success = await ClassApi.deleteClass(item['class_id'].toString());
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Class deleted successfully'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          loadClasses(); // refresh after delete
+          // Trigger reload callback if provided
+          if (widget.onReload != null) {
+            widget.onReload!();
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Failed to delete class'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -571,6 +674,33 @@ class _ClassListSectionState extends State<ClassListSection> {
           : widget.layout == ViewLayout.grid
           ? CustomScrollView(
               slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            height: 40,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "${filteredList.length} Results",
+                                style: textTheme.titleMedium,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 SliverPadding(
                   padding: const EdgeInsets.all(8.0),
                   sliver: SliverGrid(
@@ -599,6 +729,12 @@ class _ClassListSectionState extends State<ClassListSection> {
                             ),
                           );
                         },
+                        onEdit: widget.roleName.toLowerCase() == 'admin'
+                            ? () => _onEditClass(item)
+                            : null,
+                        onDelete: widget.roleName.toLowerCase() == 'admin'
+                            ? () => _onDeleteClass(item)
+                            : null,
                       );
                     }, childCount: filteredList.length),
                   ),
@@ -607,6 +743,33 @@ class _ClassListSectionState extends State<ClassListSection> {
             )
           : CustomScrollView(
               slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            height: 40,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "${filteredList.length} Results",
+                                style: textTheme.titleMedium,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   sliver: SliverList(
@@ -630,6 +793,12 @@ class _ClassListSectionState extends State<ClassListSection> {
                             ),
                           );
                         },
+                        onEdit: widget.roleName.toLowerCase() == 'admin'
+                            ? () => _onEditClass(item)
+                            : null,
+                        onDelete: widget.roleName.toLowerCase() == 'admin'
+                            ? () => _onDeleteClass(item)
+                            : null,
                       );
                     }, childCount: filteredList.length),
                   ),
