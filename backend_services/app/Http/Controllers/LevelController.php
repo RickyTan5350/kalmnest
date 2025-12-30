@@ -267,24 +267,35 @@ class LevelController extends Controller
             return response()->json(['error' => 'Level type not found'], 404);
         }
 
-        $levelTypes = ["html", "css", "js", "php"];
-        $finalLevelData = [];
-        $finalWinData = [];
+        // Priority 1: Use data passed from Flutter (from 'temp' saving)
+        if ($request->has('level_data') && $request->has('win_condition')) {
+            $dataToBePassed = [
+                'level_name' => $request->level_name,
+                'level_type_id' => $levelType->level_type_id,
+                'level_data' => $request->level_data,
+                'win_condition' => $request->win_condition,
+            ];
+        } else {
+            // Priority 2: Fall back to existing public folder logic
+            $levelTypes = ["html", "css", "js", "php"];
+            $finalLevelData = [];
+            $finalWinData = [];
 
-        foreach ($levelTypes as $level_type) {
-            $levelDataPath = public_path("unity_build/StreamingAssets/$level_type/levelData.json");
-            $winDataPath = public_path("unity_build/StreamingAssets/$level_type/winData.json");
+            foreach ($levelTypes as $level_type) {
+                $levelDataPath = public_path("unity_build/StreamingAssets/$level_type/levelData.json");
+                $winDataPath = public_path("unity_build/StreamingAssets/$level_type/winData.json");
 
-            $finalLevelData[$level_type] = file_exists($levelDataPath) ? file_get_contents($levelDataPath) : null;
-            $finalWinData[$level_type] = file_exists($winDataPath) ? file_get_contents($winDataPath) : null;
+                $finalLevelData[$level_type] = file_exists($levelDataPath) ? file_get_contents($levelDataPath) : null;
+                $finalWinData[$level_type] = file_exists($winDataPath) ? file_get_contents($winDataPath) : null;
+            }
+
+            $dataToBePassed = [
+                'level_name' => $request->level_name,
+                'level_type_id' => $levelType->level_type_id,
+                'level_data' => json_encode($finalLevelData, JSON_PRETTY_PRINT),
+                'win_condition' => json_encode($finalWinData, JSON_PRETTY_PRINT),
+            ];
         }
-
-        $dataToBePassed = [
-            'level_name' => $request->level_name,
-            'level_type_id' => $levelType->level_type_id,
-            'level_data' => json_encode($finalLevelData, JSON_PRETTY_PRINT),
-            'win_condition' => json_encode($finalWinData, JSON_PRETTY_PRINT),
-        ];
 
         $level->update($dataToBePassed);
         $level->refresh(); // ensures we return the updated model

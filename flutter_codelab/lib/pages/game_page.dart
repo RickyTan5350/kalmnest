@@ -5,6 +5,11 @@ import 'package:flutter_codelab/api/game_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/edit_game_page.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
+import 'package:flutter_codelab/models/achievement_data.dart';
+import 'package:flutter_codelab/constants/view_layout.dart' show ViewLayout;
+import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
+import 'package:flutter_codelab/services/layout_preferences.dart'; // Layout Persistence
+import 'package:flutter_codelab/constants/achievement_constants.dart';
 
 // Global key to access GamePage state for refreshing from main.dart
 final GlobalKey<_GamePageState> gamePageGlobalKey = GlobalKey<_GamePageState>();
@@ -26,6 +31,12 @@ class _GamePageState extends State<GamePage> {
   final List<String> _visibilityFilters = ['All', 'Public', 'Private'];
   String _selectedVisibility = 'All';
 
+  ViewLayout _viewLayout = ViewLayout.grid;
+  SortType _sortType = SortType.alphabetical;
+  SortOrder _sortOrder = SortOrder.ascending;
+
+  final TextEditingController _searchController = TextEditingController();
+
   List<LevelModel> _levels = [];
   List<LevelModel> _filteredLevels = [];
   Set<String> _completedLevelIds = {};
@@ -35,7 +46,23 @@ class _GamePageState extends State<GamePage> {
   @override
   void initState() {
     super.initState();
+    _loadLayoutPreference();
     fetchLevels(forceRefresh: true);
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    if (mounted) {
+      setState(() {
+        _viewLayout = savedLayout;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -56,9 +83,12 @@ class _GamePageState extends State<GamePage> {
     setState(() => _loading = true);
     
     // Fetch levels and completed achievements in parallel
+    final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
     final results = await Future.wait([
       GameAPI.fetchLevels(topic: topic, forceRefresh: forceRefresh),
-      AchievementApi().fetchMyUnlockedAchievements(),
+      isStudent 
+          ? AchievementApi().fetchMyUnlockedAchievements()
+          : Future.value(<AchievementData>[]),
     ]);
 
     final levels = results[0] as List<LevelModel>;
@@ -78,7 +108,7 @@ class _GamePageState extends State<GamePage> {
   }
 
   List<LevelModel> _applyFilters(List<LevelModel> levels) {
-    var filtered = levels;
+    var filtered = List<LevelModel>.from(levels);
     
     // Apply visibility filter (only for teachers/admins)
     final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
@@ -100,6 +130,18 @@ class _GamePageState extends State<GamePage> {
           )
           .toList();
     }
+
+    // Apply Sorting
+    filtered.sort((a, b) {
+      int result = 0;
+      if (_sortType == SortType.alphabetical) {
+        result = (a.levelName ?? '').compareTo(b.levelName ?? '');
+      } else if (_sortType == SortType.updated) {
+        // Fallback to ID sorting as proxy for date if date is not in model
+        result = (a.levelId ?? '').compareTo(b.levelId ?? '');
+      }
+      return _sortOrder == SortOrder.ascending ? result : -result;
+    });
     
     return filtered;
   }
@@ -162,13 +204,159 @@ class _GamePageState extends State<GamePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       "Game Levels",
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(color: colors.onSurface),
                     ),
+                    Row(
+                      children: [
+                        if (!isStudent)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ElevatedButton(
+                              onPressed: _onAddLevelPressed,
+                              child: const Text('Add Level'),
+                            ),
+                          ),
+                        SegmentedButton<ViewLayout>(
+                          segments: const <ButtonSegment<ViewLayout>>[
+                            ButtonSegment<ViewLayout>(
+                              value: ViewLayout.list,
+                              icon: Icon(Icons.menu),
+                            ),
+                            ButtonSegment<ViewLayout>(
+                              value: ViewLayout.grid,
+                              icon: Icon(Icons.grid_view),
+                            ),
+                          ],
+                          selected: <ViewLayout>{_viewLayout},
+                          onSelectionChanged: (Set<ViewLayout> newSelection) {
+                            final newLayout = newSelection.first;
+                            setState(() => _viewLayout = newLayout);
+                            LayoutPreferences.saveLayout('global_layout', newLayout);
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // SEARCH BAR
+                SizedBox(
+                  width: 300,
+                  child: SearchBar(
+                    controller: _searchController,
+                    hintText: "Search levels...",
+                    onChanged: _onSearchChanged,
+                    onSubmitted: _onSearchChanged,
+                    trailing: <Widget>[
+                      if (_searchQuery.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          },
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.search),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // TOPIC FILTER CHIPS & SORT
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 10.0,
+                        runSpacing: 10.0,
+                        children: _topics.map((topic) {
+                          final bool selected = _selectedTopic == topic;
+                          return FilterChip(
+                            label: Text(
+                              topic,
+                              style: TextStyle(color: colors.onSurface),
+                            ),
+                            selected: selected,
+                            onSelected: (bool selected) {
+                              if (selected) {
+                                setState(() => _selectedTopic = topic);
+                                fetchLevels(topic: topic, forceRefresh: true);
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
                     const SizedBox(width: 8),
+                    // Filter Icon (Sort)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.filter_list),
+                      tooltip: 'Sort Options',
+                      onSelected: (value) {
+                        setState(() {
+                          if (value == 'Name') {
+                            _sortType = SortType.alphabetical;
+                          } else if (value == 'Date') {
+                            _sortType = SortType.updated;
+                          } else if (value == 'Ascending') {
+                            _sortOrder = SortOrder.ascending;
+                          } else if (value == 'Descending') {
+                            _sortOrder = SortOrder.descending;
+                          }
+                          _filteredLevels = _applyFilters(_levels);
+                        });
+                      },
+                      itemBuilder: (BuildContext context) =>
+                          <PopupMenuEntry<String>>[
+                            const PopupMenuItem<String>(
+                              enabled: false,
+                              child: Text(
+                                'Sort By',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Name',
+                              checked: _sortType == SortType.alphabetical,
+                              child: const Text('Name'),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Date',
+                              checked: _sortType == SortType.updated,
+                              child: const Text('Date'),
+                            ),
+                            const PopupMenuDivider(),
+                            const PopupMenuItem<String>(
+                              enabled: false,
+                              child: Text(
+                                'Order',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Ascending',
+                              checked: _sortOrder == SortOrder.ascending,
+                              child: const Text('Ascending'),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Descending',
+                              checked: _sortOrder == SortOrder.descending,
+                              child: const Text('Descending'),
+                            ),
+                          ],
+                    ),
+                    const SizedBox(width: 4),
+                    // Refresh Icon
                     IconButton(
                       icon: const Icon(Icons.refresh),
                       tooltip: 'Refresh Levels',
@@ -176,49 +364,7 @@ class _GamePageState extends State<GamePage> {
                         fetchLevels(topic: _selectedTopic, forceRefresh: true);
                       },
                     ),
-                    const Spacer(),
-                    if (!isStudent)
-                      ElevatedButton(
-                        onPressed: _onAddLevelPressed,
-                        child: const Text('Add Level'),
-                      ),
                   ],
-                ),
-                const SizedBox(height: 16),
-
-                // SEARCH BAR
-                TextField(
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: 'Search levels...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                  ),
-                  onChanged: _onSearchChanged,
-                ),
-                const SizedBox(height: 16),
-
-                // TOPIC FILTER CHIPS
-                Wrap(
-                  spacing: 10.0,
-                  runSpacing: 10.0,
-                  children: _topics.map((topic) {
-                    final bool selected = _selectedTopic == topic;
-                    return FilterChip(
-                      label: Text(
-                        topic,
-                        style: TextStyle(color: colors.onSurface),
-                      ),
-                      selected: selected,
-                      onSelected: (bool selected) {
-                        if (selected) {
-                          setState(() => _selectedTopic = topic);
-                          fetchLevels(topic: topic, forceRefresh: true);
-                        }
-                      },
-                    );
-                  }).toList(),
                 ),
                 
                 // VISIBILITY FILTER (Only for teachers/admins)
@@ -265,212 +411,267 @@ class _GamePageState extends State<GamePage> {
                 ],
                 const SizedBox(height: 16),
 
-                // LEVEL LIST
+                // LEVEL LIST/GRID
                 Expanded(
                   child: _loading
                       ? const Center(child: CircularProgressIndicator())
                       : _filteredLevels.isEmpty
                       ? const Center(child: Text('No levels found'))
-                      : ListView.builder(
-                          itemCount: _filteredLevels.length,
-                          itemBuilder: (context, index) {
-                            final level = _filteredLevels[index];
-                            final levelTypeName =
-                                level.levelTypeName ?? 'Unknown';
-                            final isCompleted = _completedLevelIds.contains(level.levelId);
-
-                            return ListTile(
-                              tileColor: isCompleted ? Colors.green.withOpacity(0.1) : null,
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      level.levelName ?? '',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Status badge
-                                  if (level.isPrivate ?? false)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.orange),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.lock,
-                                            size: 14,
-                                            color: Colors.orange,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'Private',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.orange,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  else
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.blue),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.public,
-                                            size: 14,
-                                            color: Colors.blue,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'Public',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.blue,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              subtitle: Text(levelTypeName),
-                              leading: Icon(
-                                isCompleted ? Icons.check_circle : Icons.videogame_asset,
-                                color: isCompleted ? Colors.green : null,
-                              ),
-                              trailing: isStudent
-                                  ? null
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.edit,
-                                            color: Colors.blue,
-                                          ),
-                                          onPressed: () async {
-                                            final currentLevel =
-                                                await GameAPI.fetchLevelById(
-                                                  level.levelId!,
-                                                );
-                                            if (currentLevel == null) {
-                                              showSnackBar(
-                                                context,
-                                                "Failed to load level data",
-                                                Colors.red,
-                                              );
-                                              return;
-                                            }
-
-                                            await showEditGamePage(
-                                              context: context,
-                                              showSnackBar: showSnackBar,
-                                              level: currentLevel,
-                                              userRole: widget.userRole,
-                                            );
-
-                                            fetchLevels(topic: _selectedTopic, forceRefresh: true);
-                                          },
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.delete,
-                                            color: Colors.red,
-                                          ),
-                                          onPressed: () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                title: const Text(
-                                                  'Delete Level',
-                                                ),
-                                                content: const Text(
-                                                  'Are you sure you want to delete this level?',
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    child: const Text('Cancel'),
-                                                    onPressed: () =>
-                                                        Navigator.pop(context),
-                                                  ),
-                                                  TextButton(
-                                                    child: const Text(
-                                                      'Delete',
-                                                      style: TextStyle(
-                                                        color: Colors.red,
-                                                      ),
-                                                    ),
-                                                    onPressed: () {
-                                                      Navigator.pop(context);
-                                                      deleteLevel(
-                                                        level.levelId!,
-                                                      );
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                onTap: isStudent
-                                  ? () async {
-                                      final currentLevel =
-                                          await GameAPI.fetchLevelById(
-                                            level.levelId!,
-                                          );
-                                      
-                                      if (currentLevel == null) {
-                                        showSnackBar(
-                                          context,
-                                          "Failed to load level data",
-                                          Colors.red,
-                                        );
-                                        return;
-                                      }
-
-                                      if (!context.mounted) return;
-
-                                      showPlayGamePage(
-                                        context: context,
-                                        showSnackBar: showSnackBar,
-                                        level: currentLevel,
-                                        userRole: widget.userRole,
-                                      );
-                                    }
-                                  : null,
-                            );
-                          },
-                        ),
+                      : _viewLayout == ViewLayout.list
+                          ? _buildLevelList()
+                          : _buildLevelGrid(),
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLevelList() {
+    return ListView.builder(
+      itemCount: _filteredLevels.length,
+      itemBuilder: (context, index) {
+        final level = _filteredLevels[index];
+        return _buildLevelTile(level);
+      },
+    );
+  }
+
+  Widget _buildLevelTile(LevelModel level) {
+    final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
+    final isCompleted = _completedLevelIds.contains(level.levelId);
+    final levelTypeName = level.levelTypeName ?? 'Unknown';
+    final iconValue = levelTypeName.toLowerCase();
+    final icon = getAchievementIcon(iconValue);
+    final color = getAchievementColor(context, iconValue);
+
+    return ListTile(
+      tileColor: isCompleted ? Colors.green.withOpacity(0.1) : null,
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              level.levelName ?? '',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _buildVisibilityBadge(level),
+        ],
+      ),
+      subtitle: Text(levelTypeName),
+      leading: CircleAvatar(
+        backgroundColor: color.withOpacity(0.1),
+        foregroundColor: color,
+        child: Icon(icon),
+      ),
+      trailing: isStudent ? null : _buildAdminActions(level, iconSize: 20),
+      onTap: isStudent ? () => _onLevelTap(level) : null,
+    );
+  }
+
+  Widget _buildLevelGrid() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(8.0),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 250.0,
+        mainAxisSpacing: 12.0,
+        crossAxisSpacing: 12.0,
+        childAspectRatio: 0.9,
+      ),
+      itemCount: _filteredLevels.length,
+      itemBuilder: (context, index) {
+        final level = _filteredLevels[index];
+        return _buildGameCard(level);
+      },
+    );
+  }
+
+  Widget _buildGameCard(LevelModel level) {
+    final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
+    final isCompleted = _completedLevelIds.contains(level.levelId);
+    final levelTypeName = level.levelTypeName ?? 'Unknown';
+    final iconValue = levelTypeName.toLowerCase();
+    final icon = getAchievementIcon(iconValue);
+    final color = getAchievementColor(context, iconValue);
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      elevation: 1.0,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: InkWell(
+        onTap: isStudent ? () => _onLevelTap(level) : null,
+        child: Stack(
+          children: [
+            // Background Icon
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: Icon(icon, color: color.withOpacity(0.1)),
+                ),
+              ),
+            ),
+            // Foreground Content
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12.0, 12.0, 8.0, 8.0),
+                  child: Row(
+                    children: [
+                      Icon(icon, color: color, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          level.levelName ?? 'Unnamed',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isCompleted)
+                        const Icon(Icons.check_circle,
+                            color: Colors.green, size: 18),
+                    ],
+                  ),
+                ),
+                // Body
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: Text(
+                      levelTypeName,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 4,
+                    ),
+                  ),
+                ),
+                // Footer
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildVisibilityBadge(level),
+                      if (!isStudent) _buildAdminActions(level, iconSize: 20),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVisibilityBadge(LevelModel level) {
+    final isPrivate = level.isPrivate ?? false;
+    final color = isPrivate ? Colors.orange : Colors.blue;
+    final icon = isPrivate ? Icons.lock : Icons.public;
+    final label = isPrivate ? 'Private' : 'Public';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminActions(LevelModel level, {double iconSize = 20}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: Icon(Icons.edit, color: Colors.blue, size: iconSize),
+          onPressed: () async {
+            final currentLevel = await GameAPI.fetchLevelById(level.levelId!);
+            if (currentLevel == null) {
+              showSnackBar(context, "Failed to load level data", Colors.red);
+              return;
+            }
+            await showEditGamePage(
+              context: context,
+              showSnackBar: showSnackBar,
+              level: currentLevel,
+              userRole: widget.userRole,
+            );
+            fetchLevels(topic: _selectedTopic, forceRefresh: true);
+          },
+          constraints: const BoxConstraints(),
+          padding: EdgeInsets.zero,
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: Icon(Icons.delete, color: Colors.red, size: iconSize),
+          onPressed: () => _confirmDelete(level),
+          constraints: const BoxConstraints(),
+          padding: EdgeInsets.zero,
+        ),
+      ],
+    );
+  }
+
+  void _confirmDelete(LevelModel level) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Level'),
+        content: const Text('Are you sure you want to delete this level?'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            onPressed: () {
+              Navigator.pop(context);
+              deleteLevel(level.levelId!);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onLevelTap(LevelModel level) async {
+    final currentLevel = await GameAPI.fetchLevelById(level.levelId!);
+    if (currentLevel == null) {
+      showSnackBar(context, "Failed to load level data", Colors.red);
+      return;
+    }
+    if (!context.mounted) return;
+    showPlayGamePage(
+      context: context,
+      showSnackBar: showSnackBar,
+      level: currentLevel,
+      userRole: widget.userRole,
     );
   }
 }
