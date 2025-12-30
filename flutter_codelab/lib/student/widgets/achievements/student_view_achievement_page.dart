@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:code_play/api/achievement_api.dart';
 import 'package:code_play/models/achievement_data.dart';
@@ -74,8 +75,19 @@ class StudentViewAchievementsPageState
     });
 
     try {
-      final cloudData = await api.fetchMyUnlockedAchievements();
-      await localStore.saveUnlockedAchievements(widget.userId, cloudData);
+      // 1. Attempt to connect to the server for a longer time (30 seconds)
+      final cloudData = await api.fetchMyUnlockedAchievements().timeout(
+        const Duration(seconds: 30),
+      );
+
+      // 2. Only cache OBTAINED (unlocked) achievements locally
+      final obtainedAchievements = cloudData
+          .where((a) => a.isUnlocked)
+          .toList();
+      await localStore.saveUnlockedAchievements(
+        widget.userId,
+        obtainedAchievements,
+      );
 
       if (mounted) {
         setState(() {
@@ -88,11 +100,13 @@ class StudentViewAchievementsPageState
         setState(() {
           _isOffline = true;
         });
-        widget.showSnackBar(
-          context,
-          "Unable to sync. Showing cached data.",
-          Colors.orange.shade800,
-        );
+
+        String errorMessage = "Unable to sync. Showing cached data.";
+        if (e is TimeoutException) {
+          errorMessage = "Connection timed out. Showing cached achievements.";
+        }
+
+        widget.showSnackBar(context, errorMessage, Colors.orange.shade800);
       }
     }
   }
@@ -456,4 +470,3 @@ class StudentViewAchievementsPageState
     );
   }
 }
-
