@@ -657,6 +657,48 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         if (element.localName == 'img') {
           final src = element.attributes['src'];
           debugPrint("DEBUG Admin HtmlWidget: Rendering Image with src: $src");
+          if (src != null) {
+            // 1. Check for direct local assets
+            if (src.startsWith('assets/')) {
+              return Image.asset(src);
+            }
+
+            // 2. Check for Storage URLs that should be local assets
+            if (src.contains('/storage/notes/')) {
+              try {
+                final uri = Uri.parse(src);
+                final filename = uri.pathSegments.last;
+                // Remove timestamp prefix
+                final cleanFilename = filename.replaceFirst(
+                  RegExp(r'^\d+_'),
+                  '',
+                );
+
+                // Map topic to folder
+                String folder = 'JS'; // Default or based on topic
+                if (_currentTopic == 'HTML') folder = 'HTML';
+                if (_currentTopic == 'CSS') folder = 'CSS';
+                if (_currentTopic == 'PHP') folder = 'PHP';
+
+                final assetPath = 'assets/www/pictures/$folder/$cleanFilename';
+                debugPrint(
+                  "DEBUG Admin HtmlWidget: Trying local asset: $assetPath",
+                );
+
+                return Image.asset(
+                  assetPath,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint(
+                      "DEBUG Admin HtmlWidget: Local asset failed ($assetPath), falling back to network",
+                    );
+                    return Image.network(src);
+                  },
+                );
+              } catch (e) {
+                debugPrint("DEBUG Admin HtmlWidget: Error parsing URL: $e");
+              }
+            }
+          }
         }
 
         if (element.attributes.containsKey('data-scroll-index')) {
