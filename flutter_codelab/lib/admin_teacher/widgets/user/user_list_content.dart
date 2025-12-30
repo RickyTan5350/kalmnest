@@ -6,6 +6,7 @@ import 'package:code_play/enums/sort_enums.dart';
 import 'package:code_play/admin_teacher/widgets/user/user_grid_layout.dart';
 import 'package:flutter/services.dart';
 import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:code_play/widgets/user_avatar.dart';
 import 'package:code_play/admin_teacher/services/selection_box_painter.dart';
 import 'user_detail_page.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
@@ -219,11 +220,11 @@ class UserListContentState extends State<UserListContent> {
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return Colors.purple;
+        return Colors.pink;
       case 'teacher':
-        return scheme.tertiary;
+        return Colors.orange;
       case 'student':
-        return scheme.primary;
+        return Colors.blue;
       default:
         return scheme.secondary;
     }
@@ -572,24 +573,83 @@ class UserListContentState extends State<UserListContent> {
 
           return Container(
             key: key,
-            margin: const EdgeInsets.only(bottom: 12),
             child: Card(
-              clipBehavior: Clip.hardEdge,
-              elevation: 0,
-              color: isSelected
-                  ? colorScheme.primaryContainer.withOpacity(0.3)
-                  : null,
+              margin: const EdgeInsets.symmetric(vertical: 4.0),
+              elevation: 1.0,
               shape: RoundedRectangleBorder(
                 side: BorderSide(
                   color: isSelected
                       ? colorScheme.primary
-                      : colorScheme.outlineVariant,
-                  width: isSelected ? 2 : 1,
+                      : colorScheme.outline.withOpacity(0.3),
+                  width: isSelected ? 2.0 : 1.0,
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.0),
               ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+              child: ListTile(
+                leading: UserAvatar(
+                  name: user.name,
+                  role: user.roleName,
+                  size: 42,
+                  fontSize: 16,
+                ),
+                title: Text(
+                  user.name,
+                  style: const TextStyle(fontWeight: FontWeight.normal),
+                ),
+                subtitle: Text(user.email, style: textTheme.bodySmall),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getRoleColor(
+                          user.roleName,
+                          colorScheme,
+                        ).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _getLocalizedRole(user.roleName),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: _getRoleColor(user.roleName, colorScheme),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            (user.accountStatus == 'active'
+                                    ? Colors.green
+                                    : colorScheme.error)
+                                .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _getLocalizedStatus(user.accountStatus).toUpperCase(),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: user.accountStatus == 'active'
+                              ? Colors.green
+                              : colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 onTap: () {
                   if (isAdmin && _isSelectionMode) {
                     _toggleSelection(user.id);
@@ -598,82 +658,6 @@ class UserListContentState extends State<UserListContent> {
                   }
                 },
                 onLongPress: isAdmin ? () => _toggleSelection(user.id) : null,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: _getRoleColor(
-                          user.roleName,
-                          colorScheme,
-                        ),
-                        foregroundColor: colorScheme.onPrimary,
-                        child: isSelected
-                            ? const Icon(Icons.check)
-                            : Text(
-                                user.name.isNotEmpty
-                                    ? user.name[0].toUpperCase()
-                                    : '?',
-                              ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user.name,
-                              style: textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(user.email, style: textTheme.bodyMedium),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    _getLocalizedRole(user.roleName),
-                                    style: textTheme.labelSmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _getLocalizedStatus(
-                                    user.accountStatus,
-                                  ).toUpperCase(),
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: user.accountStatus == 'active'
-                                        ? Colors.green
-                                        : colorScheme.error,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (!_isSelectionMode)
-                        Icon(
-                          Icons.chevron_right,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                    ],
-                  ),
-                ),
               ),
             ),
           );
@@ -700,4 +684,3 @@ class UserListContentState extends State<UserListContent> {
     }
   }
 }
-
