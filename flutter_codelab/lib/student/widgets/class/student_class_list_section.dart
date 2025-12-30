@@ -63,91 +63,91 @@ class _ClassListItemState extends State<_ClassListItem> {
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: widget.colorScheme.primaryContainer,
-                  foregroundColor: widget.colorScheme.onPrimaryContainer,
-                  child: Icon(Icons.school_rounded, size: 20),
-                ),
-                title: Text(
-                  widget.item['class_name'] ?? 'No Name',
-                  style: widget.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: widget.colorScheme.onSurface,
+        leading: CircleAvatar(
+          backgroundColor: widget.colorScheme.primaryContainer,
+          foregroundColor: widget.colorScheme.onPrimaryContainer,
+          child: Icon(Icons.school_rounded, size: 20),
+        ),
+        title: Text(
+          widget.item['class_name'] ?? 'No Name',
+          style: widget.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: widget.colorScheme.onSurface,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.item['description'] != null &&
+                widget.item['description'].toString().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: Text(
+                  widget.item['description'],
+                  style: widget.textTheme.bodySmall?.copyWith(
+                    color: widget.colorScheme.onSurfaceVariant,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (widget.item['description'] != null &&
-                        widget.item['description'].toString().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, bottom: 4),
-                        child: Text(
-                          widget.item['description'],
-                          style: widget.textTheme.bodySmall?.copyWith(
-                            color: widget.colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    Icon(
+                      Icons.person_outline,
+                      size: 14,
+                      color: widget.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _hasTeacher ? _teacherName : 'No teacher',
+                      style: widget.textTheme.labelSmall?.copyWith(
+                        color: _hasTeacher
+                            ? widget.colorScheme.onSurfaceVariant
+                            : widget.colorScheme.error,
+                        fontStyle: _hasTeacher
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 4,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.person_outline,
-                              size: 14,
-                              color: widget.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _hasTeacher ? _teacherName : 'No teacher',
-                              style: widget.textTheme.labelSmall?.copyWith(
-                                color: _hasTeacher
-                                    ? widget.colorScheme.onSurfaceVariant
-                                    : widget.colorScheme.error,
-                                fontStyle: _hasTeacher
-                                    ? FontStyle.normal
-                                    : FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 14,
-                              color: widget.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _studentCount > 0
-                                  ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                                  : 'No students',
-                              style: widget.textTheme.labelSmall?.copyWith(
-                                color: _studentCount > 0
-                                    ? widget.colorScheme.onSurfaceVariant
-                                    : widget.colorScheme.error,
-                                fontStyle: _studentCount > 0
-                                    ? FontStyle.normal
-                                    : FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                     ),
                   ],
                 ),
-                onTap: widget.onTap,
-              ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 14,
+                      color: widget.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _studentCount > 0
+                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
+                          : 'No students',
+                      style: widget.textTheme.labelSmall?.copyWith(
+                        color: _studentCount > 0
+                            ? widget.colorScheme.onSurfaceVariant
+                            : widget.colorScheme.error,
+                        fontStyle: _studentCount > 0
+                            ? FontStyle.normal
+                            : FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+        onTap: widget.onTap,
+      ),
     );
   }
 }
@@ -328,7 +328,7 @@ class ClassListSection extends StatefulWidget {
     required this.layout,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
-  }) : super(key: key);
+  });
 
   @override
   State<ClassListSection> createState() => _ClassListSectionState();
@@ -348,7 +348,7 @@ class _ClassListSectionState extends State<ClassListSection> {
   @override
   void didUpdateWidget(ClassListSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (        oldWidget.searchQuery != widget.searchQuery ||
+    if (oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortOrder != widget.sortOrder) {
@@ -511,7 +511,10 @@ class _ClassListSectionState extends State<ClassListSection> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
@@ -537,13 +540,14 @@ class _ClassListSectionState extends State<ClassListSection> {
                 SliverPadding(
                   padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
                   sliver: SliverGrid(
-                            gridDelegate:
-                                const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 250.0,
-                              mainAxisSpacing: ClassConstants.defaultPadding * 0.75,
-                              crossAxisSpacing: ClassConstants.defaultPadding * 0.75,
-                              childAspectRatio: 0.85,
-                            ),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 250.0,
+                          mainAxisSpacing: ClassConstants.defaultPadding * 0.75,
+                          crossAxisSpacing:
+                              ClassConstants.defaultPadding * 0.75,
+                          childAspectRatio: 0.85,
+                        ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final item = filteredList[index];
                       return _ClassGridCard(
@@ -574,7 +578,10 @@ class _ClassListSectionState extends State<ClassListSection> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
