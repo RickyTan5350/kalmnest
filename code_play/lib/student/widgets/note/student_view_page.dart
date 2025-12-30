@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/note_api.dart';
-import 'package:flutter_codelab/models/note_brief.dart';
-import 'package:flutter_codelab/student/widgets/note/student_note_detail.dart';
-import 'package:flutter_codelab/theme.dart'; // BrandColors
+import 'package:code_play/api/note_api.dart';
+import 'package:code_play/models/note_brief.dart';
+import 'package:code_play/student/widgets/note/student_note_detail.dart';
+import 'package:code_play/theme.dart'; // BrandColors
 
 // --- NEW IMPORTS: Reuse Admin/Teacher Widgets for consistency ---
-import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart';
-import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:code_play/admin_teacher/widgets/note/note_grid_layout.dart';
+import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
 
-import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
+import 'package:code_play/enums/sort_enums.dart'; // Shared Enums
 // Removed unused ViewLayout import
 
 // Removing local SortType and SortOrder enums
@@ -87,7 +87,7 @@ class StudentViewPageState extends State<StudentViewPage> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor:colorScheme.surfaceContainerLow,
+      backgroundColor: colorScheme.surfaceContainerLow,
       body: FutureBuilder<List<NoteBrief>>(
         future: _noteFuture,
         builder: (context, snapshot) {
@@ -247,10 +247,7 @@ class StudentViewPageState extends State<StudentViewPage> {
         topicColor = brandColors?.php ?? Colors.indigo;
         topicIcon = Icons.php;
         break;
-      case 'backend':
-        topicColor = brandColors?.backend ?? Colors.purple;
-        topicIcon = Icons.storage;
-        break;
+
       default:
         topicColor = brandColors?.other ?? Colors.grey;
         topicIcon = Icons.folder_open;
@@ -259,8 +256,8 @@ class StudentViewPageState extends State<StudentViewPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
+
       // Match Admin color (Surface) instead of SurfaceContainer
-     
       shape: RoundedRectangleBorder(
         side: BorderSide(color: colorScheme.outlineVariant, width: 1),
         borderRadius: BorderRadius.circular(12.0),
@@ -404,3 +401,4 @@ class HighlightText extends StatelessWidget {
     );
   }
 }
+

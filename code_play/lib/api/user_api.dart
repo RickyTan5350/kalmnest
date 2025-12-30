@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/models/user_data.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
+import 'package:http_parser/http_parser.dart';
 
 class UserApi {
   // Existing base URL for single user operations
@@ -40,11 +41,14 @@ class UserApi {
   Future<void> createUser(UserData data) async {
     final url = Uri.parse(_baseUrl);
 
+    http.Response? response;
+
     try {
-      final response = await http.post(
+      response = await http.post(
         url,
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json',
           // Only add Host header if NOT using a custom URL
           if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
         },
@@ -57,12 +61,12 @@ class UserApi {
       } else if (response.statusCode == validationErrorCode) {
         final errorBody = jsonDecode(response.body);
         final errors = errorBody['errors'] as Map<String, dynamic>;
-        String errorMessage = errors.values.expand((list) => list).join('\n');
-        throw Exception('$validationErrorCode: $errorMessage');
+        throw ValidationException(errors);
       } else {
         throw Exception('${response.statusCode}: Failed to create user.');
       }
     } catch (e) {
+      if (e is ValidationException) rethrow;
       throw Exception('Network Error: $e');
     }
   }
@@ -105,6 +109,7 @@ class UserApi {
         throw Exception('Failed to load users: ${response.statusCode}');
       }
     } catch (e) {
+      if (e.toString().contains('Failed to load users:')) rethrow;
       throw Exception('Network Error or Auth Error: $e');
     }
   }
@@ -128,6 +133,7 @@ class UserApi {
         throw Exception('Failed to load user details: ${response.statusCode}');
       }
     } catch (e) {
+      if (e.toString().contains('Failed to load user details:')) rethrow;
       throw Exception('Network Error or Auth Error: $e');
     }
   }
@@ -145,8 +151,10 @@ class UserApi {
       );
     }
 
+    http.Response? response;
+
     try {
-      final response = await http.delete(
+      response = await http.delete(
         url,
         // 2. Add the Authorization Header, using the dynamic $token variable
         headers: <String, String>{
@@ -175,6 +183,12 @@ class UserApi {
         );
       }
     } catch (e) {
+      if (e.toString().contains('403:') ||
+          e.toString().contains('404:') ||
+          (response != null &&
+              e.toString().startsWith('Exception: ${response.statusCode}'))) {
+        rethrow;
+      }
       // If a FormatException (from trying to decode HTML) happens here,
       // it means the server returned an unexpected format for a non-403 error.
       if (e is FormatException) {
@@ -182,7 +196,7 @@ class UserApi {
           'Network Error: Server returned an unexpected response format.',
         );
       }
-      rethrow;
+      throw Exception('Network Error: $e');
     }
   }
 
@@ -200,11 +214,14 @@ class UserApi {
       );
     }
 
+    http.Response? response;
+
     try {
-      final response = await http.put(
+      response = await http.put(
         url,
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json',
           'Authorization': 'Bearer $token',
           // Only add Host header if NOT using a custom URL
           if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
@@ -218,16 +235,74 @@ class UserApi {
       } else if (response.statusCode == validationErrorCode) {
         final errorBody = jsonDecode(response.body);
         final errors = errorBody['errors'] as Map<String, dynamic>;
-        String errorMessage = errors.values.expand((list) => list).join('\n');
-        throw Exception('$validationErrorCode: $errorMessage');
+        throw ValidationException(errors);
       } else {
-        // Includes 403 Forbidden or 404 Not Found
         throw Exception(
           '${response.statusCode}: Failed to update user. Server message: ${response.body}',
         );
       }
     } catch (e) {
+      if (e is ValidationException ||
+          e.toString().contains('$forbiddenErrorCode:') ||
+          (response != null &&
+              e.toString().startsWith('Exception: ${response.statusCode}'))) {
+        rethrow;
+      }
       throw Exception('Network Error: $e');
     }
   }
+
+  Future<void> importUsers(String filePath, String fileName) async {
+    final token = await AuthApi.getToken();
+    final url = Uri.parse('$_listUrl/import');
+
+    var request = http.MultipartRequest('POST', url)
+      ..headers.addAll({
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
+
+    // Attach the Excel file
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file', // MUST match the 'file' key in Laravel validation
+        filePath,
+        filename: fileName,
+        contentType: MediaType(
+          'application',
+          'vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ),
+      ),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      String msg = 'Failed to import user list.';
+      try {
+        msg = jsonDecode(response.body)['message'] ?? msg;
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  // --- DELETE MULTIPLE USERS ---
+  Future<void> deleteUsers(List<dynamic> ids) async {
+    // Iterate and delete individually as per NoteApi implementation
+    for (final id in ids) {
+      await deleteUser(id.toString());
+    }
+  }
 }
+
+class ValidationException implements Exception {
+  final Map<String, dynamic> errors;
+  ValidationException(this.errors);
+
+  @override
+  String toString() {
+    return 'ValidationException: $errors';
+  }
+}
+

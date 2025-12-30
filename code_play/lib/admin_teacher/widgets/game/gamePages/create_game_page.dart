@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_codelab/api/game_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
+import 'package:code_play/api/game_api.dart';
+import 'package:code_play/constants/api_constants.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
 
 /// ===============================================================
 /// Platform helper (SAFE for Web)
@@ -19,6 +19,7 @@ void showCreateGamePage({
   required String userRole,
   required void Function(BuildContext context, String message, Color color)
   showSnackBar,
+  Function(String? levelId)? onLevelCreated,
 }) {
   showDialog(
     context: context,
@@ -26,6 +27,7 @@ void showCreateGamePage({
       showSnackBar: showSnackBar,
       parentContext: context,
       userRole: userRole,
+      onLevelCreated: onLevelCreated,
     ),
   );
 }
@@ -38,12 +40,14 @@ class CreateGamePage extends StatefulWidget {
   showSnackBar;
   final BuildContext parentContext;
   final String userRole;
+  final Function(String? levelId)? onLevelCreated;
 
   const CreateGamePage({
     super.key,
     required this.showSnackBar,
     required this.parentContext,
     required this.userRole,
+    this.onLevelCreated,
   });
 
   @override
@@ -170,6 +174,11 @@ class _CreateGamePageState extends State<CreateGamePage> {
                             } catch (e) {
                               print("Error parsing game data: $e");
                             }
+                          }
+
+                          // Call callback with level ID if provided
+                          if (widget.onLevelCreated != null && newLevelId != null) {
+                            widget.onLevelCreated!(newLevelId);
                           }
 
                           // Ask to create achievement
@@ -313,3 +322,4 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
     });
   }
 }
+

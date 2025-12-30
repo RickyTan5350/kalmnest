@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_codelab/api/note_api.dart';
+import 'package:code_play/api/note_api.dart';
 // Make sure this import path matches where you created the file above
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/constants/api_constants.dart';
 
-import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
-import 'package:flutter_codelab/student/widgets/note/pdf_service.dart';
+import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
+import 'package:code_play/student/widgets/note/pdf_service.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
 
@@ -486,3 +486,4 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     );
   }
 }
+

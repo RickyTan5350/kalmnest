@@ -100,12 +100,15 @@ class AchievementController extends Controller
 
         // Build the query
         $query = DB::table('achievements')
+            ->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
             ->selectRaw('
                 achievements.achievement_id, 
                 achievements.achievement_name, 
                 achievements.title, 
                 achievements.icon, 
-                achievements.description
+                achievements.description,
+                achievements.created_by,
+                users.name as creator_name
             ');
 
         // Add unlocked_count subquery based on role
@@ -144,7 +147,7 @@ class AchievementController extends Controller
 
     public function getAchievementStudents($id)
     {
-        if (!$this->isAdminOrTeacher()) {
+        if (!$this->isAdminOrTeacher() && !$this->isStudent()) {
             return response()->json(['message' => 'Access Denied.'], 403);
         }
 
@@ -173,6 +176,28 @@ class AchievementController extends Controller
         $students = $query->get();
 
         return response()->json($students);
+    }
+
+    public function getUserAchievements($userId)
+    {
+        if (!$this->isAdminOrTeacher() && !$this->isStudent()) {
+            return response()->json(['message' => 'Access Denied.'], 403);
+        }
+
+        // Fetch achievements unlocked by the specific user
+        $achievements = DB::table('achievements')
+            ->join('achievement_user', 'achievements.achievement_id', '=', 'achievement_user.achievement_id')
+            ->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
+            ->where('achievement_user.user_id', $userId)
+            ->select(
+                'achievements.*',
+                'achievement_user.created_at as unlocked_at',
+                'users.name as creator_name'
+            )
+            ->orderBy('achievement_user.created_at', 'desc')
+            ->get();
+
+        return response()->json($achievements);
     }
 
     public function getAchievement($id) 
@@ -403,10 +428,10 @@ class AchievementController extends Controller
         
         // FIX: We pass a second array with extra column values (the pivot 'id')
         $user->achievements()->syncWithoutDetaching([
-            $request->achievement_id => ['id' => (string) Str::uuid7()]
+            $request->input('achievement_id') => ['id' => (string) Str::uuid7()]
         ]);
 
-        Log::info("ACHIEVEMENT_UNLOCKED: Achievement {$request->achievement_id} unlocked by Student " . Auth::id());
+        Log::info("ACHIEVEMENT_UNLOCKED: Achievement {$request->input('achievement_id')} unlocked by Student " . Auth::id());
 
         return response()->json(['message' => 'Achievement Unlocked!']);
     }
@@ -417,10 +442,25 @@ class AchievementController extends Controller
             return response()->json(['message' => 'Access Denied: Only students have achievement progress.'], 403);
         }
 
-        $achievements = $request->user()
-                                ->achievements()
-                                ->orderBy('achievement_user.created_at', 'desc')
-                                ->get();
+        $userId = Auth::id();
+
+        // Fetch ALL achievements, left joining the pivot table for THIS user
+        $achievements = DB::table('achievements')
+            ->leftJoin('achievement_user', function ($join) use ($userId) {
+                $join->on('achievements.achievement_id', '=', 'achievement_user.achievement_id')
+                     ->where('achievement_user.user_id', '=', $userId);
+            })
+            ->leftJoin('users', 'achievements.created_by', '=', 'users.user_id') // Join creator
+            ->select(
+                'achievements.*',
+                'achievement_user.created_at as unlocked_at', // Will be NULL if locked
+                'users.name as creator_name'
+            )
+            // Order by: Unlocked first (descending date), then Locked (by creation date)
+            ->orderByRaw('CASE WHEN achievement_user.created_at IS NOT NULL THEN 1 ELSE 0 END DESC')
+            ->orderBy('achievement_user.created_at', 'desc')
+            ->orderBy('achievements.created_at', 'desc')
+            ->get();
 
         return response()->json($achievements);
     }

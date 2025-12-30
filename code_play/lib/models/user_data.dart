@@ -109,7 +109,7 @@ class UserDetails {
           : 'N/A',
 
       joinedDate: json['created_at'] ?? '',
-      token: json['token'] ?? '',
+      token: '',
     );
   }
 

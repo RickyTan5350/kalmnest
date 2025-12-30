@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/feedback_api.dart';
-import 'package:flutter_codelab/models/models.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'package:code_play/api/feedback_api.dart';
+import 'package:code_play/models/models.dart';
 
 class StudentViewFeedbackPage extends StatefulWidget {
   final String? authToken;
   final dynamic currentUser;
 
-  const StudentViewFeedbackPage({
-    super.key,
-    this.authToken,
-    this.currentUser,
-  });
+  const StudentViewFeedbackPage({super.key, this.authToken, this.currentUser});
 
   @override
-  State<StudentViewFeedbackPage> createState() => _StudentViewFeedbackPageState();
+  State<StudentViewFeedbackPage> createState() =>
+      _StudentViewFeedbackPageState();
 }
 
 class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
@@ -40,7 +36,8 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
       List<Map<String, dynamic>> feedbacks;
       String? studentId;
       if (widget.currentUser != null) {
-        if (widget.currentUser is Map && widget.currentUser['user_id'] != null) {
+        if (widget.currentUser is Map &&
+            widget.currentUser['user_id'] != null) {
           studentId = widget.currentUser['user_id']?.toString();
         } else if (widget.currentUser is String) {
           studentId = widget.currentUser;
@@ -65,9 +62,7 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
             studentId: fb['student_id'] ?? '',
             teacherName: fb['teacher_name'] ?? (fb['teacher'] is Map ? (fb['teacher']['name'] ?? fb['teacher']['full_name']) : null) ?? 'Unknown',
             teacherId: fb['teacher_id'] ?? '',
-            topicId: fb['topic_id'] ?? '',
-            topicName: fb['topic_name'] ?? fb['topic'] ?? 'Unknown',
-            title: fb['title'] ?? 'No Title',
+            topic: fb['topic'] ?? '',
             feedback: fb['feedback'] ?? '',
             createdAt: fb['created_at'] ?? fb['createdAt'] ?? (fb['teacher'] is Map && fb['teacher']['created_at'] != null ? fb['teacher']['created_at'] : null),
           ));
@@ -80,7 +75,11 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
         _errorMessage = e.toString();
       });
       if (mounted) {
-        _showSnackBar(context, 'Failed to load feedback: $e', Colors.red);
+        _showSnackBar(
+          context,
+          AppLocalizations.of(context)!.failedToLoadFeedback(e.toString()),
+          Colors.red,
+        );
       }
     }
   }
@@ -104,13 +103,11 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Feedback'),
+        title: Text(AppLocalizations.of(context)!.myFeedback),
         centerTitle: true,
       ),
       body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(color: colorScheme.primary),
-            )
+          ? Center(child: CircularProgressIndicator(color: colorScheme.primary))
           : _errorMessage != null
               ? Center(
                   child: Column(
@@ -173,42 +170,13 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Builder(builder: (context) {
-                                            String iconValue = feedback.topicName.toLowerCase();
-                                            if (iconValue == 'js') iconValue = 'javascript';
-                                            
-                                            final icon = getAchievementIcon(iconValue);
-                                            final color = getAchievementColor(context, iconValue);
-
-                                            return Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(icon, color: color, size: 16),
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  feedback.topicName,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: color,
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          }),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            feedback.title,
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: colorScheme.primary,
-                                            ),
-                                          ),
-                                        ],
+                                      child: Text(
+                                        feedback.topic,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: colorScheme.primary,
+                                        ),
                                       ),
                                     ),
                                     Icon(Icons.message_outlined, color: colorScheme.primary),
@@ -276,3 +244,4 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
     );
   }
 }
+

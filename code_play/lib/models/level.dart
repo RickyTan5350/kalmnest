@@ -5,6 +5,9 @@ class LevelModel {
   final String? levelTypeName;
   final String? levelData;
   final String? winCondition;
+  final bool? isPrivate;
+  final bool? isCreatedByMe;
+  final String? status;
 
   LevelModel({
     this.levelId,
@@ -13,6 +16,9 @@ class LevelModel {
     this.levelTypeName,
     this.levelData,
     this.winCondition,
+    this.isPrivate,
+    this.isCreatedByMe,
+    this.status,
   });
 
   factory LevelModel.fromJson(Map<String, dynamic> json) {
@@ -27,6 +33,9 @@ class LevelModel {
           : null,
       levelData: json['level_data'] as String?,
       winCondition: json['win_condition'] as String?,
+      isPrivate: json['is_private'] as bool?,
+      isCreatedByMe: json['is_created_by_me'] as bool?,
+      status: json['status'] as String?,
     );
   }
 

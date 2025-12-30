@@ -166,14 +166,13 @@ class ClassController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'class_name' => 'required|string|max:100|unique:classes,class_name',
+            'class_name' => 'required|string|max:100',
             'teacher_id' => 'nullable|string|exists:users,user_id',
             'description' => 'nullable|string',
             'admin_id' => 'nullable|string|exists:users,user_id',
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'string|exists:users,user_id',
         ], [
-            'class_name.unique' => 'A class with this name already exists. Please choose a different name.',
             'class_name.required' => 'Class name is required.',
             'class_name.max' => 'Class name cannot exceed 100 characters.',
         ]);
@@ -192,7 +191,7 @@ class ClassController extends Controller
             $class = ClassModel::create([
                 'class_id' => (string) Str::uuid(),
                 'class_name' => $request->class_name,
-                'teacher_id' => $request->teacher_id, // optional, can be null
+                'teacher_id' => !empty($request->teacher_id) ? $request->teacher_id : null, // optional, can be null
                 'description' => $request->description,
                 'admin_id' => $request->admin_id ?? $user->user_id, // Default to current admin
             ]);
@@ -219,6 +218,19 @@ class ClassController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Check if it's a unique constraint violation for class_name
+            if (str_contains($e->getMessage(), 'Duplicate entry') || 
+                str_contains($e->getMessage(), 'class_name') ||
+                str_contains($e->getCode(), '23000')) {
+                return response()->json([
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'class_name' => ['The classname is already exist. Please choose a different name.']
+                    ]
+                ], 422);
+            }
+            
             return response()->json([
                 'message' => 'Failed to create class',
                 'error' => $e->getMessage()
@@ -312,7 +324,6 @@ class ClassController extends Controller
                 'required',
                 'string',
                 'max:100',
-                'unique:classes,class_name,' . $id . ',class_id'
             ],
             'teacher_id' => 'sometimes|nullable|string|exists:users,user_id',
             'description' => 'nullable|string',
@@ -320,7 +331,6 @@ class ClassController extends Controller
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'string|exists:users,user_id',
         ], [
-            'class_name.unique' => 'A class with this name already exists. Please choose a different name.',
             'class_name.required' => 'Class name is required.',
             'class_name.max' => 'Class name cannot exceed 100 characters.',
         ]);
@@ -336,7 +346,10 @@ class ClassController extends Controller
             DB::beginTransaction();
 
             // Update class fields (teacher_id can now be null to remove teacher assignment)
-            $class->update($request->only(['class_name', 'teacher_id', 'description', 'admin_id']));
+            $updateData = $request->only(['class_name', 'description', 'admin_id']);
+            // Handle teacher_id separately to convert empty strings to null
+            $updateData['teacher_id'] = !empty($request->teacher_id) ? $request->teacher_id : null;
+            $class->update($updateData);
 
             // Update enrolled students if provided (can be empty array to clear all)
             if ($request->has('student_ids')) {
@@ -359,6 +372,19 @@ class ClassController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Check if it's a unique constraint violation for class_name
+            if (str_contains($e->getMessage(), 'Duplicate entry') || 
+                str_contains($e->getMessage(), 'class_name') ||
+                str_contains($e->getCode(), '23000')) {
+                return response()->json([
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'class_name' => ['The classname is already exist. Please choose a different name.']
+                    ]
+                ], 422);
+            }
+            
             return response()->json([
                 'message' => 'Failed to update class',
                 'error' => $e->getMessage()
@@ -505,7 +531,7 @@ class ClassController extends Controller
                 'message' => 'Unauthenticated.'
             ], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -556,7 +582,7 @@ class ClassController extends Controller
                 'message' => 'Unauthenticated.'
             ], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -596,6 +622,8 @@ class ClassController extends Controller
                 'levels.level_name',
                 'levels.created_at',
                 'levels.updated_at',
+                'levels.created_by',
+                'class_levels.is_private',
                 'level_types.level_type_id',
                 'level_types.level_type_name'
             )
@@ -609,6 +637,7 @@ class ClassController extends Controller
                         'level_type_id' => $quiz->level_type_id,
                         'level_type_name' => $quiz->level_type_name,
                     ] : null,
+                    'is_private' => (bool) $quiz->is_private,
                     'created_at' => $quiz->created_at,
                     'updated_at' => $quiz->updated_at,
                 ];
@@ -630,7 +659,7 @@ class ClassController extends Controller
                 'message' => 'Unauthenticated.'
             ], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -657,6 +686,7 @@ class ClassController extends Controller
 
         $validator = Validator::make($request->all(), [
             'level_id' => 'required|string|exists:levels,level_id',
+            'is_private' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -683,7 +713,7 @@ class ClassController extends Controller
                 'class_level_id' => (string) Str::uuid(),
                 'class_id' => $id,
                 'level_id' => $request->level_id,
-                'is_private' => false, // Default to false (all quizzes are public)
+                'is_private' => $request->input('is_private', false),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -711,7 +741,7 @@ class ClassController extends Controller
                 'message' => 'Unauthenticated.'
             ], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -750,6 +780,292 @@ class ClassController extends Controller
                 'message' => 'Quiz not found in this class'
             ], 404);
         }
+    }
+
+    /**
+     * Get student completion data for a class
+     * Returns completion statistics for all students in the class
+     */
+    public function getStudentCompletion(string $classId): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+ /** @var User $user */
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+        $class = ClassModel::find($classId);
+        if (!$class) {
+            return response()->json(['message' => 'Class not found'], 404);
+        }
+
+        // Access control: Teacher can only see their own classes, Admin can see all
+        if ($roleName === 'teacher' && $class->teacher_id !== $user->user_id) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        // Get all quizzes assigned to this class
+        $assignedQuizzes = DB::table('class_levels')
+            ->where('class_id', $classId)
+            ->pluck('level_id')
+            ->toArray();
+
+        // Get all students in this class
+        $studentsInClass = DB::table('class_student')
+            ->where('class_id', $classId)
+            ->pluck('student_id')
+            ->toArray();
+
+        $completionData = [];
+        foreach ($studentsInClass as $studentId) {
+            // Count distinct quizzes completed by this student
+            $completedQuizzes = DB::table('achievement_user')
+                ->join('achievements', 'achievement_user.achievement_id', '=', 'achievements.achievement_id')
+                ->where('achievement_user.user_id', $studentId)
+                ->whereIn('achievements.associated_level', $assignedQuizzes)
+                ->distinct('achievements.associated_level')
+                ->count('achievements.associated_level');
+
+            $totalAssignedQuizzes = count($assignedQuizzes);
+            $completionPercentage = $totalAssignedQuizzes > 0
+                ? ($completedQuizzes / $totalAssignedQuizzes) * 100
+                : 0;
+
+            $completionData[] = [
+                'user_id' => $studentId,
+                'completed_quizzes' => $completedQuizzes,
+                'total_quizzes' => $totalAssignedQuizzes,
+                'completion_percentage' => round($completionPercentage, 2),
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $completionData,
+            'total_quizzes_assigned' => count($assignedQuizzes),
+        ]);
+    }
+
+    /**
+     * Get student's quiz completion status for all quizzes in a class
+     * Returns list of quizzes with completion status for a specific student
+     */
+    public function getStudentQuizzes(string $classId, string $studentId): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+ /** @var User $user */
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+        $class = ClassModel::find($classId);
+        if (!$class) {
+            return response()->json(['message' => 'Class not found'], 404);
+        }
+
+        // Access control: Teacher can only see their own classes, Admin can see all
+        if ($roleName === 'teacher' && $class->teacher_id !== $user->user_id) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        // Verify student is enrolled in this class
+        $isEnrolled = DB::table('class_student')
+            ->where('class_id', $classId)
+            ->where('student_id', $studentId)
+            ->exists();
+
+        if (!$isEnrolled) {
+            return response()->json(['message' => 'Student not enrolled in this class'], 404);
+        }
+
+        // Get all quizzes assigned to this class
+        $quizzes = DB::table('class_levels')
+            ->join('levels', 'class_levels.level_id', '=', 'levels.level_id')
+            ->leftJoin('level_types', 'levels.level_type_id', '=', 'level_types.level_type_id')
+            ->where('class_levels.class_id', $classId)
+            ->select(
+                'levels.level_id',
+                'levels.level_name',
+                'levels.created_at',
+                'levels.updated_at',
+                'class_levels.is_private',
+                'level_types.level_type_id',
+                'level_types.level_type_name'
+            )
+            ->orderBy('levels.created_at', 'desc')
+            ->get();
+
+        // Get all achievements (completed quizzes) for this student
+        $completedLevelIds = DB::table('achievement_user')
+            ->join('achievements', 'achievement_user.achievement_id', '=', 'achievements.achievement_id')
+            ->where('achievement_user.user_id', $studentId)
+            ->whereNotNull('achievements.associated_level')
+            ->pluck('achievements.associated_level')
+            ->toArray();
+
+        // Map quizzes with completion status
+        $quizData = $quizzes->map(function ($quiz) use ($completedLevelIds, $studentId) {
+            $isCompleted = in_array($quiz->level_id, $completedLevelIds);
+            
+            // Get completion date if completed
+            $completionDate = null;
+            if ($isCompleted) {
+                $achievement = DB::table('achievement_user')
+                    ->join('achievements', 'achievement_user.achievement_id', '=', 'achievements.achievement_id')
+                    ->where('achievement_user.user_id', $studentId)
+                    ->where('achievements.associated_level', $quiz->level_id)
+                    ->orderBy('achievement_user.created_at', 'desc')
+                    ->first();
+                
+                if ($achievement) {
+                    $completionDate = $achievement->created_at;
+                }
+            }
+
+            return [
+                'level_id' => $quiz->level_id,
+                'level_name' => $quiz->level_name,
+                'level_type' => $quiz->level_type_id ? [
+                    'level_type_id' => $quiz->level_type_id,
+                    'level_type_name' => $quiz->level_type_name,
+                ] : null,
+                'is_private' => (bool) $quiz->is_private,
+                'created_at' => $quiz->created_at,
+                'updated_at' => $quiz->updated_at,
+                'is_completed' => $isCompleted,
+                'completion_date' => $completionDate,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $quizData,
+            'total_quizzes' => $quizData->count(),
+            'completed_quizzes' => $quizData->where('is_completed', true)->count(),
+        ]);
+    }
+
+    /**
+     * Get quiz's student completion status for all students in a class
+     * Returns list of students with completion status for a specific quiz
+     */
+    public function getQuizStudents(string $classId, string $levelId): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+ /** @var User $user */
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+
+        $class = ClassModel::find($classId);
+        if (!$class) {
+            return response()->json(['message' => 'Class not found'], 404);
+        }
+
+        // Access control: Teacher can only see their own classes, Admin can see all
+        if ($roleName === 'teacher' && $class->teacher_id !== $user->user_id) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        // Verify quiz is assigned to this class
+        $isAssigned = DB::table('class_levels')
+            ->where('class_id', $classId)
+            ->where('level_id', $levelId)
+            ->exists();
+
+        if (!$isAssigned) {
+            return response()->json(['message' => 'Quiz not assigned to this class'], 404);
+        }
+
+        // Get quiz info
+        $quiz = DB::table('levels')
+            ->leftJoin('level_types', 'levels.level_type_id', '=', 'level_types.level_type_id')
+            ->where('levels.level_id', $levelId)
+            ->select(
+                'levels.level_id',
+                'levels.level_name',
+                'levels.created_at',
+                'levels.updated_at',
+                'level_types.level_type_id',
+                'level_types.level_type_name'
+            )
+            ->first();
+
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz not found'], 404);
+        }
+
+        // Get all students in this class
+        $students = DB::table('class_student')
+            ->join('users', 'class_student.student_id', '=', 'users.user_id')
+            ->where('class_student.class_id', $classId)
+            ->select(
+                'users.user_id',
+                'users.name',
+                'users.email',
+                'users.phone_no'
+            )
+            ->orderBy('users.name')
+            ->get();
+
+        // Get all students who completed this quiz
+        $completedStudentIds = DB::table('achievement_user')
+            ->join('achievements', 'achievement_user.achievement_id', '=', 'achievements.achievement_id')
+            ->where('achievements.associated_level', $levelId)
+            ->pluck('achievement_user.user_id')
+            ->toArray();
+
+        // Map students with completion status
+        $studentData = $students->map(function ($student) use ($completedStudentIds, $levelId) {
+            $isCompleted = in_array($student->user_id, $completedStudentIds);
+            
+            // Get completion date if completed
+            $completionDate = null;
+            if ($isCompleted) {
+                $achievement = DB::table('achievement_user')
+                    ->join('achievements', 'achievement_user.achievement_id', '=', 'achievements.achievement_id')
+                    ->where('achievement_user.user_id', $student->user_id)
+                    ->where('achievements.associated_level', $levelId)
+                    ->orderBy('achievement_user.created_at', 'desc')
+                    ->first();
+                
+                if ($achievement) {
+                    $completionDate = $achievement->created_at;
+                }
+            }
+
+            return [
+                'user_id' => $student->user_id,
+                'name' => $student->name,
+                'email' => $student->email,
+                'phone_no' => $student->phone_no,
+                'is_completed' => $isCompleted,
+                'completion_date' => $completionDate,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'quiz' => [
+                'level_id' => $quiz->level_id,
+                'level_name' => $quiz->level_name,
+                'level_type' => $quiz->level_type_id ? [
+                    'level_type_id' => $quiz->level_type_id,
+                    'level_type_name' => $quiz->level_type_name,
+                ] : null,
+                'created_at' => $quiz->created_at,
+                'updated_at' => $quiz->updated_at,
+            ],
+            'data' => $studentData,
+            'total_students' => $studentData->count(),
+            'completed_students' => $studentData->where('is_completed', true)->count(),
+        ]);
     }
 }
 

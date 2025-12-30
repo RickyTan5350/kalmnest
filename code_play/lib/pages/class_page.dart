@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_class_list_section.dart'
-    as admin;
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_class_list_statistic.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_class_list_section.dart'
+import 'package:code_play/admin_teacher/widgets/class/teacher_class_list_section.dart'
     as teacher;
-import 'package:flutter_codelab/student/widgets/class/student_class_list_section.dart'
+import 'package:code_play/student/widgets/class/student_class_list_section.dart'
     as student;
 // import '../widgets/search_bar.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/services/layout_preferences.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/services/layout_preferences.dart';
+import 'package:code_play/enums/sort_enums.dart';
 
 // Global key to access ClassPage state for reloading from main.dart
 final GlobalKey<_ClassPageState> classPageGlobalKey =
@@ -29,6 +27,8 @@ class _ClassPageState extends State<ClassPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   ViewLayout _viewLayout = ViewLayout.grid;
+  SortType _sortType = SortType.alphabetical;
+  SortOrder _sortOrder = SortOrder.ascending;
 
   @override
   void initState() {
@@ -98,20 +98,9 @@ class _ClassPageState extends State<ClassPage> {
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(color: colors.onSurface),
                     ),
-                    SegmentedButton<ViewLayout>(
-                      segments: const <ButtonSegment<ViewLayout>>[
-                        ButtonSegment<ViewLayout>(
-                          value: ViewLayout.list,
-                          icon: Icon(Icons.menu),
-                        ),
-                        ButtonSegment<ViewLayout>(
-                          value: ViewLayout.grid,
-                          icon: Icon(Icons.grid_view),
-                        ),
-                      ],
-                      selected: <ViewLayout>{_viewLayout},
-                      onSelectionChanged: (Set<ViewLayout> newSelection) {
-                        final newLayout = newSelection.first;
+                    _ViewToggleButton(
+                      currentLayout: _viewLayout,
+                      onLayoutChanged: (ViewLayout newLayout) {
                         setState(() => _viewLayout = newLayout);
                         LayoutPreferences.saveLayout(
                           'global_layout',
@@ -156,11 +145,78 @@ class _ClassPageState extends State<ClassPage> {
 
                 const SizedBox(height: 16),
 
-                // Statistics section (only for admin)
-                if (role == 'admin') ...[
-                  ClassStatisticsSection(key: ValueKey('stats_$_reloadKey')),
-                  const SizedBox(height: 16),
-                ],
+                // Filter and Sort Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Spacer(),
+                    // Filter Icon (Sort)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.filter_list),
+                      tooltip: 'Sort Options',
+                      onSelected: (value) {
+                        setState(() {
+                          if (value == 'Name') {
+                            _sortType = SortType.alphabetical;
+                          } else if (value == 'Date') {
+                            _sortType = SortType.updated;
+                          } else if (value == 'Ascending') {
+                            _sortOrder = SortOrder.ascending;
+                          } else if (value == 'Descending') {
+                            _sortOrder = SortOrder.descending;
+                          }
+                        });
+                      },
+                      itemBuilder: (BuildContext context) =>
+                          <PopupMenuEntry<String>>[
+                            const PopupMenuItem<String>(
+                              enabled: false,
+                              child: Text(
+                                'Sort By',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Name',
+                              checked: _sortType == SortType.alphabetical,
+                              child: const Text('Name'),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Date',
+                              checked: _sortType == SortType.updated,
+                              child: const Text('Date'),
+                            ),
+                            const PopupMenuDivider(),
+                            const PopupMenuItem<String>(
+                              enabled: false,
+                              child: Text(
+                                'Order',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Ascending',
+                              checked: _sortOrder == SortOrder.ascending,
+                              child: const Text('Ascending'),
+                            ),
+                            CheckedPopupMenuItem<String>(
+                              value: 'Descending',
+                              checked: _sortOrder == SortOrder.descending,
+                              child: const Text('Descending'),
+                            ),
+                          ],
+                    ),
+                    const SizedBox(width: 4),
+                    // Refresh Icon
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: reloadClassList,
+                      tooltip: "Refresh List",
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
 
                 // Class list (fills remaining space) - role-based
                 Expanded(child: _buildRoleBasedClassList(role)),
@@ -173,21 +229,15 @@ class _ClassPageState extends State<ClassPage> {
   }
 
   Widget _buildRoleBasedClassList(String role) {
-    if (role == 'admin') {
-      return admin.ClassListSection(
-        key: ValueKey('admin_class_list_$_reloadKey'),
-        roleName: 'admin',
-        onReload: reloadClassList,
-        searchQuery: _searchQuery,
-        layout: _viewLayout,
-      );
-    }
-    if (role == 'teacher') {
+    if (role == 'admin' || role == 'teacher') {
       return teacher.ClassListSection(
-        key: ValueKey('teacher_class_list_$_reloadKey'),
-        roleName: 'teacher',
+        key: ValueKey('${role}_class_list_$_reloadKey'),
+        roleName: role,
+        onReload: role == 'admin' ? reloadClassList : null,
         searchQuery: _searchQuery,
         layout: _viewLayout,
+        sortType: _sortType,
+        sortOrder: _sortOrder,
       );
     }
     return student.ClassListSection(
@@ -195,6 +245,39 @@ class _ClassPageState extends State<ClassPage> {
       roleName: 'student',
       searchQuery: _searchQuery,
       layout: _viewLayout,
+      sortType: _sortType,
+      sortOrder: _sortOrder,
+    );
+  }
+}
+
+// Custom view toggle button with tooltips
+class _ViewToggleButton extends StatelessWidget {
+  final ViewLayout currentLayout;
+  final Function(ViewLayout) onLayoutChanged;
+
+  const _ViewToggleButton({
+    required this.currentLayout,
+    required this.onLayoutChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<ViewLayout>(
+      segments: <ButtonSegment<ViewLayout>>[
+        ButtonSegment<ViewLayout>(
+          value: ViewLayout.list,
+          icon: Tooltip(message: 'List view', child: Icon(Icons.menu)),
+        ),
+        ButtonSegment<ViewLayout>(
+          value: ViewLayout.grid,
+          icon: Tooltip(message: 'Grid view', child: Icon(Icons.grid_view)),
+        ),
+      ],
+      selected: <ViewLayout>{currentLayout},
+      onSelectionChanged: (Set<ViewLayout> newSelection) {
+        onLayoutChanged(newSelection.first);
+      },
     );
   }
 }

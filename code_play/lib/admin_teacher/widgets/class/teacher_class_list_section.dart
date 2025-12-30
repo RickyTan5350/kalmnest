@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_class_page.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/admin_teacher/widgets/class/teacher_view_class_page.dart';
+import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/enums/sort_enums.dart';
 
-// Class List Item Widget for Teacher/Student (no edit/delete buttons)
+// Class List Item Widget
 class _ClassListItem extends StatefulWidget {
   final dynamic item;
   final bool isLast;
@@ -11,6 +14,8 @@ class _ClassListItem extends StatefulWidget {
   final ColorScheme colorScheme;
   final TextTheme textTheme;
   final VoidCallback onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _ClassListItem({
     required this.item,
@@ -19,6 +24,8 @@ class _ClassListItem extends StatefulWidget {
     required this.colorScheme,
     required this.textTheme,
     required this.onTap,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -26,8 +33,6 @@ class _ClassListItem extends StatefulWidget {
 }
 
 class _ClassListItemState extends State<_ClassListItem> {
-  bool _isHovered = false;
-
   // Get teacher name from item
   String get _teacherName {
     if (widget.item['teacher'] != null) {
@@ -65,7 +70,7 @@ class _ClassListItemState extends State<_ClassListItem> {
               margin: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
                 color: _isHovered
-                    ? widget.colorScheme.surfaceContainerHighest.withOpacity(0.6)
+                    ? widget.colorScheme.surfaceVariant.withOpacity(0.6)
                     : widget.colorScheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
@@ -203,6 +208,8 @@ class _ClassGridCard extends StatelessWidget {
   final ColorScheme colorScheme;
   final TextTheme textTheme;
   final VoidCallback onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _ClassGridCard({
     required this.item,
@@ -210,6 +217,8 @@ class _ClassGridCard extends StatelessWidget {
     required this.colorScheme,
     required this.textTheme,
     required this.onTap,
+    this.onEdit,
+    this.onDelete,
   });
 
   String get _teacherName {
@@ -235,12 +244,18 @@ class _ClassGridCard extends StatelessWidget {
     return Card(
       elevation: 1.0,
       clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: colorScheme.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(ClassConstants.defaultPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -253,7 +268,7 @@ class _ClassGridCard extends StatelessWidget {
                     height: 48,
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -273,9 +288,46 @@ class _ClassGridCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (roleName.toLowerCase() == 'admin')
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert,
+                        color: colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                      onSelected: (value) {
+                        if (value == 'edit' && onEdit != null) {
+                          onEdit!();
+                        } else if (value == 'delete' && onDelete != null) {
+                          onDelete!();
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem<String>(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, size: 20, color: colorScheme.onSurface),
+                              const SizedBox(width: 8),
+                              const Text('Edit'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
+                              const SizedBox(width: 8),
+                              Text('Delete', style: TextStyle(color: colorScheme.error)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: ClassConstants.defaultPadding * 0.75),
               // Description
               if (item['description'] != null &&
                   item['description'].toString().isNotEmpty)
@@ -288,7 +340,7 @@ class _ClassGridCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               const Spacer(),
-              const SizedBox(height: 12),
+              SizedBox(height: ClassConstants.defaultPadding * 0.75),
               // Teacher and Student Info
               Row(
                 children: [
@@ -355,13 +407,16 @@ class ClassListSection extends StatefulWidget {
   final String roleName;
   final String searchQuery;
   final ViewLayout layout;
-
+  final SortType sortType;
+  final SortOrder sortOrder;
+  final VoidCallback? onReload;
+  
   const ClassListSection({
     super.key,
     required this.roleName,
     this.searchQuery = '',
     required this.layout,
-  });
+  }) : super(key: key);
 
   @override
   State<ClassListSection> createState() => _ClassListSectionState();
@@ -381,9 +436,18 @@ class _ClassListSectionState extends State<ClassListSection> {
   @override
   void didUpdateWidget(ClassListSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.searchQuery != widget.searchQuery ||
-        oldWidget.layout != widget.layout) {
-      loadClasses();
+    if (        oldWidget.searchQuery != widget.searchQuery ||
+        oldWidget.layout != widget.layout ||
+        oldWidget.sortType != widget.sortType ||
+        oldWidget.sortOrder != widget.sortOrder) {
+      if (oldWidget.searchQuery != widget.searchQuery ||
+          oldWidget.sortType != widget.sortType ||
+          oldWidget.sortOrder != widget.sortOrder) {
+        // Just re-filter and sort, don't reload from API
+        _applyFiltersAndSort();
+      } else {
+        loadClasses();
+      }
     }
   }
 
@@ -406,6 +470,9 @@ class _ClassListSectionState extends State<ClassListSection> {
         }).toList();
       }
 
+      // Apply sorting
+      filtered = _sortClasses(filtered);
+
       if (mounted) {
         setState(() {
           classList = allClasses;
@@ -422,6 +489,146 @@ class _ClassListSectionState extends State<ClassListSection> {
           filteredList = [];
           loading = false;
         });
+      }
+    }
+  }
+
+  void _applyFiltersAndSort() {
+    // Apply search filter
+    List<dynamic> filtered = classList;
+    if (widget.searchQuery.isNotEmpty) {
+      final query = widget.searchQuery.toLowerCase();
+      filtered = classList.where((classItem) {
+        final className = (classItem['class_name'] ?? '')
+            .toString()
+            .toLowerCase();
+        return className.contains(query);
+      }).toList();
+    }
+
+    // Apply sorting
+    filtered = _sortClasses(filtered);
+
+    if (mounted) {
+      setState(() {
+        filteredList = filtered;
+      });
+    }
+  }
+
+  List<dynamic> _sortClasses(List<dynamic> classes) {
+    final sortedList = List<dynamic>.from(classes);
+    sortedList.sort((a, b) {
+      int result = 0;
+      switch (widget.sortType) {
+        case SortType.alphabetical:
+          final nameA = (a['class_name'] ?? '').toString().toLowerCase();
+          final nameB = (b['class_name'] ?? '').toString().toLowerCase();
+          result = nameA.compareTo(nameB);
+          break;
+        case SortType.updated:
+          final dateA = a['created_at'] != null
+              ? DateTime.tryParse(a['created_at'].toString()) ?? DateTime(0)
+              : DateTime(0);
+          final dateB = b['created_at'] != null
+              ? DateTime.tryParse(b['created_at'].toString()) ?? DateTime(0)
+              : DateTime(0);
+          result = dateA.compareTo(dateB);
+          break;
+        case SortType.unlocked:
+          // Classes don't have unlocked status, fallback to alphabetical
+          final nameA = (a['class_name'] ?? '').toString().toLowerCase();
+          final nameB = (b['class_name'] ?? '').toString().toLowerCase();
+          result = nameA.compareTo(nameB);
+          break;
+      }
+      if (widget.sortOrder == SortOrder.descending) {
+        result = -result;
+      }
+      return result;
+    });
+    return sortedList;
+  }
+
+  void _onEditClass(dynamic item) async {
+    final updated = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => EditClassPage(classData: item)),
+    );
+
+    if (updated == true) {
+      loadClasses(); // refresh after edit
+      // Trigger reload callback if provided
+      if (widget.onReload != null) {
+        widget.onReload!();
+      }
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Class updated successfully'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  void _onDeleteClass(dynamic item) async {
+    final confirm = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Class'),
+          content: Text(
+            'Are you sure you want to delete "${item['class_name']}"? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      final success = await ClassApi.deleteClass(item['class_id'].toString());
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Class deleted successfully'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          loadClasses(); // refresh after delete
+          // Trigger reload callback if provided
+          if (widget.onReload != null) {
+            widget.onReload!();
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Failed to delete class'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
     }
   }
@@ -471,6 +678,33 @@ class _ClassListSectionState extends State<ClassListSection> {
           : widget.layout == ViewLayout.grid
           ? CustomScrollView(
               slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            height: 40,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "${filteredList.length} Results",
+                                style: textTheme.titleMedium,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 SliverPadding(
                   padding: const EdgeInsets.all(8.0),
                   sliver: SliverGrid(
@@ -499,6 +733,12 @@ class _ClassListSectionState extends State<ClassListSection> {
                             ),
                           );
                         },
+                        onEdit: widget.roleName.toLowerCase() == 'admin'
+                            ? () => _onEditClass(item)
+                            : null,
+                        onDelete: widget.roleName.toLowerCase() == 'admin'
+                            ? () => _onDeleteClass(item)
+                            : null,
                       );
                     }, childCount: filteredList.length),
                   ),
@@ -507,6 +747,33 @@ class _ClassListSectionState extends State<ClassListSection> {
             )
           : CustomScrollView(
               slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            height: 40,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "${filteredList.length} Results",
+                                style: textTheme.titleMedium,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   sliver: SliverList(
@@ -530,6 +797,12 @@ class _ClassListSectionState extends State<ClassListSection> {
                             ),
                           );
                         },
+                        onEdit: widget.roleName.toLowerCase() == 'admin'
+                            ? () => _onEditClass(item)
+                            : null,
+                        onDelete: widget.roleName.toLowerCase() == 'admin'
+                            ? () => _onDeleteClass(item)
+                            : null,
                       );
                     }, childCount: filteredList.length),
                   ),

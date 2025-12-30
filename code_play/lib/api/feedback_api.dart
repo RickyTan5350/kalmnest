@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 class FeedbackApiService {
   static String get baseUrl => ApiConstants.baseUrl; // Laravel dev server
@@ -354,3 +354,4 @@ class FeedbackApiService {
     }
   }
 }
+
