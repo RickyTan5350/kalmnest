@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/admin_teacher/widgets/class/admin_class_list_section.dart'
-    as admin;
-import 'package:code_play/admin_teacher/widgets/class/admin_class_list_statistic.dart';
-import 'package:code_play/admin_teacher/widgets/class/teacher_class_list_section.dart'
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_class_list_section.dart'
     as teacher;
-import 'package:code_play/student/widgets/class/student_class_list_section.dart'
+import 'package:flutter_codelab/student/widgets/class/student_class_list_section.dart'
     as student;
 // import '../widgets/search_bar.dart';
-import 'package:code_play/models/user_data.dart';
-import 'package:code_play/constants/view_layout.dart';
-import 'package:code_play/services/layout_preferences.dart';
-import 'package:code_play/enums/sort_enums.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/services/layout_preferences.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
 
 // Global key to access ClassPage state for reloading from main.dart
 final GlobalKey<_ClassPageState> classPageGlobalKey =
@@ -30,13 +26,9 @@ class _ClassPageState extends State<ClassPage> {
   int _reloadKey = 0;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
-    LayoutPreferences.globalLayoutKey,
-  );
+  ViewLayout _viewLayout = ViewLayout.grid;
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
-  String? _selectedIconFilter; // null means "All"
-  String? _selectedColorFilter; // null means "All"
 
   @override
   void initState() {
@@ -45,9 +37,7 @@ class _ClassPageState extends State<ClassPage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout(
-      LayoutPreferences.globalLayoutKey,
-    );
+    final savedLayout = await LayoutPreferences.getLayout('global_layout');
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -84,10 +74,7 @@ class _ClassPageState extends State<ClassPage> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        2.0,
-        2.0,
-        16.0,
+      padding: const EdgeInsets.all(
         16.0,
       ), // Outer padding (same as AchievementPage)
       child: Card(
@@ -116,7 +103,7 @@ class _ClassPageState extends State<ClassPage> {
                       onLayoutChanged: (ViewLayout newLayout) {
                         setState(() => _viewLayout = newLayout);
                         LayoutPreferences.saveLayout(
-                          LayoutPreferences.globalLayoutKey,
+                          'global_layout',
                           newLayout,
                         );
                       },
@@ -162,105 +149,6 @@ class _ClassPageState extends State<ClassPage> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Icon Filters (button style)
-                    ...ClassCustomization.availableIcons.map((classIcon) {
-                      final isSelected = _selectedIconFilter == classIcon.name;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Tooltip(
-                          message: classIcon.displayName,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              setState(() {
-                                _selectedIconFilter = isSelected
-                                    ? null
-                                    : classIcon.name;
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: isSelected
-                                  ? colors.primaryContainer
-                                  : colors.surface,
-                              foregroundColor: isSelected
-                                  ? colors.onPrimaryContainer
-                                  : colors.onSurface,
-                              side: BorderSide(
-                                color: isSelected
-                                    ? colors.primary
-                                    : colors.outline.withOpacity(0.5),
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              minimumSize: const Size(48, 40),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Icon(classIcon.icon, size: 20),
-                          ),
-                        ),
-                      );
-                    }),
-                    // Separator
-                    Container(
-                      width: 1,
-                      height: 24,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      color: colors.outline.withOpacity(0.3),
-                    ),
-                    // Color Filters (button style)
-                    ...ClassCustomization.availableColors.map((classColor) {
-                      final isSelected =
-                          _selectedColorFilter == classColor.name;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Tooltip(
-                          message: classColor.displayName,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              setState(() {
-                                _selectedColorFilter = isSelected
-                                    ? null
-                                    : classColor.name;
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: isSelected
-                                  ? classColor.color.withOpacity(0.2)
-                                  : colors.surface,
-                              foregroundColor: isSelected
-                                  ? classColor.color
-                                  : colors.onSurface,
-                              side: BorderSide(
-                                color: isSelected
-                                    ? classColor.color
-                                    : colors.outline.withOpacity(0.5),
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              minimumSize: const Size(48, 40),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: classColor.color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
                     const Spacer(),
                     // Filter Icon (Sort)
                     PopupMenuButton<String>(
@@ -330,12 +218,6 @@ class _ClassPageState extends State<ClassPage> {
 
                 const SizedBox(height: 16),
 
-                // Statistics section (only for admin)
-                if (role == 'admin') ...[
-                  ClassStatisticsSection(key: ValueKey('stats_$_reloadKey')),
-                  const SizedBox(height: 16),
-                ],
-
                 // Class list (fills remaining space) - role-based
                 Expanded(child: _buildRoleBasedClassList(role)),
               ],
@@ -347,29 +229,15 @@ class _ClassPageState extends State<ClassPage> {
   }
 
   Widget _buildRoleBasedClassList(String role) {
-    if (role == 'admin') {
-      return admin.ClassListSection(
-        key: ValueKey('admin_class_list_$_reloadKey'),
-        roleName: 'admin',
-        onReload: reloadClassList,
-        searchQuery: _searchQuery,
-        layout: _viewLayout,
-        sortType: _sortType,
-        sortOrder: _sortOrder,
-        iconFilter: _selectedIconFilter,
-        colorFilter: _selectedColorFilter,
-      );
-    }
-    if (role == 'teacher') {
+    if (role == 'admin' || role == 'teacher') {
       return teacher.ClassListSection(
-        key: ValueKey('teacher_class_list_$_reloadKey'),
-        roleName: 'teacher',
+        key: ValueKey('${role}_class_list_$_reloadKey'),
+        roleName: role,
+        onReload: role == 'admin' ? reloadClassList : null,
         searchQuery: _searchQuery,
         layout: _viewLayout,
         sortType: _sortType,
         sortOrder: _sortOrder,
-        iconFilter: _selectedIconFilter,
-        colorFilter: _selectedColorFilter,
       );
     }
     return student.ClassListSection(
@@ -379,8 +247,6 @@ class _ClassPageState extends State<ClassPage> {
       layout: _viewLayout,
       sortType: _sortType,
       sortOrder: _sortOrder,
-      iconFilter: _selectedIconFilter,
-      colorFilter: _selectedColorFilter,
     );
   }
 }
@@ -415,4 +281,3 @@ class _ViewToggleButton extends StatelessWidget {
     );
   }
 }
-
