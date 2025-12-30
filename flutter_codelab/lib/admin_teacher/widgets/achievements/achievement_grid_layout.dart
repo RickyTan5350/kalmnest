@@ -78,8 +78,8 @@ class AchievementGridLayout extends StatelessWidget {
                     ),
                   ),
                   // Only show "more" icon if we are in Admin mode (no custom tap handler)
-                  if (onTap == null)
-                    const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                  // if (onTap == null)
+                  //   const Icon(Icons.more_vert, size: 20, color: Colors.grey),
                 ],
               ),
             ),
@@ -187,4 +187,3 @@ class AchievementGridLayout extends StatelessWidget {
     );
   }
 }
-

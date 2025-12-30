@@ -160,6 +160,10 @@ class _AchievementPageState extends State<AchievementPage> {
                   child: SearchBar(
                     controller: _searchController,
                     hintText: AppLocalizations.of(context)!.searchHint,
+                    padding: const WidgetStatePropertyAll<EdgeInsets>(
+                      EdgeInsets.symmetric(horizontal: 16.0),
+                    ),
+                    leading: const Icon(Icons.search),
                     // NEW: Update state on submit or change
                     onChanged: (value) {
                       setState(() {
@@ -182,12 +186,6 @@ class _AchievementPageState extends State<AchievementPage> {
                             });
                           },
                         ),
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {
-                          /* Search logic is in onChange/onSubmitted */
-                        },
-                      ),
                     ],
                   ),
                 ),
@@ -375,4 +373,3 @@ class _AchievementPageState extends State<AchievementPage> {
     );
   }
 }
-
