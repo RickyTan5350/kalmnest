@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/theme.dart'; // Import for BrandColors
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:code_play/theme.dart'; // Import for BrandColors
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/enums/sort_enums.dart';
 
 final List<Map<String, dynamic>> achievementIconOptions = [
   // Web Development Languages
@@ -134,3 +134,4 @@ List<AchievementData> sortAchievements({
   });
   return sortedList;
 }
+

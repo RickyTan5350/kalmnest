@@ -2,31 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'dart:io'; // For HttpOverrides
 
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
-import 'package:flutter_codelab/controllers/locale_controller.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/controllers/locale_controller.dart';
 
-import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_create_note_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_create_class_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/profile_header_content.dart';
+import 'package:code_play/admin_teacher/widgets/disappearing_navigation_rail.dart';
+import 'package:code_play/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
+import 'package:code_play/admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/admin_create_note_page.dart';
+import 'package:code_play/admin_teacher/widgets/class/admin_create_class_page.dart';
+import 'package:code_play/admin_teacher/widgets/user/create_account_form.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
+import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart';
+import 'package:code_play/admin_teacher/widgets/user/profile_header_content.dart';
 
-import 'package:flutter_codelab/util.dart';
-import 'package:flutter_codelab/theme.dart';
+import 'package:code_play/util.dart';
+import 'package:code_play/theme.dart';
 
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/models/user_data.dart';
 
-import 'package:flutter_codelab/pages/pages.dart';
-import 'package:flutter_codelab/pages/user_page.dart'; // Explicit import for key
-import 'package:flutter_codelab/pages/login_page.dart';
-import 'package:flutter_codelab/pages/game_page.dart';
+import 'package:code_play/pages/pages.dart';
+import 'package:code_play/pages/user_page.dart'; // Explicit import for key
+import 'package:code_play/pages/login_page.dart';
+import 'package:code_play/pages/game_page.dart';
 
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() async {
@@ -465,3 +465,4 @@ class MyHttpOverrides extends HttpOverrides {
           (X509Certificate cert, String host, int port) => true;
   }
 }
+

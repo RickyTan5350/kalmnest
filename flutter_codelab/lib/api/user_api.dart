@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/models/user_data.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 import 'package:http_parser/http_parser.dart';
 
 class UserApi {
@@ -303,3 +303,4 @@ class ValidationException implements Exception {
     return 'ValidationException: $errors';
   }
 }
+

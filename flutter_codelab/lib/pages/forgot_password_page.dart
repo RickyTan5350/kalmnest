@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/pages/reset_password_page.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/pages/reset_password_page.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -182,3 +182,4 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     );
   }
 }
+

@@ -950,7 +950,7 @@
       "languageVersion": "3.8"
     },
     {
-      "name": "flutter_codelab",
+      "name": "code_play",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "3.9"

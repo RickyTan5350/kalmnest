@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/controllers/locale_controller.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/controllers/locale_controller.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class LanguageSelector extends StatefulWidget {
   const LanguageSelector({super.key});
@@ -81,3 +81,4 @@ class _LanguageSelectorState extends State<LanguageSelector> {
     );
   }
 }
+

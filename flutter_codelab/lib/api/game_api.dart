@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
-import 'package:flutter_codelab/models/level.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/models/level.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 /// CENTRAL API BASE URL
 String get apiBase => ApiConstants.baseUrl;
@@ -269,3 +269,4 @@ class GameAPI {
     }
   }
 }
+

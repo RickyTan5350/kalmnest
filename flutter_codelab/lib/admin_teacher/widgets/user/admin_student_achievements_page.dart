@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/achievement_api.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_achievement_detail.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/api/achievement_api.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/constants/achievement_constants.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_achievement_detail.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class AdminStudentAchievementsPage extends StatefulWidget {
   final String userId;
@@ -164,3 +164,4 @@ class _AdminStudentAchievementsPageState
     );
   }
 }
+
