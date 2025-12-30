@@ -1384,13 +1384,25 @@ class _RunCodePageState extends State<RunCodePage> {
       appBar: AppBar(
         title: BreadcrumbNavigation(
           items: [
-            BreadcrumbItem(label: 'Note'),
-            BreadcrumbItem(label: widget.topic),
+            BreadcrumbItem(
+              label: 'Note',
+              onTap: () {
+                // Return a specific signal to pop all the way back to list
+                Navigator.of(context).pop('navigate_home');
+              },
+            ),
+            BreadcrumbItem(
+              label: widget.topic,
+              onTap: () {
+                // Return signal to pop back to list with topic filter
+                Navigator.of(context).pop('navigate_topic');
+              },
+            ),
             BreadcrumbItem(
               label: widget.noteTitle,
               onTap: () => Navigator.of(context).pop(),
             ),
-            BreadcrumbItem(label: 'Run Code'),
+            const BreadcrumbItem(label: 'Run Code'),
           ],
         ),
         backgroundColor: context

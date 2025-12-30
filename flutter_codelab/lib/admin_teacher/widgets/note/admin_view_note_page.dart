@@ -479,8 +479,12 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                 ),
               ),
             );
-            if (result is String && widget.onTopicChanged != null) {
-              widget.onTopicChanged!(result);
+            if (widget.onTopicChanged != null) {
+              if (result == 'navigate_home') {
+                widget.onTopicChanged!('All');
+              } else if (result is String && result.isNotEmpty) {
+                widget.onTopicChanged!(result);
+              }
             }
           }
         },
@@ -575,8 +579,12 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                 ),
               ),
             );
-            if (result is String && widget.onTopicChanged != null) {
-              widget.onTopicChanged!(result);
+            if (widget.onTopicChanged != null) {
+              if (result == 'navigate_home') {
+                widget.onTopicChanged!('All');
+              } else if (result is String && result.isNotEmpty) {
+                widget.onTopicChanged!(result);
+              }
             }
           }
         },

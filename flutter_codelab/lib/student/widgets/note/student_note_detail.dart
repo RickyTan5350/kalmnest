@@ -222,8 +222,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     }
   }
 
-  void _openRunPage(String code, {String? fileName}) {
-    Navigator.push(
+  Future<void> _openRunPage(String code, {String? fileName}) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => RunCodePage(
@@ -236,6 +236,12 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
         ),
       ),
     );
+
+    if (result == 'navigate_home') {
+      if (mounted) Navigator.pop(context, 'navigate_home');
+    } else if (result == 'navigate_topic') {
+      if (mounted) Navigator.pop(context, _currentTopic);
+    }
   }
 
   // Helper to ensure absolute URLs
@@ -529,7 +535,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                 items: [
                   BreadcrumbItem(
                     label: 'Note',
-                    onTap: () => Navigator.of(context).pop(),
+                    onTap: () => Navigator.of(context).pop('navigate_home'),
                   ),
                   BreadcrumbItem(
                     label: _currentTopic,
