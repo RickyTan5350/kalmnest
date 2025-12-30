@@ -5,11 +5,16 @@ class QuizWidget extends StatefulWidget {
   final List<String> options;
   final int correctIndex;
 
+  final int? initialSelectedIndex;
+  final Function(int)? onAnswerSelected;
+
   const QuizWidget({
     Key? key,
     required this.question,
     required this.options,
     required this.correctIndex,
+    this.initialSelectedIndex,
+    this.onAnswerSelected,
   }) : super(key: key);
 
   @override
@@ -20,6 +25,15 @@ class _QuizWidgetState extends State<QuizWidget> {
   int? _selectedIndex;
   bool _isAnswered = false;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSelectedIndex != null) {
+      _selectedIndex = widget.initialSelectedIndex;
+      _isAnswered = true;
+    }
+  }
+
   void _handleOptionTap(int index) {
     if (_isAnswered) return; // Prevent changing answer after selection
 
@@ -27,6 +41,10 @@ class _QuizWidgetState extends State<QuizWidget> {
       _selectedIndex = index;
       _isAnswered = true;
     });
+
+    if (widget.onAnswerSelected != null) {
+      widget.onAnswerSelected!(index);
+    }
   }
 
   Color _getOptionColor(int index) {
