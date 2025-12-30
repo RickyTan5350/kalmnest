@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/achievement_api.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'package:flutter/services.dart';
+import 'package:code_play/api/achievement_api.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/constants/achievement_constants.dart';
 
 Future<void> showEditAchievementDialog({
   required BuildContext context,
@@ -274,193 +275,209 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     final textTheme = Theme.of(context).textTheme;
     final String currentId = widget.achievement['achievement_id'].toString();
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: AlertDialog(
-        backgroundColor: colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.all(24.0),
-        content: SizedBox(
-          width: 360,
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Edit Achievement',
-                    style: textTheme.titleLarge?.copyWith(
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Achievement Name
-                  TextFormField(
-                    controller: _achievementNameController,
-                    style: TextStyle(color: colorScheme.onSurface),
-                    decoration: _inputDecoration(
-                      labelText: 'Achievement Name',
-                      icon: Icons.emoji_events,
-                      colorScheme: colorScheme,
-                      errorText: _nameError, // Server error
-                    ),
-                    validator: (value) {
-                      if (_nameError != null) {
-                        return _nameError; // Server error priority
-                      }
-
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a name';
-                      }
-
-                      // Client-Side Uniqueness (Excluding current item)
-                      final isDuplicate = _existingAchievements.any((item) {
-                        return item.achievementId != currentId &&
-                            item.achievementName?.trim().toLowerCase() ==
-                                value.trim().toLowerCase();
-                      });
-
-                      if (isDuplicate) return 'Name already in use.';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Title
-                  TextFormField(
-                    controller: _achievementTitleController,
-                    style: TextStyle(color: colorScheme.onSurface),
-                    decoration: _inputDecoration(
-                      labelText: 'Achievement Title',
-                      icon: Icons.title,
-                      colorScheme: colorScheme,
-                      errorText: _titleError, // Server error
-                    ),
-                    validator: (value) {
-                      if (_titleError != null) return _titleError;
-
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a title';
-                      }
-
-                      // Client-Side Uniqueness (Excluding current item)
-                      final isDuplicate = _existingAchievements.any((item) {
-                        return item.achievementId != currentId &&
-                            item.achievementTitle?.trim().toLowerCase() ==
-                                value.trim().toLowerCase();
-                      });
-
-                      if (isDuplicate) return 'Title already in use.';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Description
-                  TextFormField(
-                    controller: _achievementDescriptionController,
-                    style: TextStyle(color: colorScheme.onSurface),
-                    decoration: _inputDecoration(
-                      labelText: 'Description',
-                      icon: Icons.description,
-                      colorScheme: colorScheme,
-                    ),
-                    maxLines: 3,
-                    validator: (value) =>
-                        value!.isEmpty ? 'Please enter a description' : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Category Icon Dropdown
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedIcon,
-                    dropdownColor: colorScheme.surfaceContainer,
-                    style: TextStyle(color: colorScheme.onSurface),
-                    decoration: _inputDecoration(
-                      labelText: 'Icon',
-                      icon: Icons.photo_library,
-                      colorScheme: colorScheme,
-                    ),
-                    items: iconOptions.map((option) {
-                      return DropdownMenuItem<String>(
-                        value: option['value'] as String,
-                        child: Row(
-                          children: [
-                            Icon(
-                              option['icon'] as IconData,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(option['display'] as String),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) => setState(() => _selectedIcon = val),
-                    validator: (val) =>
-                        val == null ? 'Please select an icon' : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Level Dropdown
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedLevel,
-                    dropdownColor: colorScheme.surfaceContainer,
-                    style: TextStyle(color: colorScheme.onSurface),
-                    decoration: _inputDecoration(
-                      labelText: 'Level',
-                      icon: Icons.signal_cellular_alt,
-                      colorScheme: colorScheme,
-                    ),
-                    items: _levels.map((val) {
-                      return DropdownMenuItem(value: val, child: Text(val));
-                    }).toList(),
-                    onChanged: (val) => setState(() => _selectedLevel = val),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          Navigator.of(context).maybePop();
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        child: WillPopScope(
+          onWillPop: _onWillPop,
+          child: AlertDialog(
+            backgroundColor: colorScheme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            contentPadding: const EdgeInsets.all(24.0),
+            content: SizedBox(
+              width: 360,
+              child: SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).maybePop(false),
-                        child: Text(
-                          'Cancel',
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      Text(
+                        'Edit Achievement',
+                        style: textTheme.titleLarge?.copyWith(
+                          color: colorScheme.onSurface,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _saveChanges,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
+                      const SizedBox(height: 24),
+
+                      // Achievement Name
+                      TextFormField(
+                        controller: _achievementNameController,
+                        style: TextStyle(color: colorScheme.onSurface),
+                        decoration: _inputDecoration(
+                          labelText: 'Achievement Name',
+                          icon: Icons.emoji_events,
+                          colorScheme: colorScheme,
+                          errorText: _nameError, // Server error
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
+                        validator: (value) {
+                          if (_nameError != null)
+                            return _nameError; // Server error priority
+
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a name';
+                          }
+
+                          // Client-Side Uniqueness (Excluding current item)
+                          final isDuplicate = _existingAchievements.any((item) {
+                            return item.achievementId != currentId &&
+                                item.achievementName?.trim().toLowerCase() ==
+                                    value.trim().toLowerCase();
+                          });
+
+                          if (isDuplicate) return 'Name already in use.';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Title
+                      TextFormField(
+                        controller: _achievementTitleController,
+                        style: TextStyle(color: colorScheme.onSurface),
+                        decoration: _inputDecoration(
+                          labelText: 'Achievement Title',
+                          icon: Icons.title,
+                          colorScheme: colorScheme,
+                          errorText: _titleError, // Server error
+                        ),
+                        validator: (value) {
+                          if (_titleError != null) return _titleError;
+
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a title';
+                          }
+
+                          // Client-Side Uniqueness (Excluding current item)
+                          final isDuplicate = _existingAchievements.any((item) {
+                            return item.achievementId != currentId &&
+                                item.achievementTitle?.trim().toLowerCase() ==
+                                    value.trim().toLowerCase();
+                          });
+
+                          if (isDuplicate) return 'Title already in use.';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Description
+                      TextFormField(
+                        controller: _achievementDescriptionController,
+                        style: TextStyle(color: colorScheme.onSurface),
+                        decoration: _inputDecoration(
+                          labelText: 'Description',
+                          icon: Icons.description,
+                          colorScheme: colorScheme,
+                        ),
+                        maxLines: 3,
+                        validator: (value) => value!.isEmpty
+                            ? 'Please enter a description'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Category Icon Dropdown
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedIcon,
+                        dropdownColor: colorScheme.surfaceContainer,
+                        style: TextStyle(color: colorScheme.onSurface),
+                        decoration: _inputDecoration(
+                          labelText: 'Icon',
+                          icon: Icons.photo_library,
+                          colorScheme: colorScheme,
+                        ),
+                        items: iconOptions.map((option) {
+                          return DropdownMenuItem<String>(
+                            value: option['value'] as String,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  option['icon'] as IconData,
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
-                              )
-                            : const Text('Save Changes'),
+                                const SizedBox(width: 10),
+                                Text(option['display'] as String),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) => setState(() => _selectedIcon = val),
+                        validator: (val) =>
+                            val == null ? 'Please select an icon' : null,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Level Dropdown
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedLevel,
+                        dropdownColor: colorScheme.surfaceContainer,
+                        style: TextStyle(color: colorScheme.onSurface),
+                        decoration: _inputDecoration(
+                          labelText: 'Level',
+                          icon: Icons.signal_cellular_alt,
+                          colorScheme: colorScheme,
+                        ),
+                        items: _levels.map((val) {
+                          return DropdownMenuItem(value: val, child: Text(val));
+                        }).toList(),
+                        onChanged: (val) =>
+                            setState(() => _selectedLevel = val),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(context).maybePop(false),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: _isLoading ? null : _saveChanges,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Save Changes'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -507,3 +524,4 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     return shouldDiscard ?? false;
   }
 }
+

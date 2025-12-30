@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/constants/api_constants.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart';
+import 'package:code_play/constants/class_constants.dart';
 
 /// Full-page student view: all quizzes for a single class.
 ///
@@ -84,7 +87,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
             children: [
               // Header with close button
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   border: Border(
@@ -159,261 +162,288 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    // Get class color for AppBar
+    final classColor = ClassCustomization.getColorByName(_classData?['color']);
+    final color = classColor?.color ?? cs.primary;
+
     return Scaffold(
-      backgroundColor: cs.surface,
-      body: SafeArea(
-        child: _loading
-            ? Center(child: CircularProgressIndicator(color: cs.primary))
-            : ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  // Header + class meta
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _Header(
-                        className: _classData?['class_name'] ?? 'No Name',
-                        classDescription:
-                            _classData?['description'] ?? 'No description',
+      appBar: AppBar(
+        title: BreadcrumbNavigation(
+          items: [
+            BreadcrumbItem(
+              label: 'Classes',
+              onTap: () {
+                // Pop twice to go back to class list (once from All Quizzes, once from Details)
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
+            ),
+            BreadcrumbItem(
+              label: 'Details',
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            const BreadcrumbItem(label: 'All Quizzes'),
+          ],
+        ),
+        backgroundColor: color.withOpacity(0.2),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() => _loading = true);
+              _fetchData();
+            },
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _fetchData();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header - Centered with icon, title, and class name
+              Center(
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: color.withOpacity(0.1),
+                      child: Icon(
+                        Icons.school_rounded,
+                        color: color,
+                        size: 40,
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'All Quizzes',
+                      style: textTheme.headlineMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Chip(
+                      label: Text(_classData?['class_name'] ?? 'No Name'),
+                      backgroundColor: color.withOpacity(0.1),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Statistics Section - General Info style
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Text(
+                  'Statistics',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: cs.primary,
                   ),
+                ),
+              ),
+              _buildInfoRow(
+                cs,
+                textTheme,
+                Icons.quiz,
+                'Total Quizzes',
+                '${_quizzes.length}',
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: _buildInfoRow(
+                  cs,
+                  textTheme,
+                  Icons.schedule,
+                  'Last Updated',
+                  _quizzes.isNotEmpty
+                      ? _formatDate(
+                          _quizzes.first['updated_at'] ??
+                              _quizzes.first['created_at'],
+                        )
+                      : 'Never',
+                ),
+              ),
+              const Divider(height: 30),
+              const SizedBox(height: 24),
 
-                  const SizedBox(height: 16),
-
-                  // Stats row
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: cs.outlineVariant, width: 1),
-                      borderRadius: BorderRadius.circular(12),
+              // Search Bar - Outside and full width
+              SearchBar(
+                controller: _searchController,
+                hintText: "Search quizzes...",
+                padding: const WidgetStatePropertyAll<EdgeInsets>(
+                  EdgeInsets.symmetric(horizontal: 16.0),
+                ),
+                onChanged: (value) {
+                  setState(() => _searchQuery = value);
+                },
+                leading: const Icon(Icons.search),
+                trailing: [
+                  if (_searchController.text.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = '';
+                        });
+                      },
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _StudentStatCard(
-                              title: 'Total Quizzes',
-                              value: '${_quizzes.length}',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _StudentStatCard(
-                              title: 'Last Updated',
-                              value: _quizzes.isNotEmpty
-                                  ? _formatDate(
-                                      _quizzes.first['updated_at'] ??
-                                          _quizzes.first['created_at'],
-                                    )
-                                  : 'Never',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Quizzes card
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: cs.outlineVariant, width: 1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _SectionHeader(
-                            title: 'Quizzes',
-                            subtitle: 'All quizzes for this class',
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _searchController,
-                            onChanged: (value) {
-                              setState(() => _searchQuery = value);
-                            },
-                            decoration: InputDecoration(
-                              prefixIcon: Icon(
-                                Icons.search,
-                                color: cs.onSurfaceVariant,
-                              ),
-                              suffixIcon: _searchQuery.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        setState(() => _searchQuery = '');
-                                      },
-                                    )
-                                  : null,
-                              hintText: 'Search quizzes...',
-                              hintStyle: textTheme.bodySmall?.copyWith(
-                                color: cs.onSurfaceVariant,
-                              ),
-                              filled: true,
-                              fillColor: cs.surfaceContainerHighest,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _filteredQuizzes.isEmpty
-                              ? Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(32.0),
-                                    child: Column(
-                                      children: [
-                                        Icon(
-                                          Icons.quiz_outlined,
-                                          size: 64,
-                                          color: cs.onSurfaceVariant
-                                              .withOpacity(0.5),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          _searchQuery.isNotEmpty
-                                              ? 'No quizzes match your search'
-                                              : 'No quizzes available',
-                                          style: textTheme.titleMedium
-                                              ?.copyWith(
-                                                color: cs.onSurfaceVariant,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          _searchQuery.isNotEmpty
-                                              ? 'Try adjusting your search query'
-                                              : 'Your teacher hasn\'t assigned any quizzes yet',
-                                          style: textTheme.bodySmall?.copyWith(
-                                            color: cs.onSurfaceVariant
-                                                .withOpacity(0.7),
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                              : Column(
-                                  children: _filteredQuizzes
-                                      .map(
-                                        (quiz) => _StudentQuizItem(
-                                          quiz: quiz,
-                                          onPlay: () => _playQuiz(quiz),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
+              const SizedBox(height: 16),
+
+              // Quizzes List Card
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  side: BorderSide(
+                    color: cs.outline.withOpacity(0.3),
+                    width: 1.0,
+                  ),
+                ),
+                color: cs.surfaceContainerLow,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Quizzes',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: cs.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${_filteredQuizzes.length} quiz${_filteredQuizzes.length != 1 ? 'es' : ''} available',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Content
+                      if (_filteredQuizzes.isEmpty)
+                        _buildEmptyState(cs, textTheme)
+                      else
+                        ..._filteredQuizzes.map((quiz) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: _StudentQuizItem(
+                              quiz: quiz,
+                              onPlay: () => _playQuiz(quiz),
+                            ),
+                          );
+                        }).toList(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
-}
 
-class _Header extends StatelessWidget {
-  final String className;
-  final String classDescription;
-
-  const _Header({required this.className, required this.classDescription});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildInfoRow(
+    ColorScheme cs,
+    TextTheme textTheme,
+    IconData icon,
+    String label,
+    String value,
+  ) {
+    return Row(
       children: [
-        TextButton.icon(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back, color: cs.primary, size: 18),
-          label: Text(
-            'Back to Class',
-            style: textTheme.bodyMedium?.copyWith(color: cs.primary),
+        Icon(icon, size: 20, color: cs.onSurfaceVariant),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'All Quizzes',
-          style: textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: cs.onSurface,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          className,
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: cs.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          classDescription,
-          style: textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
         ),
       ],
     );
   }
-}
 
-class _StudentStatCard extends StatelessWidget {
-  final String title;
-  final String value;
-
-  const _StudentStatCard({required this.title, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: cs.onSurface,
+  Widget _buildEmptyState(ColorScheme cs, TextTheme textTheme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            Icon(
+              Icons.quiz_outlined,
+              size: 48,
+              color: cs.onSurfaceVariant.withOpacity(0.5),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Text(
+              'No quizzes yet',
+              style: textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Your teacher hasn\'t assigned any quizzes yet',
+              style: textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
 
 class _StudentQuizItem extends StatelessWidget {
   final Map<String, dynamic> quiz;
@@ -436,115 +466,81 @@ class _StudentQuizItem extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final levelType = quiz['level_type'];
-    final levelTypeName = levelType != null
-        ? levelType['level_type_name'] ?? 'Unknown'
-        : 'Unknown';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant, width: 1),
+    return Card(
+      elevation: 1.0,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: cs.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            // Icon container
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: Icon(
+                Icons.quiz,
+                color: cs.onPrimaryContainer,
+                size: 24,
+              ),
             ),
-            child: Icon(Icons.quiz, color: cs.primary),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        quiz['level_name'] ?? 'No Name',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
-                      ),
+            const SizedBox(width: 12),
+            // Quiz info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    quiz['level_name'] ?? 'No Name',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: cs.primaryContainer.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        levelTypeName,
-                        style: textTheme.labelSmall?.copyWith(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Uploaded: ${_formatDate(quiz['created_at'])}',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    fontSize: 12,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    'Uploaded: ${_formatDate(quiz['created_at'])}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            onPressed: onPlay,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play'),
-          ),
-        ],
+            const SizedBox(width: 12),
+            // Play button
+            FilledButton.icon(
+              onPressed: onPlay,
+              icon: const Icon(Icons.play_arrow, size: 18),
+              label: const Text('Play'),
+              style: FilledButton.styleFrom(
+                backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
 
-  const _SectionHeader({required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: cs.onSurface,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-        ),
-      ],
-    );
-  }
-}

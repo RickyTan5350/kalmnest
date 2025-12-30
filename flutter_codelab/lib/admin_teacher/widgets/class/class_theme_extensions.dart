@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:code_play/constants/class_constants.dart';
 
 /// Theme extensions and helper methods for consistent styling in Class Module
 class ClassTheme {
@@ -64,3 +64,4 @@ class ClassTheme {
     return Theme.of(context).colorScheme.surface;
   }
 }
+

@@ -1,0 +1,18 @@
+<html>
+  <body>
+    Nombor Giliran:
+    <input id="n2"> <button type="button" onclick="semakNombor()">Pengesahan Nombor Giliran </button>
+
+    <script>
+      function semakNombor() // 3
+      {
+        var teksnombor;
+        teksnombor = document.getElementById("n2").value;
+        if (isNaN(teksnombor)) // 4
+        {
+          window.alert("Nilai yang dimasukkan adalah bukan nombor. Sila masukkan nombor."); // 5
+        }
+      }
+    </script>
+  </body>
+</html>

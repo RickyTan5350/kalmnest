@@ -1,19 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/user_api.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/api/user_api.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'edit_user_dialog.dart';
+import 'package:code_play/api/achievement_api.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/constants/achievement_constants.dart';
+import 'admin_student_achievements_page.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/student/widgets/achievements/student_profile_achievements_page.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/user_avatar.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String userId;
   final String userName; // Passed for the app bar title before loading
   final List<BreadcrumbItem>? breadcrumbs;
+  final bool isSelfProfile;
+  final String viewerRole;
+  final String? userRole; // NEW: Passed for immediate color feedback
 
   const UserDetailPage({
     super.key,
     required this.userId,
     required this.userName,
     this.breadcrumbs,
+    this.isSelfProfile = false,
+    this.viewerRole = 'Student',
+    this.userRole,
   });
 
   @override
@@ -22,26 +36,96 @@ class UserDetailPage extends StatefulWidget {
 
 class _UserDetailPageState extends State<UserDetailPage> {
   final UserApi _userApi = UserApi();
+  final AchievementApi _achievementApi = AchievementApi();
   late Future<UserDetails> _userFuture;
+  Future<List<AchievementData>>? _achievementsFuture;
+  bool _isViewerStudent = false;
+  Color? _fetchedRoleColor; // NEW: To store color after fetch
 
   @override
   void initState() {
     super.initState();
-    _userFuture = _userApi.getUserDetails(widget.userId);
     _fetchUserDetails();
+    _checkViewerRole();
   }
 
-  // Helper to get role color (matching your list logic)
+  Future<void> _checkViewerRole() async {
+    final userData = await AuthApi.getStoredUser();
+    if (userData != null && mounted) {
+      final role = userData['role'];
+      String roleName = '';
+      if (role is String) {
+        roleName = role;
+      } else if (role is Map) {
+        roleName = role['role_name'] ?? '';
+      }
+
+      if (roleName.toLowerCase() == 'student') {
+        setState(() {
+          _isViewerStudent = true;
+        });
+      }
+    }
+  }
+
+  // Helper to get role color (matching premium style)
   Color _getRoleColor(String role, ColorScheme scheme) {
-    switch (role.toLowerCase()) {
+    switch (role.trim().toLowerCase()) {
       case 'admin':
-        return scheme.error;
+        return scheme.brightness == Brightness.dark
+            ? Colors.pinkAccent
+            : Colors.pink;
       case 'teacher':
-        return scheme.tertiary;
+        return scheme.brightness == Brightness.dark
+            ? Colors.orangeAccent
+            : Colors.orange;
       case 'student':
-        return scheme.primary;
+        return scheme.brightness == Brightness.dark
+            ? Colors.lightBlueAccent
+            : Colors.blue;
       default:
         return scheme.secondary;
+    }
+  }
+
+  // Localization Helpers
+  String _getLocalizedRole(String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role.toLowerCase()) {
+      case 'student':
+        return l10n.student;
+      case 'teacher':
+        return l10n.teacher;
+      case 'admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
+  String _getLocalizedStatus(String status) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (status.toLowerCase()) {
+      case 'active':
+        return l10n.active;
+      case 'inactive':
+        return l10n.inactive;
+      default:
+        return status;
+    }
+  }
+
+  String _getLocalizedGender(String gender) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (gender.toLowerCase()) {
+      case 'male':
+        return l10n.male;
+      case 'female':
+        return l10n.female;
+      case 'other':
+        return l10n.other;
+      default:
+        return gender;
     }
   }
 
@@ -49,12 +133,40 @@ class _UserDetailPageState extends State<UserDetailPage> {
     setState(() {
       _userFuture = _userApi.getUserDetails(widget.userId);
     });
+
+    // Only fetch achievements if the user is a student
+    _userFuture
+        .then((user) {
+          if (mounted) {
+            setState(() {
+              _fetchedRoleColor = _getRoleColor(
+                user.roleName,
+                Theme.of(context).colorScheme,
+              );
+            });
+            if (user.isStudent) {
+              _fetchAchievements();
+            }
+          }
+        })
+        .catchError((_) {
+          // Errors are handled by the FutureBuilder in the UI
+        });
+  }
+
+  Future<void> _fetchAchievements() async {
+    setState(() {
+      _achievementsFuture = _achievementApi.fetchUserAchievements(
+        widget.userId,
+      );
+    });
   }
 
   Future<void> _editUser(UserDetails user) async {
     final bool? refreshed = await showEditUserDialog(
       context: context,
       initialData: user,
+      isSelfEdit: widget.isSelfProfile,
       showSnackBar: (ctx, msg, color) {
         ScaffoldMessenger.of(
           ctx,
@@ -62,7 +174,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
       },
     );
 
-    // If dialog returned true, data was updated, so refresh the view
     if (refreshed == true) {
       _fetchUserDetails();
     }
@@ -72,14 +183,16 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete User Account?'),
+        title: Text(AppLocalizations.of(context)!.deleteUserAccount),
         content: Text(
-          'Are you sure you want to permanently delete ${widget.userName}\'s account and all associated data? This action cannot be undone.',
+          AppLocalizations.of(
+            context,
+          )!.deleteUserAccountConfirmation(widget.userName),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -88,7 +201,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 Theme.of(context).colorScheme.error,
               ),
             ),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
@@ -96,27 +209,25 @@ class _UserDetailPageState extends State<UserDetailPage> {
     return confirmed ?? false;
   }
 
-  // --- NEW: Deletion Logic ---
   Future<void> _deleteUser() async {
     final bool confirmed = await _confirmDelete();
     if (!confirmed) return;
 
     if (!mounted) return;
-    // Capture context before async gap to show SnackBar
     final BuildContext scaffoldContext = context;
 
     try {
       await _userApi.deleteUser(widget.userId);
 
-      // Show success message
       ScaffoldMessenger.of(scaffoldContext).showSnackBar(
         SnackBar(
-          content: Text('Successfully deleted user: ${widget.userName}'),
+          content: Text(
+            AppLocalizations.of(context)!.deletedUserSuccess(widget.userName),
+          ),
           backgroundColor: Colors.green,
         ),
       );
 
-      // Pop the details page and pass 'true' to signal success to the parent list view
       if (mounted) {
         Navigator.of(context).pop(true);
       }
@@ -129,16 +240,14 @@ class _UserDetailPageState extends State<UserDetailPage> {
         const String deniedMessage =
             'Access Denied: Only Administrators can delete user accounts.';
 
-        // Explicitly check for the 403 error string and provide a friendly message
         if (cleanError.contains('403:')) {
           cleanError = deniedMessage;
           isDeniedError = true;
         }
 
-        // Determine the final message: remove the prefix only for the denial error
         final String snackBarText = isDeniedError
-            ? cleanError
-            : 'Error deleting user: $cleanError';
+            ? AppLocalizations.of(context)!.accessDeniedAdminOnly
+            : AppLocalizations.of(context)!.errorDeletingUser(cleanError);
 
         ScaffoldMessenger.of(scaffoldContext).showSnackBar(
           SnackBar(
@@ -155,23 +264,37 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    // Determine AppBar color
+    Color appBarColor = Colors.transparent;
+    if (_fetchedRoleColor != null) {
+      appBarColor = _fetchedRoleColor!;
+    } else if (widget.userRole != null) {
+      appBarColor = _getRoleColor(widget.userRole!, colorScheme);
+    }
+    // Apply opacity for background
+    final backgroundColor = appBarColor == Colors.transparent
+        ? Colors.transparent
+        : appBarColor.withOpacity(0.2); // Match achievement detail style
+
     return Scaffold(
       appBar: AppBar(
         title: widget.breadcrumbs != null
             ? BreadcrumbNavigation(items: widget.breadcrumbs!)
             : Text(widget.userName),
-        centerTitle: true,
+        centerTitle: false,
+        backgroundColor: backgroundColor,
+        elevation: 0,
         actions: [
           FutureBuilder<UserDetails>(
             future: _userFuture,
             builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                // Edit Button
+              if (snapshot.hasData &&
+                  (widget.viewerRole.toLowerCase() == 'admin' ||
+                      widget.isSelfProfile)) {
                 return IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () =>
-                      _editUser(snapshot.data!), // Pass the loaded user data
-                  tooltip: 'Edit User Profile',
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _editUser(snapshot.data!),
+                  tooltip: AppLocalizations.of(context)!.editUserProfile,
                 );
               }
               return const SizedBox.shrink();
@@ -180,20 +303,21 @@ class _UserDetailPageState extends State<UserDetailPage> {
           FutureBuilder<UserDetails>(
             future: _userFuture,
             builder: (context, snapshot) {
-              // Only show delete button if the page has successfully loaded the user details
-              if (snapshot.hasData) {
+              if (snapshot.hasData &&
+                  !widget.isSelfProfile &&
+                  widget.viewerRole.toLowerCase() == 'admin') {
                 return IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: _deleteUser,
-                  tooltip: 'Delete User Account',
+                  tooltip: AppLocalizations.of(context)!.deleteUserAccount,
                 );
               }
-              // Hide while loading or on error
               return const SizedBox.shrink();
             },
           ),
         ],
       ),
+      extendBodyBehindAppBar: false,
       body: FutureBuilder<UserDetails>(
         future: _userFuture,
         builder: (context, snapshot) {
@@ -206,7 +330,10 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 children: [
                   Icon(Icons.error_outline, size: 48, color: colorScheme.error),
                   const SizedBox(height: 16),
-                  Text('Error loading profile', style: textTheme.titleMedium),
+                  Text(
+                    AppLocalizations.of(context)!.errorLoadingProfile,
+                    style: textTheme.titleMedium,
+                  ),
                   Text(
                     snapshot.error.toString().replaceAll('Exception: ', ''),
                     style: textTheme.bodySmall,
@@ -215,127 +342,106 @@ class _UserDetailPageState extends State<UserDetailPage> {
               ),
             );
           } else if (!snapshot.hasData) {
-            return const Center(child: Text("No user data found."));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.noUsersFound),
+            );
           }
 
           final user = snapshot.data!;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 16.0,
+            ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // --- Header Section (Avatar & Role) ---
-                Center(
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: _getRoleColor(
-                          user.roleName,
-                          colorScheme,
-                        ),
-                        foregroundColor: colorScheme.onPrimary,
-                        child: Text(
-                          user.name.isNotEmpty
-                              ? user.name[0].toUpperCase()
-                              : '?',
-                          style: textTheme.displayMedium?.copyWith(
-                            color: colorScheme.onPrimary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        user.name,
-                        style: textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.secondaryContainer,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          user.roleName,
-                          style: textTheme.labelLarge?.copyWith(
-                            color: colorScheme.onSecondaryContainer,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildProfileHeader(context, user),
+
                 const SizedBox(height: 32),
 
-                // --- Details Card (Combined) ---
-                _buildDetailSection(
+                _buildSectionHeader(
                   context,
-                  title: "User Profile Details", // Combined title
-                  icon:
-                      Icons.person_outline, // Generic icon for profile details
-                  children: [
-                    // Contact Information
-                    _buildInfoRow(
-                      context,
-                      Icons.email_outlined,
-                      "Email",
-                      user.email,
-                    ),
-                    _buildInfoRow(
-                      context,
-                      Icons.phone_outlined,
-                      "Phone",
-                      user.phoneNo,
-                    ),
-                    _buildInfoRow(
-                      context,
-                      Icons.location_on_outlined,
-                      "Address",
-                      user.address,
-                    ),
-
-                    // Added a subtle divider to separate the two original logical groups
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Divider(
-                        height: 1,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.outlineVariant.withOpacity(0.5),
-                      ),
-                    ),
-
-                    // Personal Details
-                    _buildInfoRow(
-                      context,
-                      Icons.transgender,
-                      "Gender",
-                      user.gender,
-                    ),
-                    _buildInfoRow(
-                      context,
-                      Icons.calendar_today,
-                      "Joined Date",
-                      user.joinedDate.split('T')[0],
-                    ), // Simple date formatting
-                    _buildInfoRow(
-                      context,
-                      Icons.info_outline,
-                      "Account Status",
-                      user.accountStatus.toUpperCase(),
-                      valueColor: user.accountStatus == 'active'
-                          ? Colors.green
-                          : colorScheme.error,
-                    ),
-                  ],
+                  AppLocalizations.of(context)!.userProfileDetails,
+                  Icons.person_outline,
                 ),
-                // Removed the extra SizedBox(height: 16) that was between the two original cards
+                const SizedBox(height: 12),
+                _buildDetailCard(context, [
+                  _buildInfoRow(
+                    context,
+                    Icons.email_outlined,
+                    AppLocalizations.of(context)!.email,
+                    user.email,
+                  ),
+                  _buildDivider(context),
+                  _buildInfoRow(
+                    context,
+                    Icons.phone_outlined,
+                    AppLocalizations.of(context)!.phone,
+                    user.phoneNo,
+                  ),
+                  _buildDivider(context),
+                  _buildInfoRow(
+                    context,
+                    Icons.location_on_outlined,
+                    AppLocalizations.of(context)!.address,
+                    user.address,
+                  ),
+                  _buildDivider(context),
+                  _buildInfoRow(
+                    context,
+                    Icons.transgender,
+                    AppLocalizations.of(context)!.genderLabel,
+                    _getLocalizedGender(user.gender),
+                  ),
+                ]),
+
+                if (user.isStudent) ...[
+                  const SizedBox(height: 24),
+                  _buildSectionHeader(
+                    context,
+                    AppLocalizations.of(context)!.recentAchievements,
+                    Icons.emoji_events_outlined,
+                    trailing: TextButton(
+                      onPressed: () async {
+                        final user = await _userFuture;
+                        if (mounted) {
+                          if (_isViewerStudent) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    StudentProfileAchievementsPage(
+                                      userId: widget.userId,
+                                      userName: user.name,
+                                    ),
+                              ),
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    AdminStudentAchievementsPage(
+                                      userId: widget.userId,
+                                      userName: user.name,
+                                    ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: Text(AppLocalizations.of(context)!.viewAll),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildRecentAchievements(context),
+                ],
+                const SizedBox(height: 40),
               ],
             ),
           );
@@ -344,40 +450,206 @@ class _UserDetailPageState extends State<UserDetailPage> {
     );
   }
 
-  Widget _buildDetailSection(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(12),
+  Widget _buildProfileHeader(BuildContext context, UserDetails user) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final roleColor = _getRoleColor(user.roleName, colorScheme);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24.0),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+      child: Column(
+        children: [
+          UserAvatar(
+            name: user.name,
+            role: user.roleName,
+            size: 100,
+            fontSize: 40,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            user.name,
+            style: textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          // Role, Status, and Joined Date metadata row
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: roleColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _getLocalizedRole(user.roleName).toUpperCase(),
+                  style: textTheme.labelLarge?.copyWith(
+                    color: roleColor,
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: user.accountStatus == 'active'
+                      ? Colors.green.withOpacity(0.1)
+                      : colorScheme.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: user.accountStatus == 'active'
+                        ? Colors.green.withOpacity(0.3)
+                        : colorScheme.error.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      user.accountStatus == 'active'
+                          ? Icons.check_circle_outline
+                          : Icons.error_outline,
+                      size: 14,
+                      color: user.accountStatus == 'active'
+                          ? Colors.green
+                          : colorScheme.error,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _getLocalizedStatus(user.accountStatus).toUpperCase(),
+                      style: textTheme.labelSmall?.copyWith(
+                        color: user.accountStatus == 'active'
+                            ? Colors.green
+                            : colorScheme.error,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withOpacity(0.5),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 14,
+                      color: colorScheme.outline,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      "${AppLocalizations.of(context)!.joinedDateLabel} ${user.joinedDate.split('T')[0]}",
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title,
+    IconData icon, {
+    Widget? trailing,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const Divider(height: 24),
-            ...children,
           ],
         ),
+        if (trailing != null) trailing,
+      ],
+    );
+  }
+
+  Widget _buildDetailCard(BuildContext context, List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+        child: Column(children: children),
+      ),
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Divider(
+      height: 1,
+      color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
+    );
+  }
+
+  Widget _buildIconContainer(BuildContext context, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
     );
   }
 
@@ -389,15 +661,11 @@ class _UserDetailPageState extends State<UserDetailPage> {
     Color? valueColor,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+          _buildIconContainer(context, icon),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -407,16 +675,17 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   label,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.outline,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: valueColor,
-                    fontWeight: valueColor != null
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    color:
+                        valueColor ?? Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 15,
                   ),
                 ),
               ],
@@ -424,6 +693,125 @@ class _UserDetailPageState extends State<UserDetailPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRecentAchievements(BuildContext context) {
+    return FutureBuilder<List<AchievementData>>(
+      future: _achievementsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        } else if (snapshot.hasError) {
+          return Text('Error loading achievements: ${snapshot.error}');
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withOpacity(0.5),
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.emoji_events_outlined,
+                  size: 32,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppLocalizations.of(context)!.noAchievementsYet,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final achievements = snapshot.data!.take(10).toList();
+
+        return SizedBox(
+          height: 160,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: achievements.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final achievement = achievements[index];
+              final icon = getAchievementIcon(achievement.icon);
+              final color = getAchievementColor(context, achievement.icon);
+              final dateStr = achievement.unlockedAt != null
+                  ? achievement.unlockedAt!.toString().split(' ')[0]
+                  : AppLocalizations.of(context)!.unknownDate;
+
+              return Container(
+                width: 130,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outlineVariant.withOpacity(0.4),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, size: 28, color: color),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      achievement.achievementTitle ??
+                          AppLocalizations.of(context)!.achievement,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      dateStr,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

@@ -48,7 +48,8 @@ class ApiConstants {
       return 'https://10.0.2.2/api';
     } else {
       // Fallback for iOS Simulator
-      return 'https://kalmnest.test/api';
+        return 'https://kalmnest.test/api';
+     
     }
   }
 
@@ -76,7 +77,8 @@ class ApiConstants {
     if (Platform.isAndroid) {
       return 'https://10.0.2.2';
     } else {
-      return 'https://kalmnest.test';
+       return 'https://kalmnest.test';
+    
     }
   }
 }

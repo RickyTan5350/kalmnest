@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
-import 'package:flutter_codelab/models/level.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
-import 'package:flutter_codelab/services/local_level_storage.dart';
+import 'package:code_play/models/level.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
+import 'package:code_play/services/local_level_storage.dart';
 import 'package:flutter/foundation.dart';
 
 /// CENTRAL API BASE URL
@@ -58,7 +58,7 @@ class GameAPI {
   }) async {
     try {
       final cacheKey = await _getCacheKey();
-      
+
       // Clear cache if force refresh
       if (forceRefresh) {
         if (cacheKey != null) {
@@ -67,9 +67,12 @@ class GameAPI {
           _cachedLevelsByUser.clear();
         }
       }
-      
+
       // Return cached levels if available and not forced to refresh
-      if (!forceRefresh && cacheKey != null && _cachedLevelsByUser[cacheKey] != null && topic == null) {
+      if (!forceRefresh &&
+          cacheKey != null &&
+          _cachedLevelsByUser[cacheKey] != null &&
+          topic == null) {
         return _cachedLevelsByUser[cacheKey]!;
       }
 
@@ -104,7 +107,10 @@ class GameAPI {
   /// ------------------------------------------------------------
   /// FETCH A SINGLE LEVEL BY ID → RETURNS LevelModel?
   /// ------------------------------------------------------------
-  static Future<LevelModel?> fetchLevelById(String levelId, {String? userRole}) async {
+  static Future<LevelModel?> fetchLevelById(
+    String levelId, {
+    String? userRole,
+  }) async {
     try {
       final url = Uri.parse("$apiBase/level/$levelId");
       final headers = await _getHeaders();
@@ -114,17 +120,20 @@ class GameAPI {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = jsonDecode(response.body);
         final level = LevelModel.fromJson(jsonData);
-        
+
         // Save level data to local storage for Unity to access
         if (level.levelData != null && level.winCondition != null) {
           final storage = LocalLevelStorage();
           final levelDataJson = jsonDecode(level.levelData!);
           final winConditionJson = jsonDecode(level.winCondition!);
-          
+
           final user = await AuthApi.getStoredUser();
           final userId = user?['user_id']?.toString();
           final role = userRole ?? user?['role']?.toString();
-          final bool isStaff = role != null && (role.toLowerCase() == 'admin' || role.toLowerCase() == 'teacher');
+          final bool isStaff =
+              role != null &&
+              (role.toLowerCase() == 'admin' ||
+                  role.toLowerCase() == 'teacher');
 
           await storage.saveLevelData(
             levelId: levelId,
@@ -133,20 +142,23 @@ class GameAPI {
             userId: userId,
             userRole: role,
           );
-          
+
           // Also try to load and save student progress if exists (SKIP for admins/teachers)
           if (!isStaff) {
             final progressUrl = Uri.parse("$apiBase/level-user/$levelId");
             try {
-              final progressResponse = await http.get(progressUrl, headers: headers);
+              final progressResponse = await http.get(
+                progressUrl,
+                headers: headers,
+              );
               if (progressResponse.statusCode == 200) {
                 final progressData = jsonDecode(progressResponse.body);
                 if (progressData['saved_data'] != null) {
                   await storage.saveStudentProgress(
                     levelId: levelId,
-                    savedDataJson: progressData['saved_data'] is String 
-                      ? progressData['saved_data'] 
-                      : jsonEncode(progressData['saved_data']),
+                    savedDataJson: progressData['saved_data'] is String
+                        ? progressData['saved_data']
+                        : jsonEncode(progressData['saved_data']),
                     userId: userId,
                   );
                   if (kDebugMode) {
@@ -160,7 +172,7 @@ class GameAPI {
             }
           }
         }
-        
+
         return level;
       }
 
@@ -200,7 +212,7 @@ class GameAPI {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         // Clear cache when level is created
         clearCache();
-        
+
         try {
           final Map<String, dynamic> jsonData = jsonDecode(response.body);
 
@@ -343,9 +355,7 @@ class GameAPI {
       final response = await http.post(
         url,
         headers: headers,
-        body: jsonEncode({
-          'saved_data': savedData,
-        }),
+        body: jsonEncode({'saved_data': savedData}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -357,10 +367,7 @@ class GameAPI {
         'message': 'Failed to save progress: ${response.body}',
       };
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
+      return {'success': false, 'message': 'Error: $e'};
     }
   }
 
@@ -390,10 +397,7 @@ class GameAPI {
         'message': 'Failed to complete level: ${response.body}',
       };
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
+      return {'success': false, 'message': 'Error: $e'};
     }
   }
 }

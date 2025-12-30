@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import for keyboard shortcuts
-import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-// NOTE: Assuming 'run_code_page.dart' is in the same or accessible path.
-
+import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
 
 class ViewNotePage extends StatefulWidget {
   final String noteId;
@@ -30,13 +30,17 @@ class ViewNotePage extends StatefulWidget {
 
 class _ViewNotePageState extends State<ViewNotePage> {
   late String _content;
-  
+
   // --- Search State ---
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _pageFocusNode = FocusNode();
+
   String _searchTerm = '';
-  // --------------------
+  int _currentMatchIndex = 0;
+  int _totalMatches = 0;
+  List<GlobalKey> _matchKeys = [];
 
   @override
   void initState() {
@@ -50,86 +54,163 @@ class _ViewNotePageState extends State<ViewNotePage> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _pageFocusNode.dispose();
     super.dispose();
   }
-  
+
   // --- Search Logic ---
   void _onSearchChanged() {
+    final term = _searchController.text.trim();
+    int newTotal = 0;
+    if (term.isNotEmpty) {
+      String htmlContent = md.markdownToHtml(
+        _processMarkdown(_content),
+        extensionSet: md.ExtensionSet.gitHubFlavored,
+      );
+      final pattern = RegExp(
+        '(${RegExp.escape(term)})(?![^<]*>)',
+        caseSensitive: false,
+        multiLine: true,
+      );
+      newTotal = pattern.allMatches(htmlContent).length;
+    }
+
     setState(() {
-      // Update the search term to trigger a rebuild of the HTML widget
-      _searchTerm = _searchController.text.trim();
+      _searchTerm = term;
+      _totalMatches = newTotal;
+      _currentMatchIndex = 0;
     });
+
+    if (newTotal > 0) {
+      _scrollToMatch(0);
+    }
   }
 
-  void _toggleSearch(BuildContext context) {
+  void _toggleSearch() {
     setState(() {
       _isSearching = !_isSearching;
       if (_isSearching) {
-        // Request focus when search bar appears
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _searchFocusNode.requestFocus();
         });
       } else {
-        // Clear search state when closing
         _searchController.clear();
         _searchTerm = '';
-        FocusScope.of(context).unfocus(); // Dismiss keyboard
+        _pageFocusNode.requestFocus();
       }
     });
+  }
+
+  void _scrollToMatch(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (index < _matchKeys.length &&
+          _matchKeys[index].currentContext != null) {
+        Scrollable.ensureVisible(
+          _matchKeys[index].currentContext!,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          alignment: 0.5,
+        );
+      }
+    });
+  }
+
+  void _nextMatch() {
+    if (_totalMatches > 0) {
+      setState(() {
+        _currentMatchIndex = (_currentMatchIndex + 1) % _totalMatches;
+      });
+      _scrollToMatch(_currentMatchIndex);
+    }
+  }
+
+  void _prevMatch() {
+    if (_totalMatches > 0) {
+      setState(() {
+        _currentMatchIndex =
+            (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
+      });
+      _scrollToMatch(_currentMatchIndex);
+    }
   }
 
   void _openRunPage(String code) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RunCodePage(initialCode: code),
+        builder: (context) => RunCodePage(
+          initialCode: code,
+          contextId: widget.currentTitle,
+          topic: widget.currentTopic,
+          noteTitle: widget.currentTitle,
+          isAdmin: false,
+        ),
       ),
     );
   }
-  
+
+  // Helper to ensure absolute URLs
+  String _processMarkdown(String content) {
+    final domain = ApiConstants.domain;
+    return content.replaceAll('](/storage/', ']($domain/storage/');
+  }
+
   // --- HTML Rendering with Highlighting ---
   Widget _buildHighlightedHtml(ColorScheme colorScheme) {
+    _matchKeys = [];
+
     // 1. Convert Markdown to HTML string
     String htmlContent = md.markdownToHtml(
-      _content, 
+      _processMarkdown(_content),
       extensionSet: md.ExtensionSet.gitHubFlavored,
     );
 
+    final String activeBg =
+        '#${colorScheme.primary.value.toRadixString(16).substring(2)}';
+    final String activeText =
+        '#${colorScheme.onPrimary.value.toRadixString(16).substring(2)}';
+    final String inactiveBg =
+        '#${colorScheme.primaryContainer.value.toRadixString(16).substring(2)}';
+    final String inactiveText =
+        '#${colorScheme.onPrimaryContainer.value.toRadixString(16).substring(2)}';
+
     // 2. If searching, inject Highlight spans
     if (_searchTerm.isNotEmpty) {
-      // This Regex looks for the search term, BUT uses a "Negative Lookahead" (?![^<]*>)
-      // to ensure we don't replace text inside HTML tags (like <div class="search">).
-      // It matches the term only if it's NOT followed by a '>' without a preceding '<'.
       try {
         final pattern = RegExp(
-          '(${RegExp.escape(_searchTerm)})(?![^<]*>)', 
+          '(${RegExp.escape(_searchTerm)})(?![^<]*>)',
           caseSensitive: false,
           multiLine: true,
         );
-        
-        // Wrap matches in a span with a yellow highlight color
-        // You can customize the background-color hex code here.
+
+        int matchCounter = 0;
         htmlContent = htmlContent.replaceAllMapped(pattern, (match) {
-          return '<span style="background-color: #ffd54f; color: black;">${match.group(1)}</span>';
+          final bool isActive = matchCounter == _currentMatchIndex;
+          final String bg = isActive ? activeBg : inactiveBg;
+          final String txt = isActive ? activeText : inactiveText;
+          final String replacement =
+              '<span data-scroll-index="$matchCounter"></span><span style="background-color: $bg; color: $txt;">${match.group(1)}</span>';
+          matchCounter++;
+          return replacement;
         });
       } catch (e) {
-        // Fallback if regex fails (rare)
         debugPrint("Regex error: $e");
       }
     }
 
     return HtmlWidget(
-      htmlContent, // Pass the modified HTML string
-      textStyle: TextStyle(
-        color: colorScheme.onSurface,
-        fontSize: 15,
-      ),
+      htmlContent,
+      baseUrl: Uri.parse(ApiConstants.domain),
+      textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 15),
       customWidgetBuilder: (element) {
         if (element.localName == 'pre') {
-          // Extract text. Note: If we highlighted inside the pre tag, the 
-          // <span> tags are technically part of the text now. 
+          // Extract text. Note: If we highlighted inside the pre tag, the
+          // <span> tags are technically part of the text now.
           // For the code runner, we want clean code, so we strip tags if needed.
-          final codeText = element.text; 
+          final codeText = element.text;
+          // Use innerHtml to preserve highlighting spans, wrapped in pre to preserve whitespace
+          final htmlContent =
+              '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
 
           return Column(
             children: [
@@ -144,13 +225,24 @@ class _ViewNotePageState extends State<ViewNotePage> {
                 ),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: Text(
-                    codeText,
-                    style: TextStyle(
+                  // Use HtmlWidget to render the code with highlights
+                  child: HtmlWidget(
+                    htmlContent,
+                    textStyle: TextStyle(
                       color: colorScheme.onSurfaceVariant,
                       fontFamily: 'monospace',
-                      fontSize: 13,
                     ),
+                    // Recursively handle scroll indices inside the code block
+                    customWidgetBuilder: (innerElement) {
+                      if (innerElement.attributes.containsKey(
+                        'data-scroll-index',
+                      )) {
+                        final GlobalKey key = GlobalKey();
+                        _matchKeys.add(key);
+                        return SizedBox(width: 1, height: 1, key: key);
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ),
@@ -162,7 +254,10 @@ class _ViewNotePageState extends State<ViewNotePage> {
                   child: InkWell(
                     onTap: () => _openRunPage(codeText),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.primary,
                         borderRadius: BorderRadius.circular(4),
@@ -170,15 +265,19 @@ class _ViewNotePageState extends State<ViewNotePage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.play_arrow, size: 12, color: colorScheme.onPrimary),
+                          Icon(
+                            Icons.play_arrow,
+                            size: 12,
+                            color: colorScheme.onPrimary,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Run',
                             style: TextStyle(
                               color: colorScheme.onPrimary,
                               fontSize: 11,
-                              fontWeight: FontWeight.bold
-                            )
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -189,12 +288,29 @@ class _ViewNotePageState extends State<ViewNotePage> {
             ],
           );
         }
+        if (element.attributes.containsKey('data-scroll-index')) {
+          final GlobalKey key = GlobalKey();
+          _matchKeys.add(key);
+          return SizedBox(width: 1, height: 1, key: key);
+        }
         return null;
       },
       customStylesBuilder: (element) {
-        if (element.localName == 'h1') return {'margin-bottom': '10px', 'font-weight': 'bold', 'border-bottom': '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}'};
-        if (element.localName == 'table') return {'border-collapse': 'collapse', 'width': '100%'};
-        if (element.localName == 'th' || element.localName == 'td') return {'border': '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}', 'padding': '8px'};
+        if (element.localName == 'h1')
+          return {
+            'margin-bottom': '10px',
+            'font-weight': 'bold',
+            'border-bottom':
+                '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
+          };
+        if (element.localName == 'table')
+          return {'border-collapse': 'collapse', 'width': '100%'};
+        if (element.localName == 'th' || element.localName == 'td')
+          return {
+            'border':
+                '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
+            'padding': '8px',
+          };
         return null;
       },
     );
@@ -204,121 +320,149 @@ class _ViewNotePageState extends State<ViewNotePage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     // Shortcuts wrapper handles Ctrl+F / Cmd+F
-    return Shortcuts(
-      shortcuts: {
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyF): const ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyF): const ActivateIntent(), 
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+            _toggleSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+            _toggleSearch,
       },
-      child: Actions(
-        actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (ActivateIntent intent) => _toggleSearch(context),
-          ),
-        },
-        child: Scaffold(
-          backgroundColor: colorScheme.surface,
-          appBar: AppBar(
-            title: Text(
-              widget.currentTitle, 
-              style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)
-            ),
+      child: Focus(
+        focusNode: _pageFocusNode,
+        autofocus: true,
+        child: GestureDetector(
+          onTap: () {
+            if (!_searchFocusNode.hasFocus) _pageFocusNode.requestFocus();
+          },
+          child: Scaffold(
             backgroundColor: colorScheme.surface,
-            elevation: 0,
-            iconTheme: IconThemeData(color: colorScheme.onSurface),
-            actions: [
-              IconButton(
-                // Toggle icon based on state
-                icon: Icon(_isSearching ? Icons.close : Icons.search),
-                tooltip: _isSearching ? 'Close Search' : 'Search (Ctrl+F)',
-                onPressed: () => _toggleSearch(context),
-              ),
-            ],
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- Search Bar Widget ---
-                if (_isSearching) 
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _searchController,
-                            focusNode: _searchFocusNode,
-                            decoration: InputDecoration(
-                              hintText: 'Search in note...',
-                              filled: true,
-                              fillColor: colorScheme.surfaceContainerHigh,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              prefixIcon: const Icon(Icons.search, size: 20),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                // -----------------------------
-                
-                // Display Topic and Visibility
-                Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Text(
-                          'Topic: ${widget.currentTopic}', 
-                          style: TextStyle(color: colorScheme.primary, fontSize: 16, fontWeight: FontWeight.bold)
-                        ),
-                      ),
-                    ),
-                    Text(
-                      widget.currentVisibility ? 'Public' : 'Private',
-                      style: TextStyle(
-                        color: widget.currentVisibility ? colorScheme.secondary : colorScheme.error,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
+            appBar: AppBar(
+              title: Text(
+                widget.currentTitle,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 16),
-
-                // Live Preview of the Content
-                Container(
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colorScheme.outlineVariant),
-                  ),
+              ),
+              backgroundColor: colorScheme.surface,
+              elevation: 0,
+              iconTheme: IconThemeData(color: colorScheme.onSurface),
+              actions: [
+                IconButton(
+                  // Toggle icon based on state
+                  icon: Icon(_isSearching ? Icons.close : Icons.search),
+                  tooltip: _isSearching ? 'Close Search' : 'Search (Ctrl+F)',
+                  onPressed: _toggleSearch,
+                ),
+              ],
+            ),
+            body: Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                        ),
-                        child: Text('Note Content', style: TextStyle(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold, fontSize: 13)),
+                      // Display Topic and Visibility
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: Text(
+                                'Topic: ${widget.currentTopic}',
+                                style: TextStyle(
+                                  color: colorScheme.primary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            widget.currentVisibility ? 'Public' : 'Private',
+                            style: TextStyle(
+                              color: widget.currentVisibility
+                                  ? colorScheme.secondary
+                                  : colorScheme.error,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
-                      ClipRRect(
-                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          // This renders the HTML with highlighted words
-                          child: _buildHighlightedHtml(colorScheme),
+                      const SizedBox(height: 16),
+
+                      // Live Preview of the Content
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: colorScheme.outlineVariant),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(11),
+                                ),
+                              ),
+                              child: Text(
+                                'Note Content',
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                bottom: Radius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                // This renders the HTML with highlighted words
+                                child: _buildHighlightedHtml(colorScheme),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
+                if (_isSearching)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    width: screenWidth > 350 ? 350 : screenWidth - 32,
+                    child: CallbackShortcuts(
+                      bindings: {
+                        const SingleActivator(LogicalKeyboardKey.enter):
+                            _nextMatch,
+                      },
+                      child: SearchNote(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        matchCount: _currentMatchIndex,
+                        totalMatches: _totalMatches,
+                        onNext: _nextMatch,
+                        onPrev: _prevMatch,
+                        onClose: _toggleSearch,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

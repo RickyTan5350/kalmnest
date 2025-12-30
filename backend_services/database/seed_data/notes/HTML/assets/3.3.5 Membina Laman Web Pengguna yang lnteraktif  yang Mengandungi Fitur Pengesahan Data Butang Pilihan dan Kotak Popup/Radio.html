@@ -1,0 +1,30 @@
+<html>
+  <body>
+    <b>MOD PENGAJIAN</b>
+    <form action="">
+      <input type="radio" name="mod" id="sepenuh">Sepenuh Masa
+      <input type="radio" name="mod" id="separuh">Separuh Masa <p>
+        <button type="button" onclick="semakMod()">Pengesahan Mod Pengajian </button>
+      </p>
+    </form>
+
+    <script>
+      function semakMod() // 3
+      {
+        if (document.getElementById('sepenuh').checked == true) // 4
+        {
+          window.alert("Mod Pengajian: SEPENUH MASA"); // 5
+        }
+        else
+        {
+          if (document.getElementById('separuh').checked == true)
+          {
+            window.alert("Mod Pengajian: SEPARUH MASA"); // 6
+          }
+        }
+        document.getElementById('sepenuh').checked=false;
+        document.getElementById('separuh').checked=false;
+      }
+    </script>
+  </body>
+</html>

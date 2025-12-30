@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_view_achievement_page.dart';
-import 'package:flutter_codelab/student/widgets/achievements/student_view_achievement_page.dart';
-import 'package:flutter_codelab/constants/view_layout.dart' show ViewLayout;
-import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
-import 'package:flutter_codelab/services/layout_preferences.dart'; // Layout Persistence
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_view_achievement_page.dart';
+import 'package:code_play/student/widgets/achievements/student_view_achievement_page.dart';
+import 'package:code_play/constants/view_layout.dart' show ViewLayout;
+import 'package:code_play/enums/sort_enums.dart'; // Shared Enums
+import 'package:code_play/services/layout_preferences.dart'; // Layout Persistence
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class AchievementPage extends StatefulWidget {
   final void Function(BuildContext context, String message, Color color)
@@ -28,11 +29,15 @@ class _AchievementPageState extends State<AchievementPage> {
     'CSS',
     'JS',
     'PHP',
-    'Level',
     'Quiz',
+    'Created by Me',
+    'Unlocked',
+    'Locked',
   ]; // Added 'All'
   String _selectedTopic = 'All'; // Default to 'All'
-  ViewLayout _viewLayout = ViewLayout.grid;
+  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
+    LayoutPreferences.globalLayoutKey,
+  );
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
 
@@ -48,7 +53,9 @@ class _AchievementPageState extends State<AchievementPage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -74,6 +81,24 @@ class _AchievementPageState extends State<AchievementPage> {
     }
   }
 
+  String _getLocalizedTopic(String topic) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (topic) {
+      case 'All':
+        return l10n.all;
+      case 'Quiz':
+        return l10n.quiz;
+      case 'Created by Me':
+        return l10n.createdByMe;
+      case 'Unlocked':
+        return l10n.unlocked;
+      case 'Locked':
+        return l10n.locked;
+      default:
+        return topic; // HTML, CSS, JS, PHP
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
@@ -83,7 +108,7 @@ class _AchievementPageState extends State<AchievementPage> {
     print("IS STUDENT? ${widget.currentUser.isStudent}");
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -99,7 +124,7 @@ class _AchievementPageState extends State<AchievementPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Achievements",
+                      AppLocalizations.of(context)!.achievements,
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(color: colors.onSurface),
                     ),
@@ -119,7 +144,7 @@ class _AchievementPageState extends State<AchievementPage> {
                         final newLayout = newSelection.first;
                         setState(() => _viewLayout = newLayout);
                         LayoutPreferences.saveLayout(
-                          'global_layout',
+                          LayoutPreferences.globalLayoutKey,
                           newLayout,
                         );
                       },
@@ -134,7 +159,11 @@ class _AchievementPageState extends State<AchievementPage> {
                   width: 300,
                   child: SearchBar(
                     controller: _searchController,
-                    hintText: "Search titles or descriptions...",
+                    hintText: AppLocalizations.of(context)!.searchHint,
+                    padding: const WidgetStatePropertyAll<EdgeInsets>(
+                      EdgeInsets.symmetric(horizontal: 16.0),
+                    ),
+                    leading: const Icon(Icons.search),
                     // NEW: Update state on submit or change
                     onChanged: (value) {
                       setState(() {
@@ -157,12 +186,6 @@ class _AchievementPageState extends State<AchievementPage> {
                             });
                           },
                         ),
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {
-                          /* Search logic is in onChange/onSubmitted */
-                        },
-                      ),
                     ],
                   ),
                 ),
@@ -174,38 +197,54 @@ class _AchievementPageState extends State<AchievementPage> {
                       child: Wrap(
                         spacing: 10.0,
                         runSpacing: 10.0,
-                        children: _topics.map((topic) {
-                          final isSelected = _selectedTopic == topic;
-                          return FilterChip(
-                            label: Text(
-                              topic,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? colors.primary
-                                    : colors.onSurface,
-                              ),
-                            ),
-                            selected: isSelected,
-                            onSelected: (bool selected) {
-                              setState(() {
-                                _selectedTopic = selected ? topic : 'All';
-                              });
-                            },
-                          );
-                        }).toList(),
+                        children: _topics
+                            .where((topic) {
+                              if (widget.currentUser.isStudent) {
+                                // Student: Hide 'Created by Me'
+                                if (topic == 'Created by Me') return false;
+                              } else {
+                                // Teacher/Admin: Hide 'Unlocked', 'Locked'
+                                if (topic == 'Unlocked' || topic == 'Locked') {
+                                  return false;
+                                }
+                              }
+                              return true;
+                            })
+                            .map((topic) {
+                              final isSelected = _selectedTopic == topic;
+                              return FilterChip(
+                                label: Text(
+                                  _getLocalizedTopic(topic),
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? colors.primary
+                                        : colors.onSurface,
+                                  ),
+                                ),
+                                selected: isSelected,
+                                onSelected: (bool selected) {
+                                  setState(() {
+                                    _selectedTopic = selected ? topic : 'All';
+                                  });
+                                },
+                              );
+                            })
+                            .toList(),
                       ),
                     ),
                     const SizedBox(width: 8),
                     // Filter Icon (Sort)
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.filter_list),
-                      tooltip: 'Sort Options',
+                      tooltip: AppLocalizations.of(context)!.sortOptions,
                       onSelected: (value) {
                         setState(() {
                           if (value == 'Name') {
                             _sortType = SortType.alphabetical;
                           } else if (value == 'Date') {
                             _sortType = SortType.updated;
+                          } else if (value == 'Unlocked') {
+                            _sortType = SortType.unlocked;
                           } else if (value == 'Ascending') {
                             _sortOrder = SortOrder.ascending;
                           } else if (value == 'Descending') {
@@ -215,40 +254,57 @@ class _AchievementPageState extends State<AchievementPage> {
                       },
                       itemBuilder: (BuildContext context) =>
                           <PopupMenuEntry<String>>[
-                            const PopupMenuItem<String>(
+                            PopupMenuItem<String>(
                               enabled: false,
                               child: Text(
-                                'Sort By',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                AppLocalizations.of(context)!.sortBy,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             CheckedPopupMenuItem<String>(
                               value: 'Name',
                               checked: _sortType == SortType.alphabetical,
-                              child: const Text('Name'),
+                              child: Text(AppLocalizations.of(context)!.name),
                             ),
                             CheckedPopupMenuItem<String>(
                               value: 'Date',
                               checked: _sortType == SortType.updated,
-                              child: const Text('Date'),
+                              child: Text(AppLocalizations.of(context)!.date),
                             ),
+                            // NEW: Unlocked sort (Visible only for students)
+                            if (widget.currentUser.isStudent)
+                              CheckedPopupMenuItem<String>(
+                                value: 'Unlocked',
+                                checked: _sortType == SortType.unlocked,
+                                child: Text(
+                                  AppLocalizations.of(context)!.unlocked,
+                                ),
+                              ),
                             const PopupMenuDivider(),
-                            const PopupMenuItem<String>(
+                            PopupMenuItem<String>(
                               enabled: false,
                               child: Text(
-                                'Order',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                AppLocalizations.of(context)!.order,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             CheckedPopupMenuItem<String>(
                               value: 'Ascending',
                               checked: _sortOrder == SortOrder.ascending,
-                              child: const Text('Ascending'),
+                              child: Text(
+                                AppLocalizations.of(context)!.ascending,
+                              ),
                             ),
                             CheckedPopupMenuItem<String>(
                               value: 'Descending',
                               checked: _sortOrder == SortOrder.descending,
-                              child: const Text('Descending'),
+                              child: Text(
+                                AppLocalizations.of(context)!.descending,
+                              ),
                             ),
                           ],
                     ),
@@ -257,7 +313,7 @@ class _AchievementPageState extends State<AchievementPage> {
                     IconButton(
                       icon: const Icon(Icons.refresh),
                       onPressed: _handleRefresh,
-                      tooltip: "Refresh List",
+                      tooltip: AppLocalizations.of(context)!.refreshList,
                     ),
                   ],
                 ),
@@ -276,7 +332,13 @@ class _AchievementPageState extends State<AchievementPage> {
                           searchText: _searchText,
                           selectedTopic: _selectedTopic == 'All'
                               ? null
-                              : _selectedTopic.toLowerCase(),
+                              : ([
+                                      'Created by Me',
+                                      'Unlocked',
+                                      'Locked',
+                                    ].contains(_selectedTopic)
+                                    ? _selectedTopic
+                                    : _selectedTopic.toLowerCase()),
                           key: _studentKey,
                           sortType: _sortType,
                           sortOrder: _sortOrder,
@@ -290,10 +352,17 @@ class _AchievementPageState extends State<AchievementPage> {
                           searchText: _searchText,
                           selectedTopic: _selectedTopic == 'All'
                               ? null
-                              : _selectedTopic.toLowerCase(),
+                              : ([
+                                      'Created by Me',
+                                      'Unlocked',
+                                      'Locked',
+                                    ].contains(_selectedTopic)
+                                    ? _selectedTopic
+                                    : _selectedTopic.toLowerCase()),
                           key: _adminKey,
                           sortType: _sortType,
                           sortOrder: _sortOrder,
+                          isAdmin: widget.currentUser.isAdmin, // NEW
                         ),
                 ),
               ],
