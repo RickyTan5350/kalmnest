@@ -10,24 +10,21 @@ class DisappearingNavigationRail extends StatelessWidget {
     required this.selectedIndex,
     this.onDestinationSelected,
     required this.isExtended,
-    // REMOVED: required this.onMenuPressed,
     this.onAddButtonPressed,
-    // REMOVED: required this.onLogoutPressed,
   });
 
   final Color backgroundColor;
   final int selectedIndex;
   final ValueChanged<int>? onDestinationSelected;
   final bool isExtended;
-  // REMOVED: final VoidCallback onMenuPressed;
   final VoidCallback? onAddButtonPressed;
-  // REMOVED: final VoidCallback onLogoutPressed;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
     final l10n = AppLocalizations.of(context)!;
+
+    // Map your destinations using the localized labels from your list
     final List<String> labels = [
       l10n.users,
       l10n.games,
@@ -38,48 +35,76 @@ class DisappearingNavigationRail extends StatelessWidget {
       l10n.feedback,
     ];
 
-    // The destinations no longer need the placeholder for the add button.
-    final List<NavigationRailDestination> allDestinations = destinations.map((
-      d,
-    ) {
-      return NavigationRailDestination(
-        icon: Icon(d.icon),
-        selectedIcon: Icon(d.selectedIcon),
-        label: Text(d.label),
+    final List<NavigationRailDestination> allDestinations = [];
+    for (int i = 0; i < destinations.length; i++) {
+      final d = destinations[i];
+      allDestinations.add(
+        NavigationRailDestination(
+          icon: Icon(d.icon),
+          selectedIcon: Icon(d.selectedIcon),
+          label: Text(labels[i]),
+        ),
       );
-    }).toList();
+    }
 
-    return NavigationRail(
-      selectedIndex: selectedIndex, // Simpler indexing now
-      backgroundColor: backgroundColor,
-      onDestinationSelected: onDestinationSelected,
-      extended: isExtended,
-      // Use the 'leading' property for the top-aligned buttons.
-      leading: Column(
+    return Container(
+      color: backgroundColor,
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start, // Anchors the FAB area to the left
         children: [
-          // REMOVED: Menu Icon Button
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            // Use the FAB widget directly
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(15)),
+          // --- GMAIL STYLE FAB AREA ---
+          // A SizedBox of 72px matches the standard collapsed width of the Rail
+          SizedBox(
+            width: isExtended ? null : 72,
+            child: Padding(
+              padding: const EdgeInsets.only(
+                top: 12.0,
+                bottom: 12.0,
+                left: 12.0,
+                right: 4.0,
+              ),
+              child: isExtended
+                  ? FloatingActionButton.extended(
+                      isExtended: true,
+                      onPressed: onAddButtonPressed,
+                      icon: const Icon(Icons.add),
+                      label: const Text("Create"), // Gmail style text label
+                      backgroundColor: colorScheme.tertiaryContainer,
+                      foregroundColor: colorScheme.onTertiaryContainer,
+                    )
+                  : Center(
+                      // Center ensures the circular FAB stays perfectly
+                      // aligned over the navigation icons below
+                      child: FloatingActionButton(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
+                        ),
+                        onPressed: onAddButtonPressed,
+                        backgroundColor: colorScheme.tertiaryContainer,
+                        foregroundColor: colorScheme.onTertiaryContainer,
+                        child: const Icon(Icons.add),
+                      ),
+                    ),
             ),
-            backgroundColor: colorScheme.tertiaryContainer,
-            foregroundColor: colorScheme.onTertiaryContainer,
-            onPressed: onAddButtonPressed,
-            child: const Icon(Icons.add),
+          ),
+          // --- THE NAVIGATION RAIL ---
+          Expanded(
+            child: NavigationRail(
+              selectedIndex: selectedIndex,
+              backgroundColor: backgroundColor,
+              onDestinationSelected: onDestinationSelected,
+              extended: isExtended,
+              // groupAlignment -1.0 keeps icons at the top under the FAB
+              groupAlignment: -1.0,
+              destinations: allDestinations,
+              trailing: const SizedBox(),
+              // Leading is now null because the FAB is handled in the Column above
+              leading: null,
+            ),
           ),
         ],
       ),
-      groupAlignment: -0.95, // Adjust alignment to position destinations lower
-      destinations: allDestinations,
-
-      // ------------------------------------------------------------------
-      // MODIFIED: Trailing widget is now an empty box
-      // ------------------------------------------------------------------
-      trailing: const SizedBox(),
-      // ------------------------------------------------------------------
     );
   }
 }
-
