@@ -1,8 +1,9 @@
 //lib/widgets/create_class_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_theme_extensions.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_theme_extensions.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class CreateClassScreen extends StatefulWidget {
   const CreateClassScreen({super.key});
@@ -16,6 +17,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
   final _classNameController = TextEditingController();
   final _descriptionController = TextEditingController();
   String? _selectedTeacher;
+  String? _selectedFocus; // HTML, CSS, JavaScript, PHP
   List<String?> _selectedStudents = [null];
 
   // Data from backend
@@ -114,6 +116,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     _descriptionController.clear();
     setState(() {
       _selectedTeacher = null;
+      _selectedFocus = null;
       _selectedStudents = [null];
     });
   }
@@ -133,25 +136,27 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         teacherId: teacherId,
         description: description,
         adminId: adminId,
+        focus: _selectedFocus,
         studentIds: studentIds.isEmpty ? null : studentIds,
       );
 
+      final l10n = AppLocalizations.of(context)!;
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Class created successfully!'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            content: Text(l10n.classCreatedSuccessfully),
+            backgroundColor: Colors.green,
           ),
         );
         Navigator.pop(context, true); // Return true to trigger reload
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Failed to create class'),
+            content: Text(result['message'] ?? l10n.failedToCreateClass),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
-              label: 'OK',
+              label: l10n.ok,
               textColor: Theme.of(context).colorScheme.onError,
               onPressed: () {},
             ),
@@ -177,6 +182,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -202,7 +208,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Create New Class',
+                    l10n.createNewClass,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -216,12 +222,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
                       context: context,
-                      labelText: 'Class Name',
-                      hintText: 'Enter class name',
+                      labelText: l10n.className,
+                      hintText: l10n.enterClassName,
                       icon: Icons.class_,
                     ),
                     validator: (value) => (value == null || value.isEmpty)
-                        ? 'Please enter class name'
+                        ? l10n.pleaseEnterClassName
                         : null,
                   ),
                   SizedBox(height: ClassConstants.formSpacing),
@@ -232,12 +238,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
                       context: context,
-                      labelText: 'Description',
-                      hintText: 'Enter description',
+                      labelText: l10n.description,
+                      hintText: l10n.enterDescription,
                       icon: Icons.description,
                     ),
                     validator: (value) => (value == null || value.isEmpty)
-                        ? 'Please enter description'
+                        ? l10n.pleaseEnterDescription
                         : null,
                   ),
                   SizedBox(height: ClassConstants.formSpacing),
@@ -249,15 +255,16 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
                       context: context,
-                      labelText: 'Assign Teacher (Optional)',
+                      labelText: l10n.assignTeacherOptional,
                       hintText: _loadingTeachers
-                          ? 'Loading...'
-                          : 'Select teacher',
+                          ? l10n.loading
+                          : l10n.selectTeacher,
                       icon: Icons.person,
                     ),
                     selectedItemBuilder: (BuildContext context) {
+                      final l10n = AppLocalizations.of(context)!;
                       return [
-                        const Text('None (Optional)'),
+                        Text(l10n.noneOptional),
                         ..._teachers.map((teacher) {
                           return Text(
                             teacher['name'] as String? ?? '',
@@ -267,9 +274,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       ];
                     },
                     items: [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: null,
-                        child: Text('None (Optional)'),
+                        child: Text(l10n.noneOptional),
                       ),
                       ..._teachers.map((teacher) {
                         final status =
@@ -355,9 +362,41 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   ),
                   SizedBox(height: ClassConstants.formSpacing),
 
+                  // Focus Dropdown
+                  DropdownButtonFormField<String>(
+                    value: _selectedFocus,
+                    dropdownColor: const Color(0xFFF5FAFC),
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      context: context,
+                      labelText: l10n.focusOptional,
+                      icon: Icons.category,
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: null,
+                        child: Text(l10n.noneOptional),
+                      ),
+                      const DropdownMenuItem(
+                        value: 'HTML',
+                        child: Text('HTML'),
+                      ),
+                      const DropdownMenuItem(value: 'CSS', child: Text('CSS')),
+                      const DropdownMenuItem(
+                        value: 'JavaScript',
+                        child: Text('JavaScript'),
+                      ),
+                      const DropdownMenuItem(value: 'PHP', child: Text('PHP')),
+                    ],
+                    onChanged: (value) {
+                      setState(() => _selectedFocus = value);
+                    },
+                  ),
+                  SizedBox(height: ClassConstants.formSpacing),
+
                   // Students
                   Text(
-                    'Enroll Students',
+                    l10n.enrollStudents,
                     style: TextStyle(color: colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 8),
@@ -373,15 +412,16 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: _inputDecoration(
                             context: context,
-                            labelText: 'Student ${index + 1} (Optional)',
+                            labelText: l10n.studentOptional(index + 1),
                             hintText: _loadingStudents
-                                ? 'Loading...'
-                                : 'Select student',
+                                ? l10n.loading
+                                : l10n.selectStudent,
                             icon: Icons.person_add,
                           ),
                           selectedItemBuilder: (BuildContext context) {
+                            final l10n = AppLocalizations.of(context)!;
                             return [
-                              const Text('None (Optional)'),
+                              Text(l10n.noneOptional),
                               ...availableStudents.map((student) {
                                 return Text(
                                   student['name'] as String? ?? '',
@@ -391,9 +431,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                             ];
                           },
                           items: [
-                            const DropdownMenuItem(
+                            DropdownMenuItem(
                               value: null,
-                              child: Text('None (Optional)'),
+                              child: Text(l10n.noneOptional),
                             ),
                             ...availableStudents.map((student) {
                               final status =
@@ -494,7 +534,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     },
                     icon: Icon(Icons.add, color: colorScheme.onSurface),
                     label: Text(
-                      'Add Student',
+                      l10n.addStudent,
                       style: TextStyle(color: colorScheme.onSurface),
                     ),
                   ),
@@ -508,7 +548,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       TextButton(
                         onPressed: _resetForm,
                         child: Text(
-                          'Reset',
+                          l10n.reset,
                           style: TextStyle(color: colorScheme.onSurfaceVariant),
                         ),
                       ),
@@ -526,7 +566,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text('Create'),
+                        child: Text(l10n.create),
                       ),
                     ],
                   ),

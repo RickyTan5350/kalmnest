@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+<<<<<<< Updated upstream
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+=======
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/constants/api_constants.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+>>>>>>> Stashed changes
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_codelab/constants/class_constants.dart';
@@ -172,8 +178,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
     final textTheme = Theme.of(context).textTheme;
 
     // Get class color for AppBar
-    final classColor = ClassCustomization.getColorByName(_classData?['color']);
-    final color = classColor?.color ?? cs.primary;
+    final color = cs.primary;
 
     return Scaffold(
       appBar: AppBar(

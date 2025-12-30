@@ -36,6 +36,7 @@ class ClassApi {
     String? teacherId,
     String? description,
     String? adminId,
+    String? focus,
     List<String>? studentIds,
   }) async {
     final uri = Uri.parse('$base/classes');
@@ -44,6 +45,7 @@ class ClassApi {
       'teacher_id': teacherId,
       'description': description ?? '',
       'admin_id': adminId,
+      'focus': focus,
       'student_ids': studentIds,
     };
 
@@ -167,6 +169,33 @@ class ClassApi {
     } catch (e) {
       print("Error fetching all classes: $e");
       return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateClassFocus(
+    String classId,
+    String? focus,
+  ) async {
+    final uri = Uri.parse('$base/classes/$classId/focus');
+    final body = jsonEncode({'focus': focus});
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final response = await http.patch(uri, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        return {'success': true, 'data': decoded['data']};
+      } else {
+        final decoded = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': decoded['message'] ?? 'Failed to update class focus',
+        };
+      }
+    } catch (e) {
+      print("Error updating class focus: $e");
+      return {'success': false, 'message': 'Network error: $e'};
     }
   }
 

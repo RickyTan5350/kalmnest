@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+<<<<<<< Updated upstream
 import 'package:flutter_codelab/models/student.dart';
 import 'package:flutter_codelab/constants/class_constants.dart';
+=======
+import 'package:code_play/models/student.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+>>>>>>> Stashed changes
 
 class StudentPreviewRow extends StatelessWidget {
   final List<Student> students;
@@ -144,12 +150,12 @@ class StudentPreviewRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Students',
+                      AppLocalizations.of(context)!.students,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     SizedBox(height: ClassConstants.defaultPadding * 0.25),
                     Text(
-                      'List of enrolled students',
+                      AppLocalizations.of(context)!.listOfEnrolledStudents,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -162,7 +168,7 @@ class StudentPreviewRow extends StatelessWidget {
                     minimumSize: const Size(0, 36),
                   ),
                   onPressed: onViewAll,
-                  child: const Text("View All"),
+                  child: Text(AppLocalizations.of(context)!.viewAll),
                 ),
               ],
             ),

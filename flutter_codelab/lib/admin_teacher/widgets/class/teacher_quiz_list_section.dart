@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_quiz_page.dart';
 import 'package:intl/intl.dart';
+<<<<<<< Updated upstream
 import 'package:flutter_codelab/constants/class_constants.dart';
+=======
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+>>>>>>> Stashed changes
 
 class QuizListSection extends StatefulWidget {
   final String roleName;
@@ -52,17 +57,19 @@ class _QuizListSectionState extends State<QuizListSection> {
   }
 
   String _formatDate(dynamic date) {
-    if (date == null) return 'Unknown';
+    final l10n = AppLocalizations.of(context)!;
+    if (date == null) return l10n.unknown;
     try {
       final dateTime = DateTime.parse(date.toString());
       return DateFormat('MMM d, yyyy').format(dateTime);
     } catch (e) {
-      return 'Unknown';
+      return l10n.unknown;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -85,7 +92,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Quizzes',
+                      l10n.quizzes,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
@@ -93,7 +100,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${_quizzes.length} quiz${_quizzes.length != 1 ? 'es' : ''} available',
+                      l10n.quizAvailable(_quizzes.length, _quizzes.length != 1 ? 'es' : ''),
                       style: textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
@@ -118,7 +125,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                               _fetchQuizzes();
                             });
                       },
-                      child: const Text('View All Quizzes'),
+                      child: Text(l10n.viewAllQuizzes),
                     ),
                   ],
                 ),
@@ -148,14 +155,14 @@ class _QuizListSectionState extends State<QuizListSection> {
                       ),
                       SizedBox(height: ClassConstants.defaultPadding * 0.75),
                       Text(
-                        'No quizzes yet',
+                        l10n.noQuizzesYet,
                         style: textTheme.bodyMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
                       ),
                       SizedBox(height: ClassConstants.defaultPadding * 0.25),
                       Text(
-                        'Create or assign quizzes to get started',
+                        l10n.teacherHasntAssignedQuizzes,
                         style: textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant.withOpacity(0.7),
                         ),
@@ -170,8 +177,8 @@ class _QuizListSectionState extends State<QuizListSection> {
               ..._quizzes.take(3).map((quiz) {
                 final levelType = quiz['level_type'];
                 final levelTypeName = levelType != null
-                    ? levelType['level_type_name'] ?? 'Unknown'
-                    : 'Unknown';
+                    ? levelType['level_type_name'] ?? l10n.unknown
+                    : l10n.unknown;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
@@ -186,7 +193,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                     ),
                     leading: Icon(Icons.quiz, color: cs.primary),
                     title: Text(
-                      quiz['level_name'] ?? 'No Name',
+                      quiz['level_name'] ?? l10n.noName,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface,

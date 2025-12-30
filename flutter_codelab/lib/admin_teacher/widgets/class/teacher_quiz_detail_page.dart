@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+<<<<<<< Updated upstream
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+=======
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+>>>>>>> Stashed changes
 import 'package:intl/intl.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 /// Teacher view: Quiz detail page showing quiz info and student completion status
 class TeacherQuizDetailPage extends StatefulWidget {
@@ -95,9 +101,10 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
           _loading = false;
         });
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Failed to load quiz student data'),
+              content: Text(l10n.failedToLoadQuizStudentData),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -127,12 +134,13 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
   }
 
   String _formatDate(dynamic date) {
-    if (date == null) return 'Unknown';
+    final l10n = AppLocalizations.of(context)!;
+    if (date == null) return l10n.unknown;
     try {
       final dateTime = DateTime.parse(date.toString());
       return DateFormat('MMM d, yyyy HH:mm').format(dateTime);
     } catch (e) {
-      return 'Unknown';
+      return l10n.unknown;
     }
   }
 
@@ -146,6 +154,8 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (_loading) {
       return Scaffold(body: const Center(child: CircularProgressIndicator()));
     }
@@ -156,25 +166,25 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
     // Get class color for AppBar
     final color = cs.primary;
 
-    final quizName = _quiz?['level_name'] ?? widget.quizName ?? 'Quiz';
+    final quizName = _quiz?['level_name'] ?? widget.quizName ?? l10n.quizText;
     final levelType = _quiz?['level_type'];
     final levelTypeName = levelType != null
-        ? levelType['level_type_name'] ?? 'Unknown'
-        : 'Unknown';
+        ? levelType['level_type_name'] ?? l10n.unknown
+        : l10n.unknown;
 
     return Scaffold(
       appBar: AppBar(
         title: BreadcrumbNavigation(
           items: [
             BreadcrumbItem(
-              label: 'Classes',
+              label: l10n.classes,
               onTap: () {
                 // Navigate back to class list
                 Navigator.of(context).popUntil((route) => route.isFirst);
               },
             ),
             BreadcrumbItem(
-              label: 'Details',
+              label: l10n.details,
               onTap: () {
                 // Navigate back to class detail
                 Navigator.of(context).pop();
@@ -182,11 +192,11 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
               },
             ),
             BreadcrumbItem(
-              label: 'All Quizzes',
+              label: l10n.allQuizzes,
               onTap: () => Navigator.of(context).pop(),
             ),
             BreadcrumbItem(
-              label: widget.quizName ?? _quiz?['level_name'] ?? 'Quiz',
+              label: widget.quizName ?? _quiz?['level_name'] ?? l10n.quizText,
             ),
           ],
         ),
@@ -198,7 +208,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
               setState(() => _loading = true);
               _fetchData();
             },
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -284,7 +294,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
                 child: Text(
-                  'Statistics',
+                  l10n.statistics,
                   style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: cs.primary,
@@ -295,7 +305,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                 cs,
                 textTheme,
                 Icons.people,
-                'Total Students',
+                l10n.totalStudents,
                 '$_totalStudents',
               ),
               Padding(
@@ -304,7 +314,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                   cs,
                   textTheme,
                   Icons.check_circle,
-                  'Completed',
+                  l10n.completed,
                   '$_completedStudents',
                   valueColor: Colors.green,
                 ),
@@ -315,7 +325,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                   cs,
                   textTheme,
                   Icons.pending,
-                  'Pending',
+                  l10n.pending,
                   '${_totalStudents - _completedStudents}',
                   valueColor: Colors.orange,
                 ),
@@ -326,7 +336,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                   cs,
                   textTheme,
                   Icons.trending_up,
-                  'Completion Rate',
+                  l10n.completionRate,
                   _totalStudents > 0
                       ? '${((_completedStudents / _totalStudents) * 100).toStringAsFixed(0)}%'
                       : '0%',
@@ -342,7 +352,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                 spacing: 8,
                 children: [
                   FilterChip(
-                    label: const Text('All'),
+                    label: Text(l10n.all),
                     selected: _filter == 'all',
                     onSelected: (selected) {
                       if (selected) {
@@ -351,7 +361,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                     },
                   ),
                   FilterChip(
-                    label: const Text('Completed'),
+                    label: Text(l10n.completed),
                     selected: _filter == 'completed',
                     onSelected: (selected) {
                       if (selected) {
@@ -360,7 +370,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                     },
                   ),
                   FilterChip(
-                    label: const Text('Pending'),
+                    label: Text(l10n.pending),
                     selected: _filter == 'pending',
                     onSelected: (selected) {
                       if (selected) {
@@ -378,7 +388,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                 width: 300,
                 child: SearchBar(
                   controller: _searchController,
-                  hintText: "Search students...",
+                  hintText: l10n.searchStudentsByName,
                   padding: const WidgetStatePropertyAll<EdgeInsets>(
                     EdgeInsets.symmetric(horizontal: 16.0),
                   ),
@@ -411,7 +421,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                   final student = entry.value;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12.0),
-                    child: _buildStudentCard(cs, textTheme, student, index),
+                    child: _buildStudentCard(context, cs, textTheme, student, index),
                   );
                 }).toList(),
             ],
@@ -486,11 +496,13 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
   }
 
   Widget _buildStudentCard(
+    BuildContext context,
     ColorScheme cs,
     TextTheme textTheme,
     Map<String, dynamic> student,
     int index,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final isCompleted = student['is_completed'] == true;
     final name = student['name'] ?? 'Unknown';
     final email = student['email'] ?? '';
@@ -581,7 +593,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    isCompleted ? 'Completed' : 'Pending',
+                                    isCompleted ? l10n.completed : l10n.pending,
                                     style: textTheme.labelSmall?.copyWith(
                                       color: isCompleted
                                           ? Colors.green

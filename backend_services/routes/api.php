@@ -94,6 +94,7 @@ Route::prefix('users')->group(function () {
         Route::post('/', [ClassController::class, 'store']); // Create class (admin only)
         Route::get('/{id}', [ClassController::class, 'show']); // Get class details
         Route::put('/{id}', [ClassController::class, 'update']); // Update class (admin only)
+        Route::patch('/{id}/focus', [ClassController::class, 'updateClassFocus']); // Update class focus (teacher only)
         Route::delete('/{id}', [ClassController::class, 'destroy']); // Delete class (admin only)
         
         // Quiz (Level) management for classes

@@ -1,0 +1,442 @@
+{
+  "helloWorld": "Hello World",
+  "@helloWorld": {
+    "description": "The conventional newborn programmer greeting"
+  },
+  "userProfile": "Profile",
+  "logout": "Log out",
+  "selectLanguage": "Select Language",
+  "helloUser": "Hello, {userName}",
+  "@helloUser": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  },
+  "logoutConfirmation": "Log out of your account?",
+  "cancel": "Cancel",
+  "loginFailed": "Login Failed: {error}",
+  "@loginFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "autofillSuccess": "Autofill success!",
+  "emailHint": "user@example.com",
+  "emailValidation": "Please enter a valid email address",
+  "passwordValidation": "Password must be at least 6 characters",
+  "email": "Email",
+  "emailPlaceholder": "user@example.com",
+  "validEmailRequired": "Valid email required",
+  "password": "Password",
+  "passwordRequired": "Password required",
+  "login": "Log In",
+  "forgotPassword": "Forgot Password?",
+  "accountRecovery": "Account Recovery",
+  "resetCodeSent": "Reset code sent! Check your email.",
+  "enterEmailInstructions": "Enter your email address to receive a 6-digit verification code.",
+  "sendResetCode": "Send Reset Code",
+  "quiz": "Quiz",
+  "passwordResetSuccess": "Password reset successfully! Please login.",
+  "setNewPassword": "Set New Password",
+  "sixDigitCode": "6-Digit Code",
+  "newPassword": "New Password",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "confirmPassword": "Confirm Password",
+  "resetPassword": "Reset Password",
+  "name": "Name",
+  "date": "Date",
+  "unlocked": "Unlocked",
+  "locked": "Locked",
+  "ascending": "Ascending",
+  "descending": "Descending",
+  "noLevelsFound": "No levels found",
+  "delete": "Delete",
+  "forUser": "for {email}",
+  "achievements": "Achievements",
+  "searchHint": "Search titles or descriptions...",
+  "all": "All",
+  "createdByMe": "Created by Me",
+  "sortBy": "Sort By",
+  "order": "Order",
+  "refreshList": "Refresh List",
+  "sortOptions": "Sort Options",
+  "gameLevels": "Game Levels",
+  "refreshLevels": "Refresh Levels",
+  "addLevel": "Add Level",
+  "searchLevels": "Search levels...",
+  "visibility": "Visibility",
+  "public": "Public",
+  "private": "Private",
+  "deleteLevel": "Delete Level",
+  "deleteLevelConfirmation": "Are you sure you want to delete this level?",
+  "failedToLoadLevel": "Failed to load level data",
+  "notes": "Notes",
+  "searchNotesHint": "Search topic or title",
+  "users": "Users",
+  "games": "Games",
+  "classes": "Classes",
+  "aiChat": "AI Chat",
+  "feedback": "Feedback",
+  "searchUserHint": "Search users...",
+  "importingUsers": "Importing users...",
+  "usersImportedSuccess": "Users imported successfully!",
+  "importFailed": "Import Failed: {error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "student": "Student",
+  "teacher": "Teacher",
+  "admin": "Admin",
+  "allStatus": "All Status",
+  "active": "Active",
+  "inactive": "Inactive",
+  "users": "Users",
+  "myFeedback": "My Feedback",
+  "failedToLoadFeedback": "Failed to load feedback: {error}",
+  "@failedToLoadFeedback": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingFeedback": "Error loading feedback",
+  "retry": "Retry",
+  "noFeedbackYet": "No feedback yet",
+  "teachersFeedbackInstructions": "Your teachers will provide feedback here",
+  "fromTeacher": "From: {teacherName}",
+  "@fromTeacher": {
+    "placeholders": {
+      "teacherName": {
+        "type": "String"
+      }
+    }
+  },
+  "classCreatedSuccess": "Class created successfully!",
+  "noPermissionCreateUser": "You do not have permission to create user accounts.",
+  "selectAction": "Select Action",
+  "createUserProfile": "Create User Profile",
+  "importUserProfile": "Import User Profile",
+  "studentsCannotCreateGames": "Students cannot create games. This is for Teachers and Admins only.",
+  "studentsCannotAddNotes": "Students cannot add notes. This is for Admins only.",
+  "noAccessFunction": "You do not have access to this function",
+  "noAccessCreateFeedback": "You do not have access to create feedback",
+  "userAchievements": "{name}'s Achievements",
+  "@userAchievements": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "createNewUser": "Create New User",
+  "pleaseConfirmPassword": "Please confirm your password",
+  "userAccountCreatedSuccess": "User account successfully created!",
+  "networkErrorCheckApi": "Network Error: Check API URL and server status.",
+  "unknownErrorOccurred": "An unknown error occurred: {error}",
+  "@unknownErrorOccurred": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "createUser": "Create User",
+  "deleteUsers": "Delete Users",
+  "deleteUsersConfirmation": "Are you sure you want to delete {count} users? This action cannot be undone.",
+  "@deleteUsersConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletingUsers": "Deleting selected users...",
+  "deletedUsersSuccess": "Successfully deleted {count} users",
+  "@deletedUsersSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorDeletingUsers": "Error deleting users: {error}",
+  "errorLoadingAchievements": "Error loading achievements: {error}",
+  "@errorLoadingAchievements": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@errorDeletingUsers": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedCount": "{count} Selected",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedUsers": "Delete Selected Users",
+  "resultsCount": "{count} Results",
+  "@resultsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noUsersFound": "No users found",
+  "deleteUserAccount": "Delete User Account?",
+  "deleteUserAccountConfirmation": "Are you sure you want to permanently delete {name}'s account and all associated data? This action cannot be undone.",
+  "@deleteUserAccountConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deletedUserSuccess": "Successfully deleted user: {name}",
+  "@deletedUserSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "accessDeniedAdminOnly": "Access Denied: Only Administrators can delete user accounts.",
+  "errorDeletingUser": "Error deleting user: {error}",
+  "@errorDeletingUser": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editUserProfile": "Edit User Profile",
+  "errorLoadingProfile": "Error loading profile",
+  "userProfileDetails": "User Profile Details",
+  "phone": "Phone",
+  "address": "Address",
+  "genderLabel": "Gender",
+  "joinedDateLabel": "Joined Date",
+  "accountStatusLabel": "Account Status",
+  "recentAchievements": "Recent Achievements",
+  "viewAll": "View All",
+  "noAchievementsYet": "No achievements unlocked yet.",
+  "unknownDate": "Unknown Date",
+  "achievement": "Achievement",
+  "unlockedOn": "Unlocked on {date}",
+  "@unlockedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "saveChanges": "Save Changes",
+  "confirmNewPassword": "Confirm New Password",
+  "passwordsMatchError": "Error: New password and confirmation must match.",
+  "userProfileUpdated": "User profile successfully updated!",
+  "accessDeniedAdminModify": "Access Denied: Only Administrators can modify user profiles.",
+  "errorUpdatingProfile": "Error updating profile: {error}",
+  "@errorUpdatingProfile": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseEnterName": "Please enter a name",
+  "pleaseEnterEmail": "Please enter an email",
+  "enterValidEmail": "Enter a valid email address",
+  "passwordLengthError": "Password must be at least 8 characters",
+  "confirmPasswordRequired": "Please confirm the new password",
+  "pleaseEnterPhone": "Please enter a phone number",
+  "enterValidPhone": "Enter a valid Malaysian phone number",
+  "pleaseEnterAddress": "Please enter an address",
+  "pleaseSelectGender": "Please select a gender",
+  "pleaseSelectRole": "Please select a role",
+  "roleLabel": "Role",
+  "male": "Male",
+  "female": "Female",
+  "other": "Other",
+  "generalInfo": "General Info",
+  "description": "Description",
+  "timestamps": "Timestamps",
+  "teacher": "Teacher",
+  "teacherIncharge": "Teacher Incharge",
+  "assignedTeacher": "Assigned Teacher",
+  "quizzes": "Quizzes",
+  "students": "Students",
+  "completionRate": "Completion Rate",
+  "quizAssignTotalStudent": "Quiz Assign Total Student",
+  "statistics": "Statistics",
+  "statistic": "Statistic",
+  "assignQuiz": "Assign Quiz",
+  "createQuizzes": "Create Quizzes",
+  "searchByClassName": "Search by class name",
+  "myClasses": "My Classes",
+  "enrolledClasses": "Enrolled Classes",
+  "totalStudents": "Total Students",
+  "totalQuizzes": "Total Quizzes",
+  "createdAt": "Created At",
+  "lastUpdated": "Last Updated",
+  "name": "Name",
+  "creator": "Creator",
+  "focus": "Focus",
+  "notSet": "Not set",
+  "noTeacherAssigned": "No teacher assigned",
+  "noDescriptionAvailable": "No description available",
+  "noStudents": "No students",
+  "noStudentsEnrolled": "No students have been enrolled in this class yet.",
+  "allQuizzes": "All Quizzes",
+  "searchQuizzes": "Search quizzes...",
+  "quizAvailable": "{count} quiz{plural} available",
+  "@quizAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "plural": {
+        "type": "String"
+      }
+    }
+  },
+  "noQuizzesYet": "No quizzes yet",
+  "teacherHasntAssignedQuizzes": "Your teacher hasn't assigned any quizzes yet",
+  "uploaded": "Uploaded",
+  "unknownTeacher": "Unknown Teacher",
+  "student": "student",
+  "studentsPlural": "students",
+  "listOfEnrolledStudents": "List of enrolled students",
+  "viewAll": "View All",
+  "details": "Details",
+  "refresh": "Refresh",
+  "editClass": "Edit Class",
+  "editFocus": "Edit Focus",
+  "deleteClass": "Delete Class",
+  "classDeletedSuccessfully": "Class deleted successfully.",
+  "errorDeletingClass": "Error deleting class: {error}",
+  "@errorDeletingClass": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotOpenTeacherProfile": "Cannot open teacher profile: missing teacher id.",
+  "noTeacherAssignedToClass": "No teacher assigned to this class.",
+  "tryAdjustingSearchQuery": "Try adjusting your search query",
+  "notAssignedToAnyClasses": "You are not assigned to any classes yet",
+  "noClassesFound": "No classes found",
+  "completed": "Completed",
+  "pending": "Pending",
+  "quizzesAssigned": "Quizzes Assigned",
+  "unknown": "Unknown",
+  "nA": "N/A",
+  "teacherIncharge": "Teacher in-charge",
+  "viewAllQuizzes": "View All Quizzes",
+  "noQuizzesAvailable": "No quizzes available",
+  "assignQuiz": "Assign Quiz",
+  "assignQuizToClass": "Assign Quiz to Class",
+  "createQuiz": "Create Quiz",
+  "allQuizzes": "All Quizzes",
+  "searchQuizzes": "Search quizzes...",
+  "errorLoadingData": "Error loading data: {error}",
+  "@errorLoadingData": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToLoadQuizStudentData": "Failed to load quiz student data",
+  "searchStudents": "Search students...",
+  "filter": "Filter",
+  "all": "All",
+  "editClassFocus": "Edit Class Focus",
+  "editFocusFor": "Edit Focus for \"{className}\"",
+  "@editFocusFor": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "youCanOnlyEditFocus": "You can only edit the focus of this class.",
+  "focusOptional": "Focus (Optional)",
+  "selectFocusOptional": "Select focus",
+  "noneOptional": "None (Optional)",
+  "classFocusUpdatedSuccessfully": "Class focus updated successfully!",
+  "failedToUpdateClassFocus": "Failed to update class focus",
+  "viewDetails": "View Details",
+  "searchStudentsByName": "Search students by name...",
+  "moreOptions": "More options",
+  "completion": "Completion",
+  "courseProgress": "Course Progress",
+  "removeQuiz": "Remove Quiz",
+  "removeQuizConfirmation": "Are you sure you want to remove this quiz from the class?",
+  "remove": "Remove",
+  "quizCreatedAndAssignedSuccessfully": "Quiz created and assigned successfully",
+  "quizAssignedSuccessfully": "Quiz assigned successfully",
+  "quizRemovedSuccessfully": "Quiz removed successfully",
+  "failedToRemoveQuiz": "Failed to remove quiz",
+  "failedToAssignQuiz": "Failed to assign quiz",
+  "never": "Never",
+  "quizText": "Quiz",
+  "noName": "No Name",
+  "tapToViewStudentCompletion": "Tap to view student completion",
+  "createOrAssignQuizzes": "Create or assign quizzes to get started",
+  "createNewClass": "Create New Class",
+  "editClassDetails": "Edit Class Details",
+  "className": "Class Name",
+  "enterClassName": "Enter class name",
+  "pleaseEnterClassName": "Please enter class name",
+  "classNameRequired": "Class name required",
+  "enterDescription": "Enter description",
+  "pleaseEnterDescription": "Please enter description",
+  "assignTeacherOptional": "Assign Teacher (Optional)",
+  "selectTeacher": "Select teacher",
+  "loading": "Loading...",
+  "enrollStudents": "Enroll Students",
+  "studentOptional": "Student {index} (Optional)",
+  "@studentOptional": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "selectStudent": "Select student",
+  "addStudent": "Add Student",
+  "reset": "Reset",
+  "create": "Create",
+  "classCreatedSuccessfully": "Class created successfully!",
+  "classUpdatedSuccessfully": "Class updated successfully!",
+  "failedToCreateClass": "Failed to create class",
+  "failedToUpdateClass": "Failed to update class",
+  "ok": "OK",
+  "statusLabel": "Status",
+  "assignedLabel": "Assigned",
+  "completedDate": "Completed",
+  "quizVisibility": "Quiz Visibility",
+  "selectQuizVisibility": "Select quiz visibility",
+  "private": "Private",
+  "public": "Public"
+}

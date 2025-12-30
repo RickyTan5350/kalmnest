@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_class_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_edit_class_page.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/admin_teacher/widgets/class/teacher_view_class_page.dart';
+import 'package:code_play/admin_teacher/widgets/class/admin_view_class_page.dart';
+import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 // Class List Item Widget
 class _ClassListItem extends StatefulWidget {
@@ -35,10 +37,11 @@ class _ClassListItem extends StatefulWidget {
 class _ClassListItemState extends State<_ClassListItem> {
   // Get teacher name from item
   String get _teacherName {
+    final l10n = AppLocalizations.of(context)!;
     if (widget.item['teacher'] != null) {
-      return widget.item['teacher']['name'] ?? 'Unknown Teacher';
+      return widget.item['teacher']['name'] ?? l10n.unknownTeacher;
     }
-    return 'No teacher assigned';
+    return l10n.noTeacherAssigned;
   }
 
   // Get student count
@@ -68,128 +71,141 @@ class _ClassListItemState extends State<_ClassListItem> {
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: widget.colorScheme.primaryContainer,
-                  foregroundColor: widget.colorScheme.onPrimaryContainer,
-                  child: Icon(Icons.school_rounded, size: 20),
-                ),
-                title: Text(
-                  widget.item['class_name'] ?? 'No Name',
-                  style: widget.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: widget.colorScheme.onSurface,
+        leading: CircleAvatar(
+          backgroundColor: widget.colorScheme.primaryContainer,
+          foregroundColor: widget.colorScheme.onPrimaryContainer,
+          child: Icon(Icons.school_rounded, size: 20),
+        ),
+        title: Text(
+          widget.item['class_name'] ?? 'No Name',
+          style: widget.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: widget.colorScheme.onSurface,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.item['description'] != null &&
+                widget.item['description'].toString().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: Text(
+                  widget.item['description'],
+                  style: widget.textTheme.bodySmall?.copyWith(
+                    color: widget.colorScheme.onSurfaceVariant,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (widget.item['description'] != null &&
-                        widget.item['description'].toString().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, bottom: 4),
-                        child: Text(
-                          widget.item['description'],
-                          style: widget.textTheme.bodySmall?.copyWith(
-                            color: widget.colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    Icon(
+                      Icons.person_outline,
+                      size: 14,
+                      color: widget.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _hasTeacher
+                          ? _teacherName
+                          : AppLocalizations.of(context)!.noTeacherAssigned,
+                      style: widget.textTheme.labelSmall?.copyWith(
+                        color: _hasTeacher
+                            ? widget.colorScheme.onSurfaceVariant
+                            : widget.colorScheme.error,
+                        fontStyle: _hasTeacher
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 4,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.person_outline,
-                              size: 14,
-                              color: widget.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _hasTeacher ? _teacherName : 'No teacher',
-                              style: widget.textTheme.labelSmall?.copyWith(
-                                color: _hasTeacher
-                                    ? widget.colorScheme.onSurfaceVariant
-                                    : widget.colorScheme.error,
-                                fontStyle: _hasTeacher
-                                    ? FontStyle.normal
-                                    : FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 14,
-                              color: widget.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _studentCount > 0
-                                  ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                                  : 'No students',
-                              style: widget.textTheme.labelSmall?.copyWith(
-                                color: _studentCount > 0
-                                    ? widget.colorScheme.onSurfaceVariant
-                                    : widget.colorScheme.error,
-                                fontStyle: _studentCount > 0
-                                    ? FontStyle.normal
-                                    : FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                     ),
                   ],
                 ),
-                trailing: widget.roleName.toLowerCase() == 'admin'
-                    ? PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          color: widget.colorScheme.onSurfaceVariant,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 14,
+                      color: widget.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _studentCount > 0
+                          ? '$_studentCount ${_studentCount == 1 ? AppLocalizations.of(context)!.student : AppLocalizations.of(context)!.studentsPlural}'
+                          : AppLocalizations.of(context)!.noStudents,
+                      style: widget.textTheme.labelSmall?.copyWith(
+                        color: _studentCount > 0
+                            ? widget.colorScheme.onSurfaceVariant
+                            : widget.colorScheme.error,
+                        fontStyle: _studentCount > 0
+                            ? FontStyle.normal
+                            : FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+        trailing: widget.roleName.toLowerCase() == 'admin'
+            ? PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert,
+                  color: widget.colorScheme.onSurfaceVariant,
+                ),
+                onSelected: (value) {
+                  if (value == 'edit' && widget.onEdit != null) {
+                    widget.onEdit!();
+                  } else if (value == 'delete' && widget.onDelete != null) {
+                    widget.onDelete!();
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit,
+                          size: 20,
+                          color: widget.colorScheme.onSurface,
                         ),
-                        onSelected: (value) {
-                          if (value == 'edit' && widget.onEdit != null) {
-                            widget.onEdit!();
-                          } else if (value == 'delete' && widget.onDelete != null) {
-                            widget.onDelete!();
-                          }
-                        },
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, size: 20, color: widget.colorScheme.onSurface),
-                                const SizedBox(width: 8),
-                                const Text('Edit'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_outline, size: 20, color: widget.colorScheme.error),
-                                const SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: widget.colorScheme.error)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      )
-                    : null,
-                onTap: widget.onTap,
-              ),
+                        const SizedBox(width: 8),
+                        const Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          size: 20,
+                          color: widget.colorScheme.error,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Delete',
+                          style: TextStyle(color: widget.colorScheme.error),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : null,
+        onTap: widget.onTap,
+      ),
     );
   }
 }
@@ -261,7 +277,9 @@ class _ClassGridCard extends StatelessWidget {
                     height: 48,
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
+                      borderRadius: BorderRadius.circular(
+                        ClassConstants.cardBorderRadius * 0.67,
+                      ),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -300,7 +318,11 @@ class _ClassGridCard extends StatelessWidget {
                           value: 'edit',
                           child: Row(
                             children: [
-                              Icon(Icons.edit, size: 20, color: colorScheme.onSurface),
+                              Icon(
+                                Icons.edit,
+                                size: 20,
+                                color: colorScheme.onSurface,
+                              ),
                               const SizedBox(width: 8),
                               const Text('Edit'),
                             ],
@@ -310,9 +332,16 @@ class _ClassGridCard extends StatelessWidget {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
+                              Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: colorScheme.error,
+                              ),
                               const SizedBox(width: 8),
-                              Text('Delete', style: TextStyle(color: colorScheme.error)),
+                              Text(
+                                'Delete',
+                                style: TextStyle(color: colorScheme.error),
+                              ),
                             ],
                           ),
                         ),
@@ -345,7 +374,9 @@ class _ClassGridCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      _hasTeacher ? _teacherName : 'No teacher',
+                      _hasTeacher
+                          ? _teacherName
+                          : AppLocalizations.of(context)!.noTeacherAssigned,
                       style: textTheme.labelSmall?.copyWith(
                         color: _hasTeacher
                             ? colorScheme.onSurfaceVariant
@@ -372,8 +403,8 @@ class _ClassGridCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       _studentCount > 0
-                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                          : 'No students',
+                          ? '$_studentCount ${_studentCount == 1 ? AppLocalizations.of(context)!.student : AppLocalizations.of(context)!.studentsPlural}'
+                          : AppLocalizations.of(context)!.noStudents,
                       style: textTheme.labelSmall?.copyWith(
                         color: _studentCount > 0
                             ? colorScheme.onSurfaceVariant
@@ -403,7 +434,10 @@ class ClassListSection extends StatefulWidget {
   final SortType sortType;
   final SortOrder sortOrder;
   final VoidCallback? onReload;
-  
+  final String? selectedFilter; // 'All' or 'Created by Me'
+  final String? currentUserId; // Current user ID for filtering
+  final String? selectedFocus; // 'All', 'HTML', 'CSS', 'JavaScript', 'PHP'
+
   const ClassListSection({
     Key? key,
     required this.roleName,
@@ -412,6 +446,9 @@ class ClassListSection extends StatefulWidget {
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
     this.onReload,
+    this.selectedFilter,
+    this.currentUserId,
+    this.selectedFocus,
   }) : super(key: key);
 
   @override
@@ -432,13 +469,17 @@ class _ClassListSectionState extends State<ClassListSection> {
   @override
   void didUpdateWidget(ClassListSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (        oldWidget.searchQuery != widget.searchQuery ||
+    if (oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
-        oldWidget.sortOrder != widget.sortOrder) {
+        oldWidget.sortOrder != widget.sortOrder ||
+        oldWidget.selectedFilter != widget.selectedFilter ||
+        oldWidget.selectedFocus != widget.selectedFocus) {
       if (oldWidget.searchQuery != widget.searchQuery ||
           oldWidget.sortType != widget.sortType ||
-          oldWidget.sortOrder != widget.sortOrder) {
+          oldWidget.sortOrder != widget.sortOrder ||
+          oldWidget.selectedFilter != widget.selectedFilter ||
+          oldWidget.selectedFocus != widget.selectedFocus) {
         // Just re-filter and sort, don't reload from API
         _applyFiltersAndSort();
       } else {
@@ -447,22 +488,49 @@ class _ClassListSectionState extends State<ClassListSection> {
     }
   }
 
-  Future<void> loadClasses() async {
+  Future<void> loadClasses({bool forceRefresh = false}) async {
     if (!mounted) return;
     setState(() => loading = true);
     try {
+      // Force refresh to get latest data from server
       final allClasses = await ClassApi.fetchAllClasses();
       if (!mounted) return;
 
-      // Apply search filter if search query is provided
+      // Apply filters
       List<dynamic> filtered = allClasses;
+
+      // Apply search filter if search query is provided
       if (widget.searchQuery.isNotEmpty) {
         final query = widget.searchQuery.toLowerCase();
-        filtered = allClasses.where((classItem) {
+        filtered = filtered.where((classItem) {
           final className = (classItem['class_name'] ?? '')
               .toString()
               .toLowerCase();
           return className.contains(query);
+        }).toList();
+      }
+
+      // Apply "Created by Me" filter for admin
+      if (widget.selectedFilter == 'Created by Me' &&
+          widget.currentUserId != null) {
+        filtered = filtered.where((classItem) {
+          final adminId = classItem['admin_id']?.toString();
+          return adminId == widget.currentUserId.toString();
+        }).toList();
+      }
+
+      // Apply focus filter
+      if (widget.selectedFocus != null && widget.selectedFocus != 'All') {
+        filtered = filtered.where((classItem) {
+          final focus = classItem['focus']?.toString();
+          final matches = focus == widget.selectedFocus;
+          // Debug: print to verify filtering is working
+          if (matches) {
+            print(
+              'Class ${classItem['class_name']} matches focus filter: ${widget.selectedFocus}',
+            );
+          }
+          return matches;
         }).toList();
       }
 
@@ -490,15 +558,34 @@ class _ClassListSectionState extends State<ClassListSection> {
   }
 
   void _applyFiltersAndSort() {
-    // Apply search filter
+    // Apply filters
     List<dynamic> filtered = classList;
+
+    // Apply search filter
     if (widget.searchQuery.isNotEmpty) {
       final query = widget.searchQuery.toLowerCase();
-      filtered = classList.where((classItem) {
+      filtered = filtered.where((classItem) {
         final className = (classItem['class_name'] ?? '')
             .toString()
             .toLowerCase();
         return className.contains(query);
+      }).toList();
+    }
+
+    // Apply "Created by Me" filter for admin
+    if (widget.selectedFilter == 'Created by Me' &&
+        widget.currentUserId != null) {
+      filtered = filtered.where((classItem) {
+        final adminId = classItem['admin_id']?.toString();
+        return adminId == widget.currentUserId.toString();
+      }).toList();
+    }
+
+    // Apply focus filter
+    if (widget.selectedFocus != null && widget.selectedFocus != 'All') {
+      filtered = filtered.where((classItem) {
+        final focus = classItem['focus']?.toString();
+        return focus == widget.selectedFocus;
       }).toList();
     }
 
@@ -558,17 +645,7 @@ class _ClassListSectionState extends State<ClassListSection> {
       if (widget.onReload != null) {
         widget.onReload!();
       }
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Class updated successfully'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      // Note: Success message is already shown in EditClassPage, no need to show again
     }
   }
 
@@ -605,7 +682,7 @@ class _ClassListSectionState extends State<ClassListSection> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Class deleted successfully'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
             ),
@@ -652,7 +729,7 @@ class _ClassListSectionState extends State<ClassListSection> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No classes found',
+                      AppLocalizations.of(context)!.noClassesFound,
                       style: textTheme.titleMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -660,8 +737,12 @@ class _ClassListSectionState extends State<ClassListSection> {
                     const SizedBox(height: 8),
                     Text(
                       widget.searchQuery.isNotEmpty
-                          ? 'Try adjusting your search query'
-                          : 'You are not assigned to any classes yet',
+                          ? AppLocalizations.of(
+                              context,
+                            )!.tryAdjustingSearchQuery
+                          : AppLocalizations.of(
+                              context,
+                            )!.notAssignedToAnyClasses,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant.withOpacity(0.7),
                       ),
@@ -678,7 +759,10 @@ class _ClassListSectionState extends State<ClassListSection> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
@@ -691,7 +775,9 @@ class _ClassListSectionState extends State<ClassListSection> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                "${filteredList.length} Results",
+                                AppLocalizations.of(
+                                  context,
+                                )!.resultsCount(filteredList.length),
                                 style: textTheme.titleMedium,
                               ),
                             ),
@@ -704,13 +790,12 @@ class _ClassListSectionState extends State<ClassListSection> {
                 SliverPadding(
                   padding: const EdgeInsets.all(8.0),
                   sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 250.0,
-                          mainAxisSpacing: 12.0,
-                          crossAxisSpacing: 12.0,
-                          childAspectRatio: 0.85,
-                        ),
+                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 250.0,
+                      mainAxisSpacing: 12.0,
+                      crossAxisSpacing: 12.0,
+                      childAspectRatio: 0.85,
+                    ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final item = filteredList[index];
                       return _ClassGridCard(
@@ -718,16 +803,32 @@ class _ClassListSectionState extends State<ClassListSection> {
                         roleName: widget.roleName,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
-                        onTap: () {
-                          Navigator.push(
+                        onTap: () async {
+                          final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ClassDetailPage(
-                                classId: item['class_id'].toString(),
-                                roleName: widget.roleName,
-                              ),
+                              builder: (_) =>
+                                  widget.roleName.toLowerCase() == 'admin'
+                                  ? AdminViewClassPage(
+                                      classId: item['class_id'].toString(),
+                                    )
+                                  : ClassDetailPage(
+                                      classId: item['class_id'].toString(),
+                                      roleName: widget.roleName,
+                                    ),
                             ),
                           );
+                          // Refresh list if class was updated (e.g., focus changed)
+                          if (result == true) {
+                            // First trigger parent reload to ensure widget key changes
+                            // This forces the widget to rebuild with fresh state
+                            if (widget.onReload != null) {
+                              widget.onReload!();
+                            }
+                            // Then reload data from API - loadClasses() applies all filters
+                            // including focus filter based on current widget.selectedFocus
+                            await loadClasses();
+                          }
                         },
                         onEdit: widget.roleName.toLowerCase() == 'admin'
                             ? () => _onEditClass(item)
@@ -747,7 +848,10 @@ class _ClassListSectionState extends State<ClassListSection> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
@@ -760,7 +864,9 @@ class _ClassListSectionState extends State<ClassListSection> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                "${filteredList.length} Results",
+                                AppLocalizations.of(
+                                  context,
+                                )!.resultsCount(filteredList.length),
                                 style: textTheme.titleMedium,
                               ),
                             ),
@@ -782,16 +888,32 @@ class _ClassListSectionState extends State<ClassListSection> {
                         roleName: widget.roleName,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
-                        onTap: () {
-                          Navigator.push(
+                        onTap: () async {
+                          final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ClassDetailPage(
-                                classId: item['class_id'].toString(),
-                                roleName: widget.roleName,
-                              ),
+                              builder: (_) =>
+                                  widget.roleName.toLowerCase() == 'admin'
+                                  ? AdminViewClassPage(
+                                      classId: item['class_id'].toString(),
+                                    )
+                                  : ClassDetailPage(
+                                      classId: item['class_id'].toString(),
+                                      roleName: widget.roleName,
+                                    ),
                             ),
                           );
+                          // Refresh list if class was updated (e.g., focus changed)
+                          if (result == true) {
+                            // First trigger parent reload to ensure widget key changes
+                            // This forces the widget to rebuild with fresh state
+                            if (widget.onReload != null) {
+                              widget.onReload!();
+                            }
+                            // Then reload data from API - loadClasses() applies all filters
+                            // including focus filter based on current widget.selectedFocus
+                            await loadClasses();
+                          }
                         },
                         onEdit: widget.roleName.toLowerCase() == 'admin'
                             ? () => _onEditClass(item)

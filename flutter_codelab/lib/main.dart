@@ -178,11 +178,15 @@ class _FeedState extends State<Feed> {
     if (result == true) {
       // Use GlobalKey to access ClassPage's reload method (similar to feedback callback)
       classPageGlobalKey.currentState?.reloadClassList();
+<<<<<<< Updated upstream
       _showSnackBar(
         context,
         'Class created successfully!',
         Theme.of(context).colorScheme.primary,
       );
+=======
+      // Note: Success message is already shown in CreateClassScreen, no need to show again
+>>>>>>> Stashed changes
     }
   }
 

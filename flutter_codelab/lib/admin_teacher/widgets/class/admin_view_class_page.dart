@@ -1,14 +1,4 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
-import 'package:flutter_codelab/models/student.dart';
-import 'package:flutter_codelab/student/widgets/class/student_preview_teacher_row.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_quiz_list_section.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_all_students_page.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_edit_class_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
-=======
 import 'package:code_play/models/student.dart';
 import 'package:code_play/student/widgets/class/student_preview_teacher_row.dart';
 import 'package:code_play/admin_teacher/widgets/class/teacher_quiz_list_section.dart';
@@ -16,29 +6,22 @@ import 'package:code_play/admin_teacher/widgets/class/teacher_all_students_page.
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
-import 'package:code_play/admin_teacher/widgets/class/teacher_edit_class_focus_page.dart';
+import 'package:code_play/admin_teacher/widgets/user/user_detail_page.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
->>>>>>> Stashed changes
 
-class ClassDetailPage extends StatefulWidget {
+class AdminViewClassPage extends StatefulWidget {
   final String classId;
-  final String roleName;
 
-  const ClassDetailPage({
-    Key? key,
-    required this.classId,
-    required this.roleName,
-  }) : super(key: key);
+  const AdminViewClassPage({Key? key, required this.classId}) : super(key: key);
 
   @override
-  State<ClassDetailPage> createState() => _ClassDetailPageState();
+  State<AdminViewClassPage> createState() => _AdminViewClassPageState();
 }
 
-class _ClassDetailPageState extends State<ClassDetailPage> {
+class _AdminViewClassPageState extends State<AdminViewClassPage> {
   bool loading = true;
   Map<String, dynamic>? classData;
   int _quizCount = 0;
-  bool _dataUpdated = false; // Track if data was updated (e.g., focus changed)
 
   @override
   void initState() {
@@ -148,9 +131,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
           items: [
             BreadcrumbItem(
               label: l10n.classes,
-              onTap: () => Navigator.of(
-                context,
-              ).pop(_dataUpdated), // Return true if data was updated
+              onTap: () => Navigator.of(context).pop(),
             ),
             BreadcrumbItem(label: l10n.details),
           ],
@@ -165,49 +146,26 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
             },
             tooltip: l10n.refresh,
           ),
-          if (widget.roleName.toLowerCase() == 'admin')
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EditClassPage(classData: classData!),
-                  ),
-                );
-                if (result == true && mounted) {
-                  _fetchClassData();
-                }
-              },
-              tooltip: l10n.editClass,
-            ),
-          if (widget.roleName.toLowerCase() == 'teacher')
-            IconButton(
-              icon: const Icon(Icons.category),
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => TeacherEditClassFocusPage(
-                      classId: widget.classId,
-                      currentFocus: classData?['focus'],
-                      className: classData?['class_name'] ?? 'Class',
-                    ),
-                  ),
-                );
-                if (result == true && mounted) {
-                  _fetchClassData();
-                  _dataUpdated = true; // Mark that data was updated
-                }
-              },
-              tooltip: l10n.editFocus,
-            ),
-          if (widget.roleName.toLowerCase() == 'admin')
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: _deleteClass,
-              tooltip: l10n.deleteClass,
-            ),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditClassPage(classData: classData!),
+                ),
+              );
+              if (result == true && mounted) {
+                _fetchClassData();
+              }
+            },
+            tooltip: l10n.editClass,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: _deleteClass,
+            tooltip: l10n.deleteClass,
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -220,7 +178,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header - Centered with icon, title, and chip
+              // Header - Centered with icon, title, and teacher chip
               Center(
                 child: Column(
                   children: [
@@ -236,13 +194,19 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-                    Chip(
-                      label: Text(
-                        classData?['teacher']?['name'] ??
-                            l10n.noTeacherAssigned,
+                    if (classData?['teacher'] != null)
+                      Chip(
+                        label: Text(
+                          classData?['teacher']?['name'] ??
+                              'No teacher assigned',
+                        ),
+                        backgroundColor: color.withOpacity(0.1),
+                      )
+                    else
+                      Chip(
+                        label: const Text('No teacher assigned'),
+                        backgroundColor: Colors.grey.withOpacity(0.1),
                       ),
-                      backgroundColor: color.withOpacity(0.1),
-                    ),
                   ],
                 ),
               ),
@@ -257,8 +221,13 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
               ),
               _buildInfoRow(
                 context,
-                l10n.teacher,
-                classData?['teacher']?['name'] ?? l10n.noTeacherAssigned,
+                l10n.creator,
+                classData?['admin']?['name'] ?? l10n.unknown,
+              ),
+              _buildInfoRow(
+                context,
+                l10n.focus,
+                classData?['focus'] ?? l10n.notSet,
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -312,17 +281,106 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                   ],
                 ),
               ),
-              if (widget.roleName.toLowerCase() == 'admin')
-                _buildInfoRow(
-                  context,
-                  l10n.creator,
-                  classData?['admin']?['name'] ?? l10n.unknown,
+
+              const Divider(height: 30),
+
+              // Teacher Section (for admin to view assigned teacher)
+              _buildSectionTitle(context, l10n.assignedTeacher),
+              const SizedBox(height: 8),
+              if (classData?['teacher'] != null)
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    side: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withOpacity(0.3),
+                      width: 1.0,
+                    ),
+                  ),
+                  child: InkWell(
+                    onTap: () {
+                      final teacher = classData?['teacher'];
+                      if (teacher == null) return;
+
+                      // Try common key names for the teacher's user id
+                      final dynamic rawId =
+                          teacher['id'] ??
+                          teacher['user_id'] ??
+                          teacher['teacher_id'];
+                      if (rawId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.cannotOpenTeacherProfile),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final teacherId = rawId.toString();
+                      final teacherName = (teacher['name'] ?? 'Teacher')
+                          .toString();
+
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => UserDetailPage(
+                            userId: teacherId,
+                            userName: teacherName,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(12.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: TeacherPreviewRow(
+                        teacherName:
+                            classData?['teacher']?['name'] ??
+                            'No teacher assigned',
+                        teacherDescription:
+                            classData?['teacher']?['email'] ?? '',
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    side: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withOpacity(0.3),
+                      width: 1.0,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'No teacher has been assigned to this class yet.',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              _buildInfoRow(
-                context,
-                l10n.focus,
-                classData?['focus'] ?? l10n.notSet,
-              ),
 
               const Divider(height: 30),
 
@@ -351,59 +409,27 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
               const Divider(height: 30),
 
               // Students Section
-              if (widget.roleName.toLowerCase() == 'teacher' ||
-                  widget.roleName.toLowerCase() == 'admin')
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle(context, l10n.students),
-                    const SizedBox(height: 8),
-                    _BorderedStudentPreviewRow(
-                      students: _students,
-                      onViewAll: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TeacherAllStudentsPage(
-                              classId: widget.classId,
-                              className: classData?['class_name'] ?? 'Class',
-                            ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle(context, l10n.students),
+                  const SizedBox(height: 8),
+                  _BorderedStudentPreviewRow(
+                    students: _students,
+                    onViewAll: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TeacherAllStudentsPage(
+                            classId: widget.classId,
+                            className: classData?['class_name'] ?? 'Class',
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                )
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle(context, l10n.teacher),
-                    const SizedBox(height: 8),
-                    Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        side: BorderSide(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.outline.withOpacity(0.3),
-                          width: 1.0,
                         ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: TeacherPreviewRow(
-                          teacherName:
-                              classData?['teacher']?['name'] ??
-                              l10n.noTeacherAssigned,
-                          teacherDescription:
-                              classData?['teacher']?['email'] ?? '',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                      );
+                    },
+                  ),
+                ],
+              ),
 
               const Divider(height: 30),
 
@@ -411,7 +437,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
               _buildSectionTitle(context, l10n.quizzes),
               const SizedBox(height: 8),
               QuizListSection(
-                roleName: widget.roleName,
+                roleName: 'admin',
                 classId: widget.classId,
                 className: classData?['class_name'] ?? 'No Name',
                 classDescription: classData?['description'] ?? 'No description',

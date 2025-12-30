@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+<<<<<<< Updated upstream
 import 'package:flutter_codelab/api/class_api.dart';
 import 'package:flutter_codelab/api/user_api.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+=======
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/api/user_api.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+>>>>>>> Stashed changes
 import 'package:intl/intl.dart';
 
 /// Teacher view: Student detail page showing student info and quiz completion status
@@ -90,10 +98,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -110,13 +115,14 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
     }
   }
 
-  String _formatDate(dynamic date) {
-    if (date == null) return 'Unknown';
+  String _formatDate(dynamic date, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (date == null) return l10n.unknown;
     try {
       final dateTime = DateTime.parse(date.toString());
       return DateFormat('MMM d, yyyy HH:mm').format(dateTime);
     } catch (e) {
-      return 'Unknown';
+      return l10n.unknown;
     }
   }
 
@@ -130,10 +136,9 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_loading) {
-      return Scaffold(
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      return Scaffold(body: const Center(child: CircularProgressIndicator()));
     }
 
     final cs = Theme.of(context).colorScheme;
@@ -147,14 +152,14 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
         title: BreadcrumbNavigation(
           items: [
             BreadcrumbItem(
-              label: 'Classes',
+              label: l10n.classes,
               onTap: () {
                 // Navigate back to class list
                 Navigator.of(context).popUntil((route) => route.isFirst);
               },
             ),
             BreadcrumbItem(
-              label: 'Details',
+              label: l10n.details,
               onTap: () {
                 // Navigate back to class detail
                 Navigator.of(context).pop();
@@ -162,12 +167,10 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
               },
             ),
             BreadcrumbItem(
-              label: 'All Students',
+              label: l10n.students,
               onTap: () => Navigator.of(context).pop(),
             ),
-            BreadcrumbItem(
-              label: _studentInfo?.name ?? widget.studentName,
-            ),
+            BreadcrumbItem(label: _studentInfo?.name ?? widget.studentName),
           ],
         ),
         backgroundColor: color.withOpacity(0.2),
@@ -178,7 +181,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
               setState(() => _loading = true);
               _fetchData();
             },
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -192,7 +195,6 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               // Student Info Section - Left aligned, no centered header
               Card(
                 elevation: 1,
@@ -251,13 +253,13 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                       ),
                       if (_studentInfo != null) ...[
                         const SizedBox(height: 24),
-                        _buildSectionTitle(cs, textTheme, 'General Info'),
+                        _buildSectionTitle(cs, textTheme, l10n.generalInfo),
                         const SizedBox(height: 12),
                         _buildInfoRow(
                           cs,
                           textTheme,
                           Icons.phone_outlined,
-                          'Phone',
+                          l10n.phone,
                           _studentInfo!.phoneNo,
                         ),
                         const SizedBox(height: 12),
@@ -265,7 +267,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                           cs,
                           textTheme,
                           Icons.location_on_outlined,
-                          'Address',
+                          l10n.address,
                           _studentInfo!.address,
                         ),
                         const SizedBox(height: 12),
@@ -273,7 +275,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                           cs,
                           textTheme,
                           Icons.transgender,
-                          'Gender',
+                          l10n.genderLabel,
                           _studentInfo!.gender,
                         ),
                         const SizedBox(height: 12),
@@ -281,7 +283,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                           cs,
                           textTheme,
                           Icons.calendar_today,
-                          'Joined Date',
+                          l10n.joinedDateLabel,
                           _studentInfo!.joinedDate.split('T')[0],
                         ),
                         const SizedBox(height: 12),
@@ -289,7 +291,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                           cs,
                           textTheme,
                           Icons.info_outline,
-                          'Account Status',
+                          l10n.accountStatusLabel,
                           _studentInfo!.accountStatus.toUpperCase(),
                           valueColor: _studentInfo!.accountStatus == 'active'
                               ? Colors.green
@@ -313,7 +315,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                 spacing: 8,
                 children: [
                   FilterChip(
-                    label: const Text('All'),
+                    label: Text(l10n.all),
                     selected: _filter == 'all',
                     onSelected: (selected) {
                       if (selected) {
@@ -322,7 +324,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                     },
                   ),
                   FilterChip(
-                    label: const Text('Completed'),
+                    label: Text(l10n.completed),
                     selected: _filter == 'completed',
                     onSelected: (selected) {
                       if (selected) {
@@ -331,7 +333,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                     },
                   ),
                   FilterChip(
-                    label: const Text('Pending'),
+                    label: Text(l10n.pending),
                     selected: _filter == 'pending',
                     onSelected: (selected) {
                       if (selected) {
@@ -359,7 +361,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionTitle(cs, textTheme, 'Quizzes'),
+                      _buildSectionTitle(cs, textTheme, l10n.quizzes),
                       const SizedBox(height: 16),
                       _filteredQuizzes.isEmpty
                           ? Center(
@@ -370,11 +372,13 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                                     Icon(
                                       Icons.quiz_outlined,
                                       size: 64,
-                                      color: cs.onSurfaceVariant.withOpacity(0.5),
+                                      color: cs.onSurfaceVariant.withOpacity(
+                                        0.5,
+                                      ),
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      'No quizzes found',
+                                      l10n.noQuizzesYet,
                                       style: textTheme.titleMedium?.copyWith(
                                         color: cs.onSurfaceVariant,
                                       ),
@@ -385,10 +389,18 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                             )
                           : Column(
                               children: _filteredQuizzes
-                                  .map((quiz) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 12.0),
-                                        child: _buildQuizItem(cs, textTheme, quiz),
-                                      ))
+                                  .map(
+                                    (quiz) => Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 12.0,
+                                      ),
+                                      child: _buildQuizItem(
+                                        cs,
+                                        textTheme,
+                                        quiz,
+                                      ),
+                                    ),
+                                  )
                                   .toList(),
                             ),
                     ],
@@ -413,13 +425,14 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
   }
 
   Widget _buildStatisticsSection(ColorScheme cs, TextTheme textTheme) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
             cs,
             textTheme,
-            'Total Quizzes',
+            l10n.totalQuizzes,
             '$_totalQuizzes',
             Icons.quiz,
           ),
@@ -429,7 +442,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
           child: _buildStatCard(
             cs,
             textTheme,
-            'Completed',
+            l10n.completed,
             '$_completedQuizzes',
             Icons.check_circle,
             Colors.green,
@@ -440,7 +453,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
           child: _buildStatCard(
             cs,
             textTheme,
-            'Pending',
+            l10n.pending,
             '${_totalQuizzes - _completedQuizzes}',
             Icons.pending,
             Colors.orange,
@@ -451,7 +464,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
           child: _buildStatCard(
             cs,
             textTheme,
-            'Completion Rate',
+            l10n.completionRate,
             _totalQuizzes > 0
                 ? '${((_completedQuizzes / _totalQuizzes) * 100).toStringAsFixed(0)}%'
                 : '0%',
@@ -475,10 +488,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
-        side: BorderSide(
-          color: cs.outline.withOpacity(0.3),
-          width: 1.0,
-        ),
+        side: BorderSide(color: cs.outline.withOpacity(0.3), width: 1.0),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -496,11 +506,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                   color: (iconColor ?? cs.primary).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12.0),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor ?? cs.primary,
-                  size: 28,
-                ),
+                child: Icon(icon, color: iconColor ?? cs.primary, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -537,11 +543,12 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
     TextTheme textTheme,
     Map<String, dynamic> quiz,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final isCompleted = quiz['is_completed'] == true;
     final levelType = quiz['level_type'];
     final levelTypeName = levelType != null
-        ? levelType['level_type_name'] ?? 'Unknown'
-        : 'Unknown';
+        ? levelType['level_type_name'] ?? l10n.unknown
+        : l10n.unknown;
 
     return Card(
       elevation: 1,
@@ -587,7 +594,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                       children: [
                         Expanded(
                           child: Text(
-                            quiz['level_name'] ?? 'No Name',
+                            quiz['level_name'] ?? l10n.noName,
                             style: textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: cs.onSurface,
@@ -613,8 +620,8 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                     const SizedBox(height: 4),
                     Text(
                       isCompleted
-                          ? 'Completed: ${_formatDate(quiz['completion_date'])}'
-                          : 'Status: Pending',
+                          ? '${l10n.completedDate}: ${_formatDate(quiz['completion_date'], context)}'
+                          : '${l10n.statusLabel}: ${l10n.pending}',
                       style: textTheme.bodySmall?.copyWith(
                         color: isCompleted ? Colors.green : Colors.orange,
                       ),
@@ -622,7 +629,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
                     if (!isCompleted) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Assigned: ${_formatDate(quiz['created_at'])}',
+                        '${l10n.assignedLabel}: ${_formatDate(quiz['created_at'], context)}',
                         style: textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
@@ -677,4 +684,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
     );
   }
 }
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes

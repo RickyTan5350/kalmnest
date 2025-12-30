@@ -170,11 +170,13 @@ class ClassController extends Controller
             'teacher_id' => 'nullable|string|exists:users,user_id',
             'description' => 'nullable|string',
             'admin_id' => 'nullable|string|exists:users,user_id',
+            'focus' => 'nullable|string|in:HTML,CSS,JavaScript,PHP',
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'string|exists:users,user_id',
         ], [
             'class_name.required' => 'Class name is required.',
             'class_name.max' => 'Class name cannot exceed 100 characters.',
+            'focus.in' => 'Focus must be one of: HTML, CSS, JavaScript, PHP.',
         ]);
 
         if ($validator->fails()) {
@@ -194,6 +196,7 @@ class ClassController extends Controller
                 'teacher_id' => !empty($request->teacher_id) ? $request->teacher_id : null, // optional, can be null
                 'description' => $request->description,
                 'admin_id' => $request->admin_id ?? $user->user_id, // Default to current admin
+                'focus' => $request->focus ?? null, // optional focus
             ]);
 
             // Enroll students if provided (optional, can be empty)
@@ -328,11 +331,13 @@ class ClassController extends Controller
             'teacher_id' => 'sometimes|nullable|string|exists:users,user_id',
             'description' => 'nullable|string',
             'admin_id' => 'nullable|string|exists:users,user_id',
+            'focus' => 'nullable|string|in:HTML,CSS,JavaScript,PHP',
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'string|exists:users,user_id',
         ], [
             'class_name.required' => 'Class name is required.',
             'class_name.max' => 'Class name cannot exceed 100 characters.',
+            'focus.in' => 'Focus must be one of: HTML, CSS, JavaScript, PHP.',
         ]);
 
         if ($validator->fails()) {
@@ -346,9 +351,11 @@ class ClassController extends Controller
             DB::beginTransaction();
 
             // Update class fields (teacher_id can now be null to remove teacher assignment)
-            $updateData = $request->only(['class_name', 'description', 'admin_id']);
+            $updateData = $request->only(['class_name', 'description', 'admin_id', 'focus']);
             // Handle teacher_id separately to convert empty strings to null
             $updateData['teacher_id'] = !empty($request->teacher_id) ? $request->teacher_id : null;
+            // Handle focus separately to convert empty strings to null
+            $updateData['focus'] = !empty($request->focus) ? $request->focus : null;
             $class->update($updateData);
 
             // Update enrolled students if provided (can be empty array to clear all)
@@ -1066,6 +1073,77 @@ class ClassController extends Controller
             'total_students' => $studentData->count(),
             'completed_students' => $studentData->where('is_completed', true)->count(),
         ]);
+    }
+
+    /**
+     * Update class focus (Teacher only - can only update focus)
+     */
+    public function updateClassFocus(Request $request, string $id): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+        
+        /** @var User $user */
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+        
+        // Only teachers can update focus
+        if ($roleName !== 'teacher') {
+            return response()->json([
+                'message' => 'Unauthorized. Only teachers can update class focus.'
+            ], 403);
+        }
+
+        $class = ClassModel::find($id);
+        if (!$class) {
+            return response()->json([
+                'message' => 'Class not found'
+            ], 404);
+        }
+
+        // Check if teacher owns this class
+        if ($class->teacher_id !== $user->user_id) {
+            return response()->json([
+                'message' => 'Unauthorized. You can only update focus for your own classes.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'focus' => 'nullable|string|in:HTML,CSS,JavaScript,PHP',
+        ], [
+            'focus.in' => 'Focus must be one of: HTML, CSS, JavaScript, PHP.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $class->focus = $request->focus ?? null;
+            $class->save();
+
+            // Reload relationships
+            $class->refresh();
+            $class->load(['teacher', 'admin', 'students']);
+
+            return response()->json([
+                'message' => 'Class focus updated successfully',
+                'data' => $class
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update class focus',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
 

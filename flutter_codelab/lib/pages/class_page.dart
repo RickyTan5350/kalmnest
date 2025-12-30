@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_class_list_section.dart'
+import 'package:code_play/admin_teacher/widgets/class/teacher_class_list_section.dart'
     as teacher;
-import 'package:flutter_codelab/student/widgets/class/student_class_list_section.dart'
+import 'package:code_play/student/widgets/class/student_class_list_section.dart'
     as student;
 // import '../widgets/search_bar.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/services/layout_preferences.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/services/layout_preferences.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 // Global key to access ClassPage state for reloading from main.dart
 final GlobalKey<_ClassPageState> classPageGlobalKey =
@@ -29,6 +30,8 @@ class _ClassPageState extends State<ClassPage> {
   ViewLayout _viewLayout = ViewLayout.grid;
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
+  String _selectedFilter = 'All'; // Filter: 'All' or 'Created by Me'
+  String _selectedFocus = 'All'; // Focus filter: 'All', 'HTML', 'CSS', 'JavaScript', 'PHP'
 
   @override
   void initState() {
@@ -53,24 +56,47 @@ class _ClassPageState extends State<ClassPage> {
 
   void reloadClassList() {
     // Force rebuild by changing the key
+    // This will recreate the ClassListSection widget, forcing it to reload data
     setState(() {
       _reloadKey++;
     });
+  }
+
+  String _getLocalizedFilter(String filter) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (filter) {
+      case 'All':
+        return l10n.all;
+      case 'Created by Me':
+        return l10n.createdByMe;
+      default:
+        return filter;
+    }
+  }
+
+  String _getLocalizedFocus(String focus) {
+    final l10n = AppLocalizations.of(context)!;
+    // "All" needs localization, technical terms (HTML, CSS, etc.) don't
+    if (focus == 'All') {
+      return l10n.all;
+    }
+    return focus;
   }
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final String role = widget.currentUser.roleName.trim().toLowerCase();
+    final l10n = AppLocalizations.of(context)!;
 
     // Determine title based on role
     String pageTitle;
     if (role == 'admin') {
-      pageTitle = "All classes";
+      pageTitle = l10n.classes; // "All classes" - using classes for now
     } else if (role == 'teacher') {
-      pageTitle = "My Classes";
+      pageTitle = l10n.myClasses;
     } else {
-      pageTitle = "Enrolled Classes";
+      pageTitle = l10n.enrolledClasses;
     }
 
     return Padding(
@@ -118,7 +144,7 @@ class _ClassPageState extends State<ClassPage> {
                   width: 300,
                   child: SearchBar(
                     controller: _searchController,
-                    hintText: "Search by class name",
+                    hintText: l10n.searchByClassName,
                     padding: const WidgetStatePropertyAll<EdgeInsets>(
                       EdgeInsets.symmetric(horizontal: 16.0),
                     ),
@@ -145,12 +171,144 @@ class _ClassPageState extends State<ClassPage> {
 
                 const SizedBox(height: 16),
 
-                // Filter and Sort Row
+                // Filter Chips & Sort Controls (same line)
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Spacer(),
-                    // Filter Icon (Sort)
+                    Expanded(
+                      child: Wrap(
+                        spacing: 10.0,
+                        runSpacing: 10.0,
+                        alignment: WrapAlignment.start,
+                        children: [
+                          // Admin filter chips (if admin)
+                          if (role == 'admin') ...[
+                            FilterChip(
+                              label: Text(
+                                _getLocalizedFilter('All'),
+                                style: TextStyle(
+                                  color: _selectedFilter == 'All'
+                                      ? colors.primary
+                                      : colors.onSurface,
+                                ),
+                              ),
+                              selected: _selectedFilter == 'All',
+                              onSelected: (bool selected) {
+                                setState(() {
+                                  _selectedFilter = 'All';
+                                });
+                              },
+                            ),
+                            FilterChip(
+                              label: Text(
+                                _getLocalizedFilter('Created by Me'),
+                                style: TextStyle(
+                                  color: _selectedFilter == 'Created by Me'
+                                      ? colors.primary
+                                      : colors.onSurface,
+                                ),
+                              ),
+                              selected: _selectedFilter == 'Created by Me',
+                              onSelected: (bool selected) {
+                                setState(() {
+                                  _selectedFilter = selected ? 'Created by Me' : 'All';
+                                });
+                              },
+                            ),
+                            // Vertical Divider between Admin filters and Focus filters
+                            SizedBox(
+                              height: 32,
+                              child: VerticalDivider(
+                                width: 24,
+                                color: colors.outlineVariant,
+                              ),
+                            ),
+                          ],
+                          // Focus Filter Chips (for all roles)
+                          FilterChip(
+                            label: Text(
+                              _getLocalizedFocus('All'),
+                              style: TextStyle(
+                                color: _selectedFocus == 'All'
+                                    ? colors.primary
+                                    : colors.onSurface,
+                              ),
+                            ),
+                            selected: _selectedFocus == 'All',
+                            onSelected: (bool selected) {
+                              setState(() {
+                                _selectedFocus = 'All';
+                              });
+                            },
+                          ),
+                          FilterChip(
+                            label: Text(
+                              _getLocalizedFocus('HTML'),
+                              style: TextStyle(
+                                color: _selectedFocus == 'HTML'
+                                    ? colors.primary
+                                    : colors.onSurface,
+                              ),
+                            ),
+                            selected: _selectedFocus == 'HTML',
+                            onSelected: (bool selected) {
+                              setState(() {
+                                _selectedFocus = selected ? 'HTML' : 'All';
+                              });
+                            },
+                          ),
+                          FilterChip(
+                            label: Text(
+                              _getLocalizedFocus('CSS'),
+                              style: TextStyle(
+                                color: _selectedFocus == 'CSS'
+                                    ? colors.primary
+                                    : colors.onSurface,
+                              ),
+                            ),
+                            selected: _selectedFocus == 'CSS',
+                            onSelected: (bool selected) {
+                              setState(() {
+                                _selectedFocus = selected ? 'CSS' : 'All';
+                              });
+                            },
+                          ),
+                          FilterChip(
+                            label: Text(
+                              _getLocalizedFocus('JavaScript'),
+                              style: TextStyle(
+                                color: _selectedFocus == 'JavaScript'
+                                    ? colors.primary
+                                    : colors.onSurface,
+                              ),
+                            ),
+                            selected: _selectedFocus == 'JavaScript',
+                            onSelected: (bool selected) {
+                              setState(() {
+                                _selectedFocus = selected ? 'JavaScript' : 'All';
+                              });
+                            },
+                          ),
+                          FilterChip(
+                            label: Text(
+                              _getLocalizedFocus('PHP'),
+                              style: TextStyle(
+                                color: _selectedFocus == 'PHP'
+                                    ? colors.primary
+                                    : colors.onSurface,
+                              ),
+                            ),
+                            selected: _selectedFocus == 'PHP',
+                            onSelected: (bool selected) {
+                              setState(() {
+                                _selectedFocus = selected ? 'PHP' : 'All';
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Filter Icon (Sort) and Refresh Icon
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.filter_list),
                       tooltip: 'Sort Options',
@@ -233,11 +391,14 @@ class _ClassPageState extends State<ClassPage> {
       return teacher.ClassListSection(
         key: ValueKey('${role}_class_list_$_reloadKey'),
         roleName: role,
-        onReload: role == 'admin' ? reloadClassList : null,
+        onReload: reloadClassList, // Allow both admin and teacher to trigger reload
         searchQuery: _searchQuery,
         layout: _viewLayout,
         sortType: _sortType,
         sortOrder: _sortOrder,
+        selectedFilter: role == 'admin' ? _selectedFilter : null,
+        currentUserId: role == 'admin' ? widget.currentUser.id : null,
+        selectedFocus: _selectedFocus,
       );
     }
     return student.ClassListSection(
@@ -247,6 +408,7 @@ class _ClassPageState extends State<ClassPage> {
       layout: _viewLayout,
       sortType: _sortType,
       sortOrder: _sortOrder,
+      selectedFocus: _selectedFocus,
     );
   }
 }
