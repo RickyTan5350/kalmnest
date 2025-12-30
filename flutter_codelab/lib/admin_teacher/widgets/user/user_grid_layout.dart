@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/admin_teacher/widgets/grid_layout_view.dart';
 import 'package:code_play/theme.dart';
+import 'package:code_play/widgets/user_avatar.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class UserGridLayout extends StatelessWidget {
@@ -22,17 +23,11 @@ class UserGridLayout extends StatelessWidget {
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return scheme.brightness == Brightness.dark
-            ? Colors.pinkAccent
-            : Colors.pink;
+        return Colors.pink;
       case 'teacher':
-        return scheme.brightness == Brightness.dark
-            ? Colors.orangeAccent
-            : Colors.orange;
+        return Colors.orange;
       case 'student':
-        return scheme.brightness == Brightness.dark
-            ? Colors.lightBlueAccent
-            : Colors.blue;
+        return Colors.blue;
       default:
         return scheme.secondary;
     }
@@ -101,18 +96,7 @@ class UserGridLayout extends StatelessWidget {
               // Header: Avatar + Status
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: roleColor.withOpacity(0.2),
-                    foregroundColor: roleColor,
-                    child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : '?',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
+                  UserAvatar(name: name, role: role, size: 32, fontSize: 14),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -202,4 +186,3 @@ class UserGridLayout extends StatelessWidget {
     );
   }
 }
-
