@@ -232,6 +232,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
           initialFileName: fileName,
           topic: widget.topic,
           noteTitle: widget.noteTitle,
+          isAdmin: false,
         ),
       ),
     );

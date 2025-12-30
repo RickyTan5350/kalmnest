@@ -143,6 +143,7 @@ class _ViewNotePageState extends State<ViewNotePage> {
           contextId: widget.currentTitle,
           topic: widget.currentTopic,
           noteTitle: widget.currentTitle,
+          isAdmin: false,
         ),
       ),
     );

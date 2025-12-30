@@ -507,6 +507,7 @@ class _EditNotePageState extends State<EditNotePage> {
           contextId: widget.currentTitle,
           topic: _selectedTopic ?? widget.currentTopic,
           noteTitle: _titleController.text,
+          isAdmin: true,
         ),
       ),
     );
