@@ -41,6 +41,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   String _markdownContent = "";
   late String _currentTitle;
   late String _currentTopic; // State variable for topic
+  final Map<String, int> _quizStates =
+      {}; // Track quiz answers: Question Text -> Selected Index
 
   // --- Search State ---
   bool _isSearching = false;
@@ -133,6 +135,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
       await _pdfService.generateAndDownloadPdf(
         title: _currentTitle,
         content: _markdownContent,
+        quizStates: _quizStates,
       );
     } catch (e) {
       _showSnackBar('Failed to generate PDF: $e', isError: true);
@@ -420,6 +423,10 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                   question: quizData['question'],
                   options: List<String>.from(quizData['options']),
                   correctIndex: quizData['correctIndex'],
+                  initialSelectedIndex: _quizStates[quizData['question']],
+                  onAnswerSelected: (index) {
+                    _quizStates[quizData['question']] = index;
+                  },
                 );
               } catch (e) {
                 return Text(

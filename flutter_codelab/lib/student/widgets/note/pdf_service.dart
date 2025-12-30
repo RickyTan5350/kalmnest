@@ -9,6 +9,7 @@ class PdfService {
   Future<void> generateAndDownloadPdf({
     required String title,
     required String content,
+    Map<String, int> quizStates = const {},
   }) async {
     try {
       final pdf = pw.Document();
@@ -18,7 +19,7 @@ class PdfService {
       final fontBold = await PdfGoogleFonts.openSansBold();
 
       // 2. Pre-process Quiz Blocks
-      String processedContent = _processQuizBlocks(content);
+      String processedContent = _processQuizBlocks(content, quizStates);
 
       // 3. Pre-process Large Code Blocks (to avoid TooManyPagesException)
       processedContent = _splitLargeCodeBlocks(processedContent);
@@ -150,7 +151,7 @@ class PdfService {
     }
   }
 
-  String _processQuizBlocks(String content) {
+  String _processQuizBlocks(String content, Map<String, int> quizStates) {
     // Regex to match ```quiz ... ```
     final RegExp quizRegex = RegExp(r'```quiz\s*([\s\S]*?)\s*```');
 
@@ -161,6 +162,10 @@ class PdfService {
         String question = quizData['question'] ?? "No Question";
         List<dynamic> options = quizData['options'] ?? [];
         int correctIndex = quizData['correctIndex'] ?? -1;
+
+        // CHECK STUDENT SELECTION
+        bool isAnswered = quizStates.containsKey(question);
+        int? selectedIndex = quizStates[question];
 
         // Build HTML for the Quiz
         // We use a table for structural layout to simulate the card/box look
@@ -178,14 +183,32 @@ class PdfService {
         // Options
         for (int i = 0; i < options.length; i++) {
           String optionText = options[i];
-          bool isCorrect = (i == correctIndex);
 
-          String borderColor = isCorrect ? "#4caf50" : "#e0e0e0";
-          String bgColor = isCorrect ? "#e8f5e9" : "#ffffff";
-          String textColor = isCorrect ? "#2e7d32" : "#000000";
-          String icon = isCorrect
-              ? "( / )"
-              : "( )"; // Text-based fallback for reliability
+          // DETERMINE STYLES BASED ON SELECTION
+          String borderColor = "#e0e0e0";
+          String bgColor = "#ffffff";
+          String textColor = "#000000";
+          String icon = "( )";
+
+          if (isAnswered) {
+            if (i == correctIndex) {
+              // Correct Answer -> GREEN
+              borderColor = "#4caf50";
+              bgColor = "#e8f5e9";
+              textColor = "#2e7d32";
+              icon = "( / )"; // Checked
+            } else if (i == selectedIndex && i != correctIndex) {
+              // Selected Wrong Answer -> RED
+              borderColor = "#f44336";
+              bgColor = "#ffebee";
+              textColor = "#c62828";
+              icon = "( X )"; // Cross
+            } else {
+              // Unselected, Uncorrect -> Greyed out
+              textColor = "#9e9e9e"; // Grey text
+              // icon stays empty
+            }
+          }
 
           htmlBuffer.writeln(
             '<div style="margin-bottom: 8px; padding: 10px; border: 1px solid $borderColor; background-color: $bgColor; border-radius: 5px;">',
@@ -196,7 +219,26 @@ class PdfService {
           htmlBuffer.writeln('</div>');
         }
 
-        // Answer Key Footer
+        // Answer Key Footer (Optional, mimicking app)
+        if (isAnswered) {
+          htmlBuffer.writeln(
+            '<div style="margin-top: 10px; font-size: 10pt;">',
+          );
+          if (selectedIndex == correctIndex) {
+            htmlBuffer.writeln(
+              '<span style="color: #4caf50; font-weight: bold;">Betul! Tahniah.</span>',
+            );
+          } else {
+            String correctText =
+                (correctIndex >= 0 && correctIndex < options.length)
+                ? options[correctIndex]
+                : "Unknown";
+            htmlBuffer.writeln(
+              '<span style="color: #f44336; font-weight: bold;">Salah. Jawapan betul ialah: $correctText</span>',
+            );
+          }
+          htmlBuffer.writeln('</div>');
+        }
 
         htmlBuffer.writeln('</div>'); // Close main container
 
