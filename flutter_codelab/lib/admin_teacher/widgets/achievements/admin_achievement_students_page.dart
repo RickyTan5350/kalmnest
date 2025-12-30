@@ -262,6 +262,7 @@ class _AdminAchievementStudentsPageState
                           builder: (context) => UserDetailPage(
                             userId: userId,
                             userName: name,
+                            userRole: 'Student',
                             breadcrumbs: [
                               BreadcrumbItem(
                                 label: 'Achievements',

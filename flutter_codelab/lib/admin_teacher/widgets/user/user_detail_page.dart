@@ -10,6 +10,7 @@ import 'admin_student_achievements_page.dart';
 import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/student/widgets/achievements/student_profile_achievements_page.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/user_avatar.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String userId;
@@ -17,6 +18,7 @@ class UserDetailPage extends StatefulWidget {
   final List<BreadcrumbItem>? breadcrumbs;
   final bool isSelfProfile;
   final String viewerRole;
+  final String? userRole; // NEW: Passed for immediate color feedback
 
   const UserDetailPage({
     super.key,
@@ -25,6 +27,7 @@ class UserDetailPage extends StatefulWidget {
     this.breadcrumbs,
     this.isSelfProfile = false,
     this.viewerRole = 'Student',
+    this.userRole,
   });
 
   @override
@@ -37,6 +40,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
   late Future<UserDetails> _userFuture;
   Future<List<AchievementData>>? _achievementsFuture;
   bool _isViewerStudent = false;
+  Color? _fetchedRoleColor; // NEW: To store color after fetch
 
   @override
   void initState() {
@@ -133,8 +137,16 @@ class _UserDetailPageState extends State<UserDetailPage> {
     // Only fetch achievements if the user is a student
     _userFuture
         .then((user) {
-          if (mounted && user.isStudent) {
-            _fetchAchievements();
+          if (mounted) {
+            setState(() {
+              _fetchedRoleColor = _getRoleColor(
+                user.roleName,
+                Theme.of(context).colorScheme,
+              );
+            });
+            if (user.isStudent) {
+              _fetchAchievements();
+            }
           }
         })
         .catchError((_) {
@@ -252,13 +264,25 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    // Determine AppBar color
+    Color appBarColor = Colors.transparent;
+    if (_fetchedRoleColor != null) {
+      appBarColor = _fetchedRoleColor!;
+    } else if (widget.userRole != null) {
+      appBarColor = _getRoleColor(widget.userRole!, colorScheme);
+    }
+    // Apply opacity for background
+    final backgroundColor = appBarColor == Colors.transparent
+        ? Colors.transparent
+        : appBarColor.withOpacity(0.2); // Match achievement detail style
+
     return Scaffold(
       appBar: AppBar(
         title: widget.breadcrumbs != null
             ? BreadcrumbNavigation(items: widget.breadcrumbs!)
             : Text(widget.userName),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
+        centerTitle: false,
+        backgroundColor: backgroundColor,
         elevation: 0,
         actions: [
           FutureBuilder<UserDetails>(
@@ -441,24 +465,11 @@ class _UserDetailPageState extends State<UserDetailPage> {
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: roleColor.withOpacity(0.5), width: 2),
-            ),
-            child: CircleAvatar(
-              radius: 48,
-              backgroundColor: roleColor.withOpacity(0.2),
-              foregroundColor: roleColor,
-              child: Text(
-                user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                style: textTheme.displayMedium?.copyWith(
-                  color: roleColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+          UserAvatar(
+            name: user.name,
+            role: user.roleName,
+            size: 100,
+            fontSize: 40,
           ),
           const SizedBox(height: 16),
           Text(
@@ -804,4 +815,3 @@ class _UserDetailPageState extends State<UserDetailPage> {
     );
   }
 }
-

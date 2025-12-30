@@ -5,6 +5,7 @@ import 'package:code_play/admin_teacher/widgets/user/user_detail_page.dart';
 import 'package:code_play/pages/help_support_pages.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 import 'package:code_play/widgets/language_selector.dart';
+import 'package:code_play/widgets/user_avatar.dart';
 
 class ProfileHeaderContent extends StatelessWidget {
   final UserDetails currentUser;
@@ -17,25 +18,6 @@ class ProfileHeaderContent extends StatelessWidget {
     required this.onLogoutPressed,
     required this.onMenuPressed, // ADDED
   });
-
-  Color _getRoleColor(String role, ColorScheme scheme) {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return scheme.brightness == Brightness.dark
-            ? Colors.pinkAccent
-            : Colors.pink;
-      case 'teacher':
-        return scheme.brightness == Brightness.dark
-            ? Colors.orangeAccent
-            : Colors.orange;
-      case 'student':
-        return scheme.brightness == Brightness.dark
-            ? Colors.lightBlueAccent
-            : Colors.blue;
-      default:
-        return scheme.secondary;
-    }
-  }
 
   // --- NEW: Helper method to build the profile display widget ---
   Widget _buildProfileDisplay(
@@ -105,25 +87,11 @@ class ProfileHeaderContent extends StatelessWidget {
         ),
 
         // Profile Avatar with initials
-        Builder(
-          builder: (context) {
-            final roleColor = _getRoleColor(currentUser.roleName, colorScheme);
-            return CircleAvatar(
-              radius: 16,
-              backgroundColor: roleColor.withOpacity(0.2),
-              foregroundColor: roleColor,
-              child: Text(
-                currentUser.name.isNotEmpty
-                    ? currentUser.name[0].toUpperCase()
-                    : '?',
-                style: textTheme.titleMedium?.copyWith(
-                  color: roleColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            );
-          },
+        UserAvatar(
+          name: currentUser.name,
+          role: currentUser.roleName,
+          size: 32,
+          fontSize: 16,
         ),
       ],
     );
@@ -293,4 +261,3 @@ class ProfileHeaderContent extends StatelessWidget {
     );
   }
 }
-
