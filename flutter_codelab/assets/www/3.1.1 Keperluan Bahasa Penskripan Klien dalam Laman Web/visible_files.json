@@ -1,1 +1,1 @@
-{"rules":{"tajuk1.html":["try3.html","only3.html"]},"_private":["only3.html","tajuk1.html","tajuk.1html"]}
+{"rules":{"tajuk1.html":["try3.html","only3.html"],"index.html":["index.html","shouldsync.html"],"shouldsync.html":["shouldsync.html","rt.html"]},"_private":["only3.html","tajuk1.html","tajuk.1html","shouldsync.html","rt.html"]}
