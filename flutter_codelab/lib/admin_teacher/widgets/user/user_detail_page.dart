@@ -18,6 +18,7 @@ class UserDetailPage extends StatefulWidget {
   final List<BreadcrumbItem>? breadcrumbs;
   final bool isSelfProfile;
   final String viewerRole;
+  final String? userRole; // NEW: Passed for immediate color feedback
 
   const UserDetailPage({
     super.key,
@@ -26,6 +27,7 @@ class UserDetailPage extends StatefulWidget {
     this.breadcrumbs,
     this.isSelfProfile = false,
     this.viewerRole = 'Student',
+    this.userRole,
   });
 
   @override
@@ -38,6 +40,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
   late Future<UserDetails> _userFuture;
   Future<List<AchievementData>>? _achievementsFuture;
   bool _isViewerStudent = false;
+  Color? _fetchedRoleColor; // NEW: To store color after fetch
 
   @override
   void initState() {
@@ -134,8 +137,16 @@ class _UserDetailPageState extends State<UserDetailPage> {
     // Only fetch achievements if the user is a student
     _userFuture
         .then((user) {
-          if (mounted && user.isStudent) {
-            _fetchAchievements();
+          if (mounted) {
+            setState(() {
+              _fetchedRoleColor = _getRoleColor(
+                user.roleName,
+                Theme.of(context).colorScheme,
+              );
+            });
+            if (user.isStudent) {
+              _fetchAchievements();
+            }
           }
         })
         .catchError((_) {
@@ -253,13 +264,25 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    // Determine AppBar color
+    Color appBarColor = Colors.transparent;
+    if (_fetchedRoleColor != null) {
+      appBarColor = _fetchedRoleColor!;
+    } else if (widget.userRole != null) {
+      appBarColor = _getRoleColor(widget.userRole!, colorScheme);
+    }
+    // Apply opacity for background
+    final backgroundColor = appBarColor == Colors.transparent
+        ? Colors.transparent
+        : appBarColor.withOpacity(0.2); // Match achievement detail style
+
     return Scaffold(
       appBar: AppBar(
         title: widget.breadcrumbs != null
             ? BreadcrumbNavigation(items: widget.breadcrumbs!)
             : Text(widget.userName),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
+        centerTitle: false,
+        backgroundColor: backgroundColor,
         elevation: 0,
         actions: [
           FutureBuilder<UserDetails>(

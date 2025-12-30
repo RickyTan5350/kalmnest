@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
 import 'package:code_play/widgets/user_avatar.dart';
 import 'package:code_play/admin_teacher/services/selection_box_painter.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'user_detail_page.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 
@@ -543,10 +544,8 @@ class UserListContentState extends State<UserListContent> {
         if (isAdmin && _isSelectionMode) {
           _toggleSelection(id);
         } else {
-          _navigateToDetail(
-            id.toString(),
-            users.firstWhere((u) => u.id == id).name,
-          );
+          final user = users.firstWhere((u) => u.id == id);
+          _navigateToDetail(id.toString(), user.name, userRole: user.roleName);
         }
       },
     );
@@ -654,7 +653,11 @@ class UserListContentState extends State<UserListContent> {
                   if (isAdmin && _isSelectionMode) {
                     _toggleSelection(user.id);
                   } else {
-                    _navigateToDetail(user.id.toString(), user.name);
+                    _navigateToDetail(
+                      user.id.toString(),
+                      user.name,
+                      userRole: user.roleName,
+                    );
                   }
                 },
                 onLongPress: isAdmin ? () => _toggleSelection(user.id) : null,
@@ -666,7 +669,11 @@ class UserListContentState extends State<UserListContent> {
     );
   }
 
-  Future<void> _navigateToDetail(String userId, String userName) async {
+  Future<void> _navigateToDetail(
+    String userId,
+    String userName, {
+    String? userRole,
+  }) async {
     final bool isSelf = widget.currentUser?.id == userId;
     final bool? deleted = await Navigator.push(
       context,
@@ -676,6 +683,14 @@ class UserListContentState extends State<UserListContent> {
           userName: userName,
           viewerRole: widget.currentUser?.roleName ?? 'Student',
           isSelfProfile: isSelf,
+          userRole: userRole,
+          breadcrumbs: [
+            BreadcrumbItem(
+              label: 'Users',
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            const BreadcrumbItem(label: 'Profile'),
+          ],
         ),
       ),
     );
