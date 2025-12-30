@@ -172,8 +172,6 @@ class ClassController extends Controller
             'admin_id' => 'nullable|string|exists:users,user_id',
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'string|exists:users,user_id',
-            'icon' => 'nullable|string|max:50',
-            'color' => 'nullable|string|max:20',
         ], [
             'class_name.required' => 'Class name is required.',
             'class_name.max' => 'Class name cannot exceed 100 characters.',
@@ -196,8 +194,6 @@ class ClassController extends Controller
                 'teacher_id' => !empty($request->teacher_id) ? $request->teacher_id : null, // optional, can be null
                 'description' => $request->description,
                 'admin_id' => $request->admin_id ?? $user->user_id, // Default to current admin
-                'icon' => $request->icon ?? 'school_rounded',
-                'color' => $request->color ?? 'blue',
             ]);
 
             // Enroll students if provided (optional, can be empty)
@@ -334,8 +330,6 @@ class ClassController extends Controller
             'admin_id' => 'nullable|string|exists:users,user_id',
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'string|exists:users,user_id',
-            'icon' => 'nullable|string|max:50',
-            'color' => 'nullable|string|max:20',
         ], [
             'class_name.required' => 'Class name is required.',
             'class_name.max' => 'Class name cannot exceed 100 characters.',
@@ -352,7 +346,7 @@ class ClassController extends Controller
             DB::beginTransaction();
 
             // Update class fields (teacher_id can now be null to remove teacher assignment)
-            $updateData = $request->only(['class_name', 'description', 'admin_id', 'icon', 'color']);
+            $updateData = $request->only(['class_name', 'description', 'admin_id']);
             // Handle teacher_id separately to convert empty strings to null
             $updateData['teacher_id'] = !empty($request->teacher_id) ? $request->teacher_id : null;
             $class->update($updateData);

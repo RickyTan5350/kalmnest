@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/student/widgets/class/student_view_class_page.dart';
-import 'package:code_play/constants/view_layout.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
-import 'package:code_play/enums/sort_enums.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/student/widgets/class/student_view_class_page.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
 
 // Class List Item Widget for Student (no edit/delete buttons)
 class _ClassListItem extends StatefulWidget {
@@ -64,25 +63,10 @@ class _ClassListItemState extends State<_ClassListItem> {
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: ListTile(
-                leading: Builder(
-                  builder: (context) {
-                    final classColor = ClassCustomization.getColorByName(
-                      widget.item['color'],
-                    );
-                    final classIcon = ClassCustomization.getIconByName(
-                      widget.item['icon'],
-                    );
-                    return CircleAvatar(
-                      backgroundColor: classColor?.color.withOpacity(0.1) ??
-                          widget.colorScheme.primaryContainer,
-                      foregroundColor: classColor?.color ??
-                          widget.colorScheme.onPrimaryContainer,
-                      child: Icon(
-                        classIcon?.icon ?? Icons.school_rounded,
-                        size: 20,
-                      ),
-                    );
-                  },
+                leading: CircleAvatar(
+                  backgroundColor: widget.colorScheme.primaryContainer,
+                  foregroundColor: widget.colorScheme.onPrimaryContainer,
+                  child: Icon(Icons.school_rounded, size: 20),
                 ),
                 title: Text(
                   widget.item['class_name'] ?? 'No Name',
@@ -226,34 +210,20 @@ class _ClassGridCard extends StatelessWidget {
               // Icon and Title Row
               Row(
                 children: [
-                  Builder(
-                    builder: (context) {
-                      final classColor = ClassCustomization.getColorByName(
-                        item['color'],
-                      );
-                      final classIcon = ClassCustomization.getIconByName(
-                        item['icon'],
-                      );
-                      return Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color:
-                              classColor?.color.withOpacity(0.2) ??
-                              colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(
-                            ClassConstants.cardBorderRadius * 0.67,
-                          ),
-                        ),
-                        child: Icon(
-                          classIcon?.icon ?? Icons.school_rounded,
-                          size: 24,
-                          color:
-                              classColor?.color ??
-                              colorScheme.onPrimaryContainer,
-                        ),
-                      );
-                    },
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(
+                        ClassConstants.cardBorderRadius * 0.67,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.school_rounded,
+                      size: 24,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -351,9 +321,6 @@ class ClassListSection extends StatefulWidget {
   final ViewLayout layout;
   final SortType sortType;
   final SortOrder sortOrder;
-  final String? iconFilter;
-  final String? colorFilter;
-
   const ClassListSection({
     Key? key,
     required this.roleName,
@@ -361,8 +328,6 @@ class ClassListSection extends StatefulWidget {
     required this.layout,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
-    this.iconFilter,
-    this.colorFilter,
   }) : super(key: key);
 
   @override
@@ -383,17 +348,13 @@ class _ClassListSectionState extends State<ClassListSection> {
   @override
   void didUpdateWidget(ClassListSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.searchQuery != widget.searchQuery ||
+    if (        oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
-        oldWidget.sortOrder != widget.sortOrder ||
-        oldWidget.iconFilter != widget.iconFilter ||
-        oldWidget.colorFilter != widget.colorFilter) {
+        oldWidget.sortOrder != widget.sortOrder) {
       if (oldWidget.searchQuery != widget.searchQuery ||
           oldWidget.sortType != widget.sortType ||
-          oldWidget.sortOrder != widget.sortOrder ||
-          oldWidget.iconFilter != widget.iconFilter ||
-          oldWidget.colorFilter != widget.colorFilter) {
+          oldWidget.sortOrder != widget.sortOrder) {
         // Just re-filter and sort, don't reload from API
         _applyFiltersAndSort();
       } else {
@@ -418,22 +379,6 @@ class _ClassListSectionState extends State<ClassListSection> {
               .toString()
               .toLowerCase();
           return className.contains(query);
-        }).toList();
-      }
-
-      // Apply icon filter
-      if (widget.iconFilter != null) {
-        filtered = filtered.where((classItem) {
-          final classIcon = classItem['icon']?.toString();
-          return classIcon == widget.iconFilter;
-        }).toList();
-      }
-
-      // Apply color filter
-      if (widget.colorFilter != null) {
-        filtered = filtered.where((classItem) {
-          final classColor = classItem['color']?.toString();
-          return classColor == widget.colorFilter;
         }).toList();
       }
 
@@ -470,22 +415,6 @@ class _ClassListSectionState extends State<ClassListSection> {
             .toString()
             .toLowerCase();
         return className.contains(query);
-      }).toList();
-    }
-
-    // Apply icon filter
-    if (widget.iconFilter != null) {
-      filtered = filtered.where((classItem) {
-        final classIcon = classItem['icon']?.toString();
-        return classIcon == widget.iconFilter;
-      }).toList();
-    }
-
-    // Apply color filter
-    if (widget.colorFilter != null) {
-      filtered = filtered.where((classItem) {
-        final classColor = classItem['color']?.toString();
-        return classColor == widget.colorFilter;
       }).toList();
     }
 
@@ -578,9 +507,36 @@ class _ClassListSectionState extends State<ClassListSection> {
           : widget.layout == ViewLayout.grid
           ? CustomScrollView(
               slivers: [
-                        SliverPadding(
-                          padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
-                          sliver: SliverGrid(
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            height: 40,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "${filteredList.length} Results",
+                                style: textTheme.titleMedium,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
+                  sliver: SliverGrid(
                             gridDelegate:
                                 const SliverGridDelegateWithMaxCrossAxisExtent(
                               maxCrossAxisExtent: 250.0,
@@ -614,10 +570,37 @@ class _ClassListSectionState extends State<ClassListSection> {
             )
           : CustomScrollView(
               slivers: [
-                        SliverPadding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: ClassConstants.defaultPadding * 0.5,
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            height: 40,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "${filteredList.length} Results",
+                                style: textTheme.titleMedium,
+                              ),
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ClassConstants.defaultPadding * 0.5,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final item = filteredList[index];
@@ -648,4 +631,3 @@ class _ClassListSectionState extends State<ClassListSection> {
     );
   }
 }
-

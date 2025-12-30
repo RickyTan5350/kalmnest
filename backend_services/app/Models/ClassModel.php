@@ -33,8 +33,6 @@ class ClassModel extends Model
         'teacher_id',
         'description',
         'admin_id',
-        'icon',
-        'color',
     ];
 
     /**

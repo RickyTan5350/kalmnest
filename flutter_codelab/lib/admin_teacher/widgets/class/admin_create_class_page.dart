@@ -1,11 +1,8 @@
 //lib/widgets/create_class_page.dart
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_theme_extensions.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_color_picker.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_icon_picker.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_theme_extensions.dart';
 
 class CreateClassScreen extends StatefulWidget {
   const CreateClassScreen({super.key});
@@ -20,8 +17,6 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
   final _descriptionController = TextEditingController();
   String? _selectedTeacher;
   List<String?> _selectedStudents = [null];
-  String _selectedColor = 'blue';
-  String _selectedIcon = 'school_rounded';
 
   // Data from backend
   List<Map<String, dynamic>> _teachers = [];
@@ -139,15 +134,13 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         description: description,
         adminId: adminId,
         studentIds: studentIds.isEmpty ? null : studentIds,
-        icon: _selectedIcon,
-        color: _selectedColor,
       );
 
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Class created successfully!'),
-           backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
         Navigator.pop(context, true); // Return true to trigger reload
@@ -246,24 +239,6 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     validator: (value) => (value == null || value.isEmpty)
                         ? 'Please enter description'
                         : null,
-                  ),
-                  SizedBox(height: ClassConstants.formSpacing),
-
-                  // Color Picker
-                  ClassColorPicker(
-                    selectedColor: _selectedColor,
-                    onColorSelected: (color) {
-                      setState(() => _selectedColor = color);
-                    },
-                  ),
-                  SizedBox(height: ClassConstants.formSpacing),
-
-                  // Icon Picker
-                  ClassIconPicker(
-                    selectedIcon: _selectedIcon,
-                    onIconSelected: (icon) {
-                      setState(() => _selectedIcon = icon);
-                    },
                   ),
                   SizedBox(height: ClassConstants.formSpacing),
 
@@ -564,4 +539,3 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     );
   }
 }
-

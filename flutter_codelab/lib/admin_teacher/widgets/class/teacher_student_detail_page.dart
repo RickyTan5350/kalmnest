@@ -140,8 +140,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
     final textTheme = Theme.of(context).textTheme;
 
     // Get class color for AppBar
-    final classColor = ClassCustomization.getColorByName(_classData?['color']);
-    final color = classColor?.color ?? cs.primary;
+    final color = cs.primary;
 
     return Scaffold(
       appBar: AppBar(

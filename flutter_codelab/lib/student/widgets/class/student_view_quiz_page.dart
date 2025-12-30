@@ -220,21 +220,14 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
               Center(
                 child: Column(
                   children: [
-                    Builder(
-                      builder: (context) {
-                        final classIcon = ClassCustomization.getIconByName(
-                          _classData?['icon'],
-                        );
-                        return CircleAvatar(
-                          radius: 40,
-                          backgroundColor: color.withOpacity(0.1),
-                          child: Icon(
-                            classIcon?.icon ?? Icons.school_rounded,
-                            color: color,
-                            size: 40,
-                          ),
-                        );
-                      },
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: color.withOpacity(0.1),
+                      child: Icon(
+                        Icons.school_rounded,
+                        color: color,
+                        size: 40,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(

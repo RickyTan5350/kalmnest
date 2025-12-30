@@ -357,8 +357,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
     final textTheme = Theme.of(context).textTheme;
 
     // Get class color for AppBar
-    final classColor = ClassCustomization.getColorByName(_classData?['color']);
-    final color = classColor?.color ?? cs.primary;
+    final color = cs.primary;
 
     return Scaffold(
       appBar: AppBar(
@@ -404,21 +403,14 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
               Center(
                 child: Column(
                   children: [
-                    Builder(
-                      builder: (context) {
-                        final classIcon = ClassCustomization.getIconByName(
-                          _classData?['icon'],
-                        );
-                        return CircleAvatar(
-                          radius: 40,
-                          backgroundColor: color.withOpacity(0.1),
-                          child: Icon(
-                            classIcon?.icon ?? Icons.school_rounded,
-                            color: color,
-                            size: 40,
-                          ),
-                        );
-                      },
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: color.withOpacity(0.1),
+                      child: Icon(
+                        Icons.school_rounded,
+                        color: color,
+                        size: 40,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
