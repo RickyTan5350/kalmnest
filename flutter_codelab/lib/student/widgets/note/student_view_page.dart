@@ -325,8 +325,8 @@ class StudentViewPageState extends State<StudentViewPage> {
     );
   }
 
-  Future<dynamic> _openNote(BuildContext context, NoteBrief note) {
-    return Navigator.push(
+  Future<dynamic> _openNote(BuildContext context, NoteBrief note) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => StudentNoteDetailPage(
@@ -336,6 +336,16 @@ class StudentViewPageState extends State<StudentViewPage> {
         ),
       ),
     );
+
+    if (widget.onTopicChanged != null) {
+      if (result == 'navigate_home') {
+        widget.onTopicChanged!('All');
+      } else if (result is String && result.isNotEmpty) {
+        // Assume it's a topic
+        widget.onTopicChanged!(result);
+      }
+    }
+    return result;
   }
 }
 
