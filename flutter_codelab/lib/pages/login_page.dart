@@ -6,7 +6,7 @@ import 'package:flutter_codelab/models/user_data.dart'; // Using the UserDetails
 import 'package:flutter_codelab/main.dart'; // Import the Feed structure
 import 'package:flutter_codelab/pages/forgot_password_page.dart';
 import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
-import 'package:flutter_codelab/controllers/locale_controller.dart';
+import 'package:flutter_codelab/widgets/language_selector.dart';
 
 // Define a new page for the login screen
 class LoginPage extends StatefulWidget {
@@ -158,50 +158,7 @@ class _LoginPageState extends State<LoginPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          ValueListenableBuilder<Locale>(
-            valueListenable: LocaleController.instance,
-            builder: (context, locale, child) {
-              return PopupMenuButton<Locale>(
-                tooltip: AppLocalizations.of(context)!.selectLanguage,
-                offset: const Offset(0, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.language, color: colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 8),
-                      Text(
-                        locale.languageCode.toUpperCase(),
-                        style: textTheme.labelLarge?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                onSelected: (Locale newLocale) {
-                  LocaleController.instance.switchLocale(newLocale);
-                },
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<Locale>>[
-                  const PopupMenuItem<Locale>(
-                    value: Locale('en'),
-                    child: Text('English'),
-                  ),
-                  const PopupMenuItem<Locale>(
-                    value: Locale('ms'),
-                    child: Text('Bahasa Malaysia'),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
+        actions: [const LanguageSelector(), const SizedBox(width: 8)],
       ),
       body: Center(
         child: SingleChildScrollView(

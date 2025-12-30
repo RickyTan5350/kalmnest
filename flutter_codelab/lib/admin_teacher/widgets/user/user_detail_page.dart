@@ -64,7 +64,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
     }
   }
 
-  // Helper to get role color
+  // Helper to get role color (matching premium style)
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.trim().toLowerCase()) {
       case 'admin':
@@ -84,6 +84,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
     }
   }
 
+  // Localization Helpers
   String _getLocalizedRole(String role) {
     final l10n = AppLocalizations.of(context)!;
     switch (role.toLowerCase()) {
@@ -338,7 +339,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
                 _buildSectionHeader(
                   context,
-                  "Personal Information",
+                  AppLocalizations.of(context)!.userProfileDetails,
                   Icons.person_outline,
                 ),
                 const SizedBox(height: 12),
@@ -346,29 +347,29 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   _buildInfoRow(
                     context,
                     Icons.email_outlined,
-                    "Email",
+                    AppLocalizations.of(context)!.email,
                     user.email,
                   ),
                   _buildDivider(context),
                   _buildInfoRow(
                     context,
                     Icons.phone_outlined,
-                    "Phone",
+                    AppLocalizations.of(context)!.phone,
                     user.phoneNo,
                   ),
                   _buildDivider(context),
                   _buildInfoRow(
                     context,
                     Icons.location_on_outlined,
-                    "Address",
+                    AppLocalizations.of(context)!.address,
                     user.address,
                   ),
                   _buildDivider(context),
                   _buildInfoRow(
                     context,
                     Icons.transgender,
-                    "Gender",
-                    user.gender,
+                    AppLocalizations.of(context)!.genderLabel,
+                    _getLocalizedGender(user.gender),
                   ),
                 ]),
 
@@ -376,7 +377,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   const SizedBox(height: 24),
                   _buildSectionHeader(
                     context,
-                    "Recent Achievements",
+                    AppLocalizations.of(context)!.recentAchievements,
                     Icons.emoji_events_outlined,
                     trailing: TextButton(
                       onPressed: () async {
@@ -410,7 +411,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                       style: TextButton.styleFrom(
                         visualDensity: VisualDensity.compact,
                       ),
-                      child: const Text("View All"),
+                      child: Text(AppLocalizations.of(context)!.viewAll),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -486,7 +487,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  user.roleName.toUpperCase(),
+                  _getLocalizedRole(user.roleName).toUpperCase(),
                   style: textTheme.labelLarge?.copyWith(
                     color: roleColor,
                     letterSpacing: 1.0,
@@ -524,7 +525,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      user.accountStatus.toUpperCase(),
+                      _getLocalizedStatus(user.accountStatus).toUpperCase(),
                       style: textTheme.labelSmall?.copyWith(
                         color: user.accountStatus == 'active'
                             ? Colors.green
@@ -542,7 +543,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  // color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: colorScheme.outlineVariant.withOpacity(0.5),
@@ -558,7 +558,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      "Joined ${user.joinedDate.split('T')[0]}",
+                      "${AppLocalizations.of(context)!.joinedDateLabel} ${user.joinedDate.split('T')[0]}",
                       style: textTheme.labelSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -690,9 +690,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
       future: _achievementsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return SizedBox(
+          return const SizedBox(
             height: 100,
-            child: const Center(child: CircularProgressIndicator()),
+            child: Center(child: CircularProgressIndicator()),
           );
         } else if (snapshot.hasError) {
           return Text('Error loading achievements: ${snapshot.error}');
@@ -707,7 +707,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 color: Theme.of(
                   context,
                 ).colorScheme.outlineVariant.withOpacity(0.5),
-                style: BorderStyle.solid,
               ),
             ),
             child: Column(
@@ -719,10 +718,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  AppLocalizations.of(context)!.recentAchievements,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  "No achievements yet",
+                  AppLocalizations.of(context)!.noAchievementsYet,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.outline,
                   ),
@@ -732,9 +728,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
           );
         }
 
-        final achievements = snapshot.data!
-            .take(10)
-            .toList(); // Show more items for scrolling
+        final achievements = snapshot.data!.take(10).toList();
 
         return SizedBox(
           height: 160,
@@ -748,7 +742,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
               final color = getAchievementColor(context, achievement.icon);
               final dateStr = achievement.unlockedAt != null
                   ? achievement.unlockedAt!.toString().split(' ')[0]
-                  : 'N/A';
+                  : AppLocalizations.of(context)!.unknownDate;
 
               return Container(
                 width: 130,
@@ -782,7 +776,8 @@ class _UserDetailPageState extends State<UserDetailPage> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      achievement.achievementTitle ?? "Achievement",
+                      achievement.achievementTitle ??
+                          AppLocalizations.of(context)!.achievement,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,

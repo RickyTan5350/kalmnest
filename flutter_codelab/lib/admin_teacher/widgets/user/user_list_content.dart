@@ -42,7 +42,7 @@ class UserListContentState extends State<UserListContent> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Selection Logic for Grid (Mock for now or fully implement if needed)
+  // Selection Logic
   bool _isSelectionMode = false;
   final Set<dynamic> _selectedIds = {};
   final Map<dynamic, GlobalKey> _gridItemKeys = {};
@@ -196,10 +196,6 @@ class UserListContentState extends State<UserListContent> {
       if (widget.sortType == SortType.alphabetical) {
         comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
       } else {
-        // Fallback to CreatedAt if available or Name if not.
-        // Assuming Name for now as UserListItem might not have Date exposed deeply
-        // If you have createdAt/updatedAt in UserListItem, use it.
-        // Checking UserListItem definition might be good, but safe fallback:
         comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
       }
       return widget.sortOrder == SortOrder.ascending ? comparison : -comparison;
@@ -207,7 +203,7 @@ class UserListContentState extends State<UserListContent> {
     return sortedList;
   }
 
-  // --- Selection Helpers (Grid) ---
+  // --- Selection Helpers ---
   void _toggleSelection(dynamic id) {
     setState(() {
       if (_selectedIds.contains(id)) {
@@ -223,17 +219,11 @@ class UserListContentState extends State<UserListContent> {
   Color _getRoleColor(String role, ColorScheme scheme) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return scheme.brightness == Brightness.dark
-            ? Colors.pinkAccent
-            : Colors.pink;
+        return Colors.purple;
       case 'teacher':
-        return scheme.brightness == Brightness.dark
-            ? Colors.orangeAccent
-            : Colors.orange;
+        return scheme.tertiary;
       case 'student':
-        return scheme.brightness == Brightness.dark
-            ? Colors.lightBlueAccent
-            : Colors.blue;
+        return scheme.primary;
       default:
         return scheme.secondary;
     }
@@ -448,13 +438,12 @@ class UserListContentState extends State<UserListContent> {
 
     final sortedUsers = _sortUsers(_users);
 
-    return WillPopScope(
-      onWillPop: () async {
-        if (_isSelectionMode) {
+    return PopScope(
+      canPop: !_isSelectionMode,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isSelectionMode) {
           _exitSelectionMode();
-          return false;
         }
-        return true;
       },
       child: SelectionGestureWrapper(
         isDesktop: _isDesktop,
@@ -530,7 +519,6 @@ class UserListContentState extends State<UserListContent> {
   }
 
   Widget _buildSliverGrid(List<UserListItem> users) {
-    // Only allow selection if user is Admin
     final bool isAdmin = widget.currentUser?.roleName.toLowerCase() == 'admin';
 
     final userMaps = users
@@ -568,6 +556,8 @@ class UserListContentState extends State<UserListContent> {
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
+    final bool isAdmin = widget.currentUser?.roleName.toLowerCase() == 'admin';
+
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       sliver: SliverList(
@@ -575,147 +565,119 @@ class UserListContentState extends State<UserListContent> {
           final user = users[index];
           final isSelected = _selectedIds.contains(user.id);
 
-          // Populate key for gesture detection
           final GlobalKey key = _gridItemKeys.putIfAbsent(
             user.id,
             () => GlobalKey(),
           );
 
-          return _buildUserListTile(
-            context: context,
-            user: user,
-            isSelected: isSelected,
+          return Container(
             key: key,
-            onToggle: () => _toggleSelection(user.id),
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Card(
+              clipBehavior: Clip.hardEdge,
+              elevation: 0,
+              color: isSelected
+                  ? colorScheme.primaryContainer.withOpacity(0.3)
+                  : null,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.outlineVariant,
+                  width: isSelected ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  if (isAdmin && _isSelectionMode) {
+                    _toggleSelection(user.id);
+                  } else {
+                    _navigateToDetail(user.id.toString(), user.name);
+                  }
+                },
+                onLongPress: isAdmin ? () => _toggleSelection(user.id) : null,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: _getRoleColor(
+                          user.roleName,
+                          colorScheme,
+                        ),
+                        foregroundColor: colorScheme.onPrimary,
+                        child: isSelected
+                            ? const Icon(Icons.check)
+                            : Text(
+                                user.name.isNotEmpty
+                                    ? user.name[0].toUpperCase()
+                                    : '?',
+                              ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user.name,
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(user.email, style: textTheme.bodyMedium),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    _getLocalizedRole(user.roleName),
+                                    style: textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _getLocalizedStatus(
+                                    user.accountStatus,
+                                  ).toUpperCase(),
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: user.accountStatus == 'active'
+                                        ? Colors.green
+                                        : colorScheme.error,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!_isSelectionMode)
+                        Icon(
+                          Icons.chevron_right,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           );
         }, childCount: users.length),
-      ),
-    );
-  }
-
-  Widget _buildUserListTile({
-    required BuildContext context,
-    required UserListItem user,
-    required bool isSelected,
-    required GlobalKey key,
-    required VoidCallback onToggle,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isAdmin = widget.currentUser?.roleName.toLowerCase() == 'admin';
-
-    // Determine Role Color
-    final roleColor = _getRoleColor(user.roleName, colorScheme);
-
-    return Container(
-      key: key,
-      child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 4.0),
-        elevation: 1.0,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-            color: isSelected
-                ? colorScheme.primary
-                : colorScheme.outline.withOpacity(0.3),
-            width: isSelected ? 2.0 : 1.0,
-          ),
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16.0,
-            vertical: 2.0,
-          ),
-          leading: CircleAvatar(
-            backgroundColor: roleColor.withOpacity(0.2),
-            foregroundColor: roleColor,
-            child: Text(
-              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          title: Text(
-            user.name,
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 4),
-              Text(
-                user.email,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: roleColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  user.roleName,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: roleColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          onTap: () {
-            if (isAdmin && _isSelectionMode) {
-              onToggle();
-            } else {
-              _navigateToDetail(user.id.toString(), user.name);
-            }
-          },
-          onLongPress: isAdmin ? onToggle : null,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 1. Status Chip (Always Visible)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: user.accountStatus == 'active'
-                      ? Colors.green.withOpacity(0.1)
-                      : colorScheme.error.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: user.accountStatus == 'active'
-                        ? Colors.green
-                        : colorScheme.error,
-                    width: 0.5,
-                  ),
-                ),
-                child: Text(
-                  user.accountStatus.toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: user.accountStatus == 'active'
-                        ? Colors.green
-                        : colorScheme.error,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              // 2. Admin Options (If applicable)
-              if (isAdmin && !_isSelectionMode) ...[
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.more_vert),
-                  onPressed: () {
-                    // Placeholder for future menu options
-                  },
-                ),
-              ],
-            ],
-          ),
-        ),
       ),
     );
   }
