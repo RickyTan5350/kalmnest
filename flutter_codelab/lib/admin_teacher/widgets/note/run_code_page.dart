@@ -29,10 +29,12 @@ class RunCodePage extends StatefulWidget {
     this.initialFileName,
     required this.topic,
     required this.noteTitle,
+    this.isAdmin = false,
   });
 
   final String topic;
   final String noteTitle;
+  final bool isAdmin;
 
   @override
   State<RunCodePage> createState() => _RunCodePageState();
@@ -48,6 +50,7 @@ class _RunCodePageState extends State<RunCodePage> {
   // Multi-tab state
   List<CodeFile> _files = [];
   int _activeFileIndex = 0;
+  Timer? _debounceTimer; // For auto-saving
 
   String _browserTitle = "Preview";
   InAppLocalhostServer? _localhostServer;
@@ -308,7 +311,21 @@ class _RunCodePageState extends State<RunCodePage> {
   void _onCodeChanged() {
     // Sync controller text to active file model
     if (_activeFileIndex < _files.length) {
-      _files[_activeFileIndex].content = _codeController.text;
+      final currentFile = _files[_activeFileIndex];
+      final newContent = _codeController.text;
+
+      // Only act if content changed
+      if (currentFile.content != newContent) {
+        currentFile.content = newContent;
+
+        // Auto-save logic for Admins
+        if (widget.isAdmin) {
+          if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+          _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+            _saveAssetFileContent(currentFile.name, currentFile.content);
+          });
+        }
+      }
     }
   }
 
@@ -318,6 +335,77 @@ class _RunCodePageState extends State<RunCodePage> {
       _activeFileIndex = index;
       _codeController.text = _files[index].content;
     });
+  }
+
+  // --- FILE PERSISTENCE HELPERS (ADMIN ONLY) ---
+  Future<void> _createAssetFile(String fileName) async {
+    if (_resolvedContextPath == null) return;
+    try {
+      final file = File('$_resolvedContextPath/$fileName');
+      if (!await file.exists()) {
+        await file.create(recursive: true);
+        await file.writeAsString(""); // Empty file
+        print("DEBUG: Created asset file: ${file.path}");
+      }
+    } catch (e) {
+      print("Error creating asset file: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error creating file: $e")));
+      }
+    }
+  }
+
+  Future<void> _renameAssetFile(String oldName, String newName) async {
+    if (_resolvedContextPath == null) return;
+    try {
+      final oldFile = File('$_resolvedContextPath/$oldName');
+      if (await oldFile.exists()) {
+        await oldFile.rename('$_resolvedContextPath/$newName');
+        print("DEBUG: Renamed asset file from $oldName to $newName");
+      }
+    } catch (e) {
+      print("Error renaming asset file: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error renaming file: $e")));
+      }
+    }
+  }
+
+  Future<void> _deleteAssetFile(String fileName) async {
+    if (_resolvedContextPath == null) return;
+    try {
+      final file = File('$_resolvedContextPath/$fileName');
+      if (await file.exists()) {
+        await file.delete();
+        print("DEBUG: Deleted asset file: ${file.path}");
+      }
+    } catch (e) {
+      print("Error deleting asset file: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error deleting file: $e")));
+      }
+    }
+  }
+
+  Future<void> _saveAssetFileContent(String fileName, String content) async {
+    if (_resolvedContextPath == null) return;
+    try {
+      final file = File('$_resolvedContextPath/$fileName');
+      // Only write if file exists (don't create new ones implicitly if deleted)
+      // Actually, if it's in our tabs, it should exist or be created?
+      // Let's create it if missing, as it's an "insert".
+      await file.create(recursive: true);
+      await file.writeAsString(content);
+      print("DEBUG: Auto-saved content for $fileName");
+    } catch (e) {
+      print("Error saving asset file content: $e");
+    }
   }
 
   void _addNewFile() {
@@ -343,6 +431,9 @@ class _RunCodePageState extends State<RunCodePage> {
                   _files.add(CodeFile(name: newName, content: ""));
                   _switchTab(_files.length - 1);
                 });
+                if (widget.isAdmin) {
+                  _createAssetFile(newName);
+                }
                 Navigator.pop(context);
               },
               child: const Text("Create"),
@@ -373,9 +464,13 @@ class _RunCodePageState extends State<RunCodePage> {
             ),
             TextButton(
               onPressed: () {
+                final oldName = _files[index].name;
                 setState(() {
                   _files[index].name = newName;
                 });
+                if (widget.isAdmin) {
+                  _renameAssetFile(oldName, newName);
+                }
                 Navigator.pop(context);
               },
               child: const Text("Rename"),
@@ -406,6 +501,7 @@ class _RunCodePageState extends State<RunCodePage> {
           ),
           TextButton(
             onPressed: () {
+              final nameToDelete = _files[index].name;
               setState(() {
                 _files.removeAt(index);
                 if (_activeFileIndex >= _files.length) {
@@ -413,6 +509,9 @@ class _RunCodePageState extends State<RunCodePage> {
                 }
                 _codeController.text = _files[_activeFileIndex].content;
               });
+              if (widget.isAdmin) {
+                _deleteAssetFile(nameToDelete);
+              }
               Navigator.pop(context);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -547,13 +646,17 @@ class _RunCodePageState extends State<RunCodePage> {
           final file = File('${dir.path}/$filePath');
 
           // 1a. Try Temp Dir
+          print("DEBUG: Checking temp file: ${file.path}");
           if (await file.exists()) {
+            print("DEBUG: Found temp file! Serving...");
             final contentType = _getContentType(path);
             request.response.headers.contentType = contentType;
             // Read as bytes to support images/binary too (if we ever write them there)
             await request.response.addStream(file.openRead());
             await request.response.close();
             return;
+          } else {
+            print("DEBUG: Temp file NOT found!");
           }
 
           // 1b. Fallback to Asset Context (for images not in editor)
@@ -846,7 +949,11 @@ class _RunCodePageState extends State<RunCodePage> {
       // Write all files
       for (var file in _files) {
         final f = File('${runDir.path}/${file.name}');
+        await f.create(recursive: true); // Ensure parent dirs exist
         await f.writeAsString(file.content);
+        print(
+          "DEBUG: Wrote temp file: ${f.path} (Size: ${file.content.length})",
+        );
       }
 
       // If we are showing an output (PHP result), write that as index.html or similar
@@ -1065,6 +1172,7 @@ class _RunCodePageState extends State<RunCodePage> {
     _codeController.dispose();
     _urlBarController.dispose();
     _localhostServer?.close(); // Identify if we used specific class
+    _debounceTimer?.cancel();
     super.dispose();
   }
 

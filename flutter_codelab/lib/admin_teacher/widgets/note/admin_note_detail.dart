@@ -144,6 +144,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
           initialFileName: fileName,
           topic: _currentTopic,
           noteTitle: _currentTitle,
+          isAdmin: !widget.isStudent,
         ),
       ),
     );
