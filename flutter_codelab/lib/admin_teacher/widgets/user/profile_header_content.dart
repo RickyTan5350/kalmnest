@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart'; // ADDED
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
 import 'package:flutter_codelab/pages/help_support_pages.dart';
-import 'package:flutter_codelab/controllers/locale_controller.dart';
 import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/widgets/language_selector.dart';
 
 class ProfileHeaderContent extends StatelessWidget {
   final UserDetails currentUser;
@@ -51,15 +51,55 @@ class ProfileHeaderContent extends StatelessWidget {
         Flexible(
           child: Padding(
             padding: const EdgeInsets.only(right: 12.0),
-            child: Text(
-              AppLocalizations.of(context)!.helloUser(currentUser.name),
-              style: textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.bold, // Bolder for standalone name
-                fontSize: 14,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+            child: Builder(
+              builder: (context) {
+                final fullGreeting = AppLocalizations.of(
+                  context,
+                )!.helloUser(currentUser.name);
+                final nameIdx = fullGreeting.indexOf(currentUser.name);
+
+                if (nameIdx != -1) {
+                  final prefix = fullGreeting.substring(0, nameIdx);
+                  final suffix = fullGreeting.substring(
+                    nameIdx + currentUser.name.length,
+                  );
+                  return Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: prefix,
+                          style: const TextStyle(fontWeight: FontWeight.normal),
+                        ),
+                        TextSpan(
+                          text: currentUser.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: suffix,
+                          style: const TextStyle(fontWeight: FontWeight.normal),
+                        ),
+                      ],
+                    ),
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  );
+                }
+
+                return Text(
+                  fullGreeting,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                );
+              },
             ),
           ),
         ),
@@ -184,55 +224,11 @@ class ProfileHeaderContent extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(width: 16), // Spacing between help and profile
-              // --- NEW: Language Switcher Button ---
-          ValueListenableBuilder<Locale>(
-            valueListenable: LocaleController.instance,
-            builder: (context, locale, child) {
-              return PopupMenuButton<Locale>(
-                tooltip: AppLocalizations.of(context)!.selectLanguage,
-                offset: const Offset(0, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.language, color: colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 8),
-                      Text(
-                        locale.languageCode.toUpperCase(),
-                        style: textTheme.labelLarge?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                onSelected: (Locale newLocale) {
-                  LocaleController.instance.switchLocale(newLocale);
-                },
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<Locale>>[
-                  const PopupMenuItem<Locale>(
-                    value: Locale('en'),
-                    child: Text(
-                      'English',
-                    ), // Can use AppLocalizations.of(context)!.english if desired
-                  ),
-                  const PopupMenuItem<Locale>(
-                    value: Locale('ms'),
-                    child: Text(
-                      'Bahasa Malaysia',
-                    ), // Can use AppLocalizations.of(context)!.bahasaMalaysia if desired
-                  ),
-                ],
-              );
-            },
-          ),
+              const SizedBox(width: 8),
+              const LanguageSelector(),
+              const SizedBox(width: 8),
 
-          // The PopupMenuButton replaces the InkWell and AlertDialog logic.
+              // The PopupMenuButton replaces the InkWell and AlertDialog logic.
               // It uses the built profile display widget as its child.
               PopupMenuButton<String>(
                 // Set offset to position the menu directly below the icon/profile area
