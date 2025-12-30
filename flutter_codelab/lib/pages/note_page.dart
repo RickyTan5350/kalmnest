@@ -33,8 +33,6 @@ class _NotePageState extends State<NotePage> {
 
   final FocusNode _searchFocusNode = FocusNode();
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _searchController =
-      TextEditingController(); // ADDED
 
   final GlobalKey<StudentViewPageState> _studentKey =
       GlobalKey<StudentViewPageState>();
@@ -60,9 +58,8 @@ class _NotePageState extends State<NotePage> {
 
   @override
   void dispose() {
-    _searchController.dispose(); // ADDED
-    _searchFocusNode.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -156,7 +153,6 @@ class _NotePageState extends State<NotePage> {
                     width: 300,
                     child: SearchBar(
                       controller: _searchController,
-                      controller: _searchController, // ADDED
                       focusNode: _searchFocusNode,
                       hintText: AppLocalizations.of(context)!.searchNotesHint,
                       padding: const WidgetStatePropertyAll<EdgeInsets>(
@@ -172,10 +168,6 @@ class _NotePageState extends State<NotePage> {
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                            onPressed: () {
-                              _searchController.clear(); // ADDED
                               setState(() => _searchQuery = '');
                             },
                           ),
@@ -319,4 +311,3 @@ class _NotePageState extends State<NotePage> {
     );
   }
 }
-
