@@ -102,6 +102,8 @@ flutter:
     - assets/unity/
     - assets/CodePlay.png
     - assets/www/
+    - assets/www/pictures/
+    - assets/www/pictures/JS/
     - assets/www/3.1.9 Atur Cara lnteraktif yang Mengandungi Pengisytiharan Data, Struktur Kawalan, Procedure dan Function serta Tatasusunan/
     - assets/www/3.2.2 Penghasilan dan Penyimpanan Data dalam Fail Teks (.txt)/
     - assets/www/3.2.3 Penggunaan Bahasa Penskripan Pelayan untuk Membina Laman Web yang Unik bagi Setiap Pengguna/

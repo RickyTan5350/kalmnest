@@ -494,6 +494,49 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
         if (element.localName == 'img') {
           final src = element.attributes['src'];
           debugPrint("DEBUG HtmlWidget: Rendering Image with src: $src");
+
+          if (src != null) {
+            // 1. Check for direct local assets
+            if (src.startsWith('assets/')) {
+              return Image.asset(src);
+            }
+
+            // 2. Check for Storage URLs that should be local assets
+            // Example: https://.../storage/notes/123456789_filename.png
+            if (src.contains('/storage/notes/')) {
+              try {
+                final uri = Uri.parse(src);
+                final filename = uri.pathSegments.last;
+                // Remove timestamp prefix if present (digits + underscore)
+                final cleanFilename = filename.replaceFirst(
+                  RegExp(r'^\d+_'),
+                  '',
+                );
+
+                // Map topic to folder (Simple mapping for now)
+                String folder = 'JS'; // Default or based on topic
+                if (_currentTopic == 'HTML') folder = 'HTML';
+                if (_currentTopic == 'CSS') folder = 'CSS';
+                if (_currentTopic == 'PHP') folder = 'PHP';
+                // Add more mappings if needed
+
+                final assetPath = 'assets/www/pictures/$folder/$cleanFilename';
+                debugPrint("DEBUG HtmlWidget: Trying local asset: $assetPath");
+
+                return Image.asset(
+                  assetPath,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint(
+                      "DEBUG HtmlWidget: Local asset failed ($assetPath), falling back to network",
+                    );
+                    return Image.network(src);
+                  },
+                );
+              } catch (e) {
+                debugPrint("DEBUG HtmlWidget: Error parsing URL: $e");
+              }
+            }
+          }
         }
 
         if (element.attributes.containsKey('data-scroll-index')) {
