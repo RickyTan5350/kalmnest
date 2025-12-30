@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/models/user_data.dart';
 
 /// Model for chat messages
 class ChatMessage {

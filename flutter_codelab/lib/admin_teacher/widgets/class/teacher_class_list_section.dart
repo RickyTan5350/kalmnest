@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_class_page.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/admin_teacher/widgets/class/teacher_view_class_page.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/enums/sort_enums.dart';
 
 // Class List Item Widget for Teacher/Student (no edit/delete buttons)
 class _ClassListItem extends StatefulWidget {
@@ -639,3 +639,4 @@ class _ClassListSectionState extends State<ClassListSection> {
     );
   }
 }
+

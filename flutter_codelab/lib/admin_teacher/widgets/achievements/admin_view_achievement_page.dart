@@ -2,15 +2,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Required for HapticFeedback
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/achievement_grid_layout.dart';
-import 'package:flutter_codelab/api/achievement_api.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
-import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
-import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/achievement_grid_layout.dart';
+import 'package:code_play/api/achievement_api.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/constants/achievement_constants.dart';
+import 'package:code_play/admin_teacher/services/selection_box_painter.dart';
+import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
 import 'admin_achievement_detail.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/enums/sort_enums.dart';
 // IMPORT THE NEW WRAPPER
 
 class AdminViewAchievementsPage extends StatefulWidget {
@@ -763,3 +763,4 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
     );
   }
 }
+

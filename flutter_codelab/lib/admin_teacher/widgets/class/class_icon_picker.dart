@@ -1,6 +1,6 @@
 // Icon picker widget for class customization
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 class ClassIconPicker extends StatelessWidget {
   final String? selectedIcon;
@@ -68,4 +68,5 @@ class ClassIconPicker extends StatelessWidget {
     );
   }
 }
+
 

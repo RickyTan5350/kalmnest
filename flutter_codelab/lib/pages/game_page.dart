@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/play_game_page.dart';
-import 'package:flutter_codelab/models/level.dart';
-import 'package:flutter_codelab/api/game_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/edit_game_page.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/admin_teacher/widgets/game/gamePages/play_game_page.dart';
+import 'package:code_play/models/level.dart';
+import 'package:code_play/api/game_api.dart';
+import 'package:code_play/admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'package:code_play/admin_teacher/widgets/game/gamePages/edit_game_page.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 // Global key to access GamePage state for refreshing from main.dart
 final GlobalKey<_GamePageState> gamePageGlobalKey = GlobalKey<_GamePageState>();
@@ -507,3 +507,4 @@ class _GamePageState extends State<GamePage> {
     );
   }
 }
+

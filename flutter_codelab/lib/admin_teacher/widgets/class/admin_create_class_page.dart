@@ -1,11 +1,11 @@
 //lib/widgets/create_class_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_theme_extensions.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_color_picker.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_icon_picker.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_theme_extensions.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_color_picker.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_icon_picker.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 class CreateClassScreen extends StatefulWidget {
   const CreateClassScreen({super.key});
@@ -564,3 +564,4 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     );
   }
 }
+

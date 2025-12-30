@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_class_list_section.dart'
+import 'package:code_play/admin_teacher/widgets/class/admin_class_list_section.dart'
     as admin;
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_class_list_statistic.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_class_list_section.dart'
+import 'package:code_play/admin_teacher/widgets/class/admin_class_list_statistic.dart';
+import 'package:code_play/admin_teacher/widgets/class/teacher_class_list_section.dart'
     as teacher;
-import 'package:flutter_codelab/student/widgets/class/student_class_list_section.dart'
+import 'package:code_play/student/widgets/class/student_class_list_section.dart'
     as student;
 // import '../widgets/search_bar.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/services/layout_preferences.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/services/layout_preferences.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 // Global key to access ClassPage state for reloading from main.dart
 final GlobalKey<_ClassPageState> classPageGlobalKey =
@@ -415,3 +415,4 @@ class _ViewToggleButton extends StatelessWidget {
     );
   }
 }
+
