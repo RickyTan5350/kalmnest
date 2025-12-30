@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/user_api.dart';
 import 'package:flutter_codelab/utils/formatters.dart';
 import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 // Utility function to show the dialog
 void showCreateUserAccountDialog({
@@ -64,6 +65,32 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     super.dispose();
   }
 
+  String _getLocalizedGender(String gender) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (gender.toLowerCase()) {
+      case 'male':
+        return l10n.male;
+      case 'female':
+        return l10n.female;
+      default:
+        return gender;
+    }
+  }
+
+  String _getLocalizedRole(String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role.toLowerCase()) {
+      case 'student':
+        return l10n.student;
+      case 'teacher':
+        return l10n.teacher;
+      case 'admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
   // Submission logic, mirroring _submitForm
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
@@ -77,7 +104,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     if (_passwordController.text != _passwordConfirmationController.text) {
       widget.showSnackBar(
         context,
-        'Error: Password and confirmation must match.',
+        AppLocalizations.of(context)!.passwordsMatchError,
         Theme.of(context).colorScheme.error,
       );
       return;
@@ -110,7 +137,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
       if (mounted) {
         widget.showSnackBar(
           context,
-          'User account successfully created!',
+          AppLocalizations.of(context)!.userAccountCreatedSuccess,
           Colors.green,
         );
       }
@@ -144,14 +171,16 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
           );
           widget.showSnackBar(
             context,
-            'Network Error: Check API URL and server status.',
+            AppLocalizations.of(context)!.networkErrorCheckApi,
             errorColor,
           );
         } else {
           // Generic or unexpected server error
           widget.showSnackBar(
             context,
-            'An unknown error occurred: ${errorString.replaceAll('Exception: ', '')}',
+            AppLocalizations.of(
+              context,
+            )!.unknownErrorOccurred(errorString.replaceAll('Exception: ', '')),
             errorColor,
           );
         }
@@ -216,7 +245,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Create New User',
+                  AppLocalizations.of(context)!.createNewUser,
                   style: TextStyle(
                     color: colorScheme.onSurface,
                     fontSize: 20,
@@ -230,7 +259,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _nameController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Name',
+                    labelText: AppLocalizations.of(context)!.name,
                     icon: Icons.person,
                     colorScheme: colorScheme,
                   ),
@@ -239,7 +268,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       return _serverErrors['name'];
                     }
                     if (value == null || value.isEmpty)
-                      return 'Please enter a name';
+                      return AppLocalizations.of(context)!.pleaseEnterName;
                     return null;
                   },
                   onChanged: (value) {
@@ -255,7 +284,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _emailController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Email',
+                    labelText: AppLocalizations.of(context)!.email,
                     icon: Icons.email,
                     colorScheme: colorScheme,
                   ),
@@ -270,13 +299,13 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       return _serverErrors['email'];
                     }
                     if (value == null || value.isEmpty) {
-                      return 'Please enter an email';
+                      return AppLocalizations.of(context)!.pleaseEnterEmail;
                     }
                     final emailRegex = RegExp(
                       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
                     );
                     if (!emailRegex.hasMatch(value)) {
-                      return 'Enter a valid email address';
+                      return AppLocalizations.of(context)!.enterValidEmail;
                     }
                     return null;
                   },
@@ -288,7 +317,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Password',
+                    labelText: AppLocalizations.of(context)!.password,
                     icon: Icons.lock,
                     colorScheme: colorScheme,
                   ),
@@ -298,7 +327,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       return _serverErrors['password'];
                     }
                     if (value == null || value.isEmpty || value.length < 8)
-                      return 'Password must be at least 8 characters';
+                      return AppLocalizations.of(context)!.passwordLengthError;
                     return null;
                   },
                   onChanged: (value) {
@@ -314,16 +343,18 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _passwordConfirmationController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Confirm Password',
+                    labelText: AppLocalizations.of(context)!.confirmPassword,
                     icon: Icons.lock_open,
                     colorScheme: colorScheme,
                   ),
                   obscureText: true,
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please confirm your password';
+                      return AppLocalizations.of(
+                        context,
+                      )!.pleaseConfirmPassword;
                     if (value != _passwordController.text)
-                      return 'Passwords do not match';
+                      return AppLocalizations.of(context)!.passwordsDoNotMatch;
                     return null;
                   },
                 ),
@@ -335,7 +366,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _phoneNoController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Phone No',
+                    labelText: AppLocalizations.of(context)!.phone,
                     icon: Icons.phone,
                     colorScheme: colorScheme,
                     hintText: 'e.g. 012-3456789',
@@ -352,7 +383,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       return _serverErrors['phone_no'];
                     }
                     if (value == null || value.isEmpty)
-                      return 'Please enter a phone number';
+                      return AppLocalizations.of(context)!.pleaseEnterPhone;
                     // Regex for Malaysian Phone Numbers:
                     // Matches: +601..., 601..., 01...
                     // Supports dashes or no dashes
@@ -360,7 +391,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       r'^(\+?6?0)[0-9]{1,2}-?[0-9]{7,8}$',
                     );
                     if (!phoneRegex.hasMatch(value)) {
-                      return 'Enter a valid Malaysian phone number';
+                      return AppLocalizations.of(context)!.enterValidPhone;
                     }
                     return null;
                   },
@@ -372,14 +403,14 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _addressController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Address',
+                    labelText: AppLocalizations.of(context)!.address,
                     icon: Icons.location_on,
                     colorScheme: colorScheme,
                   ),
                   maxLines: 2,
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please enter an address';
+                      return AppLocalizations.of(context)!.pleaseEnterAddress;
                     return null;
                   },
                 ),
@@ -392,20 +423,22 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Gender',
+                    labelText: AppLocalizations.of(context)!.genderLabel,
                     icon: Icons.people,
                     colorScheme: colorScheme,
                   ),
                   items: _genders
                       .map(
-                        (value) =>
-                            DropdownMenuItem(value: value, child: Text(value)),
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(_getLocalizedGender(value)),
+                        ),
                       )
                       .toList(),
                   onChanged: (value) => setState(() => _selectedGender = value),
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please select a gender';
+                      return AppLocalizations.of(context)!.pleaseSelectGender;
                     return null;
                   },
                 ),
@@ -413,25 +446,27 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
 
                 // Role Dropdown
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedRole,
+                  value: _selectedRole,
                   // FIX: Use colorScheme.surfaceContainer instead of hardcoded dark color
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Role',
+                    labelText: AppLocalizations.of(context)!.roleLabel,
                     icon: Icons.badge,
                     colorScheme: colorScheme,
                   ),
                   items: _roles
                       .map(
-                        (value) =>
-                            DropdownMenuItem(value: value, child: Text(value)),
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(_getLocalizedRole(value)),
+                        ),
                       )
                       .toList(),
                   onChanged: (value) => setState(() => _selectedRole = value),
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please select a role';
+                      return AppLocalizations.of(context)!.pleaseSelectRole;
                     return null;
                   },
                 ),
@@ -444,7 +479,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Account Status:',
+                        '${AppLocalizations.of(context)!.accountStatusLabel}:',
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 16,
@@ -459,7 +494,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                         },
                       ),
                       Text(
-                        _accountStatus ? 'Active' : 'Inactive',
+                        _accountStatus
+                            ? AppLocalizations.of(context)!.active
+                            : AppLocalizations.of(context)!.inactive,
                         style: TextStyle(color: colorScheme.onSurface),
                       ),
                     ],
@@ -474,7 +511,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(
-                        'Cancel',
+                        AppLocalizations.of(context)!.cancel,
                         style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),
                     ),
@@ -504,7 +541,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                                 ),
                               ),
                             )
-                          : const Text('Create User'),
+                          : Text(AppLocalizations.of(context)!.createUser),
                     ),
                   ],
                 ),

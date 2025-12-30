@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
 import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
 import 'user_detail_page.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class UserListContent extends StatefulWidget {
   final String searchQuery;
@@ -232,26 +233,54 @@ class UserListContentState extends State<UserListContent> {
     }
   }
 
+  String _getLocalizedRole(String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role.toLowerCase()) {
+      case 'student':
+        return l10n.student;
+      case 'teacher':
+        return l10n.teacher;
+      case 'admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
+  String _getLocalizedStatus(String status) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (status.toLowerCase()) {
+      case 'active':
+        return l10n.active;
+      case 'inactive':
+        return l10n.inactive;
+      default:
+        return status;
+    }
+  }
+
   // --- Bulk Delete Logic ---
   void _deleteSelectedUsers() async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Delete Users"),
+        title: Text(AppLocalizations.of(context)!.deleteUsers),
         content: Text(
-          "Are you sure you want to delete ${_selectedIds.length} users? This action cannot be undone.",
+          AppLocalizations.of(
+            context,
+          )!.deleteUsersConfirmation(_selectedIds.length),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Cancel"),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text("Delete"),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
@@ -260,7 +289,7 @@ class UserListContentState extends State<UserListContent> {
     if (confirm == true) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Deleting selected users...")),
+        SnackBar(content: Text(AppLocalizations.of(context)!.deletingUsers)),
       );
 
       try {
@@ -270,7 +299,11 @@ class UserListContentState extends State<UserListContent> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Successfully deleted ${_selectedIds.length} users"),
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.deletedUsersSuccess(_selectedIds.length),
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -284,7 +317,9 @@ class UserListContentState extends State<UserListContent> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              "Error deleting users: ${e.toString().replaceAll('Exception: ', '')}",
+              AppLocalizations.of(
+                context,
+              )!.errorDeletingUsers(e.toString().replaceAll('Exception: ', '')),
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -322,7 +357,9 @@ class UserListContentState extends State<UserListContent> {
               ),
               const SizedBox(width: 8),
               Text(
-                "${_selectedIds.length} Selected",
+                AppLocalizations.of(
+                  context,
+                )!.selectedCount(_selectedIds.length),
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: colorScheme.onSecondaryContainer,
                 ),
@@ -332,7 +369,7 @@ class UserListContentState extends State<UserListContent> {
           IconButton(
             icon: Icon(Icons.delete_outline, color: colorScheme.error),
             onPressed: _deleteSelectedUsers,
-            tooltip: 'Delete Selected Users',
+            tooltip: AppLocalizations.of(context)!.deleteSelectedUsers,
           ),
         ],
       ),
@@ -358,7 +395,10 @@ class UserListContentState extends State<UserListContent> {
             height: 40,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text("$count Results", style: textTheme.titleMedium),
+              child: Text(
+                AppLocalizations.of(context)!.resultsCount(count),
+                style: textTheme.titleMedium,
+              ),
             ),
           ),
         ],
@@ -391,7 +431,10 @@ class UserListContentState extends State<UserListContent> {
           children: [
             Icon(Icons.search_off, size: 64, color: colorScheme.outline),
             const SizedBox(height: 16),
-            Text('No users found', style: textTheme.titleMedium),
+            Text(
+              AppLocalizations.of(context)!.noUsersFound,
+              style: textTheme.titleMedium,
+            ),
           ],
         ),
       );
@@ -610,7 +653,7 @@ class UserListContentState extends State<UserListContent> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    user.roleName,
+                                    _getLocalizedRole(user.roleName),
                                     style: textTheme.labelSmall?.copyWith(
                                       color: colorScheme.onSurfaceVariant,
                                     ),
@@ -618,7 +661,9 @@ class UserListContentState extends State<UserListContent> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  user.accountStatus.toUpperCase(),
+                                  _getLocalizedStatus(
+                                    user.accountStatus,
+                                  ).toUpperCase(),
                                   style: textTheme.labelSmall?.copyWith(
                                     color: user.accountStatus == 'active'
                                         ? Colors.green

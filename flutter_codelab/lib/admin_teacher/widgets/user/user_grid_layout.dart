@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/grid_layout_view.dart';
 import 'package:flutter_codelab/theme.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class UserGridLayout extends StatelessWidget {
   final List<Map<String, dynamic>> users;
@@ -28,6 +29,32 @@ class UserGridLayout extends StatelessWidget {
         return scheme.primary;
       default:
         return scheme.secondary;
+    }
+  }
+
+  String _getLocalizedRole(BuildContext context, String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role.toLowerCase()) {
+      case 'student':
+        return l10n.student;
+      case 'teacher':
+        return l10n.teacher;
+      case 'admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
+  String _getLocalizedStatus(BuildContext context, String status) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (status.toLowerCase()) {
+      case 'active':
+        return l10n.active;
+      case 'inactive':
+        return l10n.inactive;
+      default:
+        return status;
     }
   }
 
@@ -99,7 +126,7 @@ class UserGridLayout extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      status.toUpperCase(),
+                      _getLocalizedStatus(context, status).toUpperCase(),
                       style: theme.textTheme.labelSmall?.copyWith(
                         fontSize: 9,
                         color: status == 'active'
@@ -130,7 +157,7 @@ class UserGridLayout extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  role,
+                  _getLocalizedRole(context, role),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: roleColor,
                     fontSize: 10,

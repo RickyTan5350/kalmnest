@@ -5,6 +5,8 @@ import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/models/user_data.dart'; // Using the UserDetails class from here
 import 'package:flutter_codelab/main.dart'; // Import the Feed structure
 import 'package:flutter_codelab/pages/forgot_password_page.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/controllers/locale_controller.dart';
 
 // Define a new page for the login screen
 class LoginPage extends StatefulWidget {
@@ -69,7 +71,7 @@ class _LoginPageState extends State<LoginPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Login details autofilled from JSON'),
+          content: Text(AppLocalizations.of(context)!.autofillSuccess),
           backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
@@ -129,7 +131,9 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             // ✅ CORRECTION: Use the cleaned 'errorMessage' variable here
-            content: Text('Login Failed: $errorMessage'),
+            content: Text(
+              AppLocalizations.of(context)!.loginFailed(errorMessage),
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -151,6 +155,54 @@ class _LoginPageState extends State<LoginPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          ValueListenableBuilder<Locale>(
+            valueListenable: LocaleController.instance,
+            builder: (context, locale, child) {
+              return PopupMenuButton<Locale>(
+                tooltip: AppLocalizations.of(context)!.selectLanguage,
+                offset: const Offset(0, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.language, color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      Text(
+                        locale.languageCode.toUpperCase(),
+                        style: textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                onSelected: (Locale newLocale) {
+                  LocaleController.instance.switchLocale(newLocale);
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<Locale>>[
+                  const PopupMenuItem<Locale>(
+                    value: Locale('en'),
+                    child: Text('English'),
+                  ),
+                  const PopupMenuItem<Locale>(
+                    value: Locale('ms'),
+                    child: Text('Bahasa Malaysia'),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32.0),
@@ -181,8 +233,8 @@ class _LoginPageState extends State<LoginPage> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
-                      labelText: 'Email',
-                      hintText: 'user@example.com',
+                      labelText: AppLocalizations.of(context)!.email,
+                      hintText: AppLocalizations.of(context)!.emailHint,
                       prefixIcon: const Icon(Icons.email),
                       border: const OutlineInputBorder(),
                       enabledBorder: OutlineInputBorder(
@@ -193,7 +245,7 @@ class _LoginPageState extends State<LoginPage> {
                       if (value == null ||
                           value.isEmpty ||
                           !value.contains('@')) {
-                        return 'Please enter a valid email address.';
+                        return AppLocalizations.of(context)!.emailValidation;
                       }
                       return null;
                     },
@@ -207,7 +259,7 @@ class _LoginPageState extends State<LoginPage> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _handleLogin(),
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: AppLocalizations.of(context)!.password,
                       prefixIcon: const Icon(Icons.lock),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
@@ -225,7 +277,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty || value.length < 6) {
-                        return 'Password must be at least 6 characters long.';
+                        return AppLocalizations.of(context)!.passwordValidation;
                       }
                       return null;
                     },
@@ -242,11 +294,11 @@ class _LoginPageState extends State<LoginPage> {
                       : FilledButton.icon(
                           onPressed: _handleLogin,
                           icon: const Icon(Icons.login),
-                          label: const Padding(
+                          label: Padding(
                             padding: EdgeInsets.symmetric(vertical: 12.0),
                             child: Text(
-                              'Log In',
-                              style: TextStyle(fontSize: 18),
+                              AppLocalizations.of(context)!.login,
+                              style: const TextStyle(fontSize: 18),
                             ),
                           ),
                         ),
@@ -263,7 +315,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       );
                     },
-                    child: const Text('Forgot Password?'),
+                    child: Text(AppLocalizations.of(context)!.forgotPassword),
                   ),
                 ],
               ),

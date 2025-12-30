@@ -3,6 +3,7 @@ import 'package:flutter_codelab/api/achievement_api.dart';
 import 'package:flutter_codelab/models/achievement_data.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_achievement_detail.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class AdminStudentAchievementsPage extends StatefulWidget {
   final String userId;
@@ -41,7 +42,11 @@ class _AdminStudentAchievementsPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("${widget.userName}'s Achievements")),
+      appBar: AppBar(
+        title: Text(
+          AppLocalizations.of(context)!.userAchievements(widget.userName),
+        ),
+      ),
       body: FutureBuilder<List<AchievementData>>(
         future: _achievementsFuture,
         builder: (context, snapshot) {
@@ -50,11 +55,15 @@ class _AdminStudentAchievementsPageState
           } else if (snapshot.hasError) {
             return Center(
               child: Text(
-                'Error loading achievements: ${snapshot.error.toString().split("Exception: ").last}',
+                AppLocalizations.of(context)!.errorLoadingAchievements(
+                  snapshot.error.toString().split("Exception: ").last,
+                ),
               ),
             );
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text("No achievements unlocked yet."));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.noAchievementsYet),
+            );
           }
 
           final achievements = snapshot.data!;
@@ -68,7 +77,7 @@ class _AdminStudentAchievementsPageState
               final icon = getAchievementIcon(achievement.icon);
               final dateStr = achievement.unlockedAt != null
                   ? achievement.unlockedAt!.toString().split(' ')[0]
-                  : 'N/A';
+                  : AppLocalizations.of(context)!.unknownDate;
 
               return Card(
                 elevation: 2.0,
@@ -115,13 +124,16 @@ class _AdminStudentAchievementsPageState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                achievement.achievementTitle ?? "Achievement",
+                                achievement.achievementTitle ??
+                                    AppLocalizations.of(context)!.achievement,
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                "Unlocked on $dateStr",
+                                AppLocalizations.of(
+                                  context,
+                                )!.unlockedOn(dateStr),
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
                                       color: Theme.of(

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'dart:io'; // For HttpOverrides
 
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/controllers/locale_controller.dart';
+
 import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
@@ -72,12 +75,20 @@ class MainApp extends StatelessWidget {
         ? Feed(currentUser: initialUser!) // Go straight to feed if logged in
         : const LoginPage(); // Go to login if not logged in
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false, // <--- ADD THIS LINE HERE
-      theme: theme.light(),
-      darkTheme: theme.dark(),
-      themeMode: ThemeMode.system,
-      home: homeWidget, // Use the determined home widget
+    return ValueListenableBuilder<Locale>(
+      valueListenable: LocaleController.instance,
+      builder: (context, locale, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: locale,
+          theme: theme.light(),
+          darkTheme: theme.dark(),
+          themeMode: ThemeMode.system,
+          home: homeWidget,
+        );
+      },
     );
   }
 }
@@ -126,16 +137,16 @@ class _FeedState extends State<Feed> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Log out of your account?'),
+          title: Text(AppLocalizations.of(dialogContext)!.logoutConfirmation),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(dialogContext)!.cancel),
             ),
             // Use FilledButton for the primary action (Logout)
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Logout'),
+              child: Text(AppLocalizations.of(dialogContext)!.logout),
             ),
           ],
         );
@@ -181,7 +192,7 @@ class _FeedState extends State<Feed> {
       classPageGlobalKey.currentState?.reloadClassList();
       _showSnackBar(
         context,
-        'Class created successfully!',
+        AppLocalizations.of(context)!.classCreatedSuccess,
         Theme.of(context).colorScheme.primary,
       );
     }
@@ -202,7 +213,7 @@ class _FeedState extends State<Feed> {
         if (widget.currentUser.isStudent || widget.currentUser.isTeacher) {
           _showSnackBar(
             context,
-            'You do not have permission to create user accounts.',
+            AppLocalizations.of(context)!.noPermissionCreateUser,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -211,7 +222,7 @@ class _FeedState extends State<Feed> {
             context: context,
             builder: (BuildContext context) {
               return SimpleDialog(
-                title: const Text('Select Action'),
+                title: Text(AppLocalizations.of(context)!.selectAction),
                 children: [
                   SimpleDialogOption(
                     onPressed: () {
@@ -221,13 +232,13 @@ class _FeedState extends State<Feed> {
                         showSnackBar: _showSnackBar,
                       );
                     },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Row(
                         children: [
-                          Icon(Icons.person_add),
-                          SizedBox(width: 12),
-                          Text('Create User Profile'),
+                          const Icon(Icons.person_add),
+                          const SizedBox(width: 12),
+                          Text(AppLocalizations.of(context)!.createUserProfile),
                         ],
                       ),
                     ),
@@ -238,13 +249,13 @@ class _FeedState extends State<Feed> {
                       // Trigger import via GlobalKey
                       userPageGlobalKey.currentState?.importUsers();
                     },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Row(
                         children: [
-                          Icon(Icons.file_upload),
-                          SizedBox(width: 12),
-                          Text('Import User Profile'),
+                          const Icon(Icons.file_upload),
+                          const SizedBox(width: 12),
+                          Text(AppLocalizations.of(context)!.importUserProfile),
                         ],
                       ),
                     ),
@@ -261,7 +272,7 @@ class _FeedState extends State<Feed> {
         if (widget.currentUser.isStudent) {
           _showSnackBar(
             context,
-            'Students cannot create games. This is for Teachers and Admins only.',
+            AppLocalizations.of(context)!.studentsCannotCreateGames,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -277,7 +288,7 @@ class _FeedState extends State<Feed> {
           // 2. BLOCK: Show error message
           _showSnackBar(
             context,
-            'Students cannot add notes. This is for Admins only.',
+            AppLocalizations.of(context)!.studentsCannotAddNotes,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -292,7 +303,7 @@ class _FeedState extends State<Feed> {
         } else {
           _showSnackBar(
             context,
-            'You do not have access to this function',
+            AppLocalizations.of(context)!.noAccessFunction,
             Theme.of(context).colorScheme.error,
           );
         }
@@ -302,7 +313,7 @@ class _FeedState extends State<Feed> {
         if (widget.currentUser.isStudent) {
           _showSnackBar(
             context,
-            'You do not have access to this function',
+            AppLocalizations.of(context)!.noAccessFunction,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -316,7 +327,7 @@ class _FeedState extends State<Feed> {
         if (widget.currentUser.isStudent) {
           _showSnackBar(
             context,
-            'You do not have access to create feedback',
+            AppLocalizations.of(context)!.noAccessCreateFeedback,
             Theme.of(context).colorScheme.error,
           );
         } else {

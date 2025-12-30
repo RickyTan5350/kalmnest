@@ -9,6 +9,7 @@ import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'admin_student_achievements_page.dart';
 import 'package:flutter_codelab/api/auth_api.dart';
 import 'package:flutter_codelab/student/widgets/achievements/student_profile_achievements_page.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String userId;
@@ -78,6 +79,46 @@ class _UserDetailPageState extends State<UserDetailPage> {
     }
   }
 
+  String _getLocalizedRole(String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role.toLowerCase()) {
+      case 'student':
+        return l10n.student;
+      case 'teacher':
+        return l10n.teacher;
+      case 'admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
+  String _getLocalizedStatus(String status) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (status.toLowerCase()) {
+      case 'active':
+        return l10n.active;
+      case 'inactive':
+        return l10n.inactive;
+      default:
+        return status;
+    }
+  }
+
+  String _getLocalizedGender(String gender) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (gender.toLowerCase()) {
+      case 'male':
+        return l10n.male;
+      case 'female':
+        return l10n.female;
+      case 'other':
+        return l10n.other;
+      default:
+        return gender;
+    }
+  }
+
   Future<void> _fetchUserDetails() async {
     setState(() {
       _userFuture = _userApi.getUserDetails(widget.userId);
@@ -125,14 +166,16 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete User Account?'),
+        title: Text(AppLocalizations.of(context)!.deleteUserAccount),
         content: Text(
-          'Are you sure you want to permanently delete ${widget.userName}\'s account and all associated data? This action cannot be undone.',
+          AppLocalizations.of(
+            context,
+          )!.deleteUserAccountConfirmation(widget.userName),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -141,7 +184,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 Theme.of(context).colorScheme.error,
               ),
             ),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
@@ -164,7 +207,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
       // Show success message
       ScaffoldMessenger.of(scaffoldContext).showSnackBar(
         SnackBar(
-          content: Text('Successfully deleted user: ${widget.userName}'),
+          content: Text(
+            AppLocalizations.of(context)!.deletedUserSuccess(widget.userName),
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -190,8 +235,8 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
         // Determine the final message: remove the prefix only for the denial error
         final String snackBarText = isDeniedError
-            ? cleanError
-            : 'Error deleting user: $cleanError';
+            ? AppLocalizations.of(context)!.accessDeniedAdminOnly
+            : AppLocalizations.of(context)!.errorDeletingUser(cleanError);
 
         ScaffoldMessenger.of(scaffoldContext).showSnackBar(
           SnackBar(
@@ -226,7 +271,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   icon: const Icon(Icons.edit),
                   onPressed: () =>
                       _editUser(snapshot.data!), // Pass the loaded user data
-                  tooltip: 'Edit User Profile',
+                  tooltip: AppLocalizations.of(context)!.editUserProfile,
                 );
               }
               return const SizedBox.shrink();
@@ -243,7 +288,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 return IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: _deleteUser,
-                  tooltip: 'Delete User Account',
+                  tooltip: AppLocalizations.of(context)!.deleteUserAccount,
                 );
               }
               // Hide while loading or on error
@@ -264,7 +309,10 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 children: [
                   Icon(Icons.error_outline, size: 48, color: colorScheme.error),
                   const SizedBox(height: 16),
-                  Text('Error loading profile', style: textTheme.titleMedium),
+                  Text(
+                    AppLocalizations.of(context)!.errorLoadingProfile,
+                    style: textTheme.titleMedium,
+                  ),
                   Text(
                     snapshot.error.toString().replaceAll('Exception: ', ''),
                     style: textTheme.bodySmall,
@@ -273,7 +321,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
               ),
             );
           } else if (!snapshot.hasData) {
-            return const Center(child: Text("No user data found."));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.noUsersFound),
+            );
           }
 
           final user = snapshot.data!;
@@ -320,7 +370,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          user.roleName,
+                          _getLocalizedRole(user.roleName),
                           style: textTheme.labelLarge?.copyWith(
                             color: colorScheme.onSecondaryContainer,
                           ),
@@ -334,7 +384,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 // --- Details Card (Combined) ---
                 _buildDetailSection(
                   context,
-                  title: "User Profile Details", // Combined title
+                  title: AppLocalizations.of(
+                    context,
+                  )!.userProfileDetails, // Combined title
                   icon:
                       Icons.person_outline, // Generic icon for profile details
                   children: [
@@ -342,19 +394,19 @@ class _UserDetailPageState extends State<UserDetailPage> {
                     _buildInfoRow(
                       context,
                       Icons.email_outlined,
-                      "Email",
+                      AppLocalizations.of(context)!.email,
                       user.email,
                     ),
                     _buildInfoRow(
                       context,
                       Icons.phone_outlined,
-                      "Phone",
+                      AppLocalizations.of(context)!.phone,
                       user.phoneNo,
                     ),
                     _buildInfoRow(
                       context,
                       Icons.location_on_outlined,
-                      "Address",
+                      AppLocalizations.of(context)!.address,
                       user.address,
                     ),
 
@@ -372,21 +424,21 @@ class _UserDetailPageState extends State<UserDetailPage> {
                     // Personal Details
                     _buildInfoRow(
                       context,
-                      Icons.transgender,
-                      "Gender",
-                      user.gender,
+                      Icons.person_outline,
+                      AppLocalizations.of(context)!.genderLabel,
+                      _getLocalizedGender(user.gender),
                     ),
                     _buildInfoRow(
                       context,
                       Icons.calendar_today,
-                      "Joined Date",
+                      AppLocalizations.of(context)!.joinedDateLabel,
                       user.joinedDate.split('T')[0],
                     ), // Simple date formatting
                     _buildInfoRow(
                       context,
                       Icons.info_outline,
-                      "Account Status",
-                      user.accountStatus.toUpperCase(),
+                      AppLocalizations.of(context)!.accountStatusLabel,
+                      _getLocalizedStatus(user.accountStatus).toUpperCase(),
                       valueColor: user.accountStatus == 'active'
                           ? Colors.green
                           : colorScheme.error,
@@ -514,7 +566,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  "Recent Achievements",
+                  AppLocalizations.of(context)!.recentAchievements,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -548,7 +600,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   }
                 }
               },
-              child: const Text("View All"),
+              child: Text(AppLocalizations.of(context)!.viewAll),
             ),
           ],
         ),
@@ -561,10 +613,14 @@ class _UserDetailPageState extends State<UserDetailPage> {
             } else if (snapshot.hasError) {
               return Text('Error loading achievements: ${snapshot.error}');
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Card(
+              return Card(
                 child: Padding(
                   padding: EdgeInsets.all(16.0),
-                  child: Center(child: Text("No achievements unlocked yet.")),
+                  child: Center(
+                    child: Text(
+                      AppLocalizations.of(context)!.noAchievementsYet,
+                    ),
+                  ),
                 ),
               );
             }
@@ -577,7 +633,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 final color = getAchievementColor(context, achievement.icon);
                 final dateStr = achievement.unlockedAt != null
                     ? achievement.unlockedAt!.toString().split(' ')[0]
-                    : 'Unknown Date';
+                    : AppLocalizations.of(context)!.unknownDate;
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -591,12 +647,13 @@ class _UserDetailPageState extends State<UserDetailPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              achievement.achievementTitle ?? "Achievement",
+                              achievement.achievementTitle ??
+                                  AppLocalizations.of(context)!.achievement,
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              "Unlocked on $dateStr",
+                              AppLocalizations.of(context)!.unlockedOn(dateStr),
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: Theme.of(

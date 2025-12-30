@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
+import 'package:flutter_codelab/controllers/locale_controller.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class ProfileHeaderContent extends StatelessWidget {
   final UserDetails currentUser;
@@ -26,7 +28,11 @@ class ProfileHeaderContent extends StatelessWidget {
   }
 
   // --- NEW: Helper method to build the profile display widget ---
-  Widget _buildProfileDisplay(ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildProfileDisplay(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -35,7 +41,7 @@ class ProfileHeaderContent extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: Text(
-              'Hello, ${currentUser.name}',
+              AppLocalizations.of(context)!.helloUser(currentUser.name),
               style: textTheme.titleMedium?.copyWith(
                 color: colorScheme.onSurface,
                 fontSize: 14,
@@ -82,6 +88,53 @@ class ProfileHeaderContent extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // --- NEW: Language Switcher Button ---
+          ValueListenableBuilder<Locale>(
+            valueListenable: LocaleController.instance,
+            builder: (context, locale, child) {
+              return PopupMenuButton<Locale>(
+                tooltip: AppLocalizations.of(context)!.selectLanguage,
+                offset: const Offset(0, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.language, color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      Text(
+                        locale.languageCode.toUpperCase(),
+                        style: textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                onSelected: (Locale newLocale) {
+                  LocaleController.instance.switchLocale(newLocale);
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<Locale>>[
+                  const PopupMenuItem<Locale>(
+                    value: Locale('en'),
+                    child: Text(
+                      'English',
+                    ), // Can use AppLocalizations.of(context)!.english if desired
+                  ),
+                  const PopupMenuItem<Locale>(
+                    value: Locale('ms'),
+                    child: Text(
+                      'Bahasa Malaysia',
+                    ), // Can use AppLocalizations.of(context)!.bahasaMalaysia if desired
+                  ),
+                ],
+              );
+            },
+          ),
+
           // The PopupMenuButton replaces the InkWell and AlertDialog logic.
           // It uses the built profile display widget as its child.
           PopupMenuButton<String>(
@@ -92,7 +145,7 @@ class ProfileHeaderContent extends StatelessWidget {
             ),
 
             // This is the clickable area: the profile name + avatar + arrow
-            child: _buildProfileDisplay(colorScheme, textTheme),
+            child: _buildProfileDisplay(context, colorScheme, textTheme),
 
             // Handle selection from the menu items
             onSelected: (String result) async {
@@ -116,9 +169,9 @@ class ProfileHeaderContent extends StatelessWidget {
             // Define the content of the menu items
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
               // --- Placeholder Items (Kept: Accessibility, Profile, Private files, Reports) ---
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'profile',
-                child: Text('Profile'),
+                child: Text(AppLocalizations.of(context)!.userProfile),
               ),
               const PopupMenuDivider(), // Divider
               // --- Logout Item (Icon color adapts to the theme) ---
@@ -129,7 +182,7 @@ class ProfileHeaderContent extends StatelessWidget {
                     Icon(Icons.logout, color: colorScheme.onSurface),
                     const SizedBox(width: 8),
                     Text(
-                      'Log out',
+                      AppLocalizations.of(context)!.logout,
                       style: textTheme.titleMedium?.copyWith(
                         color: colorScheme
                             .error, // Text color remains error red for emphasis

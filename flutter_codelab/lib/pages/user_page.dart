@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_codelab/constants/view_layout.dart';
 import 'package:flutter_codelab/enums/sort_enums.dart';
 import 'package:flutter_codelab/services/layout_preferences.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class UserPage extends StatefulWidget {
   final UserDetails?
@@ -70,6 +71,36 @@ class UserPageState extends State<UserPage> {
     _userListKey.currentState?.refreshData();
   }
 
+  String _getLocalizedRole(String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role) {
+      case 'All':
+        return l10n.all;
+      case 'Student':
+        return l10n.student;
+      case 'Teacher':
+        return l10n.teacher;
+      case 'Admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
+  String _getLocalizedStatus(String status) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (status) {
+      case 'All Status':
+        return l10n.allStatus;
+      case 'Active':
+        return l10n.active;
+      case 'Inactive':
+        return l10n.inactive;
+      default:
+        return status;
+    }
+  }
+
   Future<void> importUsers() async {
     try {
       // 1. Pick the file
@@ -82,9 +113,9 @@ class UserPageState extends State<UserPage> {
         // 2. Show loading
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Importing users...'),
-            duration: Duration(days: 1), // Indefinite until dismissed
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.importingUsers),
+            duration: const Duration(days: 1), // Indefinite until dismissed
           ),
         );
 
@@ -99,7 +130,7 @@ class UserPageState extends State<UserPage> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Users imported successfully!'),
+            content: Text(AppLocalizations.of(context)!.usersImportedSuccess),
             backgroundColor: Colors.green,
           ),
         );
@@ -110,7 +141,9 @@ class UserPageState extends State<UserPage> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Import Failed: $e'),
+          content: Text(
+            AppLocalizations.of(context)!.importFailed(e.toString()),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -142,7 +175,7 @@ class UserPageState extends State<UserPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Users",
+                        AppLocalizations.of(context)!.users,
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       Row(
@@ -182,7 +215,9 @@ class UserPageState extends State<UserPage> {
                         width: 300,
                         child: SearchBar(
                           focusNode: _searchFocusNode,
-                          hintText: "Search user...",
+                          hintText: AppLocalizations.of(
+                            context,
+                          )!.searchUserHint,
                           padding: const WidgetStatePropertyAll<EdgeInsets>(
                             EdgeInsets.symmetric(horizontal: 16.0),
                           ),
@@ -217,7 +252,7 @@ class UserPageState extends State<UserPage> {
                           children: [
                             ..._roles.map((role) {
                               return FilterChip(
-                                label: Text(role),
+                                label: Text(_getLocalizedRole(role)),
                                 selected: _selectedRole == role,
                                 onSelected: (selected) {
                                   if (selected) {
@@ -238,7 +273,7 @@ class UserPageState extends State<UserPage> {
                             ),
                             ..._statuses.map((status) {
                               return FilterChip(
-                                label: Text(status),
+                                label: Text(_getLocalizedStatus(status)),
                                 selected: _selectedStatus == status,
                                 onSelected: (selected) {
                                   if (selected) {
@@ -255,7 +290,7 @@ class UserPageState extends State<UserPage> {
                       // Sort Menu
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.filter_list),
-                        tooltip: 'Sort Options',
+                        tooltip: AppLocalizations.of(context)!.sortOptions,
                         onSelected: (value) {
                           setState(() {
                             if (value == 'Name') {
@@ -271,40 +306,48 @@ class UserPageState extends State<UserPage> {
                         },
                         itemBuilder: (BuildContext context) =>
                             <PopupMenuEntry<String>>[
-                              const PopupMenuItem<String>(
+                              PopupMenuItem<String>(
                                 enabled: false,
                                 child: Text(
-                                  'Sort By',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  AppLocalizations.of(context)!.sortBy,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Name',
                                 checked: _sortType == SortType.alphabetical,
-                                child: const Text('Name'),
+                                child: Text(AppLocalizations.of(context)!.name),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Date',
                                 checked: _sortType == SortType.updated,
-                                child: const Text('Date'),
+                                child: Text(AppLocalizations.of(context)!.date),
                               ),
                               const PopupMenuDivider(),
-                              const PopupMenuItem<String>(
+                              PopupMenuItem<String>(
                                 enabled: false,
                                 child: Text(
-                                  'Order',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  AppLocalizations.of(context)!.order,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Ascending',
                                 checked: _sortOrder == SortOrder.ascending,
-                                child: const Text('Ascending'),
+                                child: Text(
+                                  AppLocalizations.of(context)!.ascending,
+                                ),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Descending',
                                 checked: _sortOrder == SortOrder.descending,
-                                child: const Text('Descending'),
+                                child: Text(
+                                  AppLocalizations.of(context)!.descending,
+                                ),
                               ),
                             ],
                       ),
@@ -313,7 +356,7 @@ class UserPageState extends State<UserPage> {
                       IconButton(
                         icon: const Icon(Icons.refresh),
                         onPressed: _handleRefresh,
-                        tooltip: "Refresh List",
+                        tooltip: AppLocalizations.of(context)!.refreshList,
                       ),
                     ],
                   ),
