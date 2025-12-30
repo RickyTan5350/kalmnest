@@ -322,7 +322,7 @@ class ClassListSection extends StatefulWidget {
   final SortType sortType;
   final SortOrder sortOrder;
   const ClassListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     this.searchQuery = '',
     required this.layout,

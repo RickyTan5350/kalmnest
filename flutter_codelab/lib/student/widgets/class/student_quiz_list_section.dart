@@ -14,12 +14,12 @@ class QuizListSection extends StatefulWidget {
   final String classDescription;
 
   const QuizListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     required this.classId,
     required this.className,
     required this.classDescription,
-  }) : super(key: key);
+  });
 
   @override
   State<QuizListSection> createState() => _QuizListSectionState();

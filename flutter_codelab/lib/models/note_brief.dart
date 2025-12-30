@@ -35,5 +35,5 @@ class NoteBrief {
     );
   }
 
-  toJson() {}
+  void toJson() {}
 }

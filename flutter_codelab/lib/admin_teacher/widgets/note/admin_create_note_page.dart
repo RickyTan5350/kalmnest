@@ -50,7 +50,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
   String? _selectedTopic;
   bool _noteVisibility = true;
   bool _isLoading = false;
-  List<UploadedAttachment> _attachments = [];
+  final List<UploadedAttachment> _attachments = [];
 
   final List<String> _topic = ['HTML', 'CSS', 'JS', 'PHP'];
 
@@ -481,7 +481,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                 children: [
                   // 1. Topic Selector
                   DropdownButtonFormField<String>(
-                    value: _selectedTopic,
+                    initialValue: _selectedTopic,
                     // Remove hardcoded color, let it use theme canvas/surface
                     dropdownColor: colorScheme.surfaceContainer,
                     style: TextStyle(color: colorScheme.onSurface),
@@ -683,7 +683,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                       _noteVisibility ? Icons.visibility : Icons.visibility_off,
                       color: colorScheme.onSurfaceVariant,
                     ),
-                    activeColor: colorScheme.primary,
+                    activeThumbColor: colorScheme.primary,
                     // Use surfaceContainer for the tile background
                     tileColor: colorScheme.surfaceContainer,
                     shape: RoundedRectangleBorder(

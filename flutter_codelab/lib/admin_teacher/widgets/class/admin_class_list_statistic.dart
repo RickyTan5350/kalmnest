@@ -11,7 +11,7 @@ class StatItem {
 }
 
 class ClassStatisticsSection extends StatefulWidget {
-  const ClassStatisticsSection({Key? key}) : super(key: key);
+  const ClassStatisticsSection({super.key});
 
   @override
   State<ClassStatisticsSection> createState() => _ClassStatisticsSectionState();

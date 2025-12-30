@@ -473,7 +473,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
                 // Gender Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedGender,
+                  initialValue: _selectedGender,
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(

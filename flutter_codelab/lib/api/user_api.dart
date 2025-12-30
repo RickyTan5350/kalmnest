@@ -80,10 +80,12 @@ class UserApi {
     // Build Query Parameters
     Map<String, String> queryParams = {};
     if (search != null && search.isNotEmpty) queryParams['search'] = search;
-    if (roleName != null && roleName.isNotEmpty)
+    if (roleName != null && roleName.isNotEmpty) {
       queryParams['role_name'] = roleName;
-    if (accountStatus != null && accountStatus.isNotEmpty)
+    }
+    if (accountStatus != null && accountStatus.isNotEmpty) {
       queryParams['account_status'] = accountStatus;
+    }
 
     // Construct URI with query params
     final uri = Uri.parse(_listUrl).replace(queryParameters: queryParams);

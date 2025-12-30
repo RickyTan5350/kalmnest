@@ -192,8 +192,9 @@ class _NotePageState extends State<NotePage> {
                                   label: Text(_getLocalizedTopic(topic)),
                                   selected: _selectedTopic == topic,
                                   onSelected: (selected) {
-                                    if (selected)
+                                    if (selected) {
                                       setState(() => _selectedTopic = topic);
+                                    }
                                   },
                                 ),
                               )
