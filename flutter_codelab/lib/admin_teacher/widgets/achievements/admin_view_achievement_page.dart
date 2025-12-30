@@ -735,12 +735,12 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
               const SizedBox(height: 2.0),
             ],
           ),
-          trailing: IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {
-              // Handle more options tap if needed
-            },
-          ),
+          // trailing: IconButton(
+          //   icon: const Icon(Icons.more_vert),
+          //   onPressed: () {
+          //     // Handle more options tap if needed
+          //   },
+          // ),
           onTap: () {
             if (_selectedIds.isNotEmpty) {
               onToggle();
@@ -763,4 +763,3 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
     );
   }
 }
-
