@@ -166,14 +166,13 @@ class ClassController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'class_name' => 'required|string|max:100|unique:classes,class_name',
+            'class_name' => 'required|string|max:100',
             'teacher_id' => 'nullable|string|exists:users,user_id',
             'description' => 'nullable|string',
             'admin_id' => 'nullable|string|exists:users,user_id',
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'string|exists:users,user_id',
         ], [
-            'class_name.unique' => 'A class with this name already exists. Please choose a different name.',
             'class_name.required' => 'Class name is required.',
             'class_name.max' => 'Class name cannot exceed 100 characters.',
         ]);
@@ -192,7 +191,7 @@ class ClassController extends Controller
             $class = ClassModel::create([
                 'class_id' => (string) Str::uuid(),
                 'class_name' => $request->class_name,
-                'teacher_id' => $request->teacher_id, // optional, can be null
+                'teacher_id' => !empty($request->teacher_id) ? $request->teacher_id : null, // optional, can be null
                 'description' => $request->description,
                 'admin_id' => $request->admin_id ?? $user->user_id, // Default to current admin
             ]);
@@ -219,6 +218,19 @@ class ClassController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Check if it's a unique constraint violation for class_name
+            if (str_contains($e->getMessage(), 'Duplicate entry') || 
+                str_contains($e->getMessage(), 'class_name') ||
+                str_contains($e->getCode(), '23000')) {
+                return response()->json([
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'class_name' => ['The classname is already exist. Please choose a different name.']
+                    ]
+                ], 422);
+            }
+            
             return response()->json([
                 'message' => 'Failed to create class',
                 'error' => $e->getMessage()
@@ -312,7 +324,6 @@ class ClassController extends Controller
                 'required',
                 'string',
                 'max:100',
-                'unique:classes,class_name,' . $id . ',class_id'
             ],
             'teacher_id' => 'sometimes|nullable|string|exists:users,user_id',
             'description' => 'nullable|string',
@@ -320,7 +331,6 @@ class ClassController extends Controller
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'string|exists:users,user_id',
         ], [
-            'class_name.unique' => 'A class with this name already exists. Please choose a different name.',
             'class_name.required' => 'Class name is required.',
             'class_name.max' => 'Class name cannot exceed 100 characters.',
         ]);
@@ -336,7 +346,10 @@ class ClassController extends Controller
             DB::beginTransaction();
 
             // Update class fields (teacher_id can now be null to remove teacher assignment)
-            $class->update($request->only(['class_name', 'teacher_id', 'description', 'admin_id']));
+            $updateData = $request->only(['class_name', 'description', 'admin_id']);
+            // Handle teacher_id separately to convert empty strings to null
+            $updateData['teacher_id'] = !empty($request->teacher_id) ? $request->teacher_id : null;
+            $class->update($updateData);
 
             // Update enrolled students if provided (can be empty array to clear all)
             if ($request->has('student_ids')) {
@@ -359,6 +372,19 @@ class ClassController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Check if it's a unique constraint violation for class_name
+            if (str_contains($e->getMessage(), 'Duplicate entry') || 
+                str_contains($e->getMessage(), 'class_name') ||
+                str_contains($e->getCode(), '23000')) {
+                return response()->json([
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'class_name' => ['The classname is already exist. Please choose a different name.']
+                    ]
+                ], 422);
+            }
+            
             return response()->json([
                 'message' => 'Failed to update class',
                 'error' => $e->getMessage()
@@ -505,7 +531,7 @@ class ClassController extends Controller
                 'message' => 'Unauthenticated.'
             ], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -556,7 +582,7 @@ class ClassController extends Controller
                 'message' => 'Unauthenticated.'
             ], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -633,7 +659,7 @@ class ClassController extends Controller
                 'message' => 'Unauthenticated.'
             ], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -715,7 +741,7 @@ class ClassController extends Controller
                 'message' => 'Unauthenticated.'
             ], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -766,7 +792,7 @@ class ClassController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -832,7 +858,7 @@ class ClassController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
@@ -933,7 +959,7 @@ class ClassController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
-
+ /** @var User $user */
         $user->load('role');
         $roleName = strtolower(trim($user->role?->role_name ?? ''));
 

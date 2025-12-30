@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/note_api.dart';
-import 'package:flutter_codelab/models/note_brief.dart';
+import 'package:code_play/api/note_api.dart';
+import 'package:code_play/models/note_brief.dart';
 // FIX: Imported Admin Detail Page
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_note_detail.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart'; // Adjust path as needed
+import 'package:code_play/admin_teacher/widgets/note/admin_note_detail.dart';
+import 'package:code_play/admin_teacher/widgets/note/note_grid_layout.dart'; // Adjust path as needed
 // Import Shared Grid (Adjust path if needed)
-import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
-import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
+import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:code_play/admin_teacher/services/selection_box_painter.dart';
 import 'package:flutter/services.dart'; // For HapticFeedback
-import 'package:flutter_codelab/theme.dart'; // Import BrandColors
+import 'package:code_play/theme.dart'; // Import BrandColors
 
-import 'package:flutter_codelab/enums/sort_enums.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/constants/view_layout.dart';
 
 class AdminViewNotePage extends StatefulWidget {
   final ViewLayout layout;
@@ -27,7 +27,10 @@ class AdminViewNotePage extends StatefulWidget {
     required this.query,
     required this.sortType,
     required this.sortOrder,
+    this.onTopicChanged,
   });
+
+  final void Function(String)? onTopicChanged;
 
   @override
   State<AdminViewNotePage> createState() => AdminViewNotePageState();
@@ -47,6 +50,7 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
   Offset? _dragStart;
   Offset? _dragEnd;
   Set<dynamic> _initialSelection = {};
+  final GlobalKey _selectionAreaKey = GlobalKey();
 
   bool get _isDesktop {
     final p = Theme.of(context).platform;
@@ -179,19 +183,24 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
     final Rect selectionBox = Rect.fromPoints(_dragStart!, _dragEnd!);
     final Set<dynamic> newSelection = Set.from(_initialSelection);
 
+    // Get the selection area (Stack) render object
+    final RenderBox? ancestor =
+        _selectionAreaKey.currentContext?.findRenderObject() as RenderBox?;
+    if (ancestor == null) return;
+
     for (final entry in _gridItemKeys.entries) {
       final dynamic id = entry.key;
       final GlobalKey key = entry.value;
 
-      final RenderBox? renderBox =
+      final RenderBox? itemBox =
           key.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox == null) continue;
+      if (itemBox == null) continue;
 
-      final Offset itemPosition = renderBox.localToGlobal(
+      final Offset itemPosition = itemBox.localToGlobal(
         Offset.zero,
-        ancestor: context.findRenderObject(),
+        ancestor: ancestor,
       );
-      final Rect itemRect = itemPosition & renderBox.size;
+      final Rect itemRect = itemPosition & itemBox.size;
 
       if (selectionBox.overlaps(itemRect)) {
         newSelection.add(id);
@@ -291,81 +300,75 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
             final List<NoteBrief> rawList = snapshot.data!;
             final List<NoteBrief> sortedList = _sortNotes(rawList);
 
-            return SelectionGestureWrapper(
-              isDesktop: _isDesktop,
-              selectedIds: _selectedIds
-                  .map((e) => e.toString())
-                  .toSet(), // Conv to set string if needed, or update wrapper to generic?
-              // Wrapper expects Set<String>. NoteBrief ID might be int.
-              // Let's check wrapper definition. Wrapper: final Set<String> selectedIds;
-              // So I must cast or convert. 'NoteBrief' id is likely int.
-              // Correction: specific admin_view_note handles dynamic, but wrapper expects String?
-              // checking wrapper file: "final Set<String> selectedIds;"
-              // So I better convert to String for the wrapper, or update the wrapper.
-              // Updating the wrapper is risky if used elsewhere. Converting here is safer.
-              itemKeys: _gridItemKeys.map((k, v) => MapEntry(k.toString(), v)),
-
-              onLongPressStart: (details) {
-                if (_isDesktop) {
-                  _initialSelection = Set.from(_selectedIds);
-                  setState(() {
-                    _dragStart = details.localPosition;
-                    _dragEnd = details.localPosition;
-                  });
-                  _handleBoxSelect(details.localPosition);
-                } else {
-                  _dragProcessedIds.clear();
-                  _handleDragSelect(details.globalPosition);
-                }
-              },
-              onLongPressMoveUpdate: (details) {
-                if (_isDesktop) {
-                  _handleBoxSelect(details.localPosition);
-                } else {
-                  _handleDragSelect(details.globalPosition);
-                }
-              },
-              onLongPressEnd: (_) => _endDrag(),
-
-              child: Stack(
-                children: [
-                  CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            16.0,
-                            12.0,
-                            16.0,
-                            16.0,
-                          ),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: _isSelectionMode
-                                ? _buildSelectionHeader(
-                                    context,
-                                    sortedList.length,
-                                  )
-                                : _buildSortHeader(context, sortedList.length),
-                          ),
-                        ),
-                      ),
-                      _buildSliverContent(context, sortedList),
-                    ],
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // --- STICKY HEADER ---
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _isSelectionMode
+                        ? _buildSelectionHeader(context, sortedList.length)
+                        : _buildSortHeader(context, sortedList.length),
                   ),
-                  if (_isDesktop && _dragStart != null && _dragEnd != null)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: CustomPaint(
-                          painter: SelectionBoxPainter(
-                            start: _dragStart,
-                            end: _dragEnd,
-                          ),
-                        ),
-                      ),
+                ),
+
+                // --- SCROLLABLE CONTENT ---
+                Expanded(
+                  child: SelectionGestureWrapper(
+                    isDesktop: _isDesktop,
+                    selectedIds: _selectedIds.map((e) => e.toString()).toSet(),
+                    itemKeys: _gridItemKeys.map(
+                      (k, v) => MapEntry(k.toString(), v),
                     ),
-                ],
-              ),
+
+                    onLongPressStart: (details) {
+                      if (_isDesktop) {
+                        _initialSelection = Set.from(_selectedIds);
+                        setState(() {
+                          _dragStart = details.localPosition;
+                          _dragEnd = details.localPosition;
+                        });
+                        _handleBoxSelect(details.localPosition);
+                      } else {
+                        _dragProcessedIds.clear();
+                        _handleDragSelect(details.globalPosition);
+                      }
+                    },
+                    onLongPressMoveUpdate: (details) {
+                      if (_isDesktop) {
+                        _handleBoxSelect(details.localPosition);
+                      } else {
+                        _handleDragSelect(details.globalPosition);
+                      }
+                    },
+                    onLongPressEnd: (_) => _endDrag(),
+
+                    child: Stack(
+                      key: _selectionAreaKey,
+                      children: [
+                        CustomScrollView(
+                          slivers: [_buildSliverContent(context, sortedList)],
+                        ),
+                        if (_isDesktop &&
+                            _dragStart != null &&
+                            _dragEnd != null)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: CustomPaint(
+                                painter: SelectionBoxPainter(
+                                  start: _dragStart,
+                                  end: _dragEnd,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             );
           },
         ),
@@ -463,10 +466,10 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
         itemKeys: _gridItemKeys,
 
         // 2. ADD THIS: Handle the tap event for Admin
-        onTap: (id) {
+        onTap: (id) async {
           final note = noteMap[id];
           if (note != null) {
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => AdminNoteDetailPage(
@@ -476,6 +479,13 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                 ),
               ),
             );
+            if (widget.onTopicChanged != null) {
+              if (result == 'navigate_home') {
+                widget.onTopicChanged!('All');
+              } else if (result is String && result.isNotEmpty) {
+                widget.onTopicChanged!(result);
+              }
+            }
           }
         },
       );
@@ -553,12 +563,12 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12.0),
         onLongPress: () => _enterSelectionMode(item.noteId),
-        onTap: () {
+        onTap: () async {
           if (_isSelectionMode) {
             _toggleSelection(item.noteId);
           } else {
             // FIX: Use AdminNoteDetailPage
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => AdminNoteDetailPage(
@@ -569,6 +579,13 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                 ),
               ),
             );
+            if (widget.onTopicChanged != null) {
+              if (result == 'navigate_home') {
+                widget.onTopicChanged!('All');
+              } else if (result is String && result.isNotEmpty) {
+                widget.onTopicChanged!(result);
+              }
+            }
           }
         },
         child: Padding(
@@ -606,8 +623,6 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                   ],
                 ),
               ),
-              if (!_isSelectionMode)
-                Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -615,3 +630,4 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
     );
   }
 }
+

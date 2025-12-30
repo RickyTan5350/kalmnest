@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
+import 'package:code_play/student/services/local_achievement_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 // Ensure this matches your emulator/device URL
 String get _authApiUrl => ApiConstants.baseUrl;
@@ -34,19 +34,27 @@ class AuthApi {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final token = data['token'];
+      try {
+          final data = jsonDecode(response.body);
+          final token = data['token'];
 
-        // The 'user' object from backend now includes the nested 'role' object
-        // We store this entire structure securely.
-        final userDataJson = jsonEncode(data['user']);
+          // 1. Extract the user map
+          final Map<String, dynamic> userMap = Map<String, dynamic>.from(data['user']);
+          
+          // 2. IMPORTANT: Inject the token into the user map so UserDetails model can see it
+          userMap['token'] = token; 
 
-        await _storage.write(key: _tokenKey, value: token);
-        await _storage.write(key: _userKey, value: userDataJson);
+          // 3. Store the updated map and the token
+          final userDataJson = jsonEncode(userMap);
+          await _storage.write(key: _tokenKey, value: token);
+          await _storage.write(key: _userKey, value: userDataJson);
 
-        final userMap = data['user'] as Map<String, dynamic>;
-        userMap['token'] = token; // Add token to the map
-        return userMap;
+          return userMap; // Return the map that now contains the token
+        } catch (e) {
+          print('JSON Decode Error: $e');
+          print('Response Body: ${response.body}');
+          throw Exception('Failed to decode server response. See logs.');
+        }
       } else if (response.statusCode == 422) {
         final errors = jsonDecode(response.body);
         // Safely extract email error or provide default
@@ -114,4 +122,61 @@ class AuthApi {
     final localStorage = LocalAchievementStorage();
     await localStorage.clearLocalCache(userId);
   }
+
+  // 5. FORGOT PASSWORD
+  Future<void> forgotPassword(String email) async {
+    final url = '$_authApiUrl/forgot-password';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json; charset=UTF-8'},
+      body: jsonEncode({'email': email}),
+    );
+    if (response.statusCode != 200) {
+      // Decode error message if possible
+      String msg = 'Failed to send reset code';
+      try {
+        msg = jsonDecode(response.body)['message'];
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  // 6. RESET PASSWORD
+  Future<void> resetPassword(String email, String code, String password) async {
+    final url = '$_authApiUrl/reset-password';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Accept': 'application/json', // Crucial for Laravel validation errors
+      },
+      body: jsonEncode({
+        'email': email,
+        'code': code,
+        'password': password,
+        'password_confirmation': password,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      String msg = 'Failed to reset password';
+      try {
+        final body = jsonDecode(response.body);
+        // Handle standard Laravel Error format
+        if (body['message'] != null) {
+          msg = body['message'];
+        }
+        // Handle Validation Errors key
+        if (body['errors'] != null) {
+          final errors = body['errors'] as Map<String, dynamic>;
+          if (errors.isNotEmpty) {
+            // Just grab the first error from the first field
+            msg = errors.values.first[0];
+          }
+        }
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
 }
+

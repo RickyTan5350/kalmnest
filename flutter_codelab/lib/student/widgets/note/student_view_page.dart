@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/note_api.dart';
-import 'package:flutter_codelab/models/note_brief.dart';
-import 'package:flutter_codelab/student/widgets/note/student_note_detail.dart';
-import 'package:flutter_codelab/theme.dart'; // BrandColors
+import 'package:code_play/api/note_api.dart';
+import 'package:code_play/models/note_brief.dart';
+import 'package:code_play/student/widgets/note/student_note_detail.dart';
+import 'package:code_play/theme.dart'; // BrandColors
 
 // --- NEW IMPORTS: Reuse Admin/Teacher Widgets for consistency ---
-import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart';
-import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:code_play/admin_teacher/widgets/note/note_grid_layout.dart';
+import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
 
-import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
+import 'package:code_play/enums/sort_enums.dart'; // Shared Enums
 // Removed unused ViewLayout import
 
 // Removing local SortType and SortOrder enums
@@ -27,7 +27,10 @@ class StudentViewPage extends StatefulWidget {
     required this.isGrid,
     required this.sortType,
     required this.sortOrder,
+    this.onTopicChanged,
   });
+
+  final void Function(String)? onTopicChanged;
 
   @override
   State<StudentViewPage> createState() => StudentViewPageState();
@@ -87,7 +90,7 @@ class StudentViewPageState extends State<StudentViewPage> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor:colorScheme.surfaceContainerLow,
+      backgroundColor: colorScheme.surfaceContainerLow,
       body: FutureBuilder<List<NoteBrief>>(
         future: _noteFuture,
         builder: (context, snapshot) {
@@ -167,10 +170,17 @@ class StudentViewPageState extends State<StudentViewPage> {
                         selectedIds: const {},
                         onToggleSelection: (_) {},
                         itemKeys: _gridItemKeys,
-                        onTap: (id) {
+                        onTap: (id) async {
                           // Handle navigation here
                           if (noteMap.containsKey(id)) {
-                            _openNote(context, noteMap[id]!);
+                            final result = await _openNote(
+                              context,
+                              noteMap[id]!,
+                            );
+                            if (result is String &&
+                                widget.onTopicChanged != null) {
+                              widget.onTopicChanged!(result);
+                            }
                           }
                         },
                       )
@@ -247,10 +257,7 @@ class StudentViewPageState extends State<StudentViewPage> {
         topicColor = brandColors?.php ?? Colors.indigo;
         topicIcon = Icons.php;
         break;
-      case 'backend':
-        topicColor = brandColors?.backend ?? Colors.purple;
-        topicIcon = Icons.storage;
-        break;
+
       default:
         topicColor = brandColors?.other ?? Colors.grey;
         topicIcon = Icons.folder_open;
@@ -259,15 +266,20 @@ class StudentViewPageState extends State<StudentViewPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 0,
+
       // Match Admin color (Surface) instead of SurfaceContainer
-     
       shape: RoundedRectangleBorder(
         side: BorderSide(color: colorScheme.outlineVariant, width: 1),
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12.0),
-        onTap: () => _openNote(context, note),
+        onTap: () async {
+          final result = await _openNote(context, note);
+          if (result is String && widget.onTopicChanged != null) {
+            widget.onTopicChanged!(result);
+          }
+        },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -306,9 +318,6 @@ class StudentViewPageState extends State<StudentViewPage> {
                   ],
                 ),
               ),
-
-              // 3. The Chevron Arrow (Same as Admin)
-              Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -316,8 +325,8 @@ class StudentViewPageState extends State<StudentViewPage> {
     );
   }
 
-  void _openNote(BuildContext context, NoteBrief note) {
-    Navigator.push(
+  Future<dynamic> _openNote(BuildContext context, NoteBrief note) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => StudentNoteDetailPage(
@@ -327,6 +336,16 @@ class StudentViewPageState extends State<StudentViewPage> {
         ),
       ),
     );
+
+    if (widget.onTopicChanged != null) {
+      if (result == 'navigate_home') {
+        widget.onTopicChanged!('All');
+      } else if (result is String && result.isNotEmpty) {
+        // Assume it's a topic
+        widget.onTopicChanged!(result);
+      }
+    }
+    return result;
   }
 }
 
@@ -404,3 +423,4 @@ class HighlightText extends StatelessWidget {
     );
   }
 }
+

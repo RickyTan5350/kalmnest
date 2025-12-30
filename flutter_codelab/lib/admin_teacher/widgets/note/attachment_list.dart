@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/uploaded_attachment.dart'; // Import the model
+import 'package:code_play/models/uploaded_attachment.dart'; // Import the model
 
 class AttachmentList extends StatelessWidget {
   final List<UploadedAttachment> attachments;

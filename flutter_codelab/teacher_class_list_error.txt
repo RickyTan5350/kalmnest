@@ -1,0 +1,11 @@
+Analyzing teacher_class_list_section.dart...                    
+
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\admin_teacher\widgets\class\teacher_class_list_section.dart:65:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\admin_teacher\widgets\class\teacher_class_list_section.dart:242:38 - deprecated_member_use
+   info - Parameter 'key' could be a super parameter - lib\admin_teacher\widgets\class\teacher_class_list_section.dart:407:9 - use_super_parameters
+  error - The argument for the named parameter 'key' was already specified - lib\admin_teacher\widgets\class\teacher_class_list_section.dart:415:14 - duplicate_named_argument
+   info - Don't invoke 'print' in production code - lib\admin_teacher\widgets\class\teacher_class_list_section.dart:480:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\admin_teacher\widgets\class\teacher_class_list_section.dart:481:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\admin_teacher\widgets\class\teacher_class_list_section.dart:651:59 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\admin_teacher\widgets\class\teacher_class_list_section.dart:666:61 - deprecated_member_use
+

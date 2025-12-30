@@ -11,7 +11,7 @@ return new class extends Migration {
         Schema::create('classes', function (Blueprint $table) {
             $table->uuid('class_id')->primary();
             $table->string('class_name', 100);
-            $table->uuid('teacher_id')->index(); // <-- Must be uuid
+            $table->uuid('teacher_id')->nullable()->index(); // <-- Must be uuid, nullable
             $table->text('description')->nullable();
             $table->uuid('admin_id')->nullable()->index();   // <-- Must be uuid
             $table->timestamps();

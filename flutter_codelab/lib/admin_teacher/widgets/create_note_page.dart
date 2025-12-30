@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/file_helper.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/markdown_preview.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/upload_single_file.dart';
-import 'package:flutter_codelab/api/note_api.dart';
-import 'package:flutter_codelab/models/note_data.dart';
+import 'package:code_play/admin_teacher/widgets/file_helper.dart';
+import 'package:code_play/admin_teacher/widgets/note/markdown_preview.dart';
+import 'package:code_play/admin_teacher/widgets/upload_single_file.dart';
+import 'package:code_play/api/note_api.dart';
+import 'package:code_play/models/note_data.dart';
 import 'dart:io';
 // Import path package
 
@@ -381,3 +381,4 @@ class _CreateNotePageState extends State<CreateNotePage> {
     );
   }
 }
+
