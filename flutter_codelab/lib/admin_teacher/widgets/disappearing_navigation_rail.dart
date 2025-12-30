@@ -10,7 +10,7 @@ class DisappearingNavigationRail extends StatelessWidget {
     required this.selectedIndex,
     this.onDestinationSelected,
     required this.isExtended,
-    required this.onMenuPressed,
+    // REMOVED: required this.onMenuPressed,
     this.onAddButtonPressed,
     // REMOVED: required this.onLogoutPressed,
   });
@@ -19,7 +19,7 @@ class DisappearingNavigationRail extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int>? onDestinationSelected;
   final bool isExtended;
-  final VoidCallback onMenuPressed;
+  // REMOVED: final VoidCallback onMenuPressed;
   final VoidCallback? onAddButtonPressed;
   // REMOVED: final VoidCallback onLogoutPressed;
 
@@ -39,16 +39,15 @@ class DisappearingNavigationRail extends StatelessWidget {
     ];
 
     // The destinations no longer need the placeholder for the add button.
-    final List<NavigationRailDestination> allDestinations = [];
-    for (int i = 0; i < destinations.length; i++) {
-      allDestinations.add(
-        NavigationRailDestination(
-          icon: Icon(destinations[i].icon),
-          selectedIcon: Icon(destinations[i].selectedIcon),
-          label: Text(labels[i]),
-        ),
+    final List<NavigationRailDestination> allDestinations = destinations.map((
+      d,
+    ) {
+      return NavigationRailDestination(
+        icon: Icon(d.icon),
+        selectedIcon: Icon(d.selectedIcon),
+        label: Text(d.label),
       );
-    }
+    }).toList();
 
     return NavigationRail(
       selectedIndex: selectedIndex, // Simpler indexing now
@@ -58,7 +57,7 @@ class DisappearingNavigationRail extends StatelessWidget {
       // Use the 'leading' property for the top-aligned buttons.
       leading: Column(
         children: [
-          IconButton(onPressed: onMenuPressed, icon: const Icon(Icons.menu)),
+          // REMOVED: Menu Icon Button
           const SizedBox(height: 8),
           FloatingActionButton(
             // Use the FAB widget directly

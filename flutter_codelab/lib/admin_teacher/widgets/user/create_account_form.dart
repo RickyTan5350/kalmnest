@@ -427,14 +427,30 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     icon: Icons.people,
                     colorScheme: colorScheme,
                   ),
-                  items: _genders
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(_getLocalizedGender(value)),
-                        ),
-                      )
-                      .toList(),
+                  items: _genders.map((value) {
+                    IconData icon;
+                    if (value.toLowerCase() == 'male') {
+                      icon = Icons.male;
+                    } else if (value.toLowerCase() == 'female') {
+                      icon = Icons.female;
+                    } else {
+                      icon = Icons.transgender;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(value),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (value) => setState(() => _selectedGender = value),
                   validator: (value) {
                     if (value == null || value.isEmpty)
@@ -455,14 +471,36 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     icon: Icons.badge,
                     colorScheme: colorScheme,
                   ),
-                  items: _roles
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(_getLocalizedRole(value)),
-                        ),
-                      )
-                      .toList(),
+                  items: _roles.map((value) {
+                    IconData icon;
+                    switch (value.toLowerCase()) {
+                      case 'admin':
+                        icon = Icons.admin_panel_settings;
+                        break;
+                      case 'teacher':
+                        icon = Icons.school;
+                        break;
+                      case 'student':
+                        icon = Icons.person;
+                        break;
+                      default:
+                        icon = Icons.person_outline;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(value),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (value) => setState(() => _selectedRole = value),
                   validator: (value) {
                     if (value == null || value.isEmpty)

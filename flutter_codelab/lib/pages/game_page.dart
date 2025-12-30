@@ -166,7 +166,7 @@ class _GamePageState extends State<GamePage> {
     final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(

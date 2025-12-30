@@ -108,7 +108,7 @@ class _AchievementPageState extends State<AchievementPage> {
     print("IS STUDENT? ${widget.currentUser.isStudent}");
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
