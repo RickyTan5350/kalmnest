@@ -145,9 +145,59 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
           topic: _currentTopic,
           noteTitle: _currentTitle,
           isAdmin: !widget.isStudent,
+          onFileRenamed: _handleFileRename,
         ),
       ),
     );
+  }
+
+  Future<void> _handleFileRename(String oldName, String newName) async {
+    // 1. Update Markdown Content (Regex Replace)
+    final regex = RegExp(
+      ':src=${RegExp.escape(oldName)}\\b', // Match :src=oldName word boundary
+    );
+
+    if (_markdownContent.contains(regex)) {
+      final newContent = _markdownContent.replaceAll(regex, ':src=$newName');
+
+      setState(() {
+        _markdownContent = newContent; // Update local state
+        _readOnlyController.text = newContent; // Update UI source view
+      });
+
+      // 2. Persist to Backend
+      final success = await _noteApi.updateNote(
+        widget.noteId,
+        _currentTitle, // Keep current title
+        newContent, // New content
+        _currentTopic, // Keep current topic
+        _currentVisibility, // Keep visibility
+      );
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Renamed "$oldName" to "$newName" and updated Note links.',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to save renamed file link to Note.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } else {
+      debugPrint(
+        "Warning: Renamed '$oldName' but found no reference in Markdown to update.",
+      );
+    }
   }
 
   // ====================================================================

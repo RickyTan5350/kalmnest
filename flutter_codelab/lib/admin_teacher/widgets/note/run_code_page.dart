@@ -30,11 +30,13 @@ class RunCodePage extends StatefulWidget {
     required this.topic,
     required this.noteTitle,
     this.isAdmin = false,
+    this.onFileRenamed,
   });
 
   final String topic;
   final String noteTitle;
   final bool isAdmin;
+  final Function(String oldName, String newName)? onFileRenamed;
 
   @override
   State<RunCodePage> createState() => _RunCodePageState();
@@ -231,27 +233,74 @@ class _RunCodePageState extends State<RunCodePage> {
 
         // 3. Determine Allowed Files (Filtering)
         Set<String>? allowedFiles;
+        Set<String> privateFiles = {};
+        Set<String> allClaimedFiles = {}; // Implicit Privacy
+
         try {
           final visibleFile = File('$dirPath/visible_files.json');
           if (await visibleFile.exists()) {
             final content = await visibleFile.readAsString();
-            final Map<String, dynamic> rules = jsonDecode(content);
+            final Map<String, dynamic> json = jsonDecode(content);
 
-            print(
-              "DEBUG: visible_files.json Loaded. Entry: '$effectiveEntryName'",
-            );
+            // Read Rules
+            if (json.containsKey('rules')) {
+              final Map<String, dynamic> rules = json['rules'];
+              // Only apply rule if we are SURE we matched the file on disk (Content Match)
+              // This prevents "New" code blocks (which default to index.html) from inheriting
+              // the tabs of the "Real" index.html.
+              if (detectedRealName != null &&
+                  rules.containsKey(effectiveEntryName)) {
+                final List<dynamic> allowed = rules[effectiveEntryName];
+                final allowedSet = allowed
+                    .map((e) => e.toString().trim())
+                    .toSet();
+                allowedSet.add(effectiveEntryName); // Always keep self
+                _allowedFilesCache = allowedSet;
+                allowedFiles = allowedSet;
+                print("DEBUG: Keeping only (Whitelist): $allowedFiles");
+              } else if (rules.containsKey(effectiveEntryName)) {
+                print(
+                  "DEBUG: Skipping rule for '$effectiveEntryName' due to content mismatch (Isolation).",
+                );
+              }
 
-            if (rules.containsKey(effectiveEntryName)) {
-              final List<dynamic> allowed = rules[effectiveEntryName];
-              final allowedSet = allowed.map((e) => e.toString()).toSet();
+              // Collect ALL claimed files for Implicit Privacy
+              // If a file is claimed by ANY entry point, it should be hidden from others
+              // unless specifically whitelisted (which is handled by Rule 1 above).
+              rules.forEach((key, value) {
+                if (value is List) {
+                  allClaimedFiles.addAll(value.map((e) => e.toString().trim()));
+                }
+              });
+              print("DEBUG: All Claimed Files: $allClaimedFiles");
+            } else {
+              // Legacy format support where root object IS the rules
+              // Check if root keys look like filenames (contain dots) or start small
+              // For now, assume if 'rules' missing, root might be rules, or just empty.
+              if (json.containsKey(effectiveEntryName)) {
+                // It's the old format
+                final List<dynamic> allowed = json[effectiveEntryName];
+                final allowedSet = allowed
+                    .map((e) => e.toString().trim())
+                    .toSet();
+                allowedSet.add(effectiveEntryName);
+                _allowedFilesCache = allowedSet;
+                allowedFiles = allowedSet;
+              }
+              // Legacy Claimed collection (approximate since we don't know structure perfectly)
+              // Assume keys are entry points
+              json.forEach((key, value) {
+                if (value is List) {
+                  allClaimedFiles.addAll(value.map((e) => e.toString().trim()));
+                }
+              });
+            }
 
-              // Always keep the main file itself
-              allowedSet.add(effectiveEntryName);
-
-              _allowedFilesCache =
-                  allowedSet; // Update cache for backend sync checks
-              allowedFiles = allowedSet;
-              print("DEBUG: Keeping only: $allowedFiles");
+            // Read _private
+            if (json.containsKey('_private')) {
+              final List<dynamic> private = json['_private'];
+              privateFiles = private.map((e) => e.toString().trim()).toSet();
+              print("DEBUG: Private files: $privateFiles");
             }
           }
         } catch (e) {
@@ -285,15 +334,36 @@ class _RunCodePageState extends State<RunCodePage> {
 
             // Apply filter
             if (allowedFiles != null) {
-              final isAllowed = allowedFiles.contains(candidate.name);
-              print(
-                "DEBUG: Candidate '${candidate.name}' check. Allowed? $isAllowed",
-              );
+              // Rule 1: Strict Whitelist (if defined for this entry point)
+              // NOTE: trim() is important for safety
+              final isAllowed = allowedFiles.contains(candidate.name.trim());
               if (!isAllowed) {
                 print(
-                  "DEBUG: Candidate '${candidate.name}' REJECTED by filter.",
+                  "DEBUG: Candidate '${candidate.name}' REJECTED by Whitelist.",
                 );
-                continue; // Skip hidden file
+                continue;
+              }
+            } else {
+              // Rule 2: Default "Show All" EXCEPT Private OR Claimed
+              final candidateName = candidate.name.trim();
+              final isPrivate = privateFiles.contains(candidateName);
+              final isClaimed = allClaimedFiles.contains(candidateName);
+
+              print(
+                "DEBUG: Default Filter '$candidateName'. Private? $isPrivate. Claimed? $isClaimed",
+              );
+
+              if (isPrivate) {
+                print(
+                  "DEBUG: Candidate '$candidateName' HIDDEN (Private file).",
+                );
+                continue;
+              }
+              if (isClaimed) {
+                print(
+                  "DEBUG: Candidate '$candidateName' HIDDEN (Implicitly Claimed by another block).",
+                );
+                continue;
               }
             }
 
@@ -408,6 +478,111 @@ class _RunCodePageState extends State<RunCodePage> {
     }
   }
 
+  Future<void> _updateVisibleFiles(
+    String entryName,
+    String targetFile, {
+    String? oldName,
+    bool isDelete = false,
+  }) async {
+    if (_resolvedContextPath == null) return;
+    try {
+      final visibleFile = File('$_resolvedContextPath/visible_files.json');
+      Map<String, dynamic> json = {};
+
+      // Read existing or init
+      if (await visibleFile.exists()) {
+        try {
+          json = jsonDecode(await visibleFile.readAsString());
+        } catch (_) {} // Align with empty if corrupt
+      }
+
+      // 1. Structure Check
+      if (!json.containsKey('rules') && !json.containsKey('_private')) {
+        // Migration: If root has keys that look like rules, move them.
+        if (json.isNotEmpty) {
+          bool looksLikeRules = json.keys.any((k) => k.contains('.'));
+          if (looksLikeRules) {
+            json = {'rules': Map<String, dynamic>.from(json), '_private': []};
+          } else {
+            json = {'rules': {}, '_private': []};
+          }
+        } else {
+          json = {'rules': {}, '_private': []};
+        }
+      }
+
+      json.putIfAbsent('rules', () => {});
+      json.putIfAbsent('_private', () => []);
+
+      final Map<String, dynamic> rules = json['rules'];
+      final List<dynamic> private = json['_private'];
+
+      // Helpers
+      void removeFromList(List<dynamic> list, String item) {
+        list.removeWhere((e) => e.toString() == item);
+      }
+
+      void addToList(List<dynamic> list, String item) {
+        if (!list.any((e) => e.toString() == item)) list.add(item);
+      }
+
+      if (isDelete) {
+        // DELETE
+        removeFromList(private, targetFile);
+        rules.forEach((key, val) {
+          if (val is List) removeFromList(val, targetFile);
+        });
+      } else if (oldName != null) {
+        // RENAME
+
+        // 1. Rename Key (if this was an Entry Point)
+        if (rules.containsKey(oldName)) {
+          final content = rules[oldName];
+          rules.remove(oldName);
+          rules[targetFile] = content;
+          print("DEBUG: Renamed Rule Key from $oldName to $targetFile");
+        }
+
+        // 2. Rename Value (if it appeared in other lists)
+        removeFromList(private, oldName);
+        addToList(private, targetFile);
+
+        rules.forEach((key, val) {
+          if (val is List) {
+            if (val.contains(oldName)) {
+              removeFromList(val, oldName);
+              addToList(val, targetFile);
+            }
+          }
+        });
+      } else {
+        // ADD
+        // 1. Mark as private (hidden from others)
+        addToList(private, targetFile);
+
+        // 2. Add to Rule for THIS entry point
+        if (!rules.containsKey(entryName)) {
+          // If rule missing, create it.
+          // CRITICAL: Must snapshot current visible files so we don't accidentally hide them
+          // by switching from "Default Show All" to "Strict Whitelist".
+          final currentVisible = _files.map((f) => f.name).toList();
+          if (!currentVisible.contains(targetFile))
+            currentVisible.add(targetFile);
+          rules[entryName] = currentVisible;
+        } else {
+          final List<dynamic> currentRule = rules[entryName];
+          addToList(currentRule, targetFile);
+        }
+      }
+
+      // Save
+      await visibleFile.writeAsString(jsonEncode(json));
+      print("DEBUG: visible_files.json updated for $targetFile");
+    } catch (e) {
+      print("Error updating visible_files.json: $e");
+    }
+  }
+
   void _addNewFile() {
     showDialog(
       context: context,
@@ -433,6 +608,12 @@ class _RunCodePageState extends State<RunCodePage> {
                 });
                 if (widget.isAdmin) {
                   _createAssetFile(newName);
+                  // Update visibility (Entry Point is likely _files[0] BEFORE this add, or we rely on 'files' state)
+                  // _files was just updated with .add.
+                  // The "Entry Point" is usually the first file loaded.
+                  if (_files.isNotEmpty) {
+                    _updateVisibleFiles(_files[0].name, newName);
+                  }
                 }
                 Navigator.pop(context);
               },
@@ -470,6 +651,15 @@ class _RunCodePageState extends State<RunCodePage> {
                 });
                 if (widget.isAdmin) {
                   _renameAssetFile(oldName, newName);
+                  if (_files.isNotEmpty) {
+                    _updateVisibleFiles(
+                      _files[0].name,
+                      newName,
+                      oldName: oldName,
+                    );
+                  }
+                  // Notify parent to update Markdown
+                  widget.onFileRenamed?.call(oldName, newName);
                 }
                 Navigator.pop(context);
               },
@@ -511,6 +701,15 @@ class _RunCodePageState extends State<RunCodePage> {
               });
               if (widget.isAdmin) {
                 _deleteAssetFile(nameToDelete);
+                // Note: _files content changed, but we need the entry point.
+                // Assuming entry point is still index 0 if we didn't delete it.
+                if (_files.isNotEmpty) {
+                  _updateVisibleFiles(
+                    _files[0].name,
+                    nameToDelete,
+                    isDelete: true,
+                  );
+                }
               }
               Navigator.pop(context);
             },
