@@ -10,6 +10,7 @@ import 'admin_student_achievements_page.dart';
 import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/student/widgets/achievements/student_profile_achievements_page.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/user_avatar.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String userId;
@@ -441,24 +442,11 @@ class _UserDetailPageState extends State<UserDetailPage> {
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: roleColor.withOpacity(0.5), width: 2),
-            ),
-            child: CircleAvatar(
-              radius: 48,
-              backgroundColor: roleColor.withOpacity(0.2),
-              foregroundColor: roleColor,
-              child: Text(
-                user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                style: textTheme.displayMedium?.copyWith(
-                  color: roleColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+          UserAvatar(
+            name: user.name,
+            role: user.roleName,
+            size: 100,
+            fontSize: 40,
           ),
           const SizedBox(height: 16),
           Text(
@@ -804,4 +792,3 @@ class _UserDetailPageState extends State<UserDetailPage> {
     );
   }
 }
-
