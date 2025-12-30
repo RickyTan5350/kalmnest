@@ -1,7 +1,7 @@
 // lib/widgets/note_grid_layout.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/grid_layout_view.dart';
-import 'package:flutter_codelab/theme.dart';
+import 'package:code_play/admin_teacher/widgets/grid_layout_view.dart';
+import 'package:code_play/theme.dart';
 
 class NoteGridLayout extends StatelessWidget {
   final List<Map<String, dynamic>> notes; // Renamed for clarity
@@ -57,10 +57,7 @@ class NoteGridLayout extends StatelessWidget {
         topicColor = brandColors?.php ?? Colors.indigo;
         topicIcon = Icons.php;
         break;
-      case 'backend':
-        topicColor = brandColors?.backend ?? Colors.purple;
-        topicIcon = Icons.storage;
-        break;
+
       default:
         topicColor = brandColors?.other ?? Colors.grey;
         topicIcon = Icons.folder_open;
@@ -107,7 +104,6 @@ class NoteGridLayout extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-              
                     const Spacer(),
                     if (item['updatedAt'] != null)
                       Padding(
@@ -146,3 +142,4 @@ class NoteGridLayout extends StatelessWidget {
     );
   }
 }
+

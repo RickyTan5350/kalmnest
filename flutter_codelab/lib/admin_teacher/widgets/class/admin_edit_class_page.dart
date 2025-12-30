@@ -1,6 +1,8 @@
 // lib/widgets/edit_class_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_theme_extensions.dart';
 
 class EditClassPage extends StatefulWidget {
   final dynamic classData;
@@ -171,30 +173,13 @@ class _EditClassPageState extends State<EditClassPage> {
     required String labelText,
     required IconData icon,
     String? hintText,
-    required ColorScheme colorScheme,
+    required BuildContext context,
   }) {
-    return InputDecoration(
+    return ClassTheme.inputDecoration(
+      context: context,
       labelText: labelText,
+      icon: icon,
       hintText: hintText,
-      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.outline),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.primary, width: 2),
-      ),
-      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-      hintStyle: TextStyle(
-        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-      ),
-      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.25),
-      filled: true,
     );
   }
 
@@ -234,7 +219,7 @@ class _EditClassPageState extends State<EditClassPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Failed to update class'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
           duration: const Duration(seconds: 4),
         ),
       );
@@ -283,33 +268,28 @@ class _EditClassPageState extends State<EditClassPage> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5FAFC), // Match create page
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5FAFC), // Match create page
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text("Edit Class"),
-        titleTextStyle: TextStyle(
+        titleTextStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
           color: colorScheme.onSurface,
-          fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
         iconTheme: IconThemeData(color: colorScheme.onSurface),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(ClassConstants.cardPadding),
         child: Center(
           child: Container(
-            width: 420,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5FAFC), // Match create page
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            padding: const EdgeInsets.all(24),
+            constraints: BoxConstraints(maxWidth: ClassConstants.formMaxWidth),
+            decoration: ClassTheme.cardDecoration(context),
+            padding: EdgeInsets.all(ClassConstants.cardPadding),
             child: Form(
               key: _formKey,
               child: Column(
@@ -323,22 +303,22 @@ class _EditClassPageState extends State<EditClassPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: ClassConstants.sectionSpacing),
 
                   // CLASS NAME
                   TextFormField(
                     controller: classNameController,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
+                      context: context,
                       labelText: "Class Name",
                       hintText: "Enter class name",
                       icon: Icons.class_,
-                      colorScheme: colorScheme,
                     ),
                     validator: (v) =>
                         v!.trim().isEmpty ? "Class name required" : null,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: ClassConstants.formSpacing),
 
                   // TEACHER DROPDOWN
                   // Ensure value exists in items to avoid assertion error
@@ -352,15 +332,15 @@ class _EditClassPageState extends State<EditClassPage> {
                             ))
                         ? _selectedTeacher
                         : null,
-                    dropdownColor: const Color(0xFFF5FAFC), // Match create page
+                    dropdownColor: colorScheme.surface,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
+                      context: context,
                       labelText: "Assign Teacher (Optional)",
                       hintText: _loadingTeachers
                           ? 'Loading...'
                           : 'Select teacher',
                       icon: Icons.person,
-                      colorScheme: colorScheme,
                     ),
                     selectedItemBuilder: (BuildContext context) {
                       return [
@@ -430,9 +410,9 @@ class _EditClassPageState extends State<EditClassPage> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: isActive
-                                        ? Colors.green.withOpacity(0.2)
-                                        : Colors.red.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(4),
+                                        ? colorScheme.primaryContainer
+                                        : colorScheme.errorContainer,
+                                    borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.33),
                                   ),
                                   child: Text(
                                     status.toUpperCase(),
@@ -440,8 +420,8 @@ class _EditClassPageState extends State<EditClassPage> {
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       color: isActive
-                                          ? Colors.green
-                                          : Colors.red,
+                                          ? colorScheme.primary
+                                          : colorScheme.error,
                                     ),
                                   ),
                                 ),
@@ -459,7 +439,7 @@ class _EditClassPageState extends State<EditClassPage> {
                             }
                           },
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: ClassConstants.formSpacing),
 
                   // STUDENTS ENROLLMENT
                   Text(
@@ -469,7 +449,7 @@ class _EditClassPageState extends State<EditClassPage> {
                       fontSize: 14,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: ClassConstants.defaultPadding * 0.5),
                   Column(
                     children: List.generate(_selectedStudents.length, (index) {
                       final availableStudents = _getAvailableStudents(index);
@@ -494,12 +474,12 @@ class _EditClassPageState extends State<EditClassPage> {
                           ), // Match create page
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: _inputDecoration(
+                            context: context,
                             labelText: 'Student ${index + 1} (Optional)',
                             hintText: _loadingStudents
                                 ? 'Loading...'
                                 : 'Select student',
                             icon: Icons.person_add,
-                            colorScheme: colorScheme,
                           ),
                           selectedItemBuilder: (BuildContext context) {
                             return [
@@ -624,7 +604,7 @@ class _EditClassPageState extends State<EditClassPage> {
                       ), // Match create page
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: ClassConstants.formSpacing),
 
                   // DESCRIPTION
                   TextFormField(
@@ -632,17 +612,17 @@ class _EditClassPageState extends State<EditClassPage> {
                     maxLines: 3,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
+                      context: context,
                       labelText: "Description",
                       hintText: "Enter description",
                       icon: Icons.description,
-                      colorScheme: colorScheme,
                     ),
                     validator: (value) => (value == null || value.isEmpty)
                         ? 'Please enter description'
                         : null,
                   ),
 
-                  const SizedBox(height: 24),
+                  SizedBox(height: ClassConstants.sectionSpacing),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -665,7 +645,7 @@ class _EditClassPageState extends State<EditClassPage> {
                             vertical: 12,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(ClassConstants.inputBorderRadius),
                           ),
                         ),
                         child: loading

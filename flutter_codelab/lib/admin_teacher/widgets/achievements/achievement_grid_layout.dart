@@ -1,10 +1,9 @@
 // lib/widgets/achievement_grid_layout.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_achievement_detail.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/grid_layout_view.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_achievement_detail.dart';
+import 'package:code_play/admin_teacher/widgets/grid_layout_view.dart';
+import 'package:code_play/models/achievement_data.dart';
 // FIX 1: Import the correctly named unified grid file
- 
 
 class AchievementGridLayout extends StatelessWidget {
   final List<Map<String, dynamic>> achievements;
@@ -12,7 +11,9 @@ class AchievementGridLayout extends StatelessWidget {
   final Set<String> selectedIds;
   final void Function(String) onToggleSelection;
   final Map<String, GlobalKey> itemKeys;
-  
+  final String? currentUserId; // NEW
+  final bool isAdmin; // NEW
+
   // This is the callback from the Student View
   final void Function(String)? onTap;
 
@@ -23,6 +24,8 @@ class AchievementGridLayout extends StatelessWidget {
     required this.selectedIds,
     required this.onToggleSelection,
     required this.itemKeys,
+    this.currentUserId,
+    this.isAdmin = false,
     this.onTap,
   });
 
@@ -37,9 +40,9 @@ class AchievementGridLayout extends StatelessWidget {
 
   // Custom builder for Achievement card content
   Widget _buildAchievementCardContent(
-    BuildContext context, 
-    Map<String, dynamic> item, 
-    dynamic id, 
+    BuildContext context,
+    Map<String, dynamic> item,
+    dynamic id,
     GlobalKey key,
   ) {
     final String title = item['title'];
@@ -75,8 +78,8 @@ class AchievementGridLayout extends StatelessWidget {
                     ),
                   ),
                   // Only show "more" icon if we are in Admin mode (no custom tap handler)
-                  if (onTap == null)
-                    const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                  // if (onTap == null)
+                  //   const Icon(Icons.more_vert, size: 20, color: Colors.grey),
                 ],
               ),
             ),
@@ -135,9 +138,7 @@ class AchievementGridLayout extends StatelessWidget {
                               backgroundColor: Theme.of(
                                 context,
                               ).colorScheme.surfaceContainerHighest,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                color,
-                              ),
+                              valueColor: AlwaysStoppedAnimation<Color>(color),
                             ),
                       ),
                     ),
@@ -159,7 +160,7 @@ class AchievementGridLayout extends StatelessWidget {
       itemKeys: itemKeys.cast<dynamic, GlobalKey>(),
       module: GridModule.achievement,
       itemBuilder: _buildAchievementCardContent,
-      
+
       // FIX 2: Check if onTap is provided (Student View) before using default Admin logic
       onTap: (dynamic id) {
         if (onTap != null) {
@@ -168,13 +169,15 @@ class AchievementGridLayout extends StatelessWidget {
         } else {
           // Case B: Admin View (Use default navigation)
           final AchievementData? fullData = _findOriginalDataById(id as String);
-          
+
           if (fullData != null) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => AdminAchievementDetailPage(
                   initialData: fullData,
+                  currentUserId: currentUserId, // NEW
+                  isAdmin: isAdmin, // NEW
                 ),
               ),
             );

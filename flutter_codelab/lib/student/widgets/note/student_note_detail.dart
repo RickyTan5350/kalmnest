@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:flutter/services.dart';
-import 'package:flutter_codelab/api/note_api.dart';
+import 'package:code_play/api/note_api.dart';
 // Make sure this import path matches where you created the file above
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/constants/api_constants.dart';
 
-import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
-import 'package:flutter_codelab/student/widgets/note/pdf_service.dart';
+import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
+import 'package:path/path.dart' as p;
+import 'package:code_play/student/widgets/note/pdf_service.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'dart:convert';
+import 'package:code_play/admin_teacher/widgets/note/quiz_widget.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/utils/brand_color_extension.dart';
 
 class StudentNoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -35,6 +41,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   String _markdownContent = "";
   late String _currentTitle;
   late String _currentTopic; // State variable for topic
+  final Map<String, int> _quizStates =
+      {}; // Track quiz answers: Question Text -> Selected Index
 
   // --- Search State ---
   bool _isSearching = false;
@@ -127,6 +135,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
       await _pdfService.generateAndDownloadPdf(
         title: _currentTitle,
         content: _markdownContent,
+        quizStates: _quizStates,
       );
     } catch (e) {
       _showSnackBar('Failed to generate PDF: $e', isError: true);
@@ -213,20 +222,153 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     }
   }
 
-  void _openRunPage(String code) {
-    Navigator.push(
+  Future<void> _openRunPage(String code, {String? fileName}) async {
+    final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RunCodePage(initialCode: code)),
+      MaterialPageRoute(
+        builder: (context) => RunCodePage(
+          initialCode: code,
+          contextId: _currentTitle,
+          initialFileName: fileName,
+          topic: _currentTopic,
+          noteTitle: _currentTitle,
+          isAdmin: false,
+        ),
+      ),
     );
+
+    if (result == 'navigate_home') {
+      if (mounted) Navigator.pop(context, 'navigate_home');
+    } else if (result == 'navigate_topic') {
+      if (mounted) Navigator.pop(context, _currentTopic);
+    }
   }
 
   // Helper to ensure absolute URLs
   String _processMarkdown(String content) {
+    debugPrint("DEBUG processMarkdown: Raw content length: ${content.length}");
     final domain = ApiConstants.domain;
-    return content.replaceAll('](/storage/', ']($domain/storage/');
+    final processed = content.replaceAll('](/storage/', ']($domain/storage/');
+
+    // Debug: Find image links
+    final imageRegex = RegExp(r'!\[.*?\]\((.*?)\)');
+    final matches = imageRegex.allMatches(processed);
+    for (final match in matches) {
+      debugPrint("DEBUG: Found processed image URL: ${match.group(1)}");
+    }
+
+    return processed;
   }
 
   // --- UI WIDGETS ---
+  Future<String> _loadLinkedFile(String fileName) async {
+    try {
+      final cwd = Directory.current;
+      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
+      final cleanTitle = _currentTitle
+          .replaceAll(RegExp(r'[\r\n]+'), ' ')
+          .trim();
+      final file = File(p.join(assetsWwwPath, cleanTitle, fileName));
+      debugPrint(
+        "Debug: Trying to load asset using clean title: '$cleanTitle', path: ${file.path}",
+      );
+      if (await file.exists()) {
+        debugPrint("Debug: Asset found: ${file.path}");
+        final content = await file.readAsString();
+        return content
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;');
+      }
+      return "File not found: $fileName";
+    } catch (e) {
+      return "Error reading file: $e";
+    }
+  }
+
+  Widget _buildCodeBlockUI(
+    String htmlContent,
+    String rawCode,
+    String? fileName,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final canRun =
+        (_currentTopic == 'HTML' ||
+        _currentTopic == 'CSS' ||
+        _currentTopic == 'JS' ||
+        _currentTopic == 'PHP' ||
+        _currentTopic == 'General');
+
+    return Stack(
+      children: [
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: HtmlWidget(
+              htmlContent,
+              textStyle: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontFamily: 'monospace',
+              ),
+              customWidgetBuilder: (innerElement) {
+                if (innerElement.attributes.containsKey('data-scroll-index')) {
+                  final GlobalKey key = GlobalKey();
+                  _matchKeys.add(key);
+                  return SizedBox(width: 1, height: 1, key: key);
+                }
+                return null;
+              },
+            ),
+          ),
+        ),
+        if (canRun)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: InkWell(
+              onTap: () => _openRunPage(rawCode, fileName: fileName),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.play_arrow,
+                      size: 14,
+                      color: colorScheme.onPrimary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Run',
+                      style: TextStyle(
+                        color: colorScheme.onPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildHighlightedHtml(ColorScheme colorScheme) {
     _matchKeys = [];
 
@@ -274,95 +416,86 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 16),
       customWidgetBuilder: (element) {
         if (element.localName == 'pre') {
-          final codeText = element.text;
-          // Use innerHtml to preserve highlighting spans, wrapped in pre to preserve whitespace
-          final htmlContent =
-              '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
-          return Stack(
-            children: [
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  // Use HtmlWidget to render the code with highlights
-                  child: HtmlWidget(
-                    htmlContent,
-                    textStyle: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      fontFamily: 'monospace',
+          String? linkedFileName;
+          if (element.children.isNotEmpty &&
+              element.children.first.localName == 'code') {
+            final codeClass = element.children.first.attributes['class'] ?? '';
+
+            // 1. Check for Quiz
+            if (codeClass.contains('language-quiz')) {
+              final jsonStr = element.text.trim();
+              debugPrint('DEBUG: Found Quiz Block. Length: ${jsonStr.length}');
+              try {
+                final quizData = jsonDecode(jsonStr);
+                return QuizWidget(
+                  question: quizData['question'],
+                  options: List<String>.from(quizData['options']),
+                  correctIndex: quizData['correctIndex'],
+                  initialSelectedIndex: _quizStates[quizData['question']],
+                  onAnswerSelected: (index) {
+                    _quizStates[quizData['question']] = index;
+                  },
+                );
+              } catch (e) {
+                debugPrint('DEBUG: Quiz Parsing Error: $e');
+                debugPrint('DEBUG: JSON content: $jsonStr');
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Error parsing quiz: $e',
+                      style: const TextStyle(color: Colors.red),
                     ),
-                    // Recursively handle scroll indices inside the code block
-                    customWidgetBuilder: (innerElement) {
-                      if (innerElement.attributes.containsKey(
-                        'data-scroll-index',
-                      )) {
-                        final GlobalKey key = GlobalKey();
-                        _matchKeys.add(key);
-                        return SizedBox(width: 1, height: 1, key: key);
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child:
-                    (_currentTopic == 'HTML' ||
-                        _currentTopic == 'CSS' ||
-                        _currentTopic == 'JS' ||
-                        _currentTopic == 'PHP' ||
-                        _currentTopic == 'General')
-                    ? InkWell(
-                        onTap: () {
-                          // Allow 'Run' for these topics
-                          _openRunPage(codeText);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Raw JSON:',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(jsonStr),
+                  ],
+                );
+              }
+            }
 
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+            final match = RegExp(r':src=([^\s]+)').firstMatch(codeClass);
+            if (match != null) {
+              linkedFileName = match.group(1);
+            }
+          }
 
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.play_arrow,
-                                size: 14,
-                                color: colorScheme.onPrimary,
-                              ),
+          if (linkedFileName != null) {
+            return FutureBuilder<String>(
+              future: _loadLinkedFile(linkedFileName),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  final escapedContent = snapshot.data!;
+                  final html =
+                      '<pre style="margin: 0; padding: 0;">$escapedContent</pre>';
+                  final raw = escapedContent
+                      .replaceAll('&lt;', '<')
+                      .replaceAll('&gt;', '>')
+                      .replaceAll('&amp;', '&');
+                  return _buildCodeBlockUI(html, raw, linkedFileName);
+                }
+                return const SizedBox(
+                  height: 50,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              },
+            );
+          }
 
-                              const SizedBox(width: 4),
-                              Text(
-                                'Run',
-                                style: TextStyle(
-                                  color: colorScheme.onPrimary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          );
+          final codeText = element.text;
+          final htmlBlock =
+              '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
+          return _buildCodeBlockUI(htmlBlock, codeText, null);
         }
+
+        if (element.localName == 'img') {
+          final src = element.attributes['src'];
+          debugPrint("DEBUG HtmlWidget: Rendering Image with src: $src");
+        }
+
         if (element.attributes.containsKey('data-scroll-index')) {
           final GlobalKey key = GlobalKey();
           _matchKeys.add(key);
@@ -412,15 +545,23 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
           child: Scaffold(
             backgroundColor: colorScheme.surface,
             appBar: AppBar(
-              title: Text(
-                _currentTitle,
-                style: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                ),
+              title: BreadcrumbNavigation(
+                items: [
+                  BreadcrumbItem(
+                    label: 'Note',
+                    onTap: () => Navigator.of(context).pop('navigate_home'),
+                  ),
+                  BreadcrumbItem(
+                    label: _currentTopic,
+                    onTap: () => Navigator.of(context).pop(_currentTopic),
+                  ),
+                  BreadcrumbItem(label: _currentTitle),
+                ],
               ),
 
-              backgroundColor: colorScheme.surface,
+              backgroundColor: context
+                  .getBrandColorForTopic(_currentTopic)
+                  .withOpacity(0.2),
               iconTheme: IconThemeData(color: colorScheme.onSurface),
               elevation: 0,
               actions: [
@@ -463,20 +604,30 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                 : Stack(
                     children: [
                       Positioned.fill(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16.0),
-                          child: _buildHighlightedHtml(colorScheme),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 900),
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(16.0),
+                              child: _buildHighlightedHtml(colorScheme),
+                            ),
+                          ),
                         ),
                       ),
                       if (_isSearching)
-                        SearchNote(
-                          controller: _searchController,
-                          focusNode: _searchFocusNode,
-                          matchCount: _currentMatchIndex,
-                          totalMatches: _totalMatches,
-                          onNext: _nextMatch,
-                          onPrev: _prevMatch,
-                          onClose: _toggleSearch,
+                        Positioned(
+                          top: 16,
+                          left: 16,
+                          right: 16,
+                          child: SearchNote(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            matchCount: _currentMatchIndex,
+                            totalMatches: _totalMatches,
+                            onNext: _nextMatch,
+                            onPrev: _prevMatch,
+                            onClose: _toggleSearch,
+                          ),
                         ),
                     ],
                   ),

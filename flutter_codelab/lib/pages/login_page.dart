@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/models/user_data.dart'; // Using the UserDetails class from here
-import 'package:flutter_codelab/main.dart'; // Import the Feed structure
+import 'package:flutter/foundation.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/models/user_data.dart'; // Using the UserDetails class from here
+import 'package:code_play/main.dart'; // Import the Feed structure
+import 'package:code_play/pages/forgot_password_page.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/language_selector.dart';
 
 // Define a new page for the login screen
 class LoginPage extends StatefulWidget {
@@ -20,10 +25,57 @@ class _LoginPageState extends State<LoginPage> {
   bool _isPasswordVisible = false;
 
   @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_checkForJsonPaste);
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _checkForJsonPaste() {
+    if (!kDebugMode) return;
+    final text = _emailController.text.trim();
+    if (text.startsWith('{') && text.endsWith('}')) {
+      try {
+        final Map<String, dynamic> json = jsonDecode(text);
+        _populateFormFromJson(json);
+      } catch (e) {
+        // Not valid JSON, ignore
+      }
+    }
+  }
+
+  void _populateFormFromJson(Map<String, dynamic> json) {
+    String? getValue(List<String> keys) {
+      for (final key in keys) {
+        if (json.containsKey(key)) {
+          return json[key]?.toString();
+        }
+      }
+      return null;
+    }
+
+    final email = getValue(['email', 'username', 'user']);
+    final password = getValue(['password', 'pass', 'key']);
+
+    setState(() {
+      if (email != null) _emailController.text = email;
+      if (password != null) _passwordController.text = password;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.autofillSuccess),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
   }
 
   // --- Login Logic Handler ---
@@ -59,7 +111,6 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       }
-
     } catch (e) {
       if (mounted) {
         // --- START FIX: Logic to clean the error message for display ---
@@ -67,8 +118,10 @@ class _LoginPageState extends State<LoginPage> {
 
         // 1. Check for specific unwanted technical prefixes/codes and replace with a generic message.
         //    This prevents revealing internal structure errors (like 302 redirects).
-        if (errorMessage.contains('302') || errorMessage.contains('Server Error')) {
-          errorMessage = 'A network or server configuration error occurred. Please try again.';
+        if (errorMessage.contains('302') ||
+            errorMessage.contains('Server Error')) {
+          errorMessage =
+              'A network or server configuration error occurred. Please try again.';
         } else if (errorMessage.startsWith('Exception: ')) {
           // 2. Only clean the general Dart prefix for expected exceptions (e.g., failed credentials)
           errorMessage = errorMessage.substring('Exception: '.length);
@@ -78,7 +131,9 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             // ✅ CORRECTION: Use the cleaned 'errorMessage' variable here
-            content: Text('Login Failed: $errorMessage'),
+            content: Text(
+              AppLocalizations.of(context)!.loginFailed(errorMessage),
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -100,6 +155,11 @@ class _LoginPageState extends State<LoginPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [const LanguageSelector(), const SizedBox(width: 8)],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32.0),
@@ -112,14 +172,10 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   // Logo/App Title
-                  Icon(
-                    Icons.school, // Use a relevant icon
-                    size: 80,
-                    color: colorScheme.primary,
-                  ),
+                  Image.asset('assets/CodePlay.png', height: 80),
                   const SizedBox(height: 20),
                   Text(
-                    'Welcome Back!',
+                    'CodePlay',
                     style: textTheme.headlineMedium?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -134,8 +190,8 @@ class _LoginPageState extends State<LoginPage> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
-                      labelText: 'Email',
-                      hintText: 'user@example.com',
+                      labelText: AppLocalizations.of(context)!.email,
+                      hintText: AppLocalizations.of(context)!.emailHint,
                       prefixIcon: const Icon(Icons.email),
                       border: const OutlineInputBorder(),
                       enabledBorder: OutlineInputBorder(
@@ -143,8 +199,10 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty || !value.contains('@')) {
-                        return 'Please enter a valid email address.';
+                      if (value == null ||
+                          value.isEmpty ||
+                          !value.contains('@')) {
+                        return AppLocalizations.of(context)!.emailValidation;
                       }
                       return null;
                     },
@@ -158,12 +216,14 @@ class _LoginPageState extends State<LoginPage> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _handleLogin(),
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: AppLocalizations.of(context)!.password,
                       prefixIcon: const Icon(Icons.lock),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -174,7 +234,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty || value.length < 6) {
-                        return 'Password must be at least 6 characters long.';
+                        return AppLocalizations.of(context)!.passwordValidation;
                       }
                       return null;
                     },
@@ -183,28 +243,36 @@ class _LoginPageState extends State<LoginPage> {
 
                   // 3. Login Button (Material 3: FilledButton)
                   _isLoading
-                      ? Center(child: CircularProgressIndicator(color: colorScheme.primary,))
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: colorScheme.primary,
+                          ),
+                        )
                       : FilledButton.icon(
-                    onPressed: _handleLogin,
-                    icon: const Icon(Icons.login),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text(
-                        'Log In',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                  ),
+                          onPressed: _handleLogin,
+                          icon: const Icon(Icons.login),
+                          label: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12.0),
+                            child: Text(
+                              AppLocalizations.of(context)!.login,
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                          ),
+                        ),
 
                   const SizedBox(height: 20),
 
-                  // 4. Forgot Password/Sign Up Link (Material 3: TextButton)
+                  // 4. Forgot Password Link
                   TextButton(
                     onPressed: () {
-                      // TODO: Implement navigation to registration page
-                      print('Navigate to Registration');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordPage(),
+                        ),
+                      );
                     },
-                    child: const Text('Don\'t have an account? Sign Up'),
+                    child: Text(AppLocalizations.of(context)!.forgotPassword),
                   ),
                 ],
               ),
@@ -215,3 +283,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+

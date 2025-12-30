@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter_codelab/models/level.dart';
-import 'package:flutter_codelab/api/game_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/models/level.dart';
+import 'package:code_play/api/game_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_codelab/utils/local_asset_server.dart';
@@ -522,3 +522,4 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
     });
   }
 }
+

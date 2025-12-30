@@ -22,6 +22,10 @@ use App\Http\Controllers\GeminiController;
 Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/user', [UserController::class, 'store']); // Registration
 
+// Password Reset
+Route::post('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'sendResetCode']);
+Route::post('/reset-password', [\App\Http\Controllers\PasswordResetController::class, 'resetPassword']);
+
 // --- 1. SPECIFIC ROUTES (MUST BE AT THE TOP) ---
 // These are public so your Flutter app can access them without a token.
 
@@ -29,6 +33,8 @@ Route::get('/notes', [NotesController::class, 'showNotesBrief']);
 Route::get('/notes/search', [NotesController::class, 'search']);
 Route::post('/notes/new', [NotesController::class, 'store']);         // <--- This is the active Create Note route
 Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- This is the active Upload route
+Route::post('/run-code', [App\Http\Controllers\RunCodeController::class, 'execute']); // Execute PHP code
+Route::get('/get-file', [RunCodeController::class, 'getFile']);
 
 Route::post('/achievements/new', [AchievementController::class, 'store']);
 Route::get('/achievements', [AchievementController::class, 'showAchievementsBrief']);
@@ -71,6 +77,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{user}', [UserController::class, 'update']);
         // Delete account (DELETE /api/users/{user})
         Route::delete('/{user}', [UserController::class, 'destroy']);
+        // Import users (POST /api/users/import)
+        Route::post('/import', [UserController::class, 'import']);
     });
     // --- Current Logged-in User ---
     Route::get('/user', fn(Request $request) => $request->user());
@@ -128,6 +136,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [AchievementController::class, 'showAchievementsBrief']);
 
         // Change '/achievements/{id}' to '/{id}' (This maps to /api/achievements/{id})
+        // NOTE: This must come AFTER specific routes like 'user/{id}' if we added any, 
+        // to avoid conflict, but 'user/{id}' is distinct.
+        
+        Route::get('/user/{id}', [AchievementController::class, 'getUserAchievements']);
         Route::get('/{id}', [AchievementController::class, 'getAchievement']);
         Route::get('/{id}/students', [AchievementController::class, 'getAchievementStudents']);
     });

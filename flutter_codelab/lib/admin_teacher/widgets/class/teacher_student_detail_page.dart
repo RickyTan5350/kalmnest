@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/api/user_api.dart';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/api/user_api.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 import 'package:intl/intl.dart';
 
 /// Teacher view: Student detail page showing student info and quiz completion status
@@ -31,6 +33,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
   int _completedQuizzes = 0;
   String _filter = 'all'; // 'all', 'completed', 'pending'
   UserDetails? _studentInfo;
+  Map<String, dynamic>? _classData;
   final UserApi _userApi = UserApi();
 
   @override
@@ -44,13 +47,15 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
     setState(() => _loading = true);
 
     try {
-      // Fetch student info and quiz data in parallel
+      // Fetch class data, student info and quiz data in parallel
+      final classDataFuture = ClassApi.fetchClassById(widget.classId);
       final studentInfoFuture = _userApi.getUserDetails(widget.studentId);
       final quizDataFuture = ClassApi.getStudentQuizzes(
         widget.classId,
         widget.studentId,
       );
 
+      final classData = await classDataFuture;
       final studentInfo = await studentInfoFuture;
       final result = await quizDataFuture;
 
@@ -58,6 +63,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
 
       if (result['success'] == true) {
         setState(() {
+          _classData = classData;
           _studentInfo = studentInfo;
           _quizzes = List<Map<String, dynamic>>.from(result['data'] ?? []);
           _totalQuizzes = result['total_quizzes'] ?? 0;
@@ -66,14 +72,15 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
         });
       } else {
         setState(() {
+          _classData = classData;
           _studentInfo = studentInfo;
           _loading = false;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to load student quiz data'),
-              backgroundColor: Colors.red,
+            SnackBar(
+              content: const Text('Failed to load student quiz data'),
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -123,300 +130,336 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    // Get class color for AppBar
+    final color = cs.primary;
+
     return Scaffold(
-      backgroundColor: cs.surface,
-      body: SafeArea(
-        child: _loading
-            ? Center(child: CircularProgressIndicator(color: cs.primary))
-            : SingleChildScrollView(
+      appBar: AppBar(
+        title: BreadcrumbNavigation(
+          items: [
+            BreadcrumbItem(
+              label: 'Classes',
+              onTap: () {
+                // Navigate back to class list
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+            ),
+            BreadcrumbItem(
+              label: 'Details',
+              onTap: () {
+                // Navigate back to class detail
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
+            ),
+            BreadcrumbItem(
+              label: 'All Students',
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            BreadcrumbItem(
+              label: _studentInfo?.name ?? widget.studentName,
+            ),
+          ],
+        ),
+        backgroundColor: color.withOpacity(0.2),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() => _loading = true);
+              _fetchData();
+            },
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _fetchData();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              // Student Info Section - Left aligned, no centered header
+              Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  side: BorderSide(
+                    color: cs.outline.withOpacity(0.3),
+                    width: 1.0,
+                  ),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header
                       Row(
                         children: [
-                          TextButton.icon(
-                            onPressed: () => Navigator.pop(context),
-                            icon: Icon(Icons.arrow_back, color: cs.primary),
-                            label: Text(
-                              'Back',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: cs.primary,
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundColor: cs.primaryContainer,
+                            child: Text(
+                              _getInitials(
+                                _studentInfo?.name ?? widget.studentName,
                               ),
+                              style: textTheme.headlineMedium?.copyWith(
+                                color: cs.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _studentInfo?.name ?? widget.studentName,
+                                  style: textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: cs.onSurface,
+                                  ),
+                                ),
+                                if (_studentInfo?.email != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _studentInfo!.email,
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-
-                      // Student Info Card
-                      Card(
-                        elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 32,
-                                    backgroundColor: cs.primaryContainer,
-                                    child: Text(
-                                      _getInitials(
-                                        _studentInfo?.name ?? widget.studentName,
-                                      ),
-                                      style: textTheme.headlineSmall?.copyWith(
-                                        color: cs.onPrimaryContainer,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _studentInfo?.name ?? widget.studentName,
-                                          style: textTheme.headlineSmall?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: cs.onSurface,
-                                          ),
-                                        ),
-                                        if (_studentInfo?.email != null) ...[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            _studentInfo!.email,
-                                            style: textTheme.bodyMedium?.copyWith(
-                                              color: cs.onSurfaceVariant,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_studentInfo != null) ...[
-                                const SizedBox(height: 16),
-                                Divider(color: cs.outlineVariant),
-                                const SizedBox(height: 8),
-                                _buildInfoRow(
-                                  cs,
-                                  textTheme,
-                                  Icons.phone_outlined,
-                                  'Phone',
-                                  _studentInfo!.phoneNo,
-                                ),
-                                const SizedBox(height: 8),
-                                _buildInfoRow(
-                                  cs,
-                                  textTheme,
-                                  Icons.location_on_outlined,
-                                  'Address',
-                                  _studentInfo!.address,
-                                ),
-                                const SizedBox(height: 8),
-                                _buildInfoRow(
-                                  cs,
-                                  textTheme,
-                                  Icons.transgender,
-                                  'Gender',
-                                  _studentInfo!.gender,
-                                ),
-                                const SizedBox(height: 8),
-                                _buildInfoRow(
-                                  cs,
-                                  textTheme,
-                                  Icons.calendar_today,
-                                  'Joined Date',
-                                  _studentInfo!.joinedDate.split('T')[0],
-                                ),
-                                const SizedBox(height: 8),
-                                _buildInfoRow(
-                                  cs,
-                                  textTheme,
-                                  Icons.info_outline,
-                                  'Account Status',
-                                  _studentInfo!.accountStatus.toUpperCase(),
-                                  valueColor: _studentInfo!.accountStatus == 'active'
-                                      ? Colors.green
-                                      : cs.error,
-                                ),
-                              ],
-                            ],
-                          ),
+                      if (_studentInfo != null) ...[
+                        const SizedBox(height: 24),
+                        _buildSectionTitle(cs, textTheme, 'General Info'),
+                        const SizedBox(height: 12),
+                        _buildInfoRow(
+                          cs,
+                          textTheme,
+                          Icons.phone_outlined,
+                          'Phone',
+                          _studentInfo!.phoneNo,
                         ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Statistics Card
-                      Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(color: cs.outlineVariant, width: 1),
-                          borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 12),
+                        _buildInfoRow(
+                          cs,
+                          textTheme,
+                          Icons.location_on_outlined,
+                          'Address',
+                          _studentInfo!.address,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  cs,
-                                  textTheme,
-                                  'Total Quizzes',
-                                  '$_totalQuizzes',
-                                  Icons.quiz,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildStatCard(
-                                  cs,
-                                  textTheme,
-                                  'Completed',
-                                  '$_completedQuizzes',
-                                  Icons.check_circle,
-                                  Colors.green,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildStatCard(
-                                  cs,
-                                  textTheme,
-                                  'Pending',
-                                  '${_totalQuizzes - _completedQuizzes}',
-                                  Icons.pending,
-                                  Colors.orange,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildStatCard(
-                                  cs,
-                                  textTheme,
-                                  'Completion Rate',
-                                  _totalQuizzes > 0
-                                      ? '${((_completedQuizzes / _totalQuizzes) * 100).toStringAsFixed(0)}%'
-                                      : '0%',
-                                  Icons.trending_up,
-                                  Colors.blue,
-                                ),
-                              ),
-                            ],
-                          ),
+                        const SizedBox(height: 12),
+                        _buildInfoRow(
+                          cs,
+                          textTheme,
+                          Icons.transgender,
+                          'Gender',
+                          _studentInfo!.gender,
                         ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Filter Chips
-                      Row(
-                        children: [
-                          FilterChip(
-                            label: const Text('All'),
-                            selected: _filter == 'all',
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() => _filter = 'all');
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            label: const Text('Completed'),
-                            selected: _filter == 'completed',
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() => _filter = 'completed');
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            label: const Text('Pending'),
-                            selected: _filter == 'pending',
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() => _filter = 'pending');
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Quizzes List
-                      Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(color: cs.outlineVariant, width: 1),
-                          borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 12),
+                        _buildInfoRow(
+                          cs,
+                          textTheme,
+                          Icons.calendar_today,
+                          'Joined Date',
+                          _studentInfo!.joinedDate.split('T')[0],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Quizzes',
-                                style: textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: cs.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              _filteredQuizzes.isEmpty
-                                  ? Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(32.0),
-                                        child: Column(
-                                          children: [
-                                            Icon(
-                                              Icons.quiz_outlined,
-                                              size: 64,
-                                              color: cs.onSurfaceVariant
-                                                  .withOpacity(0.5),
-                                            ),
-                                            const SizedBox(height: 16),
-                                            Text(
-                                              'No quizzes found',
-                                              style: textTheme.titleMedium
-                                                  ?.copyWith(
-                                                color: cs.onSurfaceVariant,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                                  : Column(
-                                      children: _filteredQuizzes
-                                          .map((quiz) => _buildQuizItem(
-                                                cs,
-                                                textTheme,
-                                                quiz,
-                                              ))
-                                          .toList(),
-                                    ),
-                            ],
-                          ),
+                        const SizedBox(height: 12),
+                        _buildInfoRow(
+                          cs,
+                          textTheme,
+                          Icons.info_outline,
+                          'Account Status',
+                          _studentInfo!.accountStatus.toUpperCase(),
+                          valueColor: _studentInfo!.accountStatus == 'active'
+                              ? Colors.green
+                              : cs.error,
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // Statistics Section
+              _buildStatisticsSection(cs, textTheme),
+
+              const SizedBox(height: 24),
+
+              // Filter Chips
+              Wrap(
+                spacing: 8,
+                children: [
+                  FilterChip(
+                    label: const Text('All'),
+                    selected: _filter == 'all',
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() => _filter = 'all');
+                      }
+                    },
+                  ),
+                  FilterChip(
+                    label: const Text('Completed'),
+                    selected: _filter == 'completed',
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() => _filter = 'completed');
+                      }
+                    },
+                  ),
+                  FilterChip(
+                    label: const Text('Pending'),
+                    selected: _filter == 'pending',
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() => _filter = 'pending');
+                      }
+                    },
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Quizzes List
+              Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  side: BorderSide(
+                    color: cs.outline.withOpacity(0.3),
+                    width: 1.0,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionTitle(cs, textTheme, 'Quizzes'),
+                      const SizedBox(height: 16),
+                      _filteredQuizzes.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(32.0),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.quiz_outlined,
+                                      size: 64,
+                                      color: cs.onSurfaceVariant.withOpacity(0.5),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No quizzes found',
+                                      style: textTheme.titleMedium?.copyWith(
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : Column(
+                              children: _filteredQuizzes
+                                  .map((quiz) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 12.0),
+                                        child: _buildQuizItem(cs, textTheme, quiz),
+                                      ))
+                                  .toList(),
+                            ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildSectionTitle(ColorScheme cs, TextTheme textTheme, String title) {
+    return Text(
+      title,
+      style: textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: cs.onSurface,
+      ),
+    );
+  }
+
+  Widget _buildStatisticsSection(ColorScheme cs, TextTheme textTheme) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            cs,
+            textTheme,
+            'Total Quizzes',
+            '$_totalQuizzes',
+            Icons.quiz,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCard(
+            cs,
+            textTheme,
+            'Completed',
+            '$_completedQuizzes',
+            Icons.check_circle,
+            Colors.green,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCard(
+            cs,
+            textTheme,
+            'Pending',
+            '${_totalQuizzes - _completedQuizzes}',
+            Icons.pending,
+            Colors.orange,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCard(
+            cs,
+            textTheme,
+            'Completion Rate',
+            _totalQuizzes > 0
+                ? '${((_completedQuizzes / _totalQuizzes) * 100).toStringAsFixed(0)}%'
+                : '0%',
+            Icons.trending_up,
+            Colors.blue,
+          ),
+        ),
+      ],
     );
   }
 
@@ -428,35 +471,63 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
     IconData icon, [
     Color? iconColor,
   ]) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
+          color: cs.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            icon,
-            color: iconColor ?? cs.primary,
-            size: 24,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: (iconColor ?? cs.primary).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: Icon(
+                  icon,
+                  color: iconColor ?? cs.primary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      value,
+                      style: textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      label,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: cs.onSurface,
-            ),
-          ),
-          Text(
-            label,
-            style: textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -472,94 +543,97 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
         ? levelType['level_type_name'] ?? 'Unknown'
         : 'Unknown';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
           color: isCompleted
-              ? Colors.green.withOpacity(0.5)
-              : cs.outlineVariant,
-          width: 1,
+              ? Colors.green.withOpacity(0.3)
+              : cs.outline.withOpacity(0.3),
+          width: 1.0,
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isCompleted
-                  ? Colors.green.withOpacity(0.2)
-                  : Colors.orange.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              isCompleted ? Icons.check_circle : Icons.pending,
-              color: isCompleted ? Colors.green : Colors.orange,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isCompleted
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: Icon(
+                  isCompleted ? Icons.check_circle : Icons.pending,
+                  color: isCompleted ? Colors.green : Colors.orange,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        quiz['level_name'] ?? 'No Name',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            quiz['level_name'] ?? 'No Name',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurface,
+                            ),
+                          ),
                         ),
+                        const SizedBox(width: 8),
+                        Chip(
+                          label: Text(
+                            levelTypeName,
+                            style: textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          backgroundColor: cs.primaryContainer.withOpacity(0.3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isCompleted
+                          ? 'Completed: ${_formatDate(quiz['completion_date'])}'
+                          : 'Status: Pending',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: isCompleted ? Colors.green : Colors.orange,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: cs.primaryContainer.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        levelTypeName,
-                        style: textTheme.labelSmall?.copyWith(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w600,
+                    if (!isCompleted) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Assigned: ${_formatDate(quiz['created_at'])}',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  isCompleted
-                      ? 'Completed: ${_formatDate(quiz['completion_date'])}'
-                      : 'Status: Pending',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: isCompleted ? Colors.green : Colors.orange,
-                    fontSize: 12,
-                  ),
-                ),
-                if (!isCompleted) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Assigned: ${_formatDate(quiz['created_at'])}',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -603,4 +677,5 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
     );
   }
 }
+
 
