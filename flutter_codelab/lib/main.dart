@@ -382,45 +382,51 @@ class _FeedState extends State<Feed> {
     // --- END OF FIX ---
 
     return Scaffold(
-      body: Row(
+      backgroundColor:
+          backgroundColor, // ADDED: Match background preventing white gaps
+      body: Column(
         children: [
-          if (wideScreen)
-            DisappearingNavigationRail(
-              selectedIndex: selectedIndex,
-              backgroundColor: backgroundColor, // <-- Now uses the fresh color
-              onDestinationSelected: (index) {
-                setState(() {
-                  selectedIndex = index;
-                });
-                // Refresh GamePage when navigating to it
-                if (index == 1) {
-                  gamePageGlobalKey.currentState?.refresh();
-                }
-              },
-              // REMOVED onLogoutPressed
-              isExtended: _isRailExtended,
+          // Profile Header (now always visible at the top)
+          Container(
+            color: backgroundColor,
+            child: ProfileHeaderContent(
+              currentUser: widget.currentUser,
+              onLogoutPressed: _handleLogout,
               onMenuPressed: () {
                 setState(() {
                   _isRailExtended = !_isRailExtended;
                 });
               },
-              onAddButtonPressed: _onAddButtonPressed,
             ),
+          ),
+          // Main Body: Sidebar + Content
           Expanded(
-            child: Container(
-              color: backgroundColor, // <-- Now uses the fresh color
-              // MODIFIED: Always use a Column for header + content
-              child: Column(
-                children: [
-                  // Profile Header (now always visible)
-                  ProfileHeaderContent(
-                    currentUser: widget.currentUser,
-                    onLogoutPressed: _handleLogout,
+            child: Row(
+              children: [
+                if (wideScreen)
+                  DisappearingNavigationRail(
+                    selectedIndex: selectedIndex,
+                    backgroundColor: backgroundColor,
+                    onDestinationSelected: (index) {
+                      setState(() {
+                        selectedIndex = index;
+                      });
+                      // Refresh GamePage when navigating to it
+                      if (index == 1) {
+                        gamePageGlobalKey.currentState?.refresh();
+                      }
+                    },
+                    isExtended: _isRailExtended,
+                    // REMOVED: onMenuPressed (moved to header)
+                    onAddButtonPressed: _onAddButtonPressed,
                   ),
-                  // Main Page Content (Expanded to fill the remaining space)
-                  Expanded(child: pages[selectedIndex]),
-                ],
-              ),
+                Expanded(
+                  child: Container(
+                    color: backgroundColor,
+                    child: pages[selectedIndex],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
