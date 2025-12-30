@@ -62,134 +62,145 @@ class _ClassListItemState extends State<_ClassListItem> {
       elevation: 1.0,
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: widget.colorScheme.outline.withOpacity(0.3),
+          color: widget.colorScheme.outline.withValues(alpha: 0.3),
           width: 1.0,
         ),
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: widget.colorScheme.primaryContainer,
-                  foregroundColor: widget.colorScheme.onPrimaryContainer,
-                  child: Icon(Icons.school_rounded, size: 20),
-                ),
-                title: Text(
-                  widget.item['class_name'] ?? 'No Name',
-                  style: widget.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: widget.colorScheme.onSurface,
+        leading: CircleAvatar(
+          backgroundColor: widget.colorScheme.primaryContainer,
+          foregroundColor: widget.colorScheme.onPrimaryContainer,
+          child: Icon(Icons.school_rounded, size: 20),
+        ),
+        title: Text(
+          widget.item['class_name'] ?? 'No Name',
+          style: widget.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: widget.colorScheme.onSurface,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.item['description'] != null &&
+                widget.item['description'].toString().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: Text(
+                  widget.item['description'],
+                  style: widget.textTheme.bodySmall?.copyWith(
+                    color: widget.colorScheme.onSurfaceVariant,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (widget.item['description'] != null &&
-                        widget.item['description'].toString().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, bottom: 4),
-                        child: Text(
-                          widget.item['description'],
-                          style: widget.textTheme.bodySmall?.copyWith(
-                            color: widget.colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    Icon(
+                      Icons.person_outline,
+                      size: 14,
+                      color: widget.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _hasTeacher ? _teacherName : 'No teacher',
+                      style: widget.textTheme.labelSmall?.copyWith(
+                        color: _hasTeacher
+                            ? widget.colorScheme.onSurfaceVariant
+                            : widget.colorScheme.error,
+                        fontStyle: _hasTeacher
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 4,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.person_outline,
-                              size: 14,
-                              color: widget.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _hasTeacher ? _teacherName : 'No teacher',
-                              style: widget.textTheme.labelSmall?.copyWith(
-                                color: _hasTeacher
-                                    ? widget.colorScheme.onSurfaceVariant
-                                    : widget.colorScheme.error,
-                                fontStyle: _hasTeacher
-                                    ? FontStyle.normal
-                                    : FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 14,
-                              color: widget.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _studentCount > 0
-                                  ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                                  : 'No students',
-                              style: widget.textTheme.labelSmall?.copyWith(
-                                color: _studentCount > 0
-                                    ? widget.colorScheme.onSurfaceVariant
-                                    : widget.colorScheme.error,
-                                fontStyle: _studentCount > 0
-                                    ? FontStyle.normal
-                                    : FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                     ),
                   ],
                 ),
-                trailing: widget.roleName.toLowerCase() == 'admin'
-                    ? PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          color: widget.colorScheme.onSurfaceVariant,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 14,
+                      color: widget.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _studentCount > 0
+                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
+                          : 'No students',
+                      style: widget.textTheme.labelSmall?.copyWith(
+                        color: _studentCount > 0
+                            ? widget.colorScheme.onSurfaceVariant
+                            : widget.colorScheme.error,
+                        fontStyle: _studentCount > 0
+                            ? FontStyle.normal
+                            : FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+        trailing: widget.roleName.toLowerCase() == 'admin'
+            ? PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert,
+                  color: widget.colorScheme.onSurfaceVariant,
+                ),
+                onSelected: (value) {
+                  if (value == 'edit' && widget.onEdit != null) {
+                    widget.onEdit!();
+                  } else if (value == 'delete' && widget.onDelete != null) {
+                    widget.onDelete!();
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit,
+                          size: 20,
+                          color: widget.colorScheme.onSurface,
                         ),
-                        onSelected: (value) {
-                          if (value == 'edit' && widget.onEdit != null) {
-                            widget.onEdit!();
-                          } else if (value == 'delete' && widget.onDelete != null) {
-                            widget.onDelete!();
-                          }
-                        },
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, size: 20, color: widget.colorScheme.onSurface),
-                                const SizedBox(width: 8),
-                                const Text('Edit'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_outline, size: 20, color: widget.colorScheme.error),
-                                const SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: widget.colorScheme.error)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      )
-                    : null,
-                onTap: widget.onTap,
-              ),
+                        const SizedBox(width: 8),
+                        const Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          size: 20,
+                          color: widget.colorScheme.error,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Delete',
+                          style: TextStyle(color: widget.colorScheme.error),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : null,
+        onTap: widget.onTap,
+      ),
     );
   }
 }
@@ -239,7 +250,7 @@ class _ClassGridCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: colorScheme.outline.withOpacity(0.3),
+          color: colorScheme.outline.withValues(alpha: 0.3),
           width: 1.0,
         ),
         borderRadius: BorderRadius.circular(12.0),
@@ -261,7 +272,9 @@ class _ClassGridCard extends StatelessWidget {
                     height: 48,
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
+                      borderRadius: BorderRadius.circular(
+                        ClassConstants.cardBorderRadius * 0.67,
+                      ),
                     ),
                     child: Icon(
                       Icons.school_rounded,
@@ -300,7 +313,11 @@ class _ClassGridCard extends StatelessWidget {
                           value: 'edit',
                           child: Row(
                             children: [
-                              Icon(Icons.edit, size: 20, color: colorScheme.onSurface),
+                              Icon(
+                                Icons.edit,
+                                size: 20,
+                                color: colorScheme.onSurface,
+                              ),
                               const SizedBox(width: 8),
                               const Text('Edit'),
                             ],
@@ -310,9 +327,16 @@ class _ClassGridCard extends StatelessWidget {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
+                              Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: colorScheme.error,
+                              ),
                               const SizedBox(width: 8),
-                              Text('Delete', style: TextStyle(color: colorScheme.error)),
+                              Text(
+                                'Delete',
+                                style: TextStyle(color: colorScheme.error),
+                              ),
                             ],
                           ),
                         ),
@@ -403,7 +427,7 @@ class ClassListSection extends StatefulWidget {
   final SortType sortType;
   final SortOrder sortOrder;
   final VoidCallback? onReload;
-  
+
   const ClassListSection({
     super.key,
     required this.roleName,
@@ -412,7 +436,7 @@ class ClassListSection extends StatefulWidget {
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
     this.onReload,
-  }) : super(key: key);
+  });
 
   @override
   State<ClassListSection> createState() => _ClassListSectionState();
@@ -432,7 +456,7 @@ class _ClassListSectionState extends State<ClassListSection> {
   @override
   void didUpdateWidget(ClassListSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (        oldWidget.searchQuery != widget.searchQuery ||
+    if (oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortOrder != widget.sortOrder) {
@@ -476,9 +500,7 @@ class _ClassListSectionState extends State<ClassListSection> {
           loading = false;
         });
       }
-    } catch (e, stackTrace) {
-      print('Error loading classes: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         setState(() {
           classList = [];
@@ -648,7 +670,9 @@ class _ClassListSectionState extends State<ClassListSection> {
                     Icon(
                       Icons.school_outlined,
                       size: 64,
-                      color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.5,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -663,7 +687,9 @@ class _ClassListSectionState extends State<ClassListSection> {
                           ? 'Try adjusting your search query'
                           : 'You are not assigned to any classes yet',
                       style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -678,7 +704,10 @@ class _ClassListSectionState extends State<ClassListSection> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
@@ -747,7 +776,10 @@ class _ClassListSectionState extends State<ClassListSection> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
