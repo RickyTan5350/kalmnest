@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // Required for downloading images
 import 'package:code_play/admin_teacher/widgets/note/admin_edit_note.dart';
 import 'package:code_play/api/note_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -12,8 +12,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'delete_note.dart';
 import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:flutter_codelab/utils/brand_color_extension.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/utils/brand_color_extension.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'quiz_widget.dart';
@@ -593,7 +593,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
             // 1. Check for Quiz
             if (codeClass.contains('language-quiz')) {
-              final jsonStr = element.text;
+              final jsonStr = element.text.trim();
               try {
                 final quizData = jsonDecode(jsonStr);
                 return QuizWidget(
@@ -603,7 +603,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
                 );
               } catch (e) {
                 return Text(
-                  'Error parsing quiz: $e',
+                  'Error parsing quiz: $e\n$jsonStr',
                   style: const TextStyle(color: Colors.red),
                 );
               }
@@ -977,4 +977,3 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
     );
   }
 }
-
