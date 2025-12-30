@@ -66,6 +66,10 @@ class SyncAssetsCommand extends Command
         // AND sync seed_data/notes/<Topic>/pictures to Frontend
         $this->syncBackendToFrontend($backendNotesDir, $frontendAssetsDir);
 
+        // 5. Sync Backend -> Public Storage
+        $publicNotesDir = storage_path('app/public/notes');
+        $this->syncBackendToPublic($backendNotesDir, $publicNotesDir);
+
         $this->info('Asset Synchronization Completed!');
     }
 
@@ -199,6 +203,29 @@ class SyncAssetsCommand extends Command
                     $this->copyIfNewer($pic->getPathname(), $destPath);
                 }
             }
+        }
+    }
+
+    private function syncBackendToPublic($backendNotesDir, $publicNotesDir)
+    {
+        $this->section('Syncing Backend -> Public Storage');
+
+        if (!File::exists($publicNotesDir)) {
+            File::makeDirectory($publicNotesDir, 0755, true);
+        }
+
+        $files = File::allFiles($backendNotesDir);
+        foreach ($files as $file) {
+            $relativePath = $file->getRelativePathname();
+            $destPath = "$publicNotesDir/$relativePath";
+
+            // Ensure subdirectories exist
+            $destDir = dirname($destPath);
+            if (!File::exists($destDir)) {
+                File::makeDirectory($destDir, 0755, true);
+            }
+            
+            $this->copyIfNewer($file->getPathname(), $destPath);
         }
     }
 
