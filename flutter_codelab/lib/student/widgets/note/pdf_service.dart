@@ -20,6 +20,9 @@ class PdfService {
       // 2. Pre-process Quiz Blocks
       String processedContent = _processQuizBlocks(content);
 
+      // 3. Pre-process Large Code Blocks (to avoid TooManyPagesException)
+      processedContent = _splitLargeCodeBlocks(processedContent);
+
       // 3. Convert Markdown -> HTML
       String htmlContent = md.markdownToHtml(
         processedContent,
@@ -202,6 +205,47 @@ class PdfService {
         // Fallback if JSON parsing fails
         return '<div style="color: red;">Error parsing quiz: $e</div>';
       }
+    });
+  }
+
+  String _splitLargeCodeBlocks(String content) {
+    // Regex to match code blocks: ```language ... ```
+    // We capture language to preserve it in splits
+    final RegExp codeBlockRegex = RegExp(r'```(\w*)\s*([\s\S]*?)```');
+
+    return content.replaceAllMapped(codeBlockRegex, (match) {
+      String language = match.group(1) ?? '';
+      String code = match.group(2) ?? '';
+
+      // If the code block is actually a pre-processed HTML div (from quizzes or other logic), skip it.
+      // Although _processQuizBlocks replaces ```quiz``` with <div>, so this regex shouldn't match quizzes.
+      if (language.trim() == 'quiz') return match.group(0)!;
+
+      List<String> lines = const LineSplitter().convert(code);
+      const int maxLines =
+          45; // Tuned for A4 page with default margins & font size
+
+      if (lines.length <= maxLines) {
+        return match.group(0)!; // No change needed
+      }
+
+      StringBuffer buffer = StringBuffer();
+      for (int i = 0; i < lines.length; i += maxLines) {
+        int end = (i + maxLines < lines.length) ? i + maxLines : lines.length;
+        List<String> chunk = lines.sublist(i, end);
+
+        // Re-wrap in code block
+        buffer.writeln('```$language');
+        buffer.writeln(chunk.join('\n'));
+        buffer.writeln('```');
+
+        // Add a small spacer text/div to force a potential break point if needed
+        // Markdown treats double newlines as paragraph break.
+        if (i + maxLines < lines.length) {
+          buffer.writeln('\n');
+        }
+      }
+      return buffer.toString();
     });
   }
 }
