@@ -32,6 +32,7 @@ class _NotePageState extends State<NotePage> {
   SortOrder _sortOrder = SortOrder.ascending;
 
   final FocusNode _searchFocusNode = FocusNode();
+  final TextEditingController _searchController = TextEditingController();
   final TextEditingController _searchController =
       TextEditingController(); // ADDED
 
@@ -61,6 +62,7 @@ class _NotePageState extends State<NotePage> {
   void dispose() {
     _searchController.dispose(); // ADDED
     _searchFocusNode.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -73,6 +75,14 @@ class _NotePageState extends State<NotePage> {
       _studentKey.currentState?.refreshData();
     } else {
       _adminKey.currentState?.refreshData();
+    }
+  }
+
+  void _handleTopicChange(String newTopic) {
+    if (_topics.contains(newTopic)) {
+      setState(() {
+        _selectedTopic = newTopic;
+      });
     }
   }
 
@@ -145,6 +155,7 @@ class _NotePageState extends State<NotePage> {
                   SizedBox(
                     width: 300,
                     child: SearchBar(
+                      controller: _searchController,
                       controller: _searchController, // ADDED
                       focusNode: _searchFocusNode,
                       hintText: AppLocalizations.of(context)!.searchNotesHint,
@@ -159,6 +170,10 @@ class _NotePageState extends State<NotePage> {
                         if (_searchQuery.isNotEmpty)
                           IconButton(
                             icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
                             onPressed: () {
                               _searchController.clear(); // ADDED
                               setState(() => _searchQuery = '');
@@ -281,6 +296,7 @@ class _NotePageState extends State<NotePage> {
                             isGrid: _viewLayout == ViewLayout.grid,
                             sortType: _sortType,
                             sortOrder: _sortOrder,
+                            onTopicChanged: _handleTopicChange,
                           )
                         : AdminViewNotePage(
                             key: _adminKey,
@@ -291,6 +307,7 @@ class _NotePageState extends State<NotePage> {
                             query: _searchQuery,
                             sortType: _sortType,
                             sortOrder: _sortOrder,
+                            onTopicChanged: _handleTopicChange,
                           ),
                   ),
                 ],

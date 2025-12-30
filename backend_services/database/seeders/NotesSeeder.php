@@ -74,7 +74,7 @@ class NotesSeeder extends Seeder
         $sourceDir = $file->getPath(); 
         
         // 1. IMAGE PROCESSING LOGIC
-        $processedContent = preg_replace_callback('/!\[(.*?)\]\((.*?)\)/', function ($matches) use ($sourceDir, $storageFolder) {
+        $processedContent = preg_replace_callback('/!\[(.*?)\]\((.*?)\)/', function ($matches) use ($sourceDir, $storageFolder, $topicName) {
             $altText = $matches[1];
             $linkPath = $matches[2];
 
@@ -85,7 +85,12 @@ class NotesSeeder extends Seeder
             $sourceImagePath = $sourceDir . '/pictures/' . $imageName;
 
             if (File::exists($sourceImagePath)) {
-                $newFilename = time() . '_' . pathinfo($imageName, PATHINFO_FILENAME) . '.' . pathinfo($imageName, PATHINFO_EXTENSION);
+                // Use deterministic filename: topic_slug_filename.ext
+                $cleanTopic = Str::slug($topicName);
+                $cleanName = pathinfo($imageName, PATHINFO_FILENAME);
+                $ext = pathinfo($imageName, PATHINFO_EXTENSION);
+                
+                $newFilename = "{$cleanTopic}_{$cleanName}.{$ext}";
                 
                 Storage::disk('public')->putFileAs($storageFolder, new \Illuminate\Http\File($sourceImagePath), $newFilename);
 
