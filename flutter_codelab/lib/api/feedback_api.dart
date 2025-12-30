@@ -13,6 +13,7 @@ class FeedbackApiService {
     final Map<String, String> result = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     String? effectiveToken = token;
@@ -116,6 +117,9 @@ class FeedbackApiService {
         throw Exception(
           'Failed to fetch students: ${response.statusCode} - ${response.body}',
         );
+        throw Exception(
+          'Failed to fetch students: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching students: $e');
@@ -141,8 +145,14 @@ class FeedbackApiService {
         print(
           'FeedbackApiService: received 401, refreshing token and retrying once',
         );
+        print(
+          'FeedbackApiService: received 401, refreshing token and retrying once',
+        );
         final freshHdrs = await getHeaders();
         if (freshHdrs['Authorization'] != hdrs['Authorization']) {
+          print(
+            'FeedbackApiService: Authorization changed, retrying with new token',
+          );
           print(
             'FeedbackApiService: Authorization changed, retrying with new token',
           );
@@ -179,6 +189,9 @@ class FeedbackApiService {
           'Endpoint not found. Check API URL: ${ApiConstants.baseUrl}$endpoint',
         );
       } else {
+        throw Exception(
+          'Failed to fetch feedback: ${response.statusCode} - ${response.body}',
+        );
         throw Exception(
           'Failed to fetch feedback: ${response.statusCode} - ${response.body}',
         );

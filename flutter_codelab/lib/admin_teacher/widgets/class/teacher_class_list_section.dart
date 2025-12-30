@@ -405,7 +405,7 @@ class ClassListSection extends StatefulWidget {
   final VoidCallback? onReload;
   
   const ClassListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     this.searchQuery = '',
     required this.layout,

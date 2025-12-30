@@ -21,6 +21,7 @@ class AchievementApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     final token = await AuthApi.getToken();
@@ -228,6 +229,9 @@ class AchievementApi {
       return jsonResponse
           .map((item) => AchievementData.fromJson(item))
           .toList();
+    } else if (response.statusCode == 403 || response.statusCode == 401) {
+      // Return empty list for non-students or unauthenticated (though headers check it)
+      return [];
     } else {
       throw Exception('Failed to fetch user progress');
     }

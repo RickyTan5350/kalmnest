@@ -17,6 +17,7 @@ class NoteApi {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
   }
 

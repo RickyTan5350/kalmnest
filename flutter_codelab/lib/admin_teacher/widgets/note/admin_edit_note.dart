@@ -95,8 +95,9 @@ class _EditNotePageState extends State<EditNotePage> {
       if (widget.initialCursorIndex != null) {
         int idx = widget.initialCursorIndex!;
         if (idx < 0) idx = 0;
-        if (idx > _contentController.text.length)
+        if (idx > _contentController.text.length) {
           idx = _contentController.text.length;
+        }
         _contentController.selection = TextSelection.collapsed(offset: idx);
       }
     });

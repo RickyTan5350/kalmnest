@@ -28,6 +28,7 @@ class AuthApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
+          if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
         },
         body: body,
       );
@@ -104,6 +105,7 @@ class AuthApi {
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token', // Crucial: Send the token
+            if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
           },
         );
       } catch (e) {

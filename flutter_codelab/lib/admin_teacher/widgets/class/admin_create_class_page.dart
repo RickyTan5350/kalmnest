@@ -244,7 +244,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
                   // Teacher Dropdown
                   DropdownButtonFormField<String>(
-                    value: _selectedTeacher,
+                    initialValue: _selectedTeacher,
                     dropdownColor: const Color(0xFFF5FAFC),
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
@@ -368,7 +368,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: DropdownButtonFormField<String>(
-                          value: _selectedStudents[index],
+                          initialValue: _selectedStudents[index],
                           dropdownColor: const Color(0xFFF5FAFC),
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: _inputDecoration(

@@ -11,10 +11,10 @@ class ClassDetailPage extends StatefulWidget {
   final String roleName;
 
   const ClassDetailPage({
-    Key? key,
+    super.key,
     required this.classId,
     required this.roleName,
-  }) : super(key: key);
+  });
 
   @override
   State<ClassDetailPage> createState() => _ClassDetailPageState();

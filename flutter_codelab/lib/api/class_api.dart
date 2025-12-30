@@ -6,7 +6,7 @@ import 'package:code_play/constants/api_constants.dart';
 
 class ClassApi {
   // Replace with your PC's local IP
-  static String get base => ApiConstants.baseUrl;
+  static String base = '${ApiConstants.baseUrl}/api';
 
   // Helper function to get headers with authentication
   static Future<Map<String, String>> _getAuthHeaders({
@@ -15,6 +15,7 @@ class ClassApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     final token = await AuthApi.getToken();
