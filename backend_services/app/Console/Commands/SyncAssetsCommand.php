@@ -1,0 +1,228 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+
+class SyncAssetsCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'notes:sync-assets';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Bidirectionally sync assets between Frontend (flutter_codelab) and Backend (seed_data)';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
+    {
+        $this->info('Starting Asset Synchronization...');
+
+        // 1. Define Paths
+        // Backend Seed Data Root: backend_services/database/seed_data/notes
+        $backendNotesDir = database_path('seed_data/notes');
+        
+        // Frontend Assets Root: configured in .env
+        $frontendAssetsDir = env('FRONTEND_ASSETS_PATH');
+
+        if (!$frontendAssetsDir) {
+            $this->error("FRONTEND_ASSETS_PATH is not set in .env file.");
+            $this->line("Please add FRONTEND_ASSETS_PATH=/absolute/path/to/flutter_codelab/assets/www");
+            return 1;
+        }
+
+        if (!File::exists($backendNotesDir)) {
+            $this->error("Backend notes directory not found: $backendNotesDir");
+            return 1;
+        }
+
+        if (!File::exists($frontendAssetsDir)) {
+            $this->error("Frontend assets directory not found: $frontendAssetsDir");
+            return 1;
+        }
+
+        $this->info("Backend Dir: $backendNotesDir");
+        $this->info("Frontend Dir: $frontendAssetsDir");
+
+        // 2. Index Backend Notes (Title -> Topic Mapping)
+        $noteToTopicMap = $this->indexBackendNotes($backendNotesDir);
+
+        // 3. Sync Frontend -> Backend
+        $this->syncFrontendToBackend($frontendAssetsDir, $backendNotesDir, $noteToTopicMap);
+
+        // 4. Sync Backend -> Backend (Pictures) & Backend -> Frontend
+        // We actually want to sync assets located in seed_data/notes/<Topic>/assets/<NoteTitle> to Frontend
+        // AND sync seed_data/notes/<Topic>/pictures to Frontend
+        $this->syncBackendToFrontend($backendNotesDir, $frontendAssetsDir);
+
+        $this->info('Asset Synchronization Completed!');
+    }
+
+    private function indexBackendNotes($backendNotesDir)
+    {
+        $map = [];
+        $topics = File::directories($backendNotesDir);
+
+        foreach ($topics as $topicPath) {
+            $topicName = basename($topicPath);
+            $files = File::files($topicPath);
+
+            foreach ($files as $file) {
+                if ($file->getExtension() === 'md') {
+                    // Note Title is filename without extension
+                    $noteTitle = $file->getFilenameWithoutExtension();
+                    $map[$noteTitle] = $topicName;
+                }
+            }
+        }
+        return $map;
+    }
+
+    private function syncFrontendToBackend($frontendAssetsDir, $backendNotesDir, $noteToTopicMap)
+    {
+        $this->section('Syncing Frontend -> Backend');
+
+        // Iterate over Frontend Note Folders
+        $frontendDirs = File::directories($frontendAssetsDir);
+
+        foreach ($frontendDirs as $dir) {
+            $folderName = basename($dir);
+            
+            // Skip "pictures" folder in root of assets/www if it exists (treated separately)
+            if ($folderName === 'pictures') continue;
+
+            // Check if this folder corresponds to a known backend note
+            if (isset($noteToTopicMap[$folderName])) {
+                $topic = $noteToTopicMap[$folderName];
+                $targetDir = "$backendNotesDir/$topic/assets/$folderName";
+
+                // Ensure target directory exists
+                if (!File::exists($targetDir)) {
+                    File::makeDirectory($targetDir, 0755, true);
+                    $this->line("Created backend asset dir for: $folderName");
+                }
+
+                // Copy files
+                $files = File::allFiles($dir);
+                foreach ($files as $file) {
+                    $relativePath = $file->getRelativePathname();
+                    $destPath = "$targetDir/$relativePath";
+                    
+                    $this->copyIfNewer($file->getPathname(), $destPath);
+                }
+            } else {
+                $this->warn("Skipping Frontend folder '$folderName': No matching Backend note found.");
+            }
+        }
+    }
+
+    private function syncBackendToFrontend($backendNotesDir, $frontendAssetsDir)
+    {
+        $this->section('Syncing Backend -> Frontend');
+
+        $topics = File::directories($backendNotesDir);
+
+        foreach ($topics as $topicPath) {
+            $topicName = basename($topicPath);
+
+            // A. Sync Note-Specific Assets
+            $assetsBaseDir = "$topicPath/assets";
+            if (File::exists($assetsBaseDir)) {
+                $noteAssetDirs = File::directories($assetsBaseDir);
+                foreach ($noteAssetDirs as $noteAssetDir) {
+                    $noteTitle = basename($noteAssetDir);
+                    $targetDir = "$frontendAssetsDir/$noteTitle";
+
+                    if (!File::exists($targetDir)) {
+                        File::makeDirectory($targetDir, 0755, true);
+                    }
+
+                    $files = File::allFiles($noteAssetDir);
+                    foreach ($files as $file) {
+                        $relativePath = $file->getRelativePathname();
+                        $destPath = "$targetDir/$relativePath";
+                        $this->copyIfNewer($file->getPathname(), $destPath);
+                    }
+                }
+            }
+
+            // B. Sync Global Topic Pictures (if any)
+            // Backend: seed_data/notes/<Topic>/pictures
+            // Frontend: assets/www/pictures (?) OR assets/www/<LinkStructure>?
+            // Based on seed data, pictures are in notes/<Topic>/pictures.
+            // Based on frontend usage, we need to see where they go.
+            // Usually valid markdown links are relative. 
+            // If MD is in <Topic>/Note.md, listing ![]()
+            // In frontend, we might just put them in a central 'pictures' folder or handle them differently.
+            // For now, let's look at how frontend does it. 
+            // Assumption: Frontend has a 'pictures' folder in www root? Or per note?
+            // The earlier `ls` showed `assets/www` has directories for notes.
+            // Let's assume we copy `pictures` to `assets/www/pictures`? Or `assets/www/<Topic>/pictures`?
+            // Checking `visible_files.json` in `assets/www` showed `only3.html` at root of note folder.
+            // Let's sync backend `pictures` to `assets/www/pictures/<Topic>` to avoid collisions?
+            // Wait, the MD links in database are processed by `NoteSeeder` to absolute URLs.
+            // But for offline / raw usage in other contexts, relative links might matter.
+            // Strategy: Sync `seed_data/notes/<Topic>/pictures` -> `assets/www/pictures` (flattened or subfoldered).
+            // Let's go with `assets/www/pictures` (Merge all?). Or `assets/www/<Topic>/pictures`.
+            // Let's check if `assets/www/pictures` exists. `ls` output showed `assets/www` contents were directories.
+            // Wait, step 12 showed backend has `notes/JS/pictures`.
+            // Let's look at `assets/www` again.
+            // Step 5: `assets/www` listing did NOT show `pictures` folder.
+            // But Step 13 search result showed `notes\JS\pictures\BubbleSort_Avg_case.gif`.
+            // Let's create `assets/www/pictures` if it doesn't exist and dump all pictures there?
+            // Or maybe `assets/www/<Topic>/pictures` is safer.
+            
+            $backendPicDir = "$topicPath/pictures";
+            if (File::exists($backendPicDir)) {
+                // Target: flutter_codelab/assets/www/pictures/<Topic>
+                // We'll create a `pictures` folder in `www`.
+                $targetPicDir = "$frontendAssetsDir/pictures/$topicName";
+                
+                if (!File::exists($targetPicDir)) {
+                    File::makeDirectory($targetPicDir, 0755, true);
+                }
+
+                $pics = File::files($backendPicDir);
+                foreach ($pics as $pic) {
+                    $destPath = "$targetPicDir/" . $pic->getFilename();
+                    $this->copyIfNewer($pic->getPathname(), $destPath);
+                }
+            }
+        }
+    }
+
+    private function copyIfNewer($source, $dest)
+    {
+        if (!File::exists($dest)) {
+            File::copy($source, $dest);
+            $this->info("Copied new: " . basename($dest));
+            return;
+        }
+
+        $srcTime = File::lastModified($source);
+        $destTime = File::lastModified($dest);
+
+        if ($srcTime > $destTime) {
+            File::copy($source, $dest);
+            $this->info("Updated: " . basename($dest));
+        }
+    }
+
+    private function section($title)
+    {
+        $this->line('');
+        $this->info("=== $title ===");
+        $this->line('');
+    }
+}
