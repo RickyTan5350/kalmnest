@@ -638,7 +638,7 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
     } else {
       // --- LIST VIEW ---
       return SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate((
             BuildContext context,
