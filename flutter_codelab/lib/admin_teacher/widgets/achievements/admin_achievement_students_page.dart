@@ -190,7 +190,7 @@ class _AdminAchievementStudentsPageState
                   borderRadius: BorderRadius.circular(12.0),
                 ),
                 child: ListTile(
-                  enabled: !isExcluded,
+                  // enabled: !isExcluded, // Removed to allow interaction for SnackBar
                   leading: CircleAvatar(
                     backgroundColor: Theme.of(
                       context,
@@ -210,27 +210,40 @@ class _AdminAchievementStudentsPageState
                     ),
                   ),
                   subtitle: Text(email),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Unlocked',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isExcluded
-                              ? Theme.of(context).disabledColor
-                              : Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Unlocked',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isExcluded
+                                  ? Theme.of(context).disabledColor
+                                  : Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            _formatDate(unlockedAt),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: isExcluded
+                                      ? Theme.of(context).disabledColor
+                                      : null,
+                                ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        _formatDate(unlockedAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isExcluded
-                              ? Theme.of(context).disabledColor
-                              : null,
-                        ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.chevron_right,
+                        color: isExcluded
+                            ? Theme.of(context).disabledColor
+                            : Colors.grey,
                       ),
                     ],
                   ),
@@ -284,4 +297,3 @@ class _AdminAchievementStudentsPageState
     );
   }
 }
-
