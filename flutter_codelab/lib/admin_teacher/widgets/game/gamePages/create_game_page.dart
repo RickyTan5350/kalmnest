@@ -79,6 +79,12 @@ class _CreateGamePageState extends State<CreateGamePage> {
     _initServer();
   }
 
+  Future<void> _clearTempData() async {
+    if (_userId == null) return;
+    final storage = LocalLevelStorage();
+    await storage.clearLevelData('temp', userId: _userId);
+  }
+
   Future<void> _initServer() async {
     _server = LocalAssetServer();
     _previewServer = LocalAssetServer();
@@ -88,6 +94,13 @@ class _CreateGamePageState extends State<CreateGamePage> {
       // Fetch user ID to pass to Unity
       final user = await AuthApi.getStoredUser();
       final userId = user?['user_id']?.toString();
+      
+      setState(() {
+        _userId = userId;
+      });
+
+      // Clear any existing temp data for this user
+      await _clearTempData();
       
       // Start preview server for local storage
       final storage = LocalLevelStorage();
@@ -195,11 +208,15 @@ class _CreateGamePageState extends State<CreateGamePage> {
                             levelId: 'temp',
                             type: type,
                             dataType: 'level',
+                            userId: _userId, // Added userId
+                            userRole: widget.userRole,
                           );
                           tempWinData[type] = await storage.getFileContent(
                             levelId: 'temp',
                             type: type,
                             dataType: 'win',
+                            userId: _userId, // Added userId
+                            userRole: widget.userRole,
                           );
                         }
 
@@ -224,7 +241,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
 
                         if (response.success) {
                           // Clear temp data after successful creation
-                          await storage.clearLevelData('temp');
+                          await _clearTempData();
 
                           // Extract data
                           final data = response.data;
@@ -326,11 +343,12 @@ class _CreateGamePageState extends State<CreateGamePage> {
                         controller.addJavaScriptHandler(
                           handlerName: 'saveLevelFile',
                           callback: (args) async {
-                            if (args.length >= 3) {
-                              final levelId = args[0] as String;
-                              final type = args[1] as String;
-                              final dataType = args[2] as String;
-                              final content = args[3] as String;
+                            // Unity calls: window.flutter_inappwebview.callHandler('saveLevelFile', levelId, type, dataType, content)
+                            if (args.length >= 4) {
+                              final levelId = args[0] as String? ?? 'temp';
+                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final dataType = args[2] as String? ?? 'levelData';
+                              final content = args[3] as String? ?? '';
 
                               final storage = LocalLevelStorage();
                               return await storage.saveDataFile(
@@ -338,6 +356,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                                 type: type,
                                 dataType: dataType,
                                 content: content,
+                                userId: _userId,
                               );
                             }
                             return false;
@@ -348,16 +367,18 @@ class _CreateGamePageState extends State<CreateGamePage> {
                         controller.addJavaScriptHandler(
                           handlerName: 'saveIndexFile',
                           callback: (args) async {
-                            if (args.length >= 2) {
-                              final levelId = args[0] as String;
-                              final type = args[1] as String;
-                              final content = args[2] as String;
+                            // Unity calls: window.flutter_inappwebview.callHandler('saveIndexFile', levelId, type, content)
+                            if (args.length >= 3) {
+                              final levelId = args[0] as String? ?? 'temp';
+                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final content = args[2] as String? ?? '';
 
                               final storage = LocalLevelStorage();
                               return await storage.saveIndexFile(
                                 levelId: levelId,
                                 type: type,
                                 content: content,
+                                userId: _userId,
                               );
                             }
                             return false;
@@ -368,19 +389,26 @@ class _CreateGamePageState extends State<CreateGamePage> {
                         controller.addJavaScriptHandler(
                           handlerName: 'getLevelFile',
                           callback: (args) async {
+                            // Unity calls: window.flutter_inappwebview.callHandler('getLevelFile', levelId, type, dataType, useProgress)
                             if (args.length >= 3) {
-                              final levelId = args[0] as String;
-                              final type = args[1] as String;
-                              final dataType = args[2] as String;
+                              final levelId = args[0] as String? ?? 'temp';
+                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final dataType = args[2] as String? ?? 'levelData';
+                              final useProgress = args.length >= 4 
+                                  ? (args[3] as bool? ?? false) 
+                                  : false;
 
                               final storage = LocalLevelStorage();
                               return await storage.getFileContent(
                                 levelId: levelId,
                                 type: type,
                                 dataType: dataType,
+                                useProgress: useProgress,
+                                userId: _userId,
+                                userRole: widget.userRole, // Added userRole
                               );
                             }
-                            return null;
+                            return '';
                           },
                         );
                       },

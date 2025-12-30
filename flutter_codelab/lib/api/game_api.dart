@@ -104,7 +104,7 @@ class GameAPI {
   /// ------------------------------------------------------------
   /// FETCH A SINGLE LEVEL BY ID → RETURNS LevelModel?
   /// ------------------------------------------------------------
-  static Future<LevelModel?> fetchLevelById(String levelId) async {
+  static Future<LevelModel?> fetchLevelById(String levelId, {String? userRole}) async {
     try {
       final url = Uri.parse("$apiBase/level/$levelId");
       final headers = await _getHeaders();
@@ -123,36 +123,41 @@ class GameAPI {
           
           final user = await AuthApi.getStoredUser();
           final userId = user?['user_id']?.toString();
-          
+          final role = userRole ?? user?['role']?.toString();
+          final bool isStaff = role != null && (role.toLowerCase() == 'admin' || role.toLowerCase() == 'teacher');
+
           await storage.saveLevelData(
             levelId: levelId,
             levelDataJson: levelDataJson,
             winConditionJson: winConditionJson,
             userId: userId,
+            userRole: role,
           );
           
-          // Also try to load and save student progress if exists
-          final progressUrl = Uri.parse("$apiBase/level-user/$levelId");
-          try {
-            final progressResponse = await http.get(progressUrl, headers: headers);
-            if (progressResponse.statusCode == 200) {
-              final progressData = jsonDecode(progressResponse.body);
-              if (progressData['saved_data'] != null) {
-                await storage.saveStudentProgress(
-                  levelId: levelId,
-                  savedDataJson: progressData['saved_data'] is String 
-                    ? progressData['saved_data'] 
-                    : jsonEncode(progressData['saved_data']),
-                  userId: userId,
-                );
-                if (kDebugMode) {
-                  print("Loaded backend progress for level $levelId");
+          // Also try to load and save student progress if exists (SKIP for admins/teachers)
+          if (!isStaff) {
+            final progressUrl = Uri.parse("$apiBase/level-user/$levelId");
+            try {
+              final progressResponse = await http.get(progressUrl, headers: headers);
+              if (progressResponse.statusCode == 200) {
+                final progressData = jsonDecode(progressResponse.body);
+                if (progressData['saved_data'] != null) {
+                  await storage.saveStudentProgress(
+                    levelId: levelId,
+                    savedDataJson: progressData['saved_data'] is String 
+                      ? progressData['saved_data'] 
+                      : jsonEncode(progressData['saved_data']),
+                    userId: userId,
+                  );
+                  if (kDebugMode) {
+                    print("Loaded backend progress for level $levelId");
+                  }
                 }
               }
+            } catch (e) {
+              // Progress may not exist yet, which is fine
+              print("No saved progress found for level: $levelId");
             }
-          } catch (e) {
-            // Progress may not exist yet, which is fine
-            print("No saved progress found for level: $levelId");
           }
         }
         
@@ -237,6 +242,8 @@ class GameAPI {
     required String levelId,
     required String levelName,
     required String levelTypeName,
+    String? levelData,
+    String? winCondition,
   }) async {
     try {
       final url = Uri.parse("$apiBase/levels/$levelId");
@@ -248,6 +255,8 @@ class GameAPI {
         body: jsonEncode({
           'level_name': levelName,
           'level_type_name': levelTypeName,
+          if (levelData != null) 'level_data': levelData,
+          if (winCondition != null) 'win_condition': winCondition,
         }),
       );
 
