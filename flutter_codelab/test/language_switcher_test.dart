@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/profile_header_content.dart';
-import 'package:flutter_codelab/controllers/locale_controller.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/admin_teacher/widgets/user/profile_header_content.dart';
+import 'package:code_play/controllers/locale_controller.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/models/user_data.dart';
 
 void main() {
   testWidgets('Language switcher changes locale', (WidgetTester tester) async {
@@ -25,7 +25,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: ProfileHeaderContent(currentUser: user, onLogoutPressed: () {}),
+          body: ProfileHeaderContent(
+            currentUser: user,
+            onLogoutPressed: () {},
+            onMenuPressed: () {},
+          ),
         ),
       ),
     );
