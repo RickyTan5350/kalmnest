@@ -192,6 +192,7 @@ class GameAPI {
     required String levelTypeName,
     String? levelData,
     String? winCondition,
+    int? timer,
   }) async {
     try {
       final url = Uri.parse("$apiBase/create-level");
@@ -205,6 +206,7 @@ class GameAPI {
           'level_type_name': levelTypeName,
           if (levelData != null) 'level_data': levelData,
           if (winCondition != null) 'win_condition': winCondition,
+          if (timer != null) 'timer': timer,
         }),
       );
 
@@ -256,6 +258,7 @@ class GameAPI {
     required String levelTypeName,
     String? levelData,
     String? winCondition,
+    int? timer,
   }) async {
     try {
       final url = Uri.parse("$apiBase/levels/$levelId");
@@ -269,6 +272,7 @@ class GameAPI {
           'level_type_name': levelTypeName,
           if (levelData != null) 'level_data': levelData,
           if (winCondition != null) 'win_condition': winCondition,
+          if (timer != null) 'timer': timer,
         }),
       );
 
@@ -347,6 +351,7 @@ class GameAPI {
   static Future<Map<String, dynamic>> saveStudentProgress({
     required String levelId,
     required String? savedData,
+    int? timer, // Add timer
   }) async {
     try {
       final url = Uri.parse("$apiBase/level-user/$levelId/save");
@@ -355,7 +360,10 @@ class GameAPI {
       final response = await http.post(
         url,
         headers: headers,
-        body: jsonEncode({'saved_data': savedData}),
+        body: jsonEncode({
+          'saved_data': savedData,
+          'timer': timer ?? 0, // Send timer
+        }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -398,6 +406,28 @@ class GameAPI {
       };
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// ------------------------------------------------------------
+  /// FETCH LEVEL USERS (For Teacher View)
+  /// ------------------------------------------------------------
+  static Future<List<Map<String, dynamic>>> fetchLevelUsers(
+    String levelId,
+  ) async {
+    try {
+      final url = Uri.parse("$apiBase/level-users/$levelId");
+      final headers = await _getHeaders();
+      final response = await http.get(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching level users: $e");
+      return [];
     }
   }
 }

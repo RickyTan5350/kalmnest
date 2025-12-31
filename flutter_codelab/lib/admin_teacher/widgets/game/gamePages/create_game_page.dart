@@ -62,6 +62,12 @@ class CreateGamePage extends StatefulWidget {
 class _CreateGamePageState extends State<CreateGamePage> {
   String selectedValue = 'HTML';
   String levelName = '';
+  // Validation state
+  bool _nameError = false;
+  // Timer state
+  final TextEditingController _timerController = TextEditingController(
+    text: '0',
+  );
 
   final GlobalKey<_IndexFilePreviewState> previewKey =
       GlobalKey<_IndexFilePreviewState>();
@@ -76,6 +82,9 @@ class _CreateGamePageState extends State<CreateGamePage> {
   @override
   void initState() {
     super.initState();
+    if (widget.userRole.toLowerCase() == 'teacher') {
+      selectedValue = 'Quiz';
+    }
     _initServer();
   }
 
@@ -94,14 +103,14 @@ class _CreateGamePageState extends State<CreateGamePage> {
       // Fetch user ID to pass to Unity
       final user = await AuthApi.getStoredUser();
       final userId = user?['user_id']?.toString();
-      
+
       setState(() {
         _userId = userId;
       });
 
       // Clear any existing temp data for this user
       await _clearTempData();
-      
+
       // Start preview server for local storage
       final storage = LocalLevelStorage();
       final storageBasePath = await storage.getBasePath(userId: userId);
@@ -150,11 +159,19 @@ class _CreateGamePageState extends State<CreateGamePage> {
 
                 /// Level name
                 TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Enter level name',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: 'Enter level name *',
+                    border: const OutlineInputBorder(),
+                    errorText: _nameError ? 'Level name is required' : null,
                   ),
-                  onChanged: (v) => levelName = v,
+                  onChanged: (v) {
+                    levelName = v;
+                    if (_nameError && v.isNotEmpty) {
+                      setState(() {
+                        _nameError = false;
+                      });
+                    }
+                  },
                 ),
 
                 const SizedBox(height: 16),
@@ -164,28 +181,43 @@ class _CreateGamePageState extends State<CreateGamePage> {
                   children: [
                     DropdownButton<String>(
                       value: selectedValue,
-                      items: ['HTML', 'CSS', 'JS', 'PHP', 'Quiz']
-                          .map(
-                            (e) => DropdownMenuItem(
-                              value: e,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Text(e),
-                              ),
-                            ),
-                          )
-                          .toList(),
+                      items:
+                          (widget.userRole.toLowerCase() == 'teacher'
+                                  ? ['Quiz']
+                                  : ['HTML', 'CSS', 'JS', 'PHP', 'Quiz'])
+                              .map(
+                                (e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Text(e),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (v) => setState(() => selectedValue = v!),
                     ),
                     const SizedBox(width: 16),
+                    // Timer Input (Only for Quiz)
+                    if (selectedValue == 'Quiz')
+                      SizedBox(
+                        width: 100,
+                        child: TextField(
+                          controller: _timerController,
+                          decoration: const InputDecoration(
+                            labelText: 'Timer (s)',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    if (selectedValue == 'Quiz') const SizedBox(width: 16),
                     ElevatedButton(
                       onPressed: () async {
                         if (levelName.isEmpty) {
-                          widget.showSnackBar(
-                            widget.parentContext,
-                            "Level name is required",
-                            Colors.red,
-                          );
+                          setState(() {
+                            _nameError = true;
+                          });
                           return;
                         }
 
@@ -199,7 +231,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                         // Read data from temp storage
                         final storage = LocalLevelStorage();
                         final levelTypes = ['html', 'css', 'js', 'php'];
-                        
+
                         Map<String, String?> tempLevelData = {};
                         Map<String, String?> tempWinData = {};
 
@@ -225,6 +257,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                           levelTypeName: selectedValue,
                           levelData: jsonEncode(tempLevelData),
                           winCondition: jsonEncode(tempWinData),
+                          timer: int.tryParse(_timerController.text) ?? 0,
                         );
 
                         if (!mounted) return;
@@ -273,7 +306,8 @@ class _CreateGamePageState extends State<CreateGamePage> {
                           }
 
                           // Call callback with level ID if provided
-                          if (widget.onLevelCreated != null && newLevelId != null) {
+                          if (widget.onLevelCreated != null &&
+                              newLevelId != null) {
                             widget.onLevelCreated!(newLevelId);
                           }
 
@@ -296,7 +330,8 @@ class _CreateGamePageState extends State<CreateGamePage> {
                                     Navigator.pop(ctx);
                                     // Map selectedValue (HTML, CSS...) to icon string
                                     // e.g. "HTML" -> "html"
-                                    String iconStr = selectedValue.toLowerCase();
+                                    String iconStr = selectedValue
+                                        .toLowerCase();
                                     if (iconStr == 'js') {
                                       iconStr = 'javascript';
                                     }
@@ -349,8 +384,10 @@ class _CreateGamePageState extends State<CreateGamePage> {
                             // Unity calls: window.flutter_inappwebview.callHandler('saveLevelFile', levelId, type, dataType, content)
                             if (args.length >= 4) {
                               final levelId = args[0] as String? ?? 'temp';
-                              final type = (args[1] as String? ?? 'html').toLowerCase();
-                              final dataType = args[2] as String? ?? 'levelData';
+                              final type = (args[1] as String? ?? 'html')
+                                  .toLowerCase();
+                              final dataType =
+                                  args[2] as String? ?? 'levelData';
                               final content = args[3] as String? ?? '';
 
                               final storage = LocalLevelStorage();
@@ -373,7 +410,8 @@ class _CreateGamePageState extends State<CreateGamePage> {
                             // Unity calls: window.flutter_inappwebview.callHandler('saveIndexFile', levelId, type, content)
                             if (args.length >= 3) {
                               final levelId = args[0] as String? ?? 'temp';
-                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final type = (args[1] as String? ?? 'html')
+                                  .toLowerCase();
                               final content = args[2] as String? ?? '';
 
                               final storage = LocalLevelStorage();
@@ -395,10 +433,12 @@ class _CreateGamePageState extends State<CreateGamePage> {
                             // Unity calls: window.flutter_inappwebview.callHandler('getLevelFile', levelId, type, dataType, useProgress)
                             if (args.length >= 3) {
                               final levelId = args[0] as String? ?? 'temp';
-                              final type = (args[1] as String? ?? 'html').toLowerCase();
-                              final dataType = args[2] as String? ?? 'levelData';
-                              final useProgress = args.length >= 4 
-                                  ? (args[3] as bool? ?? false) 
+                              final type = (args[1] as String? ?? 'html')
+                                  .toLowerCase();
+                              final dataType =
+                                  args[2] as String? ?? 'levelData';
+                              final useProgress = args.length >= 4
+                                  ? (args[3] as bool? ?? false)
                                   : false;
 
                               final storage = LocalLevelStorage();
@@ -488,9 +528,8 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
     if (widget.serverUrl.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    
-    final url =
-        "${widget.serverUrl}/${widget.levelId}/index/index.html";
+
+    final url = "${widget.serverUrl}/${widget.levelId}/index/index.html";
 
     return InAppWebView(
       key: _key,
@@ -508,4 +547,3 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
     });
   }
 }
-
