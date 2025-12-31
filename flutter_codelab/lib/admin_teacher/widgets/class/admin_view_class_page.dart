@@ -48,9 +48,11 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('${l10n.deleteClass}?'),
+        title: Text('${l10n.delete} ${l10n.classes}?'),
         content: Text(
-          'Are you sure you want to delete "${classData?['class_name'] ?? 'this class'}"? This action cannot be undone.',
+          l10n.deleteClassConfirmation(
+            classData?['class_name'] ?? l10n.thisClass,
+          ),
         ),
         actions: [
           TextButton(
@@ -60,7 +62,9 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: ButtonStyle(
-              foregroundColor: WidgetStateProperty.all(Colors.red),
+              foregroundColor: WidgetStateProperty.all(
+                Theme.of(context).colorScheme.error,
+              ),
             ),
             child: Text(l10n.delete),
           ),
@@ -75,7 +79,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(l10n.classDeletedSuccessfully),
-              backgroundColor: Colors.green,
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
           );
           Navigator.of(context).pop(true); // Return true to indicate change
@@ -85,7 +89,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(l10n.errorDeletingClass(e.toString())),
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -94,13 +98,14 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
   }
 
   // Get students from backend data
-  List<Student> get _students {
+  List<Student> _getStudents(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (classData == null || classData!['students'] == null) {
       return [];
     }
     final studentsList = classData!['students'] as List;
     return studentsList.map((s) {
-      final name = s['name'] ?? 'Unknown';
+      final name = s['name'] ?? l10n.unknown;
       final nameParts = name.split(' ');
       final initials = nameParts.length > 1
           ? '${nameParts[0][0]}${nameParts[1][0]}'
@@ -110,7 +115,8 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
   }
 
   String _formatDate(DateTime? date) {
-    if (date == null) return 'N/A';
+    final l10n = AppLocalizations.of(context)!;
+    if (date == null) return l10n.nA;
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute}';
   }
 
@@ -189,7 +195,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      classData?['class_name'] ?? 'No Name',
+                      classData?['class_name'] ?? l10n.noName,
                       style: Theme.of(context).textTheme.headlineMedium,
                       textAlign: TextAlign.center,
                     ),
@@ -198,13 +204,13 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
                       Chip(
                         label: Text(
                           classData?['teacher']?['name'] ??
-                              'No teacher assigned',
+                              l10n.noTeacherAssigned,
                         ),
                         backgroundColor: color.withOpacity(0.1),
                       )
                     else
                       Chip(
-                        label: const Text('No teacher assigned'),
+                        label: Text(l10n.noTeacherAssigned),
                         backgroundColor: Colors.grey.withOpacity(0.1),
                       ),
                   ],
@@ -246,7 +252,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
                     ),
                     Expanded(
                       child: Text(
-                        '${_students.length}',
+                        '${_getStudents(context).length}',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
@@ -310,6 +316,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
                           teacher['user_id'] ??
                           teacher['teacher_id'];
                       if (rawId == null) {
+                        final l10n = AppLocalizations.of(context)!;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(l10n.cannotOpenTeacherProfile),
@@ -337,7 +344,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
                       child: TeacherPreviewRow(
                         teacherName:
                             classData?['teacher']?['name'] ??
-                            'No teacher assigned',
+                            l10n.noTeacherAssigned,
                         teacherDescription:
                             classData?['teacher']?['email'] ?? '',
                       ),
@@ -367,7 +374,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'No teacher has been assigned to this class yet.',
+                            l10n.noTeacherAssignedToClass,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: Theme.of(
@@ -415,7 +422,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
                   _buildSectionTitle(context, l10n.students),
                   const SizedBox(height: 8),
                   _BorderedStudentPreviewRow(
-                    students: _students,
+                    students: _getStudents(context),
                     onViewAll: () {
                       Navigator.push(
                         context,
@@ -439,8 +446,9 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
               QuizListSection(
                 roleName: 'admin',
                 classId: widget.classId,
-                className: classData?['class_name'] ?? 'No Name',
-                classDescription: classData?['description'] ?? 'No description',
+                className: classData?['class_name'] ?? l10n.noName,
+                classDescription:
+                    classData?['description'] ?? l10n.noDescriptionAvailable,
               ),
             ],
           ),
@@ -463,6 +471,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
   }
 
   Widget _buildInfoRow(BuildContext context, String label, String? value) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -480,7 +489,7 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
           ),
           Expanded(
             child: Text(
-              value ?? 'N/A',
+              value ?? l10n.nA,
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
           ),
@@ -538,6 +547,7 @@ class _BorderedStudentPreviewRow extends StatelessWidget {
   }
 
   Widget _othersCard(BuildContext context, int extra) {
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: onViewAll,
       borderRadius: BorderRadius.circular(12.0),
@@ -565,7 +575,7 @@ class _BorderedStudentPreviewRow extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                "$extra more",
+                l10n.moreStudents(extra),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,

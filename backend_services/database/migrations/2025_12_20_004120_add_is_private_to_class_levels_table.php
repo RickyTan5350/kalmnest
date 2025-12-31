@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('class_levels', function (Blueprint $table) {
-            $table->boolean('is_private')->default(false)->after('level_id');
-        });
+        // Check if column already exists before adding it
+        if (!Schema::hasColumn('class_levels', 'is_private')) {
+            Schema::table('class_levels', function (Blueprint $table) {
+                $table->boolean('is_private')->default(false)->after('level_id');
+            });
+        }
     }
 
     /**
@@ -21,8 +24,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('class_levels', function (Blueprint $table) {
-            $table->dropColumn('is_private');
-        });
+        // Check if column exists before dropping it
+        if (Schema::hasColumn('class_levels', 'is_private')) {
+            Schema::table('class_levels', function (Blueprint $table) {
+                $table->dropColumn('is_private');
+            });
+        }
     }
 };

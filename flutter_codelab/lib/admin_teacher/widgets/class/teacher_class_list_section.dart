@@ -5,6 +5,7 @@ import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart
 import 'package:code_play/constants/view_layout.dart';
 import 'package:code_play/constants/class_constants.dart';
 import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 // Class List Item Widget
 class _ClassListItem extends StatefulWidget {
@@ -165,35 +166,45 @@ class _ClassListItemState extends State<_ClassListItem> {
                   }
                 },
                 itemBuilder: (BuildContext context) => [
-                  PopupMenuItem<String>(
+                      PopupMenuItem<String>(
                     value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.edit,
-                          size: 20,
-                          color: widget.colorScheme.onSurface,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('Edit'),
-                      ],
+                    child: Builder(
+                      builder: (context) {
+                        final l10n = AppLocalizations.of(context)!;
+                        return Row(
+                          children: [
+                            Icon(
+                              Icons.edit,
+                              size: 20,
+                              color: widget.colorScheme.onSurface,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(l10n.edit),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   PopupMenuItem<String>(
                     value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          size: 20,
-                          color: widget.colorScheme.error,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Delete',
-                          style: TextStyle(color: widget.colorScheme.error),
-                        ),
-                      ],
+                    child: Builder(
+                      builder: (context) {
+                        final l10n = AppLocalizations.of(context)!;
+                        return Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 20,
+                              color: widget.colorScheme.error,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.delete,
+                              style: TextStyle(color: widget.colorScheme.error),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -308,39 +319,42 @@ class _ClassGridCard extends StatelessWidget {
                           onDelete!();
                         }
                       },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.edit,
-                                size: 20,
-                                color: colorScheme.onSurface,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text('Edit'),
-                            ],
+                      itemBuilder: (BuildContext context) {
+                        final l10n = AppLocalizations.of(context)!;
+                        return [
+                          PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit,
+                                  size: 20,
+                                  color: colorScheme.onSurface,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(l10n.edit),
+                              ],
+                            ),
                           ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.delete_outline,
-                                size: 20,
-                                color: colorScheme.error,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Delete',
-                                style: TextStyle(color: colorScheme.error),
-                              ),
-                            ],
+                          PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline,
+                                  size: 20,
+                                  color: colorScheme.error,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  l10n.delete,
+                                  style: TextStyle(color: colorScheme.error),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ];
+                      },
                     ),
                 ],
               ),
@@ -427,6 +441,9 @@ class ClassListSection extends StatefulWidget {
   final SortType sortType;
   final SortOrder sortOrder;
   final VoidCallback? onReload;
+  final String ownerFilter; // 'all' or 'created_by_me'
+  final String? focusFilter; // null, 'HTML', 'CSS', 'JavaScript', 'PHP'
+  final String currentUserId; // Current user's ID for filtering
 
   const ClassListSection({
     super.key,
@@ -436,6 +453,9 @@ class ClassListSection extends StatefulWidget {
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
     this.onReload,
+    this.ownerFilter = 'all',
+    this.focusFilter,
+    this.currentUserId = '',
   });
 
   @override
@@ -459,10 +479,14 @@ class _ClassListSectionState extends State<ClassListSection> {
     if (oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
-        oldWidget.sortOrder != widget.sortOrder) {
+        oldWidget.sortOrder != widget.sortOrder ||
+        oldWidget.ownerFilter != widget.ownerFilter ||
+        oldWidget.focusFilter != widget.focusFilter) {
       if (oldWidget.searchQuery != widget.searchQuery ||
           oldWidget.sortType != widget.sortType ||
-          oldWidget.sortOrder != widget.sortOrder) {
+          oldWidget.sortOrder != widget.sortOrder ||
+          oldWidget.ownerFilter != widget.ownerFilter ||
+          oldWidget.focusFilter != widget.focusFilter) {
         // Just re-filter and sort, don't reload from API
         _applyFiltersAndSort();
       } else {
@@ -478,11 +502,39 @@ class _ClassListSectionState extends State<ClassListSection> {
       final allClasses = await ClassApi.fetchAllClasses();
       if (!mounted) return;
 
-      // Apply search filter if search query is provided
+      // Apply filters
       List<dynamic> filtered = allClasses;
+      
+      // Apply owner filter (created by me)
+      if (widget.ownerFilter == 'created_by_me' && widget.currentUserId.isNotEmpty) {
+        final role = widget.roleName.toLowerCase();
+        if (role == 'admin') {
+          // For admin: filter by admin_id
+          filtered = filtered.where((classItem) {
+            final adminId = classItem['admin_id']?.toString() ?? '';
+            return adminId == widget.currentUserId;
+          }).toList();
+        } else if (role == 'teacher') {
+          // For teacher: filter by teacher_id
+          filtered = filtered.where((classItem) {
+            final teacherId = classItem['teacher_id']?.toString() ?? '';
+            return teacherId == widget.currentUserId;
+          }).toList();
+        }
+      }
+      
+      // Apply focus filter
+      if (widget.focusFilter != null && widget.focusFilter!.isNotEmpty) {
+        filtered = filtered.where((classItem) {
+          final focus = classItem['focus']?.toString();
+          return focus == widget.focusFilter;
+        }).toList();
+      }
+      
+      // Apply search filter if search query is provided
       if (widget.searchQuery.isNotEmpty) {
         final query = widget.searchQuery.toLowerCase();
-        filtered = allClasses.where((classItem) {
+        filtered = filtered.where((classItem) {
           final className = (classItem['class_name'] ?? '')
               .toString()
               .toLowerCase();
@@ -512,11 +564,39 @@ class _ClassListSectionState extends State<ClassListSection> {
   }
 
   void _applyFiltersAndSort() {
-    // Apply search filter
+    // Apply filters
     List<dynamic> filtered = classList;
+    
+    // Apply owner filter (created by me)
+    if (widget.ownerFilter == 'created_by_me' && widget.currentUserId.isNotEmpty) {
+      final role = widget.roleName.toLowerCase();
+      if (role == 'admin') {
+        // For admin: filter by admin_id
+        filtered = filtered.where((classItem) {
+          final adminId = classItem['admin_id']?.toString() ?? '';
+          return adminId == widget.currentUserId;
+        }).toList();
+      } else if (role == 'teacher') {
+        // For teacher: filter by teacher_id
+        filtered = filtered.where((classItem) {
+          final teacherId = classItem['teacher_id']?.toString() ?? '';
+          return teacherId == widget.currentUserId;
+        }).toList();
+      }
+    }
+    
+    // Apply focus filter
+    if (widget.focusFilter != null && widget.focusFilter!.isNotEmpty) {
+      filtered = filtered.where((classItem) {
+        final focus = classItem['focus']?.toString();
+        return focus == widget.focusFilter;
+      }).toList();
+    }
+    
+    // Apply search filter
     if (widget.searchQuery.isNotEmpty) {
       final query = widget.searchQuery.toLowerCase();
-      filtered = classList.where((classItem) {
+      filtered = filtered.where((classItem) {
         final className = (classItem['class_name'] ?? '')
             .toString()
             .toLowerCase();
@@ -580,40 +660,31 @@ class _ClassListSectionState extends State<ClassListSection> {
       if (widget.onReload != null) {
         widget.onReload!();
       }
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Class updated successfully'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      // Note: Success message is already shown in EditClassPage, so we don't show it here to avoid duplicate
     }
   }
 
   void _onDeleteClass(dynamic item) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Class'),
+          title: Text(l10n.deleteClass),
           content: Text(
-            'Are you sure you want to delete "${item['class_name']}"? This action cannot be undone.',
+            l10n.deleteClassConfirmation(item['class_name'] ?? ''),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
               ),
-              child: const Text('Delete'),
+              child: Text(l10n.delete),
             ),
           ],
         );
@@ -626,8 +697,8 @@ class _ClassListSectionState extends State<ClassListSection> {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Class deleted successfully'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              content: Text(l10n.classDeletedSuccessfully),
+              backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
             ),
@@ -640,7 +711,7 @@ class _ClassListSectionState extends State<ClassListSection> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Failed to delete class'),
+              content: Text(l10n.failedToUpdateClass),
               backgroundColor: Theme.of(context).colorScheme.error,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
@@ -653,6 +724,7 @@ class _ClassListSectionState extends State<ClassListSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -676,7 +748,7 @@ class _ClassListSectionState extends State<ClassListSection> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No classes found',
+                      l10n.noClassesFound,
                       style: textTheme.titleMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -684,8 +756,8 @@ class _ClassListSectionState extends State<ClassListSection> {
                     const SizedBox(height: 8),
                     Text(
                       widget.searchQuery.isNotEmpty
-                          ? 'Try adjusting your search query'
-                          : 'You are not assigned to any classes yet',
+                          ? l10n.tryAdjustingSearchQuery
+                          : l10n.notEnrolledInAnyClasses,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant.withValues(
                           alpha: 0.7,
@@ -720,7 +792,7 @@ class _ClassListSectionState extends State<ClassListSection> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                "${filteredList.length} Results",
+                                l10n.resultsCount(filteredList.length),
                                 style: textTheme.titleMedium,
                               ),
                             ),
@@ -792,7 +864,7 @@ class _ClassListSectionState extends State<ClassListSection> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                "${filteredList.length} Results",
+                                l10n.resultsCount(filteredList.length),
                                 style: textTheme.titleMedium,
                               ),
                             ),

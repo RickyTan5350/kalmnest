@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/constants/api_constants.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart';
 import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 /// Full-page student view: all quizzes for a single class.
 ///
@@ -63,9 +64,10 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading data: $e'),
+          content: Text(l10n.errorDeletingClass(e.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -79,30 +81,32 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
     // Open Unity WebView with the level (same as game module)
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        child: SizedBox(
-          width: 1200,
-          height: 800,
-          child: Column(
-            children: [
-              // Header with close button
-              Container(
-                padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(context).colorScheme.outlineVariant,
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return Dialog(
+          child: SizedBox(
+            width: 1200,
+            height: 800,
+            child: Column(
+              children: [
+                // Header with close button
+                Container(
+                  padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
                     ),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      quiz['level_name'] ?? 'Quiz',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        quiz['level_name'] ?? l10n.quiz,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
@@ -137,7 +141,8 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
             ],
           ),
         ),
-      ),
+      );
+    },
     );
   }
 
@@ -150,22 +155,22 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
     }).toList();
   }
 
-  String _formatDate(dynamic date) {
-    if (date == null) return 'Unknown';
+  String _formatDate(dynamic date, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (date == null) return l10n.unknown;
     try {
       final dateTime = DateTime.parse(date.toString());
       return DateFormat('MMM d, yyyy').format(dateTime);
     } catch (e) {
-      return 'Unknown';
+      return l10n.unknown;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_loading) {
-      return Scaffold(
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      return Scaffold(body: const Center(child: CircularProgressIndicator()));
     }
 
     final cs = Theme.of(context).colorScheme;
@@ -180,7 +185,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
         title: BreadcrumbNavigation(
           items: [
             BreadcrumbItem(
-              label: 'Classes',
+              label: l10n.classes,
               onTap: () {
                 // Pop twice to go back to class list (once from All Quizzes, once from Details)
                 Navigator.of(context).pop();
@@ -188,10 +193,10 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
               },
             ),
             BreadcrumbItem(
-              label: 'Details',
+              label: l10n.details,
               onTap: () => Navigator.of(context).pop(),
             ),
-            const BreadcrumbItem(label: 'All Quizzes'),
+            BreadcrumbItem(label: l10n.allQuizzes),
           ],
         ),
         backgroundColor: color.withOpacity(0.2),
@@ -202,7 +207,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
               setState(() => _loading = true);
               _fetchData();
             },
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -223,21 +228,17 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                     CircleAvatar(
                       radius: 40,
                       backgroundColor: color.withOpacity(0.1),
-                      child: Icon(
-                        Icons.school_rounded,
-                        color: color,
-                        size: 40,
-                      ),
+                      child: Icon(Icons.school_rounded, color: color, size: 40),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'All Quizzes',
+                      l10n.allQuizzes,
                       style: textTheme.headlineMedium,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Chip(
-                      label: Text(_classData?['class_name'] ?? 'No Name'),
+                      label: Text(_classData?['class_name'] ?? l10n.noName),
                       backgroundColor: color.withOpacity(0.1),
                     ),
                   ],
@@ -249,7 +250,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
                 child: Text(
-                  'Statistics',
+                  l10n.statistics,
                   style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: cs.primary,
@@ -260,7 +261,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                 cs,
                 textTheme,
                 Icons.quiz,
-                'Total Quizzes',
+                l10n.totalQuizzes,
                 '${_quizzes.length}',
               ),
               Padding(
@@ -269,13 +270,14 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                   cs,
                   textTheme,
                   Icons.schedule,
-                  'Last Updated',
+                  l10n.lastUpdated,
                   _quizzes.isNotEmpty
                       ? _formatDate(
                           _quizzes.first['updated_at'] ??
                               _quizzes.first['created_at'],
+                          context,
                         )
-                      : 'Never',
+                      : l10n.never,
                 ),
               ),
               const Divider(height: 30),
@@ -284,7 +286,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
               // Search Bar - Outside and full width
               SearchBar(
                 controller: _searchController,
-                hintText: "Search quizzes...",
+                hintText: l10n.searchQuizzes,
                 padding: const WidgetStatePropertyAll<EdgeInsets>(
                   EdgeInsets.symmetric(horizontal: 16.0),
                 ),
@@ -331,7 +333,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Quizzes',
+                                l10n.quizzes,
                                 style: textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: cs.onSurface,
@@ -339,7 +341,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${_filteredQuizzes.length} quiz${_filteredQuizzes.length != 1 ? 'es' : ''} available',
+                                l10n.quizzesAvailable(_filteredQuizzes.length),
                                 style: textTheme.bodySmall?.copyWith(
                                   color: cs.onSurfaceVariant,
                                 ),
@@ -399,9 +401,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                 child: Text(
                   value,
                   textAlign: TextAlign.end,
-                  style: TextStyle(
-                    color: cs.onSurface,
-                  ),
+                  style: TextStyle(color: cs.onSurface),
                 ),
               ),
             ],
@@ -412,6 +412,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
   }
 
   Widget _buildEmptyState(ColorScheme cs, TextTheme textTheme) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -424,14 +425,12 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              'No quizzes yet',
-              style: textTheme.bodyMedium?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
+              l10n.noQuizzesYet,
+              style: textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 4),
             Text(
-              'Your teacher hasn\'t assigned any quizzes yet',
+              l10n.noQuizzesAssigned,
               style: textTheme.bodySmall?.copyWith(
                 color: cs.onSurfaceVariant.withOpacity(0.7),
               ),
@@ -444,35 +443,34 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
   }
 }
 
-
 class _StudentQuizItem extends StatelessWidget {
   final Map<String, dynamic> quiz;
   final VoidCallback onPlay;
 
   const _StudentQuizItem({required this.quiz, required this.onPlay});
 
-  String _formatDate(dynamic date) {
-    if (date == null) return 'Unknown';
+  String _formatDate(BuildContext context, dynamic date) {
+    final l10n = AppLocalizations.of(context)!;
+    if (date == null) return l10n.unknown;
     try {
       final dateTime = DateTime.parse(date.toString());
-      return DateFormat('MMM d, yyyy').format(dateTime);
+      final formatted = DateFormat('MMM d, yyyy').format(dateTime);
+      return l10n.uploaded(formatted);
     } catch (e) {
-      return 'Unknown';
+      return l10n.unknown;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return Card(
       elevation: 1.0,
       shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: cs.outline.withOpacity(0.3),
-          width: 1.0,
-        ),
+        side: BorderSide(color: cs.outline.withOpacity(0.3), width: 1.0),
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: Padding(
@@ -487,11 +485,7 @@ class _StudentQuizItem extends StatelessWidget {
                 color: cs.primaryContainer,
                 borderRadius: BorderRadius.circular(12.0),
               ),
-              child: Icon(
-                Icons.quiz,
-                color: cs.onPrimaryContainer,
-                size: 24,
-              ),
+              child: Icon(Icons.quiz, color: cs.onPrimaryContainer, size: 24),
             ),
             const SizedBox(width: 12),
             // Quiz info
@@ -500,7 +494,7 @@ class _StudentQuizItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    quiz['level_name'] ?? 'No Name',
+                    quiz['level_name'] ?? l10n.noName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.titleMedium?.copyWith(
@@ -510,7 +504,7 @@ class _StudentQuizItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Uploaded: ${_formatDate(quiz['created_at'])}',
+                    _formatDate(context, quiz['created_at']),
                     style: textTheme.bodySmall?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
@@ -523,7 +517,7 @@ class _StudentQuizItem extends StatelessWidget {
             FilledButton.icon(
               onPressed: onPlay,
               icon: const Icon(Icons.play_arrow, size: 18),
-              label: const Text('Play'),
+              label: Text(l10n.play),
               style: FilledButton.styleFrom(
                 backgroundColor: cs.primary,
                 foregroundColor: cs.onPrimary,
@@ -542,5 +536,3 @@ class _StudentQuizItem extends StatelessWidget {
     );
   }
 }
-
-

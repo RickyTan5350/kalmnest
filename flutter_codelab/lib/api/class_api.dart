@@ -5,8 +5,8 @@ import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/constants/api_constants.dart';
 
 class ClassApi {
-  // Replace with your PC's local IP
-  static String base = '${ApiConstants.baseUrl}/api';
+  // Base URL for API endpoints (already includes /api)
+  static String base = ApiConstants.baseUrl;
 
   // Helper function to get headers with authentication
   static Future<Map<String, String>> _getAuthHeaders({

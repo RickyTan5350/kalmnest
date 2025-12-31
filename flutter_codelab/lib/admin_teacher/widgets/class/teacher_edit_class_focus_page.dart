@@ -48,7 +48,7 @@ class _TeacherEditClassFocusPageState extends State<TeacherEditClassFocusPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.classFocusUpdatedSuccessfully),
-          backgroundColor: Colors.green,
+          backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
       Navigator.pop(context, true); // Return true to indicate change

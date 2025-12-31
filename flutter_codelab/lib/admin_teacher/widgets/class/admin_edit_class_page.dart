@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/constants/class_constants.dart';
 import 'package:code_play/admin_teacher/widgets/class/class_theme_extensions.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class EditClassPage extends StatefulWidget {
   final dynamic classData;
@@ -20,6 +21,7 @@ class _EditClassPageState extends State<EditClassPage> {
   late TextEditingController descriptionController;
 
   String? _selectedTeacher;
+  String? _selectedFocus;
   List<String?> _selectedStudents = [];
 
   // Data from backend
@@ -57,6 +59,9 @@ class _EditClassPageState extends State<EditClassPage> {
     descriptionController = TextEditingController(
       text: widget.classData['description'] ?? "",
     );
+
+    // Set initial focus
+    _selectedFocus = widget.classData['focus'];
 
     // Store initial teacher ID to set after teachers are loaded
     final initialTeacherId = widget.classData['teacher_id'];
@@ -195,6 +200,7 @@ class _EditClassPageState extends State<EditClassPage> {
       "class_name": classNameController.text.trim(),
       "teacher_id": _selectedTeacher,
       "description": descriptionController.text.trim(),
+      "focus": _selectedFocus,
       "admin_id": widget.classData["admin_id"],
       "student_ids": studentIds.isEmpty ? null : studentIds,
     };
@@ -206,11 +212,14 @@ class _EditClassPageState extends State<EditClassPage> {
 
     setState(() => loading = false);
 
+    final l10n = AppLocalizations.of(context)!;
     if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Class updated successfully!'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
+          content: Text(l10n.classUpdatedSuccessfully),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
         ),
       );
       Navigator.pop(context, true);
@@ -218,7 +227,7 @@ class _EditClassPageState extends State<EditClassPage> {
       // Show specific error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? 'Failed to update class'),
+          content: Text(result['message'] ?? l10n.failedToUpdateClass),
           backgroundColor: Theme.of(context).colorScheme.error,
           duration: const Duration(seconds: 4),
         ),
@@ -265,6 +274,7 @@ class _EditClassPageState extends State<EditClassPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -276,7 +286,7 @@ class _EditClassPageState extends State<EditClassPage> {
           icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Edit Class"),
+        title: Text(l10n.editClass),
         titleTextStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.bold,
@@ -296,7 +306,7 @@ class _EditClassPageState extends State<EditClassPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Edit Class Details',
+                    l10n.editClassDetails,
                     style: TextStyle(
                       color: colorScheme.onSurface,
                       fontSize: 22,
@@ -311,12 +321,42 @@ class _EditClassPageState extends State<EditClassPage> {
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
                       context: context,
-                      labelText: "Class Name",
-                      hintText: "Enter class name",
+                      labelText: l10n.className,
+                      hintText: l10n.enterClassName,
                       icon: Icons.class_,
                     ),
                     validator: (v) =>
-                        v!.trim().isEmpty ? "Class name required" : null,
+                        v!.trim().isEmpty ? l10n.classNameRequired : null,
+                  ),
+                  SizedBox(height: ClassConstants.formSpacing),
+
+                  // FOCUS DROPDOWN
+                  DropdownButtonFormField<String>(
+                    value: _selectedFocus,
+                    dropdownColor: colorScheme.surface,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      context: context,
+                      labelText: l10n.focusOptional,
+                      hintText: l10n.focusOptional,
+                      icon: Icons.category,
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: null,
+                        child: Text(l10n.noneOptional),
+                      ),
+                      const DropdownMenuItem(value: 'HTML', child: Text('HTML')),
+                      const DropdownMenuItem(value: 'CSS', child: Text('CSS')),
+                      const DropdownMenuItem(
+                        value: 'JavaScript',
+                        child: Text('JavaScript'),
+                      ),
+                      const DropdownMenuItem(value: 'PHP', child: Text('PHP')),
+                    ],
+                    onChanged: (value) {
+                      setState(() => _selectedFocus = value);
+                    },
                   ),
                   SizedBox(height: ClassConstants.formSpacing),
 
@@ -336,15 +376,16 @@ class _EditClassPageState extends State<EditClassPage> {
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
                       context: context,
-                      labelText: "Assign Teacher (Optional)",
+                      labelText: l10n.assignTeacherOptional,
                       hintText: _loadingTeachers
-                          ? 'Loading...'
-                          : 'Select teacher',
+                          ? l10n.loading
+                          : l10n.selectTeacher,
                       icon: Icons.person,
                     ),
                     selectedItemBuilder: (BuildContext context) {
+                      final l10n = AppLocalizations.of(context)!;
                       return [
-                        const Text('None (Optional)'),
+                        Text(l10n.noneOptional),
                         ..._teachers.map((teacher) {
                           return Text(
                             teacher['name'] as String? ?? '',
@@ -354,9 +395,9 @@ class _EditClassPageState extends State<EditClassPage> {
                       ];
                     },
                     items: [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: null,
-                        child: Text('None (Optional)'),
+                        child: Text(l10n.noneOptional),
                       ),
                       ..._teachers.map((teacher) {
                         final status =
@@ -443,7 +484,7 @@ class _EditClassPageState extends State<EditClassPage> {
 
                   // STUDENTS ENROLLMENT
                   Text(
-                    'Enroll Students',
+                    l10n.assignStudentsOptional,
                     style: TextStyle(
                       color: colorScheme.onSurfaceVariant,
                       fontSize: 14,
@@ -475,15 +516,16 @@ class _EditClassPageState extends State<EditClassPage> {
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: _inputDecoration(
                             context: context,
-                            labelText: 'Student ${index + 1} (Optional)',
+                            labelText: l10n.studentNumber(index + 1),
                             hintText: _loadingStudents
-                                ? 'Loading...'
-                                : 'Select student',
+                                ? l10n.loading
+                                : l10n.selectStudents,
                             icon: Icons.person_add,
                           ),
                           selectedItemBuilder: (BuildContext context) {
+                            final l10n = AppLocalizations.of(context)!;
                             return [
-                              const Text('None (Optional)'),
+                              Text(l10n.noneOptional),
                               ...availableStudents.map((student) {
                                 return Text(
                                   student['name'] as String? ?? '',
@@ -493,9 +535,9 @@ class _EditClassPageState extends State<EditClassPage> {
                             ];
                           },
                           items: [
-                            const DropdownMenuItem(
+                            DropdownMenuItem(
                               value: null,
-                              child: Text('None (Optional)'),
+                              child: Text(l10n.noneOptional),
                             ),
                             ...availableStudents.map((student) {
                               final status =
@@ -598,7 +640,7 @@ class _EditClassPageState extends State<EditClassPage> {
                       color: colorScheme.onSurface,
                     ), // Match create page
                     label: Text(
-                      'Add Student',
+                      l10n.addStudent,
                       style: TextStyle(
                         color: colorScheme.onSurface,
                       ), // Match create page
@@ -613,12 +655,12 @@ class _EditClassPageState extends State<EditClassPage> {
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
                       context: context,
-                      labelText: "Description",
-                      hintText: "Enter description",
+                      labelText: l10n.description,
+                      hintText: l10n.enterDescription,
                       icon: Icons.description,
                     ),
                     validator: (value) => (value == null || value.isEmpty)
-                        ? 'Please enter description'
+                        ? l10n.pleaseEnterDescription
                         : null,
                   ),
 
@@ -630,7 +672,7 @@ class _EditClassPageState extends State<EditClassPage> {
                       TextButton(
                         onPressed: () => Navigator.pop(context),
                         child: Text(
-                          "Cancel",
+                          l10n.cancel,
                           style: TextStyle(color: colorScheme.onSurfaceVariant),
                         ),
                       ),
@@ -652,7 +694,7 @@ class _EditClassPageState extends State<EditClassPage> {
                             ? CircularProgressIndicator(
                                 color: colorScheme.onPrimary,
                               )
-                            : const Text("Save Changes"),
+                            : Text(l10n.saveChanges),
                       ),
                     ],
                   ),

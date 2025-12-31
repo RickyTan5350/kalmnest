@@ -58,9 +58,15 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+            'options' => extension_loaded('pdo_mysql') ? (function() {
+                $options = [];
+                $sslCa = env('MYSQL_ATTR_SSL_CA');
+                // Only use SSL if certificate path is provided and file exists
+                if ($sslCa && file_exists(base_path($sslCa))) {
+                    $options[PDO::MYSQL_ATTR_SSL_CA] = base_path($sslCa);
+                }
+                return array_filter($options);
+            })() : [],
         ],
 
         'mariadb' => [
@@ -78,9 +84,15 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+            'options' => extension_loaded('pdo_mysql') ? (function() {
+                $options = [];
+                $sslCa = env('MYSQL_ATTR_SSL_CA');
+                // Only use SSL if certificate path is provided and file exists
+                if ($sslCa && file_exists(base_path($sslCa))) {
+                    $options[PDO::MYSQL_ATTR_SSL_CA] = base_path($sslCa);
+                }
+                return array_filter($options);
+            })() : [],
         ],
 
         'pgsql' => [

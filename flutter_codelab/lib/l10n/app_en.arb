@@ -79,6 +79,11 @@
   "users": "Users",
   "games": "Games",
   "classes": "Classes",
+  "allClasses": "All classes",
+  "myClasses": "My Classes",
+  "enrolledClasses": "Enrolled Classes",
+  "searchByClassName": "Search by class name",
+  "edit": "Edit",
   "aiChat": "AI Chat",
   "feedback": "Feedback",
   "searchUserHint": "Search users...",
@@ -275,5 +280,208 @@
   "roleLabel": "Role",
   "male": "Male",
   "female": "Female",
-  "other": "Other"
+  "other": "Other",
+  "details": "Details",
+  "refresh": "Refresh",
+  "editClass": "Edit Class",
+  "deleteClass": "Delete Class",
+  "classDeletedSuccessfully": "Class deleted successfully.",
+  "errorDeletingClass": "Error deleting class: {error}",
+  "@errorDeletingClass": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noName": "No Name",
+  "noTeacherAssigned": "No teacher assigned",
+  "generalInfo": "General Info",
+  "creator": "Creator",
+  "focus": "Focus",
+  "notSet": "Not Set",
+  "totalStudents": "Total Students:",
+  "totalQuizzes": "Total Quizzes:",
+  "assignedTeacher": "Assigned Teacher",
+  "cannotOpenTeacherProfile": "Cannot open teacher profile: missing teacher id.",
+  "noTeacherAssignedToClass": "No teacher has been assigned to this class yet.",
+  "description": "Description",
+  "noDescriptionAvailable": "No description available",
+  "timestamps": "Timestamps",
+  "createdAt": "Created At",
+  "lastUpdated": "Last Updated",
+  "students": "Students",
+  "noStudentsEnrolled": "No students have been enrolled in this class yet.",
+  "listOfEnrolledStudents": "List of enrolled students",
+  "viewAll": "View All",
+  "moreStudents": "{count} more",
+  "@moreStudents": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quizzes": "Quizzes",
+  "allQuizzes": "All Quizzes",
+  "statistics": "Statistics",
+  "searchQuizzes": "Search quizzes...",
+  "quizzesAvailable": "{count} quiz{count, plural, =1{} other{s}} available",
+  "@quizzesAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noQuizzesYet": "No quizzes yet",
+  "noQuizzesAssigned": "Your teacher hasn't assigned any quizzes yet",
+  "play": "Play",
+  "uploaded": "Uploaded: {date}",
+  "@uploaded": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "never": "Never",
+  "deleteClassConfirmation": "Are you sure you want to delete \"{className}\"? This action cannot be undone.",
+  "@deleteClassConfirmation": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "thisClass": "this class",
+  "unknown": "Unknown",
+  "nA": "N/A",
+  "classFocusUpdatedSuccessfully": "Class focus updated successfully.",
+  "failedToUpdateClassFocus": "Failed to update class focus.",
+  "editClassFocus": "Edit Class Focus",
+  "editFocusFor": "Edit Focus for {className}",
+  "@editFocusFor": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "youCanOnlyEditFocus": "You can only edit the focus of this class.",
+  "focusOptional": "Focus (Optional)",
+  "noneOptional": "None (Optional)",
+  "classCreatedSuccessfully": "Class created successfully!",
+  "failedToCreateClass": "Failed to create class",
+  "ok": "OK",
+  "createNewClass": "Create New Class",
+  "className": "Class Name",
+  "enterClassName": "Enter class name",
+  "pleaseEnterClassName": "Please enter class name",
+  "enterDescription": "Enter description",
+  "pleaseEnterDescription": "Please enter description",
+  "assignTeacherOptional": "Assign Teacher (Optional)",
+  "loading": "Loading...",
+  "selectTeacher": "Select teacher",
+  "assignStudentsOptional": "Assign Students (Optional)",
+  "selectStudents": "Select students",
+  "addStudent": "Add Student",
+  "reset": "Reset",
+  "create": "Create",
+  "studentNumber": "Student {number} (Optional)",
+  "@studentNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "classUpdatedSuccessfully": "Class updated successfully!",
+  "failedToUpdateClass": "Failed to update class",
+  "editClass": "Edit Class",
+  "editClassDetails": "Edit Class Details",
+  "classNameRequired": "Class name required",
+  "unknownTeacher": "Unknown Teacher",
+  "noTeacher": "No teacher",
+  "noStudents": "No students",
+  "studentCount": "{count} {count, plural, =1{student} other{students}}",
+  "@studentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studentSingular": "student",
+  "studentsPlural": "students",
+  "noClassesFound": "No classes found",
+  "tryAdjustingSearchQuery": "Try adjusting your search query",
+  "notEnrolledInAnyClasses": "You are not enrolled in any classes yet",
+  "results": "{count} Results",
+  "@results": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quizVisibility": "Quiz Visibility",
+  "howShouldQuizBeVisible": "How should this quiz be visible after creation?",
+  "private": "Private",
+  "onlyVisibleToThisClass": "Only visible to this class",
+  "public": "Public",
+  "visibleToEveryone": "Visible to everyone, can be assigned to other classes",
+  "quizCreatedAndAssignedSuccessfully": "Quiz created and assigned successfully as {visibility}",
+  "@quizCreatedAndAssignedSuccessfully": {
+    "placeholders": {
+      "visibility": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToAssignQuiz": "Failed to assign quiz",
+  "quizAssignedSuccessfully": "Quiz assigned successfully",
+  "removeQuiz": "Remove Quiz",
+  "areYouSureRemoveQuiz": "Are you sure you want to remove this quiz from the class?",
+  "remove": "Remove",
+  "quizRemovedSuccessfully": "Quiz removed successfully",
+  "failedToRemoveQuiz": "Failed to remove quiz",
+  "failedToLoadStudentQuizData": "Failed to load student quiz data",
+  "failedToLoadQuizStudentData": "Failed to load quiz student data",
+  "phone": "Phone",
+  "address": "Address",
+  "gender": "Gender",
+  "joinedDate": "Joined Date",
+  "accountStatus": "Account Status",
+  "all": "All",
+  "completed": "Completed",
+  "pending": "Pending",
+  "noQuizzesFound": "No quizzes found",
+  "completionRate": "Completion Rate",
+  "assignQuiz": "Assign Quiz",
+  "createQuiz": "Create Quiz",
+  "status": "Status",
+  "assigned": "Assigned",
+  "allStudents": "All Students",
+  "error": "Error",
+  "viewAllQuizzes": "View All Quizzes",
+  "createOrAssignQuizzes": "Create or assign quizzes to get started",
+  "assignQuizToClass": "Assign Quiz to Class",
+  "reloadQuizzes": "Reload quizzes",
+  "quizzesAssigned": "Quizzes Assigned",
+  "moreOptions": "More options",
+  "courseProgress": "Course Progress",
+  "tryAdjustingSearchCriteria": "Try adjusting your search criteria",
+  "viewAllXQuizzes": "View all {count} quizzes",
+  "@viewAllXQuizzes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchStudents": "Search students...",
+  "viewDetails": "View Details",
+  "noStudentsFound": "No students found",
+  "tapToViewStudentCompletion": "Tap to view student completion"
 }
