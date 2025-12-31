@@ -44,6 +44,7 @@ Color getAchievementColor(BuildContext context, String? iconValue) {
     case 'css':
       return brandColors.css;
     case 'javascript':
+    case 'js':
       return brandColors.javascript;
     case 'php':
       return brandColors.php;
@@ -55,6 +56,9 @@ Color getAchievementColor(BuildContext context, String? iconValue) {
 
 IconData getAchievementIcon(String? iconValue) {
   try {
+    // Map 'js' to 'javascript' for lookup
+    if (iconValue == 'js') iconValue = 'javascript';
+    
     final entry = achievementIconOptions.firstWhere(
       (opt) => opt['value'] == iconValue,
       orElse: () => {'icon': Icons.help_outline},
