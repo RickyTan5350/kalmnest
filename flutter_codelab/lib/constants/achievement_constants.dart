@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/theme.dart'; // Import for BrandColors
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:code_play/theme.dart'; // Import for BrandColors
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/enums/sort_enums.dart';
 
 final List<Map<String, dynamic>> achievementIconOptions = [
   // Web Development Languages
@@ -44,6 +44,7 @@ Color getAchievementColor(BuildContext context, String? iconValue) {
     case 'css':
       return brandColors.css;
     case 'javascript':
+    case 'js':
       return brandColors.javascript;
     case 'php':
       return brandColors.php;
@@ -55,6 +56,9 @@ Color getAchievementColor(BuildContext context, String? iconValue) {
 
 IconData getAchievementIcon(String? iconValue) {
   try {
+    // Map 'js' to 'javascript' for lookup
+    if (iconValue == 'js') iconValue = 'javascript';
+    
     final entry = achievementIconOptions.firstWhere(
       (opt) => opt['value'] == iconValue,
       orElse: () => {'icon': Icons.help_outline},
@@ -134,3 +138,4 @@ List<AchievementData> sortAchievements({
   });
   return sortedList;
 }
+

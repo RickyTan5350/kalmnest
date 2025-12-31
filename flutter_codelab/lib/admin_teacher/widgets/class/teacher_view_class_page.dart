@@ -1,14 +1,4 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
-import 'package:flutter_codelab/models/student.dart';
-import 'package:flutter_codelab/student/widgets/class/student_preview_teacher_row.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_quiz_list_section.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_all_students_page.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_edit_class_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
-=======
 import 'package:code_play/models/student.dart';
 import 'package:code_play/student/widgets/class/student_preview_teacher_row.dart';
 import 'package:code_play/admin_teacher/widgets/class/teacher_quiz_list_section.dart';
@@ -16,19 +6,17 @@ import 'package:code_play/admin_teacher/widgets/class/teacher_all_students_page.
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
-import 'package:code_play/admin_teacher/widgets/class/teacher_edit_class_focus_page.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
->>>>>>> Stashed changes
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 class ClassDetailPage extends StatefulWidget {
   final String classId;
   final String roleName;
 
   const ClassDetailPage({
-    Key? key,
+    super.key,
     required this.classId,
     required this.roleName,
-  }) : super(key: key);
+  });
 
   @override
   State<ClassDetailPage> createState() => _ClassDetailPageState();
@@ -38,7 +26,6 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
   bool loading = true;
   Map<String, dynamic>? classData;
   int _quizCount = 0;
-  bool _dataUpdated = false; // Track if data was updated (e.g., focus changed)
 
   @override
   void initState() {
@@ -61,25 +48,24 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
   }
 
   Future<void> _deleteClass() async {
-    final l10n = AppLocalizations.of(context)!;
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('${l10n.deleteClass}?'),
+        title: const Text('Delete Class?'),
         content: Text(
           'Are you sure you want to delete "${classData?['class_name'] ?? 'this class'}"? This action cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.cancel),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: ButtonStyle(
               foregroundColor: WidgetStateProperty.all(Colors.red),
             ),
-            child: Text(l10n.delete),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -90,8 +76,8 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
         await ClassApi.deleteClass(widget.classId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.classDeletedSuccessfully),
+            const SnackBar(
+              content: Text('Class deleted successfully.'),
               backgroundColor: Colors.green,
             ),
           );
@@ -101,7 +87,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(l10n.errorDeletingClass(e.toString())),
+              content: Text('Error deleting class: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -133,10 +119,10 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     if (loading) {
-      return Scaffold(body: const Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     final color = Theme.of(context).colorScheme.primary;
@@ -147,12 +133,10 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
         title: BreadcrumbNavigation(
           items: [
             BreadcrumbItem(
-              label: l10n.classes,
-              onTap: () => Navigator.of(
-                context,
-              ).pop(_dataUpdated), // Return true if data was updated
+              label: 'Classes',
+              onTap: () => Navigator.of(context).pop(),
             ),
-            BreadcrumbItem(label: l10n.details),
+            const BreadcrumbItem(label: 'Details'),
           ],
         ),
         backgroundColor: color.withOpacity(0.2),
@@ -163,7 +147,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
               setState(() => loading = true);
               _fetchClassData();
             },
-            tooltip: l10n.refresh,
+            tooltip: 'Refresh',
           ),
           if (widget.roleName.toLowerCase() == 'admin')
             IconButton(
@@ -179,34 +163,13 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                   _fetchClassData();
                 }
               },
-              tooltip: l10n.editClass,
-            ),
-          if (widget.roleName.toLowerCase() == 'teacher')
-            IconButton(
-              icon: const Icon(Icons.category),
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => TeacherEditClassFocusPage(
-                      classId: widget.classId,
-                      currentFocus: classData?['focus'],
-                      className: classData?['class_name'] ?? 'Class',
-                    ),
-                  ),
-                );
-                if (result == true && mounted) {
-                  _fetchClassData();
-                  _dataUpdated = true; // Mark that data was updated
-                }
-              },
-              tooltip: l10n.editFocus,
+              tooltip: 'Edit Class',
             ),
           if (widget.roleName.toLowerCase() == 'admin')
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
               onPressed: _deleteClass,
-              tooltip: l10n.deleteClass,
+              tooltip: 'Delete Class',
             ),
         ],
       ),
@@ -238,8 +201,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                     const SizedBox(height: 8),
                     Chip(
                       label: Text(
-                        classData?['teacher']?['name'] ??
-                            l10n.noTeacherAssigned,
+                        classData?['teacher']?['name'] ?? 'No teacher assigned',
                       ),
                       backgroundColor: color.withOpacity(0.1),
                     ),
@@ -249,16 +211,16 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
               const SizedBox(height: 32),
 
               // General Info Section
-              _buildSectionTitle(context, l10n.generalInfo),
+              _buildSectionTitle(context, 'General Info'),
               _buildInfoRow(
                 context,
-                l10n.name,
-                classData?['class_name'] ?? l10n.nA,
+                'Name',
+                classData?['class_name'] ?? 'N/A',
               ),
               _buildInfoRow(
                 context,
-                l10n.teacher,
-                classData?['teacher']?['name'] ?? l10n.noTeacherAssigned,
+                'Teacher',
+                classData?['teacher']?['name'] ?? 'No teacher assigned',
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -268,7 +230,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                     SizedBox(
                       width: 120,
                       child: Text(
-                        l10n.totalStudents,
+                        'Total Students:',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -294,7 +256,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                     SizedBox(
                       width: 120,
                       child: Text(
-                        l10n.totalQuizzes,
+                        'Total Quizzes:',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -315,37 +277,36 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
               if (widget.roleName.toLowerCase() == 'admin')
                 _buildInfoRow(
                   context,
-                  l10n.creator,
-                  classData?['admin']?['name'] ?? l10n.unknown,
+                  'Creator',
+                  classData?['admin']?['name'] ?? 'Unknown',
                 ),
-              _buildInfoRow(
-                context,
-                l10n.focus,
-                classData?['focus'] ?? l10n.notSet,
-              ),
 
               const Divider(height: 30),
 
               // Description Section
-              _buildSectionTitle(context, l10n.description),
+              _buildSectionTitle(context, 'Description'),
               Text(
-                classData?['description'] ?? l10n.noDescriptionAvailable,
+                classData?['description'] ?? 'No description available',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
 
               const Divider(height: 30),
 
               // Timestamps Section
-              _buildSectionTitle(context, l10n.timestamps),
+              _buildSectionTitle(context, 'Timestamps'),
               _buildInfoRow(
                 context,
-                l10n.createdAt,
-                _formatDate(DateTime.tryParse(classData?['created_at'] ?? '')),
+                'Created At',
+                _formatDate(
+                  DateTime.tryParse(classData?['created_at'] ?? ''),
+                ),
               ),
               _buildInfoRow(
                 context,
-                l10n.lastUpdated,
-                _formatDate(DateTime.tryParse(classData?['updated_at'] ?? '')),
+                'Last Updated',
+                _formatDate(
+                  DateTime.tryParse(classData?['updated_at'] ?? ''),
+                ),
               ),
 
               const Divider(height: 30),
@@ -356,7 +317,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle(context, l10n.students),
+                    _buildSectionTitle(context, 'Students'),
                     const SizedBox(height: 8),
                     _BorderedStudentPreviewRow(
                       students: _students,
@@ -378,16 +339,14 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle(context, l10n.teacher),
+                    _buildSectionTitle(context, 'Teacher'),
                     const SizedBox(height: 8),
                     Card(
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.0),
                         side: BorderSide(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.outline.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
                           width: 1.0,
                         ),
                       ),
@@ -395,10 +354,8 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                         padding: const EdgeInsets.all(16.0),
                         child: TeacherPreviewRow(
                           teacherName:
-                              classData?['teacher']?['name'] ??
-                              l10n.noTeacherAssigned,
-                          teacherDescription:
-                              classData?['teacher']?['email'] ?? '',
+                              classData?['teacher']?['name'] ?? 'No teacher assigned',
+                          teacherDescription: classData?['teacher']?['email'] ?? '',
                         ),
                       ),
                     ),
@@ -408,7 +365,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
               const Divider(height: 30),
 
               // Quizzes Section
-              _buildSectionTitle(context, l10n.quizzes),
+              _buildSectionTitle(context, 'Quizzes'),
               const SizedBox(height: 8),
               QuizListSection(
                 roleName: widget.roleName,
@@ -455,7 +412,9 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
           Expanded(
             child: Text(
               value ?? 'N/A',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ),
         ],
@@ -480,7 +439,9 @@ class _BorderedStudentPreviewRow extends StatelessWidget {
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
         color: Theme.of(context).colorScheme.surfaceContainerLow,
       ),
       child: Row(
@@ -554,7 +515,6 @@ class _BorderedStudentPreviewRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -563,17 +523,23 @@ class _BorderedStudentPreviewRow extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
-          side: BorderSide(color: cs.outline.withOpacity(0.3), width: 1.0),
+          side: BorderSide(
+            color: cs.outline.withOpacity(0.3),
+            width: 1.0,
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              Icon(Icons.info_outline, color: cs.onSurfaceVariant),
+              Icon(
+                Icons.info_outline,
+                color: cs.onSurfaceVariant,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  l10n.noStudentsEnrolled,
+                  'No students have been enrolled in this class yet.',
                   style: textTheme.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant,
                     fontStyle: FontStyle.italic,
@@ -593,7 +559,10 @@ class _BorderedStudentPreviewRow extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
-        side: BorderSide(color: cs.outline.withOpacity(0.3), width: 1.0),
+        side: BorderSide(
+          color: cs.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -607,10 +576,13 @@ class _BorderedStudentPreviewRow extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(l10n.students, style: textTheme.titleMedium),
+                    Text(
+                      'Students',
+                      style: textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 4),
                     Text(
-                      l10n.listOfEnrolledStudents,
+                      'List of enrolled students',
                       style: textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
@@ -623,7 +595,7 @@ class _BorderedStudentPreviewRow extends StatelessWidget {
                     minimumSize: const Size(0, 36),
                   ),
                   onPressed: onViewAll,
-                  child: Text(l10n.viewAll),
+                  child: const Text("View All"),
                 ),
               ],
             ),
@@ -656,3 +628,4 @@ class _BorderedStudentPreviewRow extends StatelessWidget {
     );
   }
 }
+

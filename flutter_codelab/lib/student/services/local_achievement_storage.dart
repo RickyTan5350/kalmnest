@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
+import 'package:code_play/models/achievement_data.dart';
 // Note: Requires adding 'encrypt: ^latest' to pubspec.yaml
 import 'package:encrypt/encrypt.dart' as encrypt;
 // Note: Requires adding 'flutter_secure_storage: ^latest' to pubspec.yaml
@@ -36,7 +36,7 @@ class LocalAchievementStorage {
       print('Generating new secure encryption keys...');
 
       _key = encrypt.Key.fromSecureRandom(32); // 256-bit key
-      _iv = encrypt.IV.fromSecureRandom(16);    // 128-bit IV
+      _iv = encrypt.IV.fromSecureRandom(16); // 128-bit IV
 
       // Store them as Base64 strings for persistence
       await _secureStorage.write(key: _keyName, value: _key!.base64);
@@ -49,7 +49,9 @@ class LocalAchievementStorage {
     }
 
     // Initialize the Encrypter once we have the key/IV
-    _encrypter = encrypt.Encrypter(encrypt.AES(_key!, mode: encrypt.AESMode.cbc));
+    _encrypter = encrypt.Encrypter(
+      encrypt.AES(_key!, mode: encrypt.AESMode.cbc),
+    );
   }
   // ------------------------------------------
 
@@ -60,20 +62,18 @@ class LocalAchievementStorage {
   }
 
   // 4. SAVE ACHIEVEMENTS (ENCRYPT)
-  Future<void> saveUnlockedAchievements(String userId, List<AchievementData> achievements) async {
+  Future<void> saveUnlockedAchievements(
+    String userId,
+    List<AchievementData> achievements,
+  ) async {
     await _initEncrypter(); // Ensure encrypter is ready
 
     final file = await _getLocalFile(userId);
 
-    // Convert the list of objects into a List of JSON maps
-    final List<Map<String, dynamic>> achievementMaps = achievements.map((a) => {
-      'achievement_id': a.achievementId,
-      'title': a.achievementTitle,
-      'description': a.achievementDescription,
-      'icon': a.icon,
-      'associated_level': a.levelName,
-      'obtained_at': DateTime.now().toIso8601String(),
-    }).toList();
+    // Convert the list of objects into a List of JSON maps using the model's toJson
+    final List<Map<String, dynamic>> achievementMaps = achievements
+        .map((a) => a.toJson())
+        .toList();
 
     // 1. Convert data to JSON string
     final String jsonString = jsonEncode(achievementMaps);
@@ -104,14 +104,14 @@ class LocalAchievementStorage {
       // 2. Decrypt the contents
       // Use the securely loaded _encrypter and _iv
       final decryptedBytes = _encrypter!.decrypt64(encryptedBase64, iv: _iv!);
-      final String contents = decryptedBytes; // This is the original JSON string
+      final String contents =
+          decryptedBytes; // This is the original JSON string
 
       // 3. Decode the JSON string
       final List<dynamic> jsonList = jsonDecode(contents);
 
       // 4. Map back to AchievementData objects
       return jsonList.map((json) => AchievementData.fromJson(json)).toList();
-
     } catch (e) {
       print('Error reading or decrypting local achievements: $e');
       return [];

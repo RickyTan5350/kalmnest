@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/models/user_data.dart';
 
 // 1. Import Admin View normally
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_view_note_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/admin_view_note_page.dart';
 
 // 2. Import Student View
-import 'package:flutter_codelab/student/widgets/note/student_view_page.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
-import 'package:flutter_codelab/constants/view_layout.dart'; // Shared ViewLayout
-import 'package:flutter_codelab/services/layout_preferences.dart'; // Layout Persistence
+import 'package:code_play/student/widgets/note/student_view_page.dart';
+import 'package:code_play/enums/sort_enums.dart'; // Shared Enums
+import 'package:code_play/constants/view_layout.dart'; // Shared ViewLayout
+import 'package:code_play/services/layout_preferences.dart'; // Layout Persistence
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class NotePage extends StatefulWidget {
   final UserDetails currentUser;
@@ -24,11 +25,14 @@ class _NotePageState extends State<NotePage> {
   final List<String> _topics = ['All', 'HTML', 'CSS', 'JS', 'PHP'];
   String _selectedTopic = 'All';
   String _searchQuery = '';
-  ViewLayout _viewLayout = ViewLayout.grid;
+  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
+    LayoutPreferences.globalLayoutKey,
+  );
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
 
   final FocusNode _searchFocusNode = FocusNode();
+  final TextEditingController _searchController = TextEditingController();
 
   final GlobalKey<StudentViewPageState> _studentKey =
       GlobalKey<StudentViewPageState>();
@@ -42,7 +46,9 @@ class _NotePageState extends State<NotePage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('global_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -52,6 +58,7 @@ class _NotePageState extends State<NotePage> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
@@ -68,6 +75,24 @@ class _NotePageState extends State<NotePage> {
     }
   }
 
+  void _handleTopicChange(String newTopic) {
+    if (_topics.contains(newTopic)) {
+      setState(() {
+        _selectedTopic = newTopic;
+      });
+    }
+  }
+
+  String _getLocalizedTopic(String topic) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (topic) {
+      case 'All':
+        return l10n.all;
+      default:
+        return topic; // HTML, CSS, JS, PHP
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CallbackShortcuts(
@@ -78,7 +103,7 @@ class _NotePageState extends State<NotePage> {
       child: Focus(
         autofocus: true,
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
           child: Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -91,7 +116,7 @@ class _NotePageState extends State<NotePage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Notes",
+                        AppLocalizations.of(context)!.notes,
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       Row(
@@ -112,7 +137,7 @@ class _NotePageState extends State<NotePage> {
                               final newLayout = val.first;
                               setState(() => _viewLayout = newLayout);
                               LayoutPreferences.saveLayout(
-                                'global_layout',
+                                LayoutPreferences.globalLayoutKey,
                                 newLayout,
                               );
                             },
@@ -127,8 +152,9 @@ class _NotePageState extends State<NotePage> {
                   SizedBox(
                     width: 300,
                     child: SearchBar(
+                      controller: _searchController,
                       focusNode: _searchFocusNode,
-                      hintText: "Search topic or title",
+                      hintText: AppLocalizations.of(context)!.searchNotesHint,
                       padding: const WidgetStatePropertyAll<EdgeInsets>(
                         EdgeInsets.symmetric(horizontal: 16.0),
                       ),
@@ -140,7 +166,10 @@ class _NotePageState extends State<NotePage> {
                         if (_searchQuery.isNotEmpty)
                           IconButton(
                             icon: const Icon(Icons.clear),
-                            onPressed: () => setState(() => _searchQuery = ''),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
                           ),
                       ],
                     ),
@@ -160,11 +189,12 @@ class _NotePageState extends State<NotePage> {
                           children: _topics
                               .map(
                                 (topic) => FilterChip(
-                                  label: Text(topic),
+                                  label: Text(_getLocalizedTopic(topic)),
                                   selected: _selectedTopic == topic,
                                   onSelected: (selected) {
-                                    if (selected)
+                                    if (selected) {
                                       setState(() => _selectedTopic = topic);
+                                    }
                                   },
                                 ),
                               )
@@ -175,7 +205,7 @@ class _NotePageState extends State<NotePage> {
                       // Filter Icon (Sort)
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.filter_list),
-                        tooltip: 'Sort Options',
+                        tooltip: AppLocalizations.of(context)!.sortOptions,
                         onSelected: (value) {
                           setState(() {
                             if (value == 'Name') {
@@ -191,40 +221,48 @@ class _NotePageState extends State<NotePage> {
                         },
                         itemBuilder: (BuildContext context) =>
                             <PopupMenuEntry<String>>[
-                              const PopupMenuItem<String>(
+                              PopupMenuItem<String>(
                                 enabled: false,
                                 child: Text(
-                                  'Sort By',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  AppLocalizations.of(context)!.sortBy,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Name',
                                 checked: _sortType == SortType.alphabetical,
-                                child: const Text('Name'),
+                                child: Text(AppLocalizations.of(context)!.name),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Date',
                                 checked: _sortType == SortType.updated,
-                                child: const Text('Date'),
+                                child: Text(AppLocalizations.of(context)!.date),
                               ),
                               const PopupMenuDivider(),
-                              const PopupMenuItem<String>(
+                              PopupMenuItem<String>(
                                 enabled: false,
                                 child: Text(
-                                  'Order',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  AppLocalizations.of(context)!.order,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Ascending',
                                 checked: _sortOrder == SortOrder.ascending,
-                                child: const Text('Ascending'),
+                                child: Text(
+                                  AppLocalizations.of(context)!.ascending,
+                                ),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Descending',
                                 checked: _sortOrder == SortOrder.descending,
-                                child: const Text('Descending'),
+                                child: Text(
+                                  AppLocalizations.of(context)!.descending,
+                                ),
                               ),
                             ],
                       ),
@@ -233,7 +271,7 @@ class _NotePageState extends State<NotePage> {
                       IconButton(
                         icon: const Icon(Icons.refresh),
                         onPressed: _handleRefresh,
-                        tooltip: "Refresh List",
+                        tooltip: AppLocalizations.of(context)!.refreshList,
                       ),
                     ],
                   ),
@@ -251,6 +289,7 @@ class _NotePageState extends State<NotePage> {
                             isGrid: _viewLayout == ViewLayout.grid,
                             sortType: _sortType,
                             sortOrder: _sortOrder,
+                            onTopicChanged: _handleTopicChange,
                           )
                         : AdminViewNotePage(
                             key: _adminKey,
@@ -261,6 +300,7 @@ class _NotePageState extends State<NotePage> {
                             query: _searchQuery,
                             sortType: _sortType,
                             sortOrder: _sortOrder,
+                            onTopicChanged: _handleTopicChange,
                           ),
                   ),
                 ],

@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/models/user_data.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
+import 'package:http_parser/http_parser.dart';
 
 class UserApi {
   // Existing base URL for single user operations
@@ -79,10 +80,12 @@ class UserApi {
     // Build Query Parameters
     Map<String, String> queryParams = {};
     if (search != null && search.isNotEmpty) queryParams['search'] = search;
-    if (roleName != null && roleName.isNotEmpty)
+    if (roleName != null && roleName.isNotEmpty) {
       queryParams['role_name'] = roleName;
-    if (accountStatus != null && accountStatus.isNotEmpty)
+    }
+    if (accountStatus != null && accountStatus.isNotEmpty) {
       queryParams['account_status'] = accountStatus;
+    }
 
     // Construct URI with query params
     final uri = Uri.parse(_listUrl).replace(queryParameters: queryParams);
@@ -248,6 +251,49 @@ class UserApi {
       throw Exception('Network Error: $e');
     }
   }
+
+  Future<void> importUsers(String filePath, String fileName) async {
+    final token = await AuthApi.getToken();
+    final url = Uri.parse('$_listUrl/import');
+
+    var request = http.MultipartRequest('POST', url)
+      ..headers.addAll({
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
+
+    // Attach the Excel file
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file', // MUST match the 'file' key in Laravel validation
+        filePath,
+        filename: fileName,
+        contentType: MediaType(
+          'application',
+          'vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ),
+      ),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      String msg = 'Failed to import user list.';
+      try {
+        msg = jsonDecode(response.body)['message'] ?? msg;
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  // --- DELETE MULTIPLE USERS ---
+  Future<void> deleteUsers(List<dynamic> ids) async {
+    // Iterate and delete individually as per NoteApi implementation
+    for (final id in ids) {
+      await deleteUser(id.toString());
+    }
+  }
 }
 
 class ValidationException implements Exception {
@@ -259,3 +305,4 @@ class ValidationException implements Exception {
     return 'ValidationException: $errors';
   }
 }
+

@@ -1,14 +1,9 @@
 // lib/widgets/quiz_list_section.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_quiz_page.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/admin_teacher/widgets/class/teacher_view_quiz_page.dart';
 import 'package:intl/intl.dart';
-<<<<<<< Updated upstream
-import 'package:flutter_codelab/constants/class_constants.dart';
-=======
 import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
->>>>>>> Stashed changes
 
 class QuizListSection extends StatefulWidget {
   final String roleName;
@@ -17,12 +12,12 @@ class QuizListSection extends StatefulWidget {
   final String classDescription;
 
   const QuizListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     required this.classId,
     required this.className,
     required this.classDescription,
-  }) : super(key: key);
+  });
 
   @override
   State<QuizListSection> createState() => _QuizListSectionState();
@@ -57,19 +52,17 @@ class _QuizListSectionState extends State<QuizListSection> {
   }
 
   String _formatDate(dynamic date) {
-    final l10n = AppLocalizations.of(context)!;
-    if (date == null) return l10n.unknown;
+    if (date == null) return 'Unknown';
     try {
       final dateTime = DateTime.parse(date.toString());
       return DateFormat('MMM d, yyyy').format(dateTime);
     } catch (e) {
-      return l10n.unknown;
+      return 'Unknown';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -92,7 +85,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l10n.quizzes,
+                      'Quizzes',
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
@@ -100,7 +93,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      l10n.quizAvailable(_quizzes.length, _quizzes.length != 1 ? 'es' : ''),
+                      '${_quizzes.length} quiz${_quizzes.length != 1 ? 'es' : ''} available',
                       style: textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
@@ -125,7 +118,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                               _fetchQuizzes();
                             });
                       },
-                      child: Text(l10n.viewAllQuizzes),
+                      child: const Text('View All Quizzes'),
                     ),
                   ],
                 ),
@@ -155,14 +148,14 @@ class _QuizListSectionState extends State<QuizListSection> {
                       ),
                       SizedBox(height: ClassConstants.defaultPadding * 0.75),
                       Text(
-                        l10n.noQuizzesYet,
+                        'No quizzes yet',
                         style: textTheme.bodyMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
                       ),
                       SizedBox(height: ClassConstants.defaultPadding * 0.25),
                       Text(
-                        l10n.teacherHasntAssignedQuizzes,
+                        'Create or assign quizzes to get started',
                         style: textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant.withOpacity(0.7),
                         ),
@@ -177,8 +170,8 @@ class _QuizListSectionState extends State<QuizListSection> {
               ..._quizzes.take(3).map((quiz) {
                 final levelType = quiz['level_type'];
                 final levelTypeName = levelType != null
-                    ? levelType['level_type_name'] ?? l10n.unknown
-                    : l10n.unknown;
+                    ? levelType['level_type_name'] ?? 'Unknown'
+                    : 'Unknown';
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
@@ -193,7 +186,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                     ),
                     leading: Icon(Icons.quiz, color: cs.primary),
                     title: Text(
-                      quiz['level_name'] ?? l10n.noName,
+                      quiz['level_name'] ?? 'No Name',
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface,
@@ -240,7 +233,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                     },
                   ),
                 );
-              }).toList(),
+              }),
 
             // Show "View All" link if more than 3 quizzes
             if (_quizzes.length > 3)
@@ -276,3 +269,4 @@ class _QuizListSectionState extends State<QuizListSection> {
     );
   }
 }
+

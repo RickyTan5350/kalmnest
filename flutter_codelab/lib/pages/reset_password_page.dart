@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -32,8 +33,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset successfully! Please login.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.passwordResetSuccess),
             backgroundColor: Colors.green,
           ),
         );
@@ -60,7 +61,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password'), centerTitle: true),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.resetPassword),
+        centerTitle: true,
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -101,7 +105,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Set New Password',
+                        AppLocalizations.of(context)!.setNewPassword,
                         style: textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
@@ -111,7 +115,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       const SizedBox(height: 8),
                       Text(
                         // Show email but shorten if too long
-                        'for ${widget.email}',
+                        AppLocalizations.of(context)!.forUser(widget.email),
                         style: textTheme.labelLarge?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.w600,
@@ -125,7 +129,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         controller: _codeController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: '6-Digit Code',
+                          labelText: AppLocalizations.of(context)!.sixDigitCode,
                           prefixIcon: const Icon(Icons.pin),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -142,7 +146,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         controller: _passwordController,
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
-                          labelText: 'New Password',
+                          labelText: AppLocalizations.of(context)!.newPassword,
                           prefixIcon: const Icon(Icons.lock_outline),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -169,7 +173,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         controller: _confirmPasswordController,
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
-                          labelText: 'Confirm Password',
+                          labelText: AppLocalizations.of(
+                            context,
+                          )!.confirmPassword,
                           prefixIcon: const Icon(Icons.lock_reset),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -177,7 +183,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         ),
                         validator: (value) {
                           if (value != _passwordController.text)
-                            return 'Passwords do not match';
+                            return AppLocalizations.of(
+                              context,
+                            )!.passwordsDoNotMatch;
                           return null;
                         },
                       ),
@@ -199,9 +207,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                                   color: colorScheme.onPrimary,
                                 ),
                               )
-                            : const Text(
-                                'Reset Password',
-                                style: TextStyle(fontSize: 16),
+                            : Text(
+                                AppLocalizations.of(context)!.resetPassword,
+                                style: const TextStyle(fontSize: 16),
                               ),
                       ),
                     ],
@@ -215,3 +223,4 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     );
   }
 }
+

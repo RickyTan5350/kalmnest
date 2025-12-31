@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
+import 'package:code_play/student/services/local_achievement_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 // Ensure this matches your emulator/device URL
 String get _authApiUrl => ApiConstants.baseUrl;
@@ -28,6 +28,7 @@ class AuthApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
+          if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
         },
         body: body,
       );
@@ -104,6 +105,7 @@ class AuthApi {
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token', // Crucial: Send the token
+            if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
           },
         );
       } catch (e) {
@@ -177,3 +179,4 @@ class AuthApi {
     }
   }
 }
+

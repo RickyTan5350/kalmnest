@@ -1,18 +1,22 @@
 import 'dart:io';
-import 'dart:typed_data'; // Required for handling image data
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // Required for downloading images
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_edit_note.dart';
-import 'package:flutter_codelab/api/note_api.dart';
+import 'package:code_play/admin_teacher/widgets/note/admin_edit_note.dart';
+import 'package:code_play/api/note_api.dart';
+import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:path/path.dart' as p;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'delete_note.dart';
-import 'run_code_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
+import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/utils/brand_color_extension.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'quiz_widget.dart';
 
 class AdminNoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -130,11 +134,76 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
     }
   }
 
-  void _openRunPage(String code) {
-    Navigator.push(
+  Future<void> _openRunPage(String code, {String? fileName}) async {
+    final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RunCodePage(initialCode: code)),
+      MaterialPageRoute(
+        builder: (context) => RunCodePage(
+          initialCode: code,
+          contextId: _currentTitle,
+          initialFileName: fileName,
+          topic: _currentTopic,
+          noteTitle: _currentTitle,
+          isAdmin: !widget.isStudent,
+          onFileRenamed: _handleFileRename,
+        ),
+      ),
     );
+
+    if (result == 'navigate_home') {
+      if (mounted) Navigator.pop(context, 'navigate_home');
+    } else if (result == 'navigate_topic') {
+      if (mounted) Navigator.pop(context, _currentTopic);
+    }
+  }
+
+  Future<void> _handleFileRename(String oldName, String newName) async {
+    // 1. Update Markdown Content (Regex Replace)
+    final regex = RegExp(
+      ':src=${RegExp.escape(oldName)}\\b', // Match :src=oldName word boundary
+    );
+
+    if (_markdownContent.contains(regex)) {
+      final newContent = _markdownContent.replaceAll(regex, ':src=$newName');
+
+      setState(() {
+        _markdownContent = newContent; // Update local state
+        _readOnlyController.text = newContent; // Update UI source view
+      });
+
+      // 2. Persist to Backend
+      final success = await _noteApi.updateNote(
+        widget.noteId,
+        _currentTitle, // Keep current title
+        newContent, // New content
+        _currentTopic, // Keep current topic
+        _currentVisibility, // Keep visibility
+      );
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Renamed "$oldName" to "$newName" and updated Note links.',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to save renamed file link to Note.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } else {
+      debugPrint(
+        "Warning: Renamed '$oldName' but found no reference in Markdown to update.",
+      );
+    }
   }
 
   // ====================================================================
@@ -316,7 +385,11 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
       if (imageUrl != null) {
         try {
           // Download image bytes
+          debugPrint("DEBUG PDF: Downloading image: $imageUrl");
           final response = await http.get(Uri.parse(imageUrl));
+          debugPrint(
+            "DEBUG PDF: Image download status: ${response.statusCode}",
+          );
           if (response.statusCode == 200) {
             final imageBytes = response.bodyBytes;
             widgets.add(
@@ -367,6 +440,105 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
     return widgets;
   }
 
+  Future<String> _loadLinkedFile(String fileName) async {
+    try {
+      final cwd = Directory.current;
+      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
+      // sanitize title for path: replace newlines with space and trim
+      final cleanTitle = _currentTitle
+          .replaceAll(RegExp(r'[\r\n]+'), ' ')
+          .trim();
+      final file = File(p.join(assetsWwwPath, cleanTitle, fileName));
+      debugPrint(
+        "Debug: Trying to load asset using clean title: '$cleanTitle', path: ${file.path}",
+      );
+      if (await file.exists()) {
+        debugPrint("Debug: Asset found: ${file.path}");
+        final content = await file.readAsString();
+        // Simple HTML escape for display
+        return content
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;');
+      }
+      return "File not found: $fileName (in $_currentTitle)";
+    } catch (e) {
+      return "Error reading file: $e";
+    }
+  }
+
+  Widget _buildCodeBlockUI(
+    String htmlContent,
+    String rawCode,
+    String? fileName,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Stack(
+      children: [
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: HtmlWidget(
+              htmlContent,
+              textStyle: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontFamily: 'monospace',
+              ),
+              customWidgetBuilder: (innerElement) {
+                if (innerElement.attributes.containsKey('data-scroll-index')) {
+                  final GlobalKey key = GlobalKey();
+                  _matchKeys.add(key);
+                  return SizedBox(width: 1, height: 1, key: key);
+                }
+                return null;
+              },
+            ),
+          ),
+        ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: InkWell(
+            onTap: () => _openRunPage(rawCode, fileName: fileName),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: colorScheme.primary,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.play_arrow,
+                    size: 14,
+                    color: colorScheme.onPrimary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Run',
+                    style: TextStyle(
+                      color: colorScheme.onPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildHighlightedHtml(ColorScheme colorScheme) {
     _matchKeys = [];
 
@@ -413,82 +585,122 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 16),
       customWidgetBuilder: (element) {
         if (element.localName == 'pre') {
+          // Check for linked file in class
+          String? linkedFileName;
+          if (element.children.isNotEmpty &&
+              element.children.first.localName == 'code') {
+            final codeClass = element.children.first.attributes['class'] ?? '';
+
+            // 1. Check for Quiz
+            if (codeClass.contains('language-quiz')) {
+              final jsonStr = element.text.trim();
+              try {
+                final quizData = jsonDecode(jsonStr);
+                return QuizWidget(
+                  question: quizData['question'],
+                  options: List<String>.from(quizData['options']),
+                  correctIndex: quizData['correctIndex'],
+                );
+              } catch (e) {
+                return Text(
+                  'Error parsing quiz: $e\n$jsonStr',
+                  style: const TextStyle(color: Colors.red),
+                );
+              }
+            }
+
+            // 2. Search for :src=filename.ext
+            final match = RegExp(r':src=([^\s]+)').firstMatch(codeClass);
+            if (match != null) {
+              linkedFileName = match.group(1);
+            }
+          }
+
+          if (linkedFileName != null) {
+            return FutureBuilder<String>(
+              future: _loadLinkedFile(linkedFileName),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  final escapedContent = snapshot.data!;
+                  // Wrap in pre for styling consistency
+                  final html =
+                      '<pre style="margin: 0; padding: 0;">$escapedContent</pre>';
+                  // Raw content is unescaped for running
+                  final raw = escapedContent
+                      .replaceAll('&lt;', '<')
+                      .replaceAll('&gt;', '>')
+                      .replaceAll('&amp;', '&');
+                  // Wait, loadLinkedFile returned escaped!
+                  // Actually I should have _loadLinkedFile return RAW and then escape it for display.
+                  // I'll fix that.
+
+                  // Re-decode for running, or just load again?
+                  // Sticking to "load returns escaped" is weird.
+                  // Better: load returns raw.
+
+                  return _buildCodeBlockUI(html, raw, linkedFileName);
+                }
+                return const SizedBox(
+                  height: 50,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              },
+            );
+          }
+
           final codeText = element.text;
-          // Use innerHtml to preserve highlighting spans, wrapped in pre to preserve whitespace
-          final htmlContent =
+          final htmlBlock =
               '<pre style="margin: 0; padding: 0;">${element.innerHtml}</pre>';
-          return Stack(
-            children: [
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  // Use HtmlWidget to render the code with highlights
-                  child: HtmlWidget(
-                    htmlContent,
-                    textStyle: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      fontFamily: 'monospace',
-                    ),
-                    // Recursively handle scroll indices inside the code block
-                    customWidgetBuilder: (innerElement) {
-                      if (innerElement.attributes.containsKey(
-                        'data-scroll-index',
-                      )) {
-                        final GlobalKey key = GlobalKey();
-                        _matchKeys.add(key);
-                        return SizedBox(width: 1, height: 1, key: key);
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: InkWell(
-                  onTap: () => _openRunPage(codeText),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.play_arrow,
-                          size: 14,
-                          color: colorScheme.onPrimary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Run',
-                          style: TextStyle(
-                            color: colorScheme.onPrimary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
+          return _buildCodeBlockUI(htmlBlock, codeText, null);
         }
+
+        if (element.localName == 'img') {
+          final src = element.attributes['src'];
+          debugPrint("DEBUG Admin HtmlWidget: Rendering Image with src: $src");
+          if (src != null) {
+            // 1. Check for direct local assets
+            if (src.startsWith('assets/')) {
+              return Image.asset(src);
+            }
+
+            // 2. Check for Storage URLs that should be local assets
+            if (src.contains('/storage/notes/')) {
+              try {
+                final uri = Uri.parse(src);
+                final filename = uri.pathSegments.last;
+                // Remove timestamp prefix
+                final cleanFilename = filename.replaceFirst(
+                  RegExp(r'^\d+_'),
+                  '',
+                );
+
+                // Map topic to folder
+                String folder = 'JS'; // Default or based on topic
+                if (_currentTopic == 'HTML') folder = 'HTML';
+                if (_currentTopic == 'CSS') folder = 'CSS';
+                if (_currentTopic == 'PHP') folder = 'PHP';
+
+                final assetPath = 'assets/www/pictures/$folder/$cleanFilename';
+                debugPrint(
+                  "DEBUG Admin HtmlWidget: Trying local asset: $assetPath",
+                );
+
+                return Image.asset(
+                  assetPath,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint(
+                      "DEBUG Admin HtmlWidget: Local asset failed ($assetPath), falling back to network",
+                    );
+                    return Image.network(src);
+                  },
+                );
+              } catch (e) {
+                debugPrint("DEBUG Admin HtmlWidget: Error parsing URL: $e");
+              }
+            }
+          }
+        }
+
         if (element.attributes.containsKey('data-scroll-index')) {
           final GlobalKey key = GlobalKey();
           _matchKeys.add(key);
@@ -496,7 +708,6 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         }
         return null;
       },
-      // Ensure spans are styled correctly if they aren't caught by customWidgetBuilder (fallback)
       customStylesBuilder: (element) {
         if (element.localName == 'table') {
           return {
@@ -524,6 +735,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return CallbackShortcuts(
       bindings: {
@@ -538,14 +750,22 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         child: Scaffold(
           backgroundColor: colorScheme.surface,
           appBar: AppBar(
-            title: Text(
-              _currentTitle,
-              style: TextStyle(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
-              ),
+            title: BreadcrumbNavigation(
+              items: [
+                BreadcrumbItem(
+                  label: 'Note',
+                  onTap: () => Navigator.of(context).pop('navigate_home'),
+                ),
+                BreadcrumbItem(
+                  label: _currentTopic,
+                  onTap: () => Navigator.of(context).pop(_currentTopic),
+                ),
+                BreadcrumbItem(label: _currentTitle),
+              ],
             ),
-            backgroundColor: colorScheme.surface,
+            backgroundColor: context
+                .getBrandColorForTopic(_currentTopic)
+                .withOpacity(0.2),
             iconTheme: IconThemeData(color: colorScheme.onSurface),
             elevation: 0,
             actions: [
@@ -772,14 +992,25 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
                       ),
                     ),
                     if (_isSearching)
-                      SearchNote(
-                        controller: _searchController,
-                        focusNode: _searchFocusNode,
-                        matchCount: _currentMatchIndex,
-                        totalMatches: _totalMatches,
-                        onNext: _nextMatch,
-                        onPrev: _prevMatch,
-                        onClose: _toggleSearch,
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        width: screenWidth > 350 ? 350 : screenWidth - 32,
+                        child: CallbackShortcuts(
+                          bindings: {
+                            const SingleActivator(LogicalKeyboardKey.enter):
+                                _nextMatch,
+                          },
+                          child: SearchNote(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            matchCount: _currentMatchIndex,
+                            totalMatches: _totalMatches,
+                            onNext: _nextMatch,
+                            onPrev: _prevMatch,
+                            onClose: _toggleSearch,
+                          ),
+                        ),
                       ),
                   ],
                 ),

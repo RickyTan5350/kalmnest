@@ -1,16 +1,16 @@
 // lib/widgets/class_statistics_section.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:code_play/constants/class_constants.dart';
 
 class ClassStatisticsSection extends StatelessWidget {
   final int totalStudents;
   final int totalQuizzes;
 
   const ClassStatisticsSection({
-    Key? key,
+    super.key,
     required this.totalStudents,
     required this.totalQuizzes,
-  }) : super(key: key);
+  });
 
   Widget _statCard(
     BuildContext context,
@@ -80,3 +80,4 @@ class ClassStatisticsSection extends StatelessWidget {
     );
   }
 }
+

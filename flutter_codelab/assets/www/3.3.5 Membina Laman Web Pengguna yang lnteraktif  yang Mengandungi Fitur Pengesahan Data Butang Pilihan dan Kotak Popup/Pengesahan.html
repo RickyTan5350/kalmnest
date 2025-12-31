@@ -1,0 +1,18 @@
+<html>
+
+<body>
+    Nama Anda:
+    <input id="n1"> <button type="button" onclick="semakData()">Pengesahan Nama</button>
+    <script>
+        function semakData() // 3
+        {
+            var teksnama;
+            teksnama = document.getElementById("n1").value; // 4
+            if (teksnama == "" || teksnama == " ") {
+                window.alert("Sila masukkan nama anda"); // 5
+            }
+        }
+    </script>
+</body>
+
+</html>

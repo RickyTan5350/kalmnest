@@ -1,8 +1,8 @@
 // lib/widgets/achievement_grid_layout.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_achievement_detail.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/grid_layout_view.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_achievement_detail.dart';
+import 'package:code_play/admin_teacher/widgets/grid_layout_view.dart';
+import 'package:code_play/models/achievement_data.dart';
 // FIX 1: Import the correctly named unified grid file
 
 class AchievementGridLayout extends StatelessWidget {
@@ -78,8 +78,8 @@ class AchievementGridLayout extends StatelessWidget {
                     ),
                   ),
                   // Only show "more" icon if we are in Admin mode (no custom tap handler)
-                  if (onTap == null)
-                    const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                  // if (onTap == null)
+                  //   const Icon(Icons.more_vert, size: 20, color: Colors.grey),
                 ],
               ),
             ),

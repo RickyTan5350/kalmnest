@@ -1,22 +1,16 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
-import 'package:flutter_codelab/models/student.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
-=======
 import 'package:code_play/models/student.dart';
 import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
->>>>>>> Stashed changes
 
 class StudentPreviewRow extends StatelessWidget {
   final List<Student> students;
   final VoidCallback onViewAll;
 
   const StudentPreviewRow({
-    Key? key,
+    super.key,
     required this.students,
     required this.onViewAll,
-  }) : super(key: key);
+  });
 
   Widget _studentCard(BuildContext context, Student student) {
     return Container(
@@ -150,12 +144,12 @@ class StudentPreviewRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      AppLocalizations.of(context)!.students,
+                      'Students',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     SizedBox(height: ClassConstants.defaultPadding * 0.25),
                     Text(
-                      AppLocalizations.of(context)!.listOfEnrolledStudents,
+                      'List of enrolled students',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -168,7 +162,7 @@ class StudentPreviewRow extends StatelessWidget {
                     minimumSize: const Size(0, 36),
                   ),
                   onPressed: onViewAll,
-                  child: Text(AppLocalizations.of(context)!.viewAll),
+                  child: const Text("View All"),
                 ),
               ],
             ),
@@ -205,3 +199,4 @@ class StudentPreviewRow extends StatelessWidget {
     );
   }
 }
+

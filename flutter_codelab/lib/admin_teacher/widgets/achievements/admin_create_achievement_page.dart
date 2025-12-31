@@ -2,11 +2,11 @@ import 'dart:convert'; // Required for jsonDecode
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_codelab/api/achievement_api.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
-import 'package:flutter_codelab/api/game_api.dart';
-import 'package:flutter_codelab/models/level.dart';
+import 'package:code_play/api/achievement_api.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/constants/achievement_constants.dart';
+import 'package:code_play/api/game_api.dart';
+import 'package:code_play/models/level.dart';
 
 void showCreateAchievementDialog({
   required BuildContext context,
@@ -96,6 +96,7 @@ class _AdminCreateAchievementDialogState
       final icon = _selectedIcon!.toLowerCase();
       // Heuristic: Check if the level type name allows the icon tag
       // e.g. "HTML Basics" contains "html"
+      if (icon == 'javascript' && type.contains('js')) return true;
       return type.contains(icon);
     }).toList();
   }
@@ -794,3 +795,4 @@ class _AdminCreateAchievementDialogState
     return shouldDiscard ?? false;
   }
 }
+

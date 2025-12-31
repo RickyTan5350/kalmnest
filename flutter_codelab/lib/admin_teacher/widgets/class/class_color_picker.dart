@@ -1,6 +1,6 @@
 // Color picker widget for class customization
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 class ClassColorPicker extends StatelessWidget {
   final String? selectedColor;
@@ -75,4 +75,5 @@ class ClassColorPicker extends StatelessWidget {
     );
   }
 }
+
 

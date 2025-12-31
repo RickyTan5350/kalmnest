@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/feedback_api.dart';
-import 'package:flutter_codelab/models/models.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart' as create_fb;
-import 'package:flutter_codelab/admin_teacher/widgets/feedback/edit_feedback.dart' as edit_fb;
-import 'package:flutter_codelab/student/widgets/feedback/student_view_feedback_page.dart';
+import 'package:code_play/api/feedback_api.dart';
+import 'package:code_play/models/models.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart' as create_fb;
+import 'package:code_play/admin_teacher/widgets/feedback/edit_feedback.dart' as edit_fb;
+import 'package:code_play/student/widgets/feedback/student_view_feedback_page.dart';
 class FeedbackPage extends StatefulWidget {
   final String? authToken;
   final UserDetails? currentUser;
@@ -168,11 +168,38 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Feedback'),
+    final colors = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        elevation: 2.0,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- HEADER ---
+                Text(
+                  "Feedback",
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: colors.onSurface,
+                      ),
+                ),
+                const SizedBox(height: 16),
+
+                // --- CONTENT ---
+                Expanded(
+                  child: _buildBody(),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      body: _buildBody(),
     );
   }
 
@@ -416,7 +443,7 @@ class _FeedbackCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.6),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.6),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -481,3 +508,4 @@ class _FeedbackCard extends StatelessWidget {
     );
   }
 }
+

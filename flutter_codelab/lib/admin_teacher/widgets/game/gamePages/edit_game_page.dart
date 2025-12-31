@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_codelab/models/level.dart';
-import 'package:flutter_codelab/api/game_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/models/level.dart';
+import 'package:code_play/api/game_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter/foundation.dart';
+import 'package:code_play/utils/local_asset_server.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/services/local_level_storage.dart';
+import 'dart:convert';
 
 /// Opens the edit dialog
 Future<void> showEditGamePage({
@@ -50,21 +54,77 @@ class _EditGamePageState extends State<EditGamePage> {
   late String selectedValue;
   late String levelName;
   bool _saving = false;
+  late TextEditingController _nameController;
 
   final GlobalKey<_IndexFilePreviewState> previewKey =
       GlobalKey<_IndexFilePreviewState>();
 
   final List<String> levelTypes = ['HTML', 'CSS', 'JS', 'PHP', 'Quiz'];
 
+  LocalAssetServer? _server;
+  LocalAssetServer? _previewServer;
+  String? _serverUrl;
+  String? _previewServerUrl;
+
+  String? _userId;
+  final _levelStorage = LocalLevelStorage();
+
   @override
   void initState() {
     super.initState();
     levelName = widget.level.levelName ?? '';
+    _nameController = TextEditingController(text: levelName);
     selectedValue = widget.level.levelTypeName ?? 'HTML';
+    _initServer().then((_) => _loadLevelDetails());
+  }
+
+  Future<void> _loadLevelDetails() async {
+    if (widget.level.levelId != null) {
+      await GameAPI.fetchLevelById(widget.level.levelId!, userRole: widget.userRole);
+    }
+  }
+
+  Future<void> _initServer() async {
+    _server = LocalAssetServer();
+    _previewServer = LocalAssetServer();
+    try {
+      await _server!.start(path: 'assets');
+
+      // Fetch user ID to pass to Unity
+      final user = await AuthApi.getStoredUser();
+      final userId = user?['user_id']?.toString();
+      
+      setState(() {
+        _userId = userId;
+      });
+
+      // Start preview server for local storage base path
+      final storageBasePath = await _levelStorage.getBasePath(userId: userId);
+      await _previewServer!.start(path: storageBasePath);
+
+      setState(() {
+        _serverUrl = 'http://localhost:${_server!.port}';
+        _previewServerUrl = 'http://localhost:${_previewServer!.port}';
+      });
+    } catch (e) {
+      print("Error starting local server: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _server?.stop();
+    _previewServer?.stop();
+    _nameController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_serverUrl == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -91,7 +151,7 @@ class _EditGamePageState extends State<EditGamePage> {
 
                 // Level Name TextField
                 TextField(
-                  controller: TextEditingController(text: levelName),
+                  controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: 'Enter level name',
                     border: OutlineInputBorder(),
@@ -139,12 +199,63 @@ class _EditGamePageState extends State<EditGamePage> {
 
                               setState(() => _saving = true);
 
-                              final ApiResponse response =
-                                  await GameAPI.updateLevel(
-                                    levelId: widget.level.levelId!,
-                                    levelName: levelName,
-                                    levelTypeName: selectedValue,
-                                  );
+                              if (kDebugMode) {
+                                final storage = LocalLevelStorage();
+                                final basePath = await storage.getBasePath(userId: _userId);
+                                print('--- Edit Save Started ---');
+                                print('Target Level ID: ${widget.level.levelId}');
+                                print('Current _userId: $_userId');
+                                print('Local Storage Path: $basePath');
+                              }
+
+                              // Sync Unity data from local storage back to server
+                              final storage = LocalLevelStorage();
+                              final levelTypes = ['html', 'css', 'js', 'php'];
+                              
+                              Map<String, String?> currentLevelData = {};
+                              Map<String, String?> currentWinData = {};
+
+                              final originalLevelData = widget.level.levelData != null ? jsonDecode(widget.level.levelData!) : {};
+                              final originalWinData = widget.level.winCondition != null ? jsonDecode(widget.level.winCondition!) : {};
+
+                              for (final type in levelTypes) {
+                                final localLevel = await storage.getFileContent(
+                                  levelId: widget.level.levelId!,
+                                  type: type,
+                                  dataType: 'level',
+                                  userId: _userId,
+                                  userRole: widget.userRole,
+                                );
+                                // Use local or fallback to original
+                                final localWin = await storage.getFileContent(
+                                  levelId: widget.level.levelId!,
+                                  type: type,
+                                  dataType: 'win',
+                                  userId: _userId,
+                                  userRole: widget.userRole,
+                                );
+                                
+                                if (kDebugMode) {
+                                  print('Type $type: localLevel=${localLevel != null}, localWin=${localWin != null}');
+                                }
+                                currentLevelData[type] = localLevel ?? originalLevelData[type]?.toString();
+                                currentWinData[type] = localWin ?? originalWinData[type]?.toString();
+                              }
+
+                               if (kDebugMode) {
+                                 print('Syncing level data to server:');
+                                 print('LevelData: ${jsonEncode(currentLevelData)}');
+                                 print('WinCondition: ${jsonEncode(currentWinData)}');
+                               }
+
+                               final ApiResponse response =
+                                   await GameAPI.updateLevel(
+                                     levelId: widget.level.levelId!,
+                                     levelName: levelName,
+                                     levelTypeName: selectedValue,
+                                     levelData: jsonEncode(currentLevelData),
+                                     winCondition: jsonEncode(currentWinData),
+                                   );
 
                               setState(() => _saving = false);
 
@@ -189,13 +300,98 @@ class _EditGamePageState extends State<EditGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "${ApiConstants.domain}/unity_build/index.html?role=${widget.userRole}",
+                          "$_serverUrl/unity/index.html?role=${widget.userRole}&level_Id=${widget.level.levelId}&user_Id=$_userId",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
+                        // Cross-platform settings
                         javaScriptEnabled: true,
                         isInspectable: kDebugMode,
                       ),
+                      onWebViewCreated: (controller) {
+                        // Handler for saving level data (triggered by Unity)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'saveLevelFile',
+                          callback: (args) async {
+                            // Unity calls: window.flutter_inappwebview.callHandler('saveLevelFile', levelId, type, dataType, content)
+                            if (args.length >= 4) {
+                              final levelId = args[0] as String? ?? widget.level.levelId ?? '';
+                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final dataType = args[2] as String? ?? 'levelData';
+                              final content = args[3] as String? ?? '';
+
+                              final storage = LocalLevelStorage();
+                              return await storage.saveDataFile(
+                                levelId: levelId,
+                                userId: _userId, // Pass userId
+                                type: type,
+                                dataType: dataType,
+                                content: content,
+                              );
+                            }
+                            return false;
+                          },
+                        );
+
+                        // Handler for saving index file (triggered by Unity)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'saveIndexFile',
+                          callback: (args) async {
+                            // Unity calls: window.flutter_inappwebview.callHandler('saveIndexFile', levelId, type, content)
+                            if (args.length >= 3) {
+                              final levelId = args[0] as String? ?? widget.level.levelId ?? '';
+                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final content = args[2] as String? ?? '';
+
+                              final storage = LocalLevelStorage();
+                              return await storage.saveIndexFile(
+                                levelId: levelId,
+                                userId: _userId, // Pass userId
+                                type: type,
+                                content: content,
+                              );
+                            }
+                            return false;
+                          },
+                        );
+
+                        // Handler for getting level files (triggered by Unity)
+                        controller.addJavaScriptHandler(
+                          handlerName: 'getLevelFile',
+                          callback: (args) async {
+                            // Unity calls: window.flutter_inappwebview.callHandler('getLevelFile', levelId, type, dataType, useProgress)
+                            if (args.length >= 3) {
+                              final levelId = args[0] as String? ?? widget.level.levelId ?? '';
+                              final type = (args[1] as String? ?? 'html').toLowerCase();
+                              final dataType = args[2] as String? ?? 'level'; // levelData or winData
+                              final useProgress = args.length >= 4 
+                                  ? (args[3] as bool? ?? false) 
+                                  : false;
+
+                              if (kDebugMode) {
+                                print("EditMode -> getLevelFile: levelId=$levelId, type=$type, dataType=$dataType, useProgress=$useProgress");
+                              }
+
+                              final storage = LocalLevelStorage();
+                              final content = await storage.getFileContent(
+                                levelId: levelId,
+                                userId: _userId, // Pass userId
+                                type: type,
+                                dataType: dataType,
+                                useProgress: useProgress,
+                                userRole: widget.userRole, // Added userRole
+                              );
+
+                              if (kDebugMode) {
+                                print("EditMode -> content found: ${content != null}");
+                              }
+                              
+                              return content ?? '';
+                            }
+                            return '';
+                          },
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -227,6 +423,8 @@ class _EditGamePageState extends State<EditGamePage> {
                     child: IndexFilePreview(
                       key: previewKey,
                       userRole: widget.userRole,
+                      serverUrl: _previewServerUrl ?? '', // Use preview server
+                      levelId: widget.level.levelId ?? '',
                     ),
                   ),
                 ),
@@ -242,8 +440,15 @@ class _EditGamePageState extends State<EditGamePage> {
 /// WebView preview for Unity build
 class IndexFilePreview extends StatefulWidget {
   final String userRole;
+  final String serverUrl;
+  final String levelId;
 
-  const IndexFilePreview({super.key, required this.userRole});
+  const IndexFilePreview({
+    super.key,
+    required this.userRole,
+    required this.serverUrl,
+    required this.levelId,
+  });
 
   @override
   State<IndexFilePreview> createState() => _IndexFilePreviewState();
@@ -254,8 +459,12 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.serverUrl.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final url =
-        "${ApiConstants.domain}/unity_build/StreamingAssets/html/index.html";
+        "${widget.serverUrl}/${widget.levelId}/index/index.html";
 
     return InAppWebView(
       key: _key,
@@ -273,3 +482,4 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
     });
   }
 }
+

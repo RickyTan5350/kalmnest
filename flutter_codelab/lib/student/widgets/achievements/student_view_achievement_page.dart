@@ -1,11 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/achievement_api.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
-import 'package:flutter_codelab/student/widgets/achievements/student_achievement_detail_page.dart';
+import 'package:code_play/api/achievement_api.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/student/services/local_achievement_storage.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/constants/achievement_constants.dart';
+import 'package:code_play/enums/sort_enums.dart'; // Shared Enums
+import 'package:code_play/student/widgets/achievements/student_achievement_detail_page.dart';
 
 class StudentViewAchievementsPage extends StatefulWidget {
   final ViewLayout layout;
@@ -74,8 +75,19 @@ class StudentViewAchievementsPageState
     });
 
     try {
-      final cloudData = await api.fetchMyUnlockedAchievements();
-      await localStore.saveUnlockedAchievements(widget.userId, cloudData);
+      // 1. Attempt to connect to the server for a longer time (2 minutes)
+      final cloudData = await api.fetchMyUnlockedAchievements().timeout(
+        const Duration(minutes: 2),
+      );
+
+      // 2. Only cache OBTAINED (unlocked) achievements locally
+      final obtainedAchievements = cloudData
+          .where((a) => a.isUnlocked)
+          .toList();
+      await localStore.saveUnlockedAchievements(
+        widget.userId,
+        obtainedAchievements,
+      );
 
       if (mounted) {
         setState(() {
@@ -88,11 +100,13 @@ class StudentViewAchievementsPageState
         setState(() {
           _isOffline = true;
         });
-        widget.showSnackBar(
-          context,
-          "Unable to sync. Showing cached data.",
-          Colors.orange.shade800,
-        );
+
+        String errorMessage = "Unable to sync. Showing cached data.";
+        if (e is TimeoutException) {
+          errorMessage = "Connection timed out. Showing cached achievements.";
+        }
+
+        widget.showSnackBar(context, errorMessage, Colors.orange.shade800);
       }
     }
   }

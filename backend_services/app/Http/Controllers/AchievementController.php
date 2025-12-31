@@ -147,7 +147,7 @@ class AchievementController extends Controller
 
     public function getAchievementStudents($id)
     {
-        if (!$this->isAdminOrTeacher()) {
+        if (!$this->isAdminOrTeacher() && !$this->isStudent()) {
             return response()->json(['message' => 'Access Denied.'], 403);
         }
 
@@ -176,6 +176,28 @@ class AchievementController extends Controller
         $students = $query->get();
 
         return response()->json($students);
+    }
+
+    public function getUserAchievements($userId)
+    {
+        if (!$this->isAdminOrTeacher() && !$this->isStudent()) {
+            return response()->json(['message' => 'Access Denied.'], 403);
+        }
+
+        // Fetch achievements unlocked by the specific user
+        $achievements = DB::table('achievements')
+            ->join('achievement_user', 'achievements.achievement_id', '=', 'achievement_user.achievement_id')
+            ->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
+            ->where('achievement_user.user_id', $userId)
+            ->select(
+                'achievements.*',
+                'achievement_user.created_at as unlocked_at',
+                'users.name as creator_name'
+            )
+            ->orderBy('achievement_user.created_at', 'desc')
+            ->get();
+
+        return response()->json($achievements);
     }
 
     public function getAchievement($id) 

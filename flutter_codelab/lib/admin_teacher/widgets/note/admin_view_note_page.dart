@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/note_api.dart';
-import 'package:flutter_codelab/models/note_brief.dart';
+import 'package:code_play/api/note_api.dart';
+import 'package:code_play/models/note_brief.dart';
 // FIX: Imported Admin Detail Page
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_note_detail.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart'; // Adjust path as needed
+import 'package:code_play/admin_teacher/widgets/note/admin_note_detail.dart';
+import 'package:code_play/admin_teacher/widgets/note/note_grid_layout.dart'; // Adjust path as needed
 // Import Shared Grid (Adjust path if needed)
-import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
-import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
+import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:code_play/admin_teacher/services/selection_box_painter.dart';
 import 'package:flutter/services.dart'; // For HapticFeedback
-import 'package:flutter_codelab/theme.dart'; // Import BrandColors
+import 'package:code_play/theme.dart'; // Import BrandColors
 
-import 'package:flutter_codelab/enums/sort_enums.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/constants/view_layout.dart';
 
 class AdminViewNotePage extends StatefulWidget {
   final ViewLayout layout;
@@ -27,7 +27,10 @@ class AdminViewNotePage extends StatefulWidget {
     required this.query,
     required this.sortType,
     required this.sortOrder,
+    this.onTopicChanged,
   });
+
+  final void Function(String)? onTopicChanged;
 
   @override
   State<AdminViewNotePage> createState() => AdminViewNotePageState();
@@ -463,10 +466,10 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
         itemKeys: _gridItemKeys,
 
         // 2. ADD THIS: Handle the tap event for Admin
-        onTap: (id) {
+        onTap: (id) async {
           final note = noteMap[id];
           if (note != null) {
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => AdminNoteDetailPage(
@@ -476,6 +479,13 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                 ),
               ),
             );
+            if (widget.onTopicChanged != null) {
+              if (result == 'navigate_home') {
+                widget.onTopicChanged!('All');
+              } else if (result is String && result.isNotEmpty) {
+                widget.onTopicChanged!(result);
+              }
+            }
           }
         },
       );
@@ -553,12 +563,12 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12.0),
         onLongPress: () => _enterSelectionMode(item.noteId),
-        onTap: () {
+        onTap: () async {
           if (_isSelectionMode) {
             _toggleSelection(item.noteId);
           } else {
             // FIX: Use AdminNoteDetailPage
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => AdminNoteDetailPage(
@@ -569,6 +579,13 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                 ),
               ),
             );
+            if (widget.onTopicChanged != null) {
+              if (result == 'navigate_home') {
+                widget.onTopicChanged!('All');
+              } else if (result is String && result.isNotEmpty) {
+                widget.onTopicChanged!(result);
+              }
+            }
           }
         },
         child: Padding(
@@ -606,8 +623,6 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
                   ],
                 ),
               ),
-              if (!_isSelectionMode)
-                Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -615,3 +630,4 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
     );
   }
 }
+

@@ -4,12 +4,14 @@ use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\NotesController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\LevelController;
+use App\Http\Controllers\LevelUserController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\FeedbackController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Requests\DeleteUserRequest;
+use App\Http\Controllers\GeminiController;
 /*
 |--------------------------------------------------------------------------
 | Public Routes (No Authentication Required)
@@ -28,9 +30,11 @@ Route::post('/reset-password', [\App\Http\Controllers\PasswordResetController::c
 // These are public so your Flutter app can access them without a token.
 
 Route::get('/notes', [NotesController::class, 'showNotesBrief']);
-Route::get('/notes/search', [NotesController::class, 'search']); 
+Route::get('/notes/search', [NotesController::class, 'search']);
 Route::post('/notes/new', [NotesController::class, 'store']);         // <--- This is the active Create Note route
 Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- This is the active Upload route
+Route::post('/run-code', [App\Http\Controllers\RunCodeController::class, 'execute']); // Execute PHP code
+Route::get('/get-file', [RunCodeController::class, 'getFile']);
 
 Route::post('/achievements/new', [AchievementController::class, 'store']);
 Route::get('/achievements', [AchievementController::class, 'showAchievementsBrief']);
@@ -58,12 +62,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-Route::post('/logout', [UserController::class, 'logout']);
-// --- User Management (CRUD/View) ---
+    Route::post('/logout', [UserController::class, 'logout']);
+    // --- User Management (CRUD/View) ---
     // All roles (Admin/Teacher/Student) can view list/search/filter
-Route::prefix('users')->group(function () {
+    Route::prefix('users')->group(function () {
         // List/Search/Filter (GET /api/users)
-        Route::get('/', [UserController::class, 'index']); 
+        Route::get('/', [UserController::class, 'index']);
         // User lists for class management (MUST be before /{user} route to avoid route model binding conflict)
         Route::get('/teachers', [UserController::class, 'getTeachers']); // Get all teachers
         Route::get('/students', [UserController::class, 'getStudents']); // Get all students
@@ -73,6 +77,8 @@ Route::prefix('users')->group(function () {
         Route::put('/{user}', [UserController::class, 'update']);
         // Delete account (DELETE /api/users/{user})
         Route::delete('/{user}', [UserController::class, 'destroy']);
+        // Import users (POST /api/users/import)
+        Route::post('/import', [UserController::class, 'import']);
     });
     // --- Current Logged-in User ---
     Route::get('/user', fn(Request $request) => $request->user());
@@ -88,7 +94,7 @@ Route::prefix('users')->group(function () {
             'role_name' => $user->role?->role_name ?? 'N/A',
         ]);
     });
- // --- Classes Module ---
+    // --- Classes Module ---
     Route::prefix('classes')->group(function () {
         Route::get('/', [ClassController::class, 'index']); // List classes (role-based)
         Route::post('/', [ClassController::class, 'store']); // Create class (admin only)
@@ -96,7 +102,7 @@ Route::prefix('users')->group(function () {
         Route::put('/{id}', [ClassController::class, 'update']); // Update class (admin only)
         Route::patch('/{id}/focus', [ClassController::class, 'updateClassFocus']); // Update class focus (teacher only)
         Route::delete('/{id}', [ClassController::class, 'destroy']); // Delete class (admin only)
-        
+
         // Quiz (Level) management for classes
         Route::get('/{id}/quizzes', [ClassController::class, 'getQuizzes']); // Get quizzes for a class
         Route::post('/{id}/quizzes', [ClassController::class, 'assignQuiz']); // Assign existing quiz to class
@@ -105,7 +111,7 @@ Route::prefix('users')->group(function () {
         Route::get('/{classId}/students/{studentId}/quizzes', [ClassController::class, 'getStudentQuizzes']); // Get student's quiz completion status
         Route::get('/{classId}/quizzes/{levelId}/students', [ClassController::class, 'getQuizStudents']); // Get quiz's student completion status
     });
-    
+
     // Class statistics
     Route::get('/classes-count', [ClassController::class, 'getCount']); // Get class count
     Route::get('/classes-stats', [ClassController::class, 'getStats']); // Get class stats
@@ -131,6 +137,10 @@ Route::prefix('users')->group(function () {
         Route::get('/', [AchievementController::class, 'showAchievementsBrief']);
 
         // Change '/achievements/{id}' to '/{id}' (This maps to /api/achievements/{id})
+        // NOTE: This must come AFTER specific routes like 'user/{id}' if we added any, 
+        // to avoid conflict, but 'user/{id}' is distinct.
+        
+        Route::get('/user/{id}', [AchievementController::class, 'getUserAchievements']);
         Route::get('/{id}', [AchievementController::class, 'getAchievement']);
         Route::get('/{id}/students', [AchievementController::class, 'getAchievementStudents']);
     });
@@ -150,6 +160,17 @@ Route::prefix('users')->group(function () {
     Route::put('/levels/{levelId}', [LevelController::class, 'update']);
     Route::delete('/levels/{levelId}', [LevelController::class, 'destroy']);
     Route::get('/level/{levelId}', [LevelController::class, 'singleLevel']);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Level User (Level Progress & Completion)
+    |--------------------------------------------------------------------------
+    */
+    Route::post('/level-user/{levelId}/save', [LevelUserController::class, 'saveLevelData']);
+    Route::post('/level-user/{levelId}/{userId}/save-file', [LevelUserController::class, 'storeProgressFromFiles']);
+    Route::get('/level-user/{levelId}', [LevelUserController::class, 'getLevelData']);
+    Route::post('/level-user/{levelId}/{userId}/complete', [LevelUserController::class, 'completeLevel']);
+
 });
 
 
@@ -158,8 +179,6 @@ Route::prefix('users')->group(function () {
 | Public Read-Only Routes
 |--------------------------------------------------------------------------
 */
-
-
 
 
 // --- 2. WILDCARD ROUTES (MUST BE AT THE BOTTOM) ---
@@ -182,4 +201,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Get feedback received by a specific student (requires auth)
     Route::get('/feedback/student/{studentId}', [FeedbackController::class, 'getStudentFeedback']);
+    Route::post('/chat', [GeminiController::class, 'getResponse']);
 });

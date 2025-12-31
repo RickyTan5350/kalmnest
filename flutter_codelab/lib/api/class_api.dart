@@ -1,12 +1,12 @@
 // lib/api/class_api.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 class ClassApi {
   // Replace with your PC's local IP
-  static String get base => ApiConstants.baseUrl;
+  static String base = '${ApiConstants.baseUrl}/api';
 
   // Helper function to get headers with authentication
   static Future<Map<String, String>> _getAuthHeaders({
@@ -15,6 +15,7 @@ class ClassApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     final token = await AuthApi.getToken();
@@ -580,3 +581,4 @@ class ClassApi {
     }
   }
 }
+

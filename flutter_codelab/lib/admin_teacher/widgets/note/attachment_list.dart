@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/uploaded_attachment.dart'; // Import the model
+import 'package:code_play/models/uploaded_attachment.dart'; // Import the model
 
 class AttachmentList extends StatelessWidget {
   final List<UploadedAttachment> attachments;
@@ -45,7 +45,7 @@ class AttachmentList extends StatelessWidget {
 
             return Container(
               decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant.withOpacity(0.3),
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                     color: item.isFailed

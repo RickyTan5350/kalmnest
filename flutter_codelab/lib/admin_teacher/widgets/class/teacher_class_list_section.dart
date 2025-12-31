@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/admin_teacher/widgets/class/teacher_view_class_page.dart';
-import 'package:code_play/admin_teacher/widgets/class/admin_view_class_page.dart';
 import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
 import 'package:code_play/constants/view_layout.dart';
 import 'package:code_play/constants/class_constants.dart';
 import 'package:code_play/enums/sort_enums.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
 
 // Class List Item Widget
 class _ClassListItem extends StatefulWidget {
@@ -37,11 +35,10 @@ class _ClassListItem extends StatefulWidget {
 class _ClassListItemState extends State<_ClassListItem> {
   // Get teacher name from item
   String get _teacherName {
-    final l10n = AppLocalizations.of(context)!;
     if (widget.item['teacher'] != null) {
-      return widget.item['teacher']['name'] ?? l10n.unknownTeacher;
+      return widget.item['teacher']['name'] ?? 'Unknown Teacher';
     }
-    return l10n.noTeacherAssigned;
+    return 'No teacher assigned';
   }
 
   // Get student count
@@ -65,7 +62,7 @@ class _ClassListItemState extends State<_ClassListItem> {
       elevation: 1.0,
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: widget.colorScheme.outline.withOpacity(0.3),
+          color: widget.colorScheme.outline.withValues(alpha: 0.3),
           width: 1.0,
         ),
         borderRadius: BorderRadius.circular(12.0),
@@ -114,9 +111,7 @@ class _ClassListItemState extends State<_ClassListItem> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      _hasTeacher
-                          ? _teacherName
-                          : AppLocalizations.of(context)!.noTeacherAssigned,
+                      _hasTeacher ? _teacherName : 'No teacher',
                       style: widget.textTheme.labelSmall?.copyWith(
                         color: _hasTeacher
                             ? widget.colorScheme.onSurfaceVariant
@@ -139,8 +134,8 @@ class _ClassListItemState extends State<_ClassListItem> {
                     const SizedBox(width: 4),
                     Text(
                       _studentCount > 0
-                          ? '$_studentCount ${_studentCount == 1 ? AppLocalizations.of(context)!.student : AppLocalizations.of(context)!.studentsPlural}'
-                          : AppLocalizations.of(context)!.noStudents,
+                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
+                          : 'No students',
                       style: widget.textTheme.labelSmall?.copyWith(
                         color: _studentCount > 0
                             ? widget.colorScheme.onSurfaceVariant
@@ -255,7 +250,7 @@ class _ClassGridCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: colorScheme.outline.withOpacity(0.3),
+          color: colorScheme.outline.withValues(alpha: 0.3),
           width: 1.0,
         ),
         borderRadius: BorderRadius.circular(12.0),
@@ -374,9 +369,7 @@ class _ClassGridCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      _hasTeacher
-                          ? _teacherName
-                          : AppLocalizations.of(context)!.noTeacherAssigned,
+                      _hasTeacher ? _teacherName : 'No teacher',
                       style: textTheme.labelSmall?.copyWith(
                         color: _hasTeacher
                             ? colorScheme.onSurfaceVariant
@@ -403,8 +396,8 @@ class _ClassGridCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       _studentCount > 0
-                          ? '$_studentCount ${_studentCount == 1 ? AppLocalizations.of(context)!.student : AppLocalizations.of(context)!.studentsPlural}'
-                          : AppLocalizations.of(context)!.noStudents,
+                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
+                          : 'No students',
                       style: textTheme.labelSmall?.copyWith(
                         color: _studentCount > 0
                             ? colorScheme.onSurfaceVariant
@@ -434,22 +427,16 @@ class ClassListSection extends StatefulWidget {
   final SortType sortType;
   final SortOrder sortOrder;
   final VoidCallback? onReload;
-  final String? selectedFilter; // 'All' or 'Created by Me'
-  final String? currentUserId; // Current user ID for filtering
-  final String? selectedFocus; // 'All', 'HTML', 'CSS', 'JavaScript', 'PHP'
 
   const ClassListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     this.searchQuery = '',
     required this.layout,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
     this.onReload,
-    this.selectedFilter,
-    this.currentUserId,
-    this.selectedFocus,
-  }) : super(key: key);
+  });
 
   @override
   State<ClassListSection> createState() => _ClassListSectionState();
@@ -472,14 +459,10 @@ class _ClassListSectionState extends State<ClassListSection> {
     if (oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
-        oldWidget.sortOrder != widget.sortOrder ||
-        oldWidget.selectedFilter != widget.selectedFilter ||
-        oldWidget.selectedFocus != widget.selectedFocus) {
+        oldWidget.sortOrder != widget.sortOrder) {
       if (oldWidget.searchQuery != widget.searchQuery ||
           oldWidget.sortType != widget.sortType ||
-          oldWidget.sortOrder != widget.sortOrder ||
-          oldWidget.selectedFilter != widget.selectedFilter ||
-          oldWidget.selectedFocus != widget.selectedFocus) {
+          oldWidget.sortOrder != widget.sortOrder) {
         // Just re-filter and sort, don't reload from API
         _applyFiltersAndSort();
       } else {
@@ -488,49 +471,22 @@ class _ClassListSectionState extends State<ClassListSection> {
     }
   }
 
-  Future<void> loadClasses({bool forceRefresh = false}) async {
+  Future<void> loadClasses() async {
     if (!mounted) return;
     setState(() => loading = true);
     try {
-      // Force refresh to get latest data from server
       final allClasses = await ClassApi.fetchAllClasses();
       if (!mounted) return;
 
-      // Apply filters
-      List<dynamic> filtered = allClasses;
-
       // Apply search filter if search query is provided
+      List<dynamic> filtered = allClasses;
       if (widget.searchQuery.isNotEmpty) {
         final query = widget.searchQuery.toLowerCase();
-        filtered = filtered.where((classItem) {
+        filtered = allClasses.where((classItem) {
           final className = (classItem['class_name'] ?? '')
               .toString()
               .toLowerCase();
           return className.contains(query);
-        }).toList();
-      }
-
-      // Apply "Created by Me" filter for admin
-      if (widget.selectedFilter == 'Created by Me' &&
-          widget.currentUserId != null) {
-        filtered = filtered.where((classItem) {
-          final adminId = classItem['admin_id']?.toString();
-          return adminId == widget.currentUserId.toString();
-        }).toList();
-      }
-
-      // Apply focus filter
-      if (widget.selectedFocus != null && widget.selectedFocus != 'All') {
-        filtered = filtered.where((classItem) {
-          final focus = classItem['focus']?.toString();
-          final matches = focus == widget.selectedFocus;
-          // Debug: print to verify filtering is working
-          if (matches) {
-            print(
-              'Class ${classItem['class_name']} matches focus filter: ${widget.selectedFocus}',
-            );
-          }
-          return matches;
         }).toList();
       }
 
@@ -544,9 +500,7 @@ class _ClassListSectionState extends State<ClassListSection> {
           loading = false;
         });
       }
-    } catch (e, stackTrace) {
-      print('Error loading classes: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         setState(() {
           classList = [];
@@ -558,34 +512,15 @@ class _ClassListSectionState extends State<ClassListSection> {
   }
 
   void _applyFiltersAndSort() {
-    // Apply filters
-    List<dynamic> filtered = classList;
-
     // Apply search filter
+    List<dynamic> filtered = classList;
     if (widget.searchQuery.isNotEmpty) {
       final query = widget.searchQuery.toLowerCase();
-      filtered = filtered.where((classItem) {
+      filtered = classList.where((classItem) {
         final className = (classItem['class_name'] ?? '')
             .toString()
             .toLowerCase();
         return className.contains(query);
-      }).toList();
-    }
-
-    // Apply "Created by Me" filter for admin
-    if (widget.selectedFilter == 'Created by Me' &&
-        widget.currentUserId != null) {
-      filtered = filtered.where((classItem) {
-        final adminId = classItem['admin_id']?.toString();
-        return adminId == widget.currentUserId.toString();
-      }).toList();
-    }
-
-    // Apply focus filter
-    if (widget.selectedFocus != null && widget.selectedFocus != 'All') {
-      filtered = filtered.where((classItem) {
-        final focus = classItem['focus']?.toString();
-        return focus == widget.selectedFocus;
       }).toList();
     }
 
@@ -645,7 +580,17 @@ class _ClassListSectionState extends State<ClassListSection> {
       if (widget.onReload != null) {
         widget.onReload!();
       }
-      // Note: Success message is already shown in EditClassPage, no need to show again
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Class updated successfully'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -682,7 +627,7 @@ class _ClassListSectionState extends State<ClassListSection> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Class deleted successfully'),
-              backgroundColor: Colors.green,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
             ),
@@ -725,11 +670,13 @@ class _ClassListSectionState extends State<ClassListSection> {
                     Icon(
                       Icons.school_outlined,
                       size: 64,
-                      color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.5,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      AppLocalizations.of(context)!.noClassesFound,
+                      'No classes found',
                       style: textTheme.titleMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -737,14 +684,12 @@ class _ClassListSectionState extends State<ClassListSection> {
                     const SizedBox(height: 8),
                     Text(
                       widget.searchQuery.isNotEmpty
-                          ? AppLocalizations.of(
-                              context,
-                            )!.tryAdjustingSearchQuery
-                          : AppLocalizations.of(
-                              context,
-                            )!.notAssignedToAnyClasses,
+                          ? 'Try adjusting your search query'
+                          : 'You are not assigned to any classes yet',
                       style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -775,9 +720,7 @@ class _ClassListSectionState extends State<ClassListSection> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                AppLocalizations.of(
-                                  context,
-                                )!.resultsCount(filteredList.length),
+                                "${filteredList.length} Results",
                                 style: textTheme.titleMedium,
                               ),
                             ),
@@ -790,12 +733,13 @@ class _ClassListSectionState extends State<ClassListSection> {
                 SliverPadding(
                   padding: const EdgeInsets.all(8.0),
                   sliver: SliverGrid(
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 250.0,
-                      mainAxisSpacing: 12.0,
-                      crossAxisSpacing: 12.0,
-                      childAspectRatio: 0.85,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 250.0,
+                          mainAxisSpacing: 12.0,
+                          crossAxisSpacing: 12.0,
+                          childAspectRatio: 0.85,
+                        ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final item = filteredList[index];
                       return _ClassGridCard(
@@ -803,32 +747,16 @@ class _ClassListSectionState extends State<ClassListSection> {
                         roleName: widget.roleName,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
-                        onTap: () async {
-                          final result = await Navigator.push(
+                        onTap: () {
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  widget.roleName.toLowerCase() == 'admin'
-                                  ? AdminViewClassPage(
-                                      classId: item['class_id'].toString(),
-                                    )
-                                  : ClassDetailPage(
-                                      classId: item['class_id'].toString(),
-                                      roleName: widget.roleName,
-                                    ),
+                              builder: (_) => ClassDetailPage(
+                                classId: item['class_id'].toString(),
+                                roleName: widget.roleName,
+                              ),
                             ),
                           );
-                          // Refresh list if class was updated (e.g., focus changed)
-                          if (result == true) {
-                            // First trigger parent reload to ensure widget key changes
-                            // This forces the widget to rebuild with fresh state
-                            if (widget.onReload != null) {
-                              widget.onReload!();
-                            }
-                            // Then reload data from API - loadClasses() applies all filters
-                            // including focus filter based on current widget.selectedFocus
-                            await loadClasses();
-                          }
                         },
                         onEdit: widget.roleName.toLowerCase() == 'admin'
                             ? () => _onEditClass(item)
@@ -864,9 +792,7 @@ class _ClassListSectionState extends State<ClassListSection> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                AppLocalizations.of(
-                                  context,
-                                )!.resultsCount(filteredList.length),
+                                "${filteredList.length} Results",
                                 style: textTheme.titleMedium,
                               ),
                             ),
@@ -888,32 +814,16 @@ class _ClassListSectionState extends State<ClassListSection> {
                         roleName: widget.roleName,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
-                        onTap: () async {
-                          final result = await Navigator.push(
+                        onTap: () {
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  widget.roleName.toLowerCase() == 'admin'
-                                  ? AdminViewClassPage(
-                                      classId: item['class_id'].toString(),
-                                    )
-                                  : ClassDetailPage(
-                                      classId: item['class_id'].toString(),
-                                      roleName: widget.roleName,
-                                    ),
+                              builder: (_) => ClassDetailPage(
+                                classId: item['class_id'].toString(),
+                                roleName: widget.roleName,
+                              ),
                             ),
                           );
-                          // Refresh list if class was updated (e.g., focus changed)
-                          if (result == true) {
-                            // First trigger parent reload to ensure widget key changes
-                            // This forces the widget to rebuild with fresh state
-                            if (widget.onReload != null) {
-                              widget.onReload!();
-                            }
-                            // Then reload data from API - loadClasses() applies all filters
-                            // including focus filter based on current widget.selectedFocus
-                            await loadClasses();
-                          }
                         },
                         onEdit: widget.roleName.toLowerCase() == 'admin'
                             ? () => _onEditClass(item)

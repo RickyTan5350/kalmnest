@@ -321,16 +321,14 @@ class ClassListSection extends StatefulWidget {
   final ViewLayout layout;
   final SortType sortType;
   final SortOrder sortOrder;
-  final String? selectedFocus; // 'All', 'HTML', 'CSS', 'JavaScript', 'PHP'
   const ClassListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     this.searchQuery = '',
     required this.layout,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
-    this.selectedFocus,
-  }) : super(key: key);
+  });
 
   @override
   State<ClassListSection> createState() => _ClassListSectionState();
@@ -353,12 +351,10 @@ class _ClassListSectionState extends State<ClassListSection> {
     if (oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
-        oldWidget.sortOrder != widget.sortOrder ||
-        oldWidget.selectedFocus != widget.selectedFocus) {
+        oldWidget.sortOrder != widget.sortOrder) {
       if (oldWidget.searchQuery != widget.searchQuery ||
           oldWidget.sortType != widget.sortType ||
-          oldWidget.sortOrder != widget.sortOrder ||
-          oldWidget.selectedFocus != widget.selectedFocus) {
+          oldWidget.sortOrder != widget.sortOrder) {
         // Just re-filter and sort, don't reload from API
         _applyFiltersAndSort();
       } else {
@@ -374,25 +370,15 @@ class _ClassListSectionState extends State<ClassListSection> {
       final allClasses = await ClassApi.fetchAllClasses();
       if (!mounted) return;
 
-      // Apply filters
-      List<dynamic> filtered = allClasses;
-
       // Apply search filter if search query is provided
+      List<dynamic> filtered = allClasses;
       if (widget.searchQuery.isNotEmpty) {
         final query = widget.searchQuery.toLowerCase();
-        filtered = filtered.where((classItem) {
+        filtered = allClasses.where((classItem) {
           final className = (classItem['class_name'] ?? '')
               .toString()
               .toLowerCase();
           return className.contains(query);
-        }).toList();
-      }
-
-      // Apply focus filter
-      if (widget.selectedFocus != null && widget.selectedFocus != 'All') {
-        filtered = filtered.where((classItem) {
-          final focus = classItem['focus']?.toString();
-          return focus == widget.selectedFocus;
         }).toList();
       }
 
@@ -420,25 +406,15 @@ class _ClassListSectionState extends State<ClassListSection> {
   }
 
   void _applyFiltersAndSort() {
-    // Apply filters
-    List<dynamic> filtered = classList;
-
     // Apply search filter
+    List<dynamic> filtered = classList;
     if (widget.searchQuery.isNotEmpty) {
       final query = widget.searchQuery.toLowerCase();
-      filtered = filtered.where((classItem) {
+      filtered = classList.where((classItem) {
         final className = (classItem['class_name'] ?? '')
             .toString()
             .toLowerCase();
         return className.contains(query);
-      }).toList();
-    }
-
-    // Apply focus filter
-    if (widget.selectedFocus != null && widget.selectedFocus != 'All') {
-      filtered = filtered.where((classItem) {
-        final focus = classItem['focus']?.toString();
-        return focus == widget.selectedFocus;
       }).toList();
     }
 
@@ -564,12 +540,14 @@ class _ClassListSectionState extends State<ClassListSection> {
                 SliverPadding(
                   padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
                   sliver: SliverGrid(
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 250.0,
-                      mainAxisSpacing: ClassConstants.defaultPadding * 0.75,
-                      crossAxisSpacing: ClassConstants.defaultPadding * 0.75,
-                      childAspectRatio: 0.85,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 250.0,
+                          mainAxisSpacing: ClassConstants.defaultPadding * 0.75,
+                          crossAxisSpacing:
+                              ClassConstants.defaultPadding * 0.75,
+                          childAspectRatio: 0.85,
+                        ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final item = filteredList[index];
                       return _ClassGridCard(

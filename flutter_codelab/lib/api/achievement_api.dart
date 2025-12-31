@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
+import 'package:code_play/student/services/local_achievement_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/constants/api_constants.dart';
 import 'auth_api.dart';
 
 //server URL: set your own
@@ -21,6 +21,7 @@ class AchievementApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     final token = await AuthApi.getToken();
@@ -228,6 +229,9 @@ class AchievementApi {
       return jsonResponse
           .map((item) => AchievementData.fromJson(item))
           .toList();
+    } else if (response.statusCode == 403 || response.statusCode == 401) {
+      // Return empty list for non-students or unauthenticated (though headers check it)
+      return [];
     } else {
       throw Exception('Failed to fetch user progress');
     }
@@ -252,4 +256,27 @@ class AchievementApi {
       throw Exception('Failed to load students: $e');
     }
   }
+
+  Future<List<AchievementData>> fetchUserAchievements(String userId) async {
+    final url = '$_apiUrl/user/$userId';
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      if (response.statusCode == 200) {
+        List<dynamic> jsonResponse = jsonDecode(response.body);
+        return jsonResponse
+            .map((item) => AchievementData.fromJson(item))
+            .toList();
+      } else {
+        throw Exception(
+          'Failed to load user achievements: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('Error fetching user achievements: $e');
+      throw Exception('Failed to load user achievements: $e');
+    }
+  }
 }
+

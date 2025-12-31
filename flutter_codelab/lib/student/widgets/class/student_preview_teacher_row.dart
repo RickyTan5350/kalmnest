@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
-import 'package:flutter_codelab/constants/class_constants.dart';
-=======
 import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
->>>>>>> Stashed changes
 
 class TeacherPreviewRow extends StatelessWidget {
   final String teacherName;
@@ -27,12 +22,11 @@ class TeacherPreviewRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.teacherIncharge,
+          "Teacher in-charge",
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -105,3 +99,4 @@ class TeacherPreviewRow extends StatelessWidget {
     );
   }
 }
+

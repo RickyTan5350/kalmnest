@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_student_detail_page.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
-=======
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/admin_teacher/widgets/class/teacher_student_detail_page.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
->>>>>>> Stashed changes
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 /// Teacher view: All students in a class with search and scrollable list.
 class TeacherAllStudentsPage extends StatefulWidget {
@@ -200,8 +193,6 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    
     if (_loading) {
       return Scaffold(
         body: const Center(child: CircularProgressIndicator()),
@@ -216,7 +207,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         title: BreadcrumbNavigation(
           items: [
             BreadcrumbItem(
-              label: l10n.classes,
+              label: 'Classes',
               onTap: () {
                 // Navigate back twice to go to class list
                 Navigator.of(context).pop();
@@ -224,10 +215,10 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               },
             ),
             BreadcrumbItem(
-              label: l10n.details,
+              label: 'Details',
               onTap: () => Navigator.of(context).pop(),
             ),
-            BreadcrumbItem(label: l10n.students),
+            const BreadcrumbItem(label: 'All Students'),
           ],
         ),
         backgroundColor: color.withOpacity(0.2),
@@ -238,7 +229,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               setState(() => _loading = true);
               _fetchClassData();
             },
-            tooltip: l10n.refresh,
+            tooltip: 'Refresh',
           ),
         ],
       ),
@@ -267,7 +258,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      l10n.students,
+                      'All Students',
                       style: Theme.of(context).textTheme.headlineMedium,
                       textAlign: TextAlign.center,
                     ),
@@ -282,7 +273,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               const SizedBox(height: 32),
 
               // Statistics Section
-              _buildStatisticsSection(context),
+              _buildStatisticsSection(),
               const SizedBox(height: 32),
 
               // Search Section
@@ -290,7 +281,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                 width: 300,
                 child: SearchBar(
                   controller: _searchController,
-                  hintText: l10n.searchStudentsByName,
+                  hintText: "Search students...",
                   padding: const WidgetStatePropertyAll<EdgeInsets>(
                     EdgeInsets.symmetric(horizontal: 16.0),
                   ),
@@ -323,7 +314,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                   final student = entry.value;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12.0),
-                    child: _buildStudentCard(context, student, index),
+                    child: _buildStudentCard(student, index),
                   );
                 }).toList(),
             ],
@@ -333,13 +324,12 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     );
   }
 
-  Widget _buildStatisticsSection(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+  Widget _buildStatisticsSection() {
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
-            l10n.totalStudents,
+            'Total Students',
             '$_totalStudents',
             Icons.people,
           ),
@@ -347,7 +337,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            l10n.completionRate,
+            'Completion Rate',
             '${_averageCompletionPercentage.toStringAsFixed(1)}%',
             Icons.check_circle,
           ),
@@ -355,7 +345,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            l10n.quizzesAssigned,
+            'Quizzes Assigned',
             '$_totalQuizzesAssigned',
             Icons.quiz,
           ),
@@ -433,14 +423,12 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
   }
 
   Widget _buildStudentCard(
-    BuildContext context,
     Map<String, dynamic> student,
     int index,
   ) {
-    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final name = student['name'] ?? l10n.unknown;
+    final name = student['name'] ?? 'Unknown';
     final email = student['email'] ?? '';
     final phone = student['phone_no'] ?? '+1 234 567 8901';
     final initials = _getInitials(name);
@@ -550,7 +538,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                       color: cs.onSurfaceVariant,
                       size: 20,
                     ),
-                    tooltip: l10n.moreOptions,
+                    tooltip: 'More options',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(
                       minWidth: 32,
@@ -587,7 +575,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              l10n.viewDetails,
+                              'View Details',
                               style: textTheme.labelLarge?.copyWith(
                                 color: cs.onSurface,
                               ),
@@ -609,7 +597,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        l10n.completion,
+                        'Completion',
                         style: textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
@@ -642,7 +630,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        l10n.quizzes,
+                        'Quizzes',
                         style: textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
@@ -661,7 +649,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               ),
               const SizedBox(height: 12),
               Text(
-                l10n.courseProgress,
+                'Course Progress',
                 style: textTheme.bodySmall?.copyWith(
                   color: cs.onSurfaceVariant,
                 ),
@@ -714,3 +702,4 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     );
   }
 }
+
