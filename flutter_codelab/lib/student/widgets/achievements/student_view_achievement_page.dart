@@ -75,9 +75,9 @@ class StudentViewAchievementsPageState
     });
 
     try {
-      // 1. Attempt to connect to the server for a longer time (30 seconds)
+      // 1. Attempt to connect to the server for a longer time (2 minutes)
       final cloudData = await api.fetchMyUnlockedAchievements().timeout(
-        const Duration(seconds: 30),
+        const Duration(minutes: 2),
       );
 
       // 2. Only cache OBTAINED (unlocked) achievements locally
