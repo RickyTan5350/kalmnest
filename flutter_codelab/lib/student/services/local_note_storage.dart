@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 // Ensure you import your Note model
-import 'package:code_play/models/note_brief.dart'; 
+import 'package:flutter_codelab/models/note_brief.dart'; 
 
 class LocalNoteStorage {
   final _storage = const FlutterSecureStorage();

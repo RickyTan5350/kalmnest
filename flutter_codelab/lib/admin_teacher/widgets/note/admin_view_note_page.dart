@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/note_api.dart';
-import 'package:code_play/models/note_brief.dart';
+import 'package:flutter_codelab/api/note_api.dart';
+import 'package:flutter_codelab/models/note_brief.dart';
 // FIX: Imported Admin Detail Page
-import 'package:code_play/admin_teacher/widgets/note/admin_note_detail.dart';
-import 'package:code_play/admin_teacher/widgets/note/note_grid_layout.dart'; // Adjust path as needed
+import 'package:flutter_codelab/admin_teacher/widgets/note/admin_note_detail.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/note_grid_layout.dart'; // Adjust path as needed
 // Import Shared Grid (Adjust path if needed)
-import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
-import 'package:code_play/admin_teacher/services/selection_box_painter.dart';
+import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
 import 'package:flutter/services.dart'; // For HapticFeedback
-import 'package:code_play/theme.dart'; // Import BrandColors
+import 'package:flutter_codelab/theme.dart'; // Import BrandColors
 
-import 'package:code_play/enums/sort_enums.dart';
-import 'package:code_play/constants/view_layout.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
 
 class AdminViewNotePage extends StatefulWidget {
   final ViewLayout layout;

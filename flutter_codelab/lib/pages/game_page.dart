@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/admin_teacher/widgets/game/gamePages/play_game_page.dart';
-import 'package:code_play/models/level.dart';
-import 'package:code_play/api/game_api.dart';
-import 'package:code_play/admin_teacher/widgets/game/gamePages/create_game_page.dart';
-import 'package:code_play/admin_teacher/widgets/game/gamePages/edit_game_page.dart';
-import 'package:code_play/api/achievement_api.dart';
-import 'package:code_play/models/achievement_data.dart';
-import 'package:code_play/constants/view_layout.dart' show ViewLayout;
-import 'package:code_play/enums/sort_enums.dart'; // Shared Enums
-import 'package:code_play/services/layout_preferences.dart'; // Layout Persistence
-import 'package:code_play/constants/achievement_constants.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/play_game_page.dart';
+import 'package:flutter_codelab/models/level.dart';
+import 'package:flutter_codelab/api/game_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/edit_game_page.dart';
+import 'package:flutter_codelab/api/achievement_api.dart';
+import 'package:flutter_codelab/models/achievement_data.dart';
+import 'package:flutter_codelab/constants/view_layout.dart' show ViewLayout;
+import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
+import 'package:flutter_codelab/services/layout_preferences.dart'; // Layout Persistence
+import 'package:flutter_codelab/constants/achievement_constants.dart';
 
 // Global key to access GamePage state for refreshing from main.dart
 final GlobalKey<_GamePageState> gamePageGlobalKey = GlobalKey<_GamePageState>();

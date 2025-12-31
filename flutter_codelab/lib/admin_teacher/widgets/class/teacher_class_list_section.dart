@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/admin_teacher/widgets/class/teacher_view_class_page.dart';
-import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
-import 'package:code_play/constants/view_layout.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/enums/sort_enums.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_class_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/admin_edit_class_page.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
 
 // Class List Item Widget
 class _ClassListItem extends StatefulWidget {
@@ -33,6 +33,8 @@ class _ClassListItem extends StatefulWidget {
 }
 
 class _ClassListItemState extends State<_ClassListItem> {
+  bool _isHovered = false;
+
   // Get teacher name from item
   String get _teacherName {
     if (widget.item['teacher'] != null) {
@@ -57,149 +59,155 @@ class _ClassListItemState extends State<_ClassListItem> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      elevation: 1.0,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: widget.colorScheme.outline.withValues(alpha: 0.3),
-          width: 1.0,
-        ),
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: widget.colorScheme.primaryContainer,
-          foregroundColor: widget.colorScheme.onPrimaryContainer,
-          child: Icon(Icons.school_rounded, size: 20),
-        ),
-        title: Text(
-          widget.item['class_name'] ?? 'No Name',
-          style: widget.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: widget.colorScheme.onSurface,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        elevation: _isHovered ? 4.0 : 1.0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(
+            color: _isHovered
+                ? widget.colorScheme.primary.withOpacity(0.5)
+                : widget.colorScheme.outline.withOpacity(0.3),
+            width: _isHovered ? 1.5 : 1.0,
           ),
+          borderRadius: BorderRadius.circular(12.0),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.item['description'] != null &&
-                widget.item['description'].toString().isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 4),
-                child: Text(
-                  widget.item['description'],
-                  style: widget.textTheme.bodySmall?.copyWith(
-                    color: widget.colorScheme.onSurfaceVariant,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 14,
-                      color: widget.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _hasTeacher ? _teacherName : 'No teacher',
-                      style: widget.textTheme.labelSmall?.copyWith(
-                        color: _hasTeacher
-                            ? widget.colorScheme.onSurfaceVariant
-                            : widget.colorScheme.error,
-                        fontStyle: _hasTeacher
-                            ? FontStyle.normal
-                            : FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.people_outline,
-                      size: 14,
-                      color: widget.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _studentCount > 0
-                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                          : 'No students',
-                      style: widget.textTheme.labelSmall?.copyWith(
-                        color: _studentCount > 0
-                            ? widget.colorScheme.onSurfaceVariant
-                            : widget.colorScheme.error,
-                        fontStyle: _studentCount > 0
-                            ? FontStyle.normal
-                            : FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: widget.colorScheme.primaryContainer,
+            foregroundColor: widget.colorScheme.onPrimaryContainer,
+            child: Icon(Icons.school_rounded, size: 20),
+          ),
+          title: Text(
+            widget.item['class_name'] ?? 'No Name',
+            style: widget.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: widget.colorScheme.onSurface,
             ),
-          ],
-        ),
-        trailing: widget.roleName.toLowerCase() == 'admin'
-            ? PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: widget.colorScheme.onSurfaceVariant,
-                ),
-                onSelected: (value) {
-                  if (value == 'edit' && widget.onEdit != null) {
-                    widget.onEdit!();
-                  } else if (value == 'delete' && widget.onDelete != null) {
-                    widget.onDelete!();
-                  }
-                },
-                itemBuilder: (BuildContext context) => [
-                  PopupMenuItem<String>(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.edit,
-                          size: 20,
-                          color: widget.colorScheme.onSurface,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('Edit'),
-                      ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.item['description'] != null &&
+                  widget.item['description'].toString().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 4),
+                  child: Text(
+                    widget.item['description'],
+                    style: widget.textTheme.bodySmall?.copyWith(
+                      color: widget.colorScheme.onSurfaceVariant,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  PopupMenuItem<String>(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          size: 20,
-                          color: widget.colorScheme.error,
+                ),
+              Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: widget.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _hasTeacher ? _teacherName : 'No teacher',
+                        style: widget.textTheme.labelSmall?.copyWith(
+                          color: _hasTeacher
+                              ? widget.colorScheme.onSurfaceVariant
+                              : widget.colorScheme.error,
+                          fontStyle: _hasTeacher
+                              ? FontStyle.normal
+                              : FontStyle.italic,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Delete',
-                          style: TextStyle(color: widget.colorScheme.error),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.people_outline,
+                        size: 14,
+                        color: widget.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _studentCount > 0
+                            ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
+                            : 'No students',
+                        style: widget.textTheme.labelSmall?.copyWith(
+                          color: _studentCount > 0
+                              ? widget.colorScheme.onSurfaceVariant
+                              : widget.colorScheme.error,
+                          fontStyle: _studentCount > 0
+                              ? FontStyle.normal
+                              : FontStyle.italic,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
-              )
-            : null,
-        onTap: widget.onTap,
+              ),
+            ],
+          ),
+          trailing: widget.roleName.toLowerCase() == 'admin'
+              ? PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: widget.colorScheme.onSurfaceVariant,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'edit' && widget.onEdit != null) {
+                      widget.onEdit!();
+                    } else if (value == 'delete' && widget.onDelete != null) {
+                      widget.onDelete!();
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => [
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.edit,
+                            size: 20,
+                            color: widget.colorScheme.onSurface,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('Edit'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline,
+                            size: 20,
+                            color: widget.colorScheme.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete',
+                            style: TextStyle(color: widget.colorScheme.error),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : null,
+          onTap: widget.onTap,
+        ),
       ),
     );
   }
@@ -435,6 +443,7 @@ class ClassListSection extends StatefulWidget {
     required this.layout,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
+
     this.onReload,
   });
 
