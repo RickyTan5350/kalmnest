@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/feedback_api.dart';
-import 'package:flutter_codelab/models/models.dart';
+import 'package:code_play/api/feedback_api.dart';
+import 'package:code_play/models/models.dart';
 
 void showCreateFeedbackDialog({
   required BuildContext context,
@@ -38,20 +38,16 @@ class CreateFeedbackDialog extends StatefulWidget {
 
 class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _topicController = TextEditingController();
   final TextEditingController _feedbackController = TextEditingController();
   late final FeedbackApiService _apiService;
 
   String? _selectedStudent;
   String? _selectedStudentId;
-  String? _selectedTopicId;
-  String? _selectedTopicName;
   bool _isLoading = false;
   bool _isLoadingStudents = false;
-  bool _isLoadingTopics = false;
 
   List<Map<String, dynamic>> _students = [];
-  List<Map<String, dynamic>> _topics = [];
 
   @override
   void initState() {
@@ -59,21 +55,6 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     // Initialize FeedbackApiService WITH the auth token
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadStudents();
-    _loadTopics();
-  }
-
-  Future<void> _loadTopics() async {
-    setState(() => _isLoadingTopics = true);
-    try {
-      final topics = await _apiService.getTopics();
-      setState(() => _topics = topics);
-    } catch (e) {
-      print('CreateFeedback: Error loading topics: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingTopics = false);
-      }
-    }
   }
 
   Future<void> _loadStudents() async {
@@ -95,7 +76,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
 
   @override
   void dispose() {
-    _titleController.dispose();
+    _topicController.dispose();
     _feedbackController.dispose();
     super.dispose();
   }
@@ -118,8 +99,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
       // Call the backend API to create feedback
       await _apiService.createFeedback(
         studentId: _selectedStudentId!,
-        topicId: _selectedTopicId!,
-        title: _titleController.text,
+        topic: _topicController.text,
         comment: _feedbackController.text,
       );
 
@@ -130,9 +110,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
         studentId: _selectedStudentId!,
         teacherName: 'Unknown', // Will be updated from API
         teacherId: '', // Will be updated from API
-        topicId: _selectedTopicId!,
-        topicName: _selectedTopicName!,
-        title: _titleController.text,
+        topic: _topicController.text,
         feedback: _feedbackController.text,
       );
 
@@ -268,57 +246,19 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                       ),
                 const SizedBox(height: 16),
 
-                // Topic Dropdown
-                _isLoadingTopics
-                    ? const LinearProgressIndicator()
-                    : DropdownButtonFormField<String?>(
-                        value: _selectedTopicId,
-                        dropdownColor: const Color.fromARGB(255, 239, 243, 255),
-                        style: TextStyle(color: colorScheme.onSurface),
-                        decoration: _inputDecoration(
-                          labelText: 'Select Topic',
-                          icon: Icons.subject,
-                          colorScheme: colorScheme,
-                        ),
-                        hint: Text('Select a topic', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                        items: _topics.map<DropdownMenuItem<String?>>((topic) {
-                          final id = topic['topic_id']?.toString() ?? '';
-                          final name = topic['topic_name'] as String? ?? 'Unknown';
-                          return DropdownMenuItem<String?>(
-                            value: id,
-                            child: Text(name),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedTopicId = value;
-                            if (value != null) {
-                              _selectedTopicName = _topics.firstWhere((t) => t['topic_id'].toString() == value)['topic_name'];
-                            }
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a topic';
-                          }
-                          return null;
-                        },
-                      ),
-                const SizedBox(height: 16),
-
-                // Title
+                // Topic
                 TextFormField(
-                  controller: _titleController,
+                  controller: _topicController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Title',
-                    hintText: 'e.g., Great Job!',
-                    icon: Icons.title,
+                    labelText: 'Topic',
+                    hintText: 'e.g., Code Quality',
+                    icon: Icons.subject,
                     colorScheme: colorScheme,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a title';
+                      return 'Please enter a topic';
                     }
                     return null;
                   },
