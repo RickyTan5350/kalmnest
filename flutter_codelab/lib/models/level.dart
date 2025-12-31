@@ -10,7 +10,6 @@ class LevelModel {
   final bool? isPrivate;
   final bool? isCreatedByMe;
   final String? status;
-  final int? timer; // Add timer field
 
   LevelModel({
     this.levelId,
@@ -22,7 +21,6 @@ class LevelModel {
     this.isPrivate,
     this.isCreatedByMe,
     this.status,
-    this.timer,
   });
 
   factory LevelModel.fromJson(Map<String, dynamic> json) {
@@ -38,21 +36,18 @@ class LevelModel {
       levelData: json['level_data'] is String
           ? json['level_data'] as String?
           : json['level_data'] != null
-          ? jsonEncode(json['level_data'])
-          : null,
+              ? jsonEncode(json['level_data'])
+              : null,
       winCondition: json['win_condition'] is String
           ? json['win_condition'] as String?
           : json['win_condition'] != null
-          ? jsonEncode(json['win_condition'])
-          : null,
-      isPrivate: json['is_private'] is int
-          ? (json['is_private'] == 1)
+              ? jsonEncode(json['win_condition'])
+              : null,
+      isPrivate: json['is_private'] is int 
+          ? (json['is_private'] == 1) 
           : json['is_private'] as bool?,
       isCreatedByMe: json['is_created_by_me'] as bool?,
       status: json['status'] as String?,
-      timer: json['timer'] is int
-          ? json['timer'] as int?
-          : int.tryParse(json['timer']?.toString() ?? ''),
     );
   }
 
