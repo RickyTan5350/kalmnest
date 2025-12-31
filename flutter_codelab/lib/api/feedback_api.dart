@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:code_play/api/auth_api.dart';
-import 'package:code_play/constants/api_constants.dart';
+import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 class FeedbackApiService {
   final String? token; // Store the auth token from login
@@ -64,6 +64,33 @@ class FeedbackApiService {
     } catch (e) {
       print('Connection test failed: $e');
       return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTopics() async {
+    try {
+      final endpoint = '/topics';
+      final hdrs = await getHeaders();
+      final response = await http
+          .get(Uri.parse('${ApiConstants.baseUrl}$endpoint'), headers: hdrs)
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final List<dynamic> topics = data['data'] ?? [];
+          return topics.map<Map<String, dynamic>>((t) => {
+            'topic_id': t['topic_id']?.toString() ?? '',
+            'topic_name': t['topic_name'] ?? 'Unknown',
+          }).toList();
+        } else {
+          throw Exception(data['error'] ?? 'Failed to fetch topics');
+        }
+      } else {
+        throw Exception('Failed to fetch topics: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching topics: $e');
     }
   }
 
@@ -248,16 +275,17 @@ class FeedbackApiService {
   /// Create new feedback
   Future<Map<String, dynamic>> createFeedback({
     required String studentId,
-    required String topic,
+    required String topicId,
+    required String title,
     required String comment,
   }) async {
     try {
-      // Use public endpoint if no token provided (for testing)
       final endpoint = '/feedback';
 
       final body = jsonEncode({
         'student_id': studentId,
-        'topic': topic,
+        'topic_id': topicId,
+        'title': title,
         'comment': comment,
       });
 
@@ -316,7 +344,8 @@ class FeedbackApiService {
 
   Future<void> editFeedback({
     required String feedbackId,
-    required String topic,
+    required String topicId,
+    required String title,
     required String comment,
   }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/feedback/$feedbackId');
@@ -326,7 +355,11 @@ class FeedbackApiService {
     final response = await http.put(
       url,
       headers: hdrs,
-      body: jsonEncode({'topic': topic, 'comment': comment}),
+      body: jsonEncode({
+        'topic_id': topicId,
+        'title': title,
+        'comment': comment,
+      }),
     );
 
     if (response.statusCode != 200) {
