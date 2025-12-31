@@ -189,7 +189,7 @@
     },
     {
       "name": "file_picker",
-      "rootUri": "file:///C:/Users/60111/AppData/Local/Pub/Cache/hosted/pub.dev/file_picker-10.3.7",
+      "rootUri": "file:///C:/Users/60111/AppData/Local/Pub/Cache/hosted/pub.dev/file_picker-10.3.8",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -278,8 +278,14 @@
       "languageVersion": "3.8"
     },
     {
+      "name": "flutter_markdown",
+      "rootUri": "file:///C:/Users/60111/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_markdown-0.7.7+1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "flutter_markdown_plus",
-      "rootUri": "file:///C:/Users/60111/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_markdown_plus-1.0.5",
+      "rootUri": "file:///C:/Users/60111/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_markdown_plus-1.0.7",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -783,7 +789,7 @@
     },
     {
       "name": "unified_analytics",
-      "rootUri": "file:///C:/Users/60111/AppData/Local/Pub/Cache/hosted/pub.dev/unified_analytics-8.0.5",
+      "rootUri": "file:///C:/Users/60111/AppData/Local/Pub/Cache/hosted/pub.dev/unified_analytics-8.0.10",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -879,7 +885,7 @@
     },
     {
       "name": "video_player_android",
-      "rootUri": "file:///C:/Users/60111/AppData/Local/Pub/Cache/hosted/pub.dev/video_player_android-2.8.22",
+      "rootUri": "file:///C:/Users/60111/AppData/Local/Pub/Cache/hosted/pub.dev/video_player_android-2.9.1",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -986,7 +992,7 @@
       "languageVersion": "3.8"
     },
     {
-      "name": "code_play",
+      "name": "flutter_codelab",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "3.9"
