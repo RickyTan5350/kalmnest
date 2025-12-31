@@ -96,6 +96,7 @@ class _AdminCreateAchievementDialogState
       final icon = _selectedIcon!.toLowerCase();
       // Heuristic: Check if the level type name allows the icon tag
       // e.g. "HTML Basics" contains "html"
+      if (icon == 'javascript' && type.contains('js')) return true;
       return type.contains(icon);
     }).toList();
   }

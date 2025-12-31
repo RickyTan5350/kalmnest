@@ -296,7 +296,10 @@ class _CreateGamePageState extends State<CreateGamePage> {
                                     Navigator.pop(ctx);
                                     // Map selectedValue (HTML, CSS...) to icon string
                                     // e.g. "HTML" -> "html"
-                                    final iconStr = selectedValue.toLowerCase();
+                                    String iconStr = selectedValue.toLowerCase();
+                                    if (iconStr == 'js') {
+                                      iconStr = 'javascript';
+                                    }
 
                                     showCreateAchievementDialog(
                                       context: widget.parentContext,
