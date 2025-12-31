@@ -109,9 +109,7 @@ class UserDetails {
           : 'N/A',
 
       joinedDate: json['created_at'] ?? '',
-      token: json['token'] ?? '',
-    );
-
+      token: json['token'] ?? '',    );
   }
 
   // Convenience getter to return a role object-like interface for compatibility

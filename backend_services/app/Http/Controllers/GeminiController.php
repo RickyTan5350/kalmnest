@@ -48,17 +48,27 @@ class GeminiController extends Controller
                 'content' => $userMessage,
             ]);
 
-            // 3. Interface with Gemini
-            $aiResponse = '(AI unavailable due to an internal error...)';
-            try {
-                $aiResponse = $this->geminiService->generateResponse($sessionId, $userMessage, $currentUserMessage->message_id);
-            } catch (\Throwable $e) {
-                $aiResponse = '(AI Error: ' . $e->getMessage() . ')';
-                Log::error("Gemini Generate Response Error: " . $e->getMessage());
-            }
+            // 3. Prepare History for Gemini
+            $history = ChatbotMessage::where('chatbot_session_id', $sessionId)
+                ->orderBy('created_at', 'asc')
+                ->get()
+                ->map(fn($msg) => [
+                    'role' => $msg->role, // 'user' or 'model'
+                    'parts' => [['text' => $msg->content]],
+                ])
+                ->toArray();
 
-            // 4. Store AI Response
-            $this->geminiService->storeMessage($sessionId, 'model', $aiResponse);
+            // 4. Interface with Gemini using chat (multi-turn)
+            $chat = Gemini::generativeModel(model: 'gemini-3-pro-preview')->startChat(history: array_slice($history, 0, -1));
+            $result = $chat->sendMessage($userMessage);
+            $aiResponse = $result->text();
+
+            // 5. Store AI Response
+            ChatbotMessage::create([
+                'chatbot_session_id' => $sessionId,
+                'role' => 'model',
+                'content' => $aiResponse,
+            ]);
 
             return response()->json([
                 'status' => 'success',
@@ -66,18 +76,12 @@ class GeminiController extends Controller
                 'session_id' => $sessionId,
             ], 200);
 
-        } catch (\Throwable $e) {
-            Log::error("Gemini Chat Error: " . $e->getMessage(), [
-                'exception' => get_class($e),
-                'session_id' => $sessionId ?? null,
-                'trace' => $e->getTraceAsString(),
-            ]);
+        } catch (\Exception $e) {
+            Log::error("Gemini Chat Error: " . $e->getMessage());
             return response()->json([
                 'status' => 'error',
-                'message' => 'AI Chat Error: ' . $e->getMessage(),
-                'session_id' => $sessionId ?? null,
-                'ai_response' => '(AI unavailable due to an internal error: ' . $e->getMessage() . ')'
-            ], 200);
+                'message' => 'Could not process the chat. Please try again later.'
+            ], 500);
         }
     }
 }

@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter_codelab/destinations.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/destinations.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class DisappearingBottomNavigationBar extends StatelessWidget {
   const DisappearingBottomNavigationBar({
     super.key,
     required this.selectedIndex,
     this.onDestinationSelected,
-    required this.destinations,
   });
 
   final int selectedIndex;
   final ValueChanged<int>? onDestinationSelected;
-  final List<Destination> destinations;
 
   @override
   Widget build(BuildContext context) {
@@ -31,20 +29,24 @@ class DisappearingBottomNavigationBar extends StatelessWidget {
         backgroundColor: Colors.white,
         destinations: () {
           final l10n = AppLocalizations.of(context)!;
-          final Map<String, String> labelMap = {
-            'User': l10n.users,
-            'Game': l10n.games,
-            'Note': l10n.notes,
-            'Class': l10n.classes,
-            'Achievement': l10n.achievements,
-            'AI chat': l10n.aiChat,
-            'Feedback': l10n.feedback,
-          };
-          return destinations.map<NavigationDestination>((d) {
+          final List<String> labels = [
+            l10n.users,
+            l10n.games,
+            l10n.notes,
+            l10n.classes,
+            l10n.achievements,
+            l10n.aiChat,
+            l10n.feedback,
+          ];
+          return destinations.asMap().entries.map<NavigationDestination>((
+            entry,
+          ) {
+            final idx = entry.key;
+            final d = entry.value;
             return NavigationDestination(
               icon: Icon(d.icon),
               selectedIcon: Icon(d.selectedIcon),
-              label: labelMap[d.label] ?? d.label,
+              label: labels[idx],
             );
           }).toList();
         }(),

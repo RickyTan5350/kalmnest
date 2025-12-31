@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/feedback_api.dart';
-import 'package:flutter_codelab/models/models.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/api/feedback_api.dart';
+import 'package:code_play/models/models.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class StudentViewFeedbackPage extends StatefulWidget {
   final String? authToken;
@@ -57,18 +57,28 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
       setState(() {
         _feedbackList.clear();
         for (var fb in feedbacks) {
-          _feedbackList.add(FeedbackData(
-            feedbackId: fb['feedback_id']?.toString() ?? '',
-            studentName: fb['student_name'] ?? 'Unknown',
-            studentId: fb['student_id'] ?? '',
-            teacherName: fb['teacher_name'] ?? (fb['teacher'] is Map ? (fb['teacher']['name'] ?? fb['teacher']['full_name']) : null) ?? 'Unknown',
-            teacherId: fb['teacher_id']?.toString() ?? '',
-            topicId: fb['topic_id']?.toString() ?? '',
-            topicName: fb['topic'] ?? fb['topic_name'] ?? '',
-            title: fb['title'] ?? '',
-            feedback: fb['feedback'] ?? '',
-            createdAt: fb['created_at'] ?? fb['createdAt'] ?? (fb['teacher'] is Map && fb['teacher']['created_at'] != null ? fb['teacher']['created_at'] : null),
-          ));
+          _feedbackList.add(
+            FeedbackData(
+              feedbackId: fb['feedback_id']?.toString() ?? '',
+              studentName: fb['student_name'] ?? 'Unknown',
+              studentId: fb['student_id'] ?? '',
+              teacherName:
+                  fb['teacher_name'] ??
+                  (fb['teacher'] is Map
+                      ? (fb['teacher']['name'] ?? fb['teacher']['full_name'])
+                      : null) ??
+                  'Unknown',
+              teacherId: fb['teacher_id'] ?? '',
+              topic: fb['topic'] ?? '',
+              feedback: fb['feedback'] ?? '',
+              createdAt:
+                  fb['created_at'] ??
+                  fb['createdAt'] ??
+                  (fb['teacher'] is Map && fb['teacher']['created_at'] != null
+                      ? fb['teacher']['created_at']
+                      : null),
+            ),
+          );
         }
         _isLoading = false;
       });
@@ -112,138 +122,165 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: colorScheme.primary))
           : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, size: 64, color: colorScheme.error),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error loading feedback',
-                        style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: _loadFeedback,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : _feedbackList.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.feedback_outlined, size: 64, color: colorScheme.outline),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No feedback yet',
-                            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Your teachers will provide feedback here',
-                            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: _feedbackList.length,
-                      itemBuilder: (context, index) {
-                        final feedback = _feedbackList[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          elevation: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        feedback.topicName,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(Icons.message_outlined, color: colorScheme.primary),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  feedback.feedback,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: colorScheme.onSurface,
-                                    height: 1.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'From: ${feedback.teacherName}',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: colorScheme.onPrimaryContainer,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Builder(builder: (context) {
-                                        final created = feedback.createdAt;
-                                        if (created == null || created.isEmpty) {
-                                          return const SizedBox.shrink();
-                                        }
-                                        DateTime? dt;
-                                        try {
-                                          dt = DateTime.parse(created).toLocal();
-                                        } catch (_) {
-                                          dt = null;
-                                        }
-                                        final ts = dt != null
-                                            ? '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}'
-                                            : created;
-                                        return Text(
-                                          ts,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: colorScheme.onPrimaryContainer.withOpacity(0.9),
-                                          ),
-                                        );
-                                      }),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: colorScheme.error),
+                  const SizedBox(height: 16),
+                  Text(
+                    AppLocalizations.of(context)!.errorLoadingFeedback,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 16,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _loadFeedback,
+                    icon: const Icon(Icons.refresh),
+                    label: Text(AppLocalizations.of(context)!.retry),
+                  ),
+                ],
+              ),
+            )
+          : _feedbackList.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.feedback_outlined,
+                    size: 64,
+                    color: colorScheme.outline,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    AppLocalizations.of(context)!.noFeedbackYet,
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    AppLocalizations.of(context)!.teachersFeedbackInstructions,
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _feedbackList.length,
+              itemBuilder: (context, index) {
+                final feedback = _feedbackList[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                feedback.topic,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.message_outlined,
+                              color: colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          feedback.feedback,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colorScheme.onSurface,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.fromTeacher(feedback.teacherName),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Builder(
+                                builder: (context) {
+                                  final created = feedback.createdAt;
+                                  if (created == null || created.isEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  DateTime? dt;
+                                  try {
+                                    dt = DateTime.parse(created).toLocal();
+                                  } catch (_) {
+                                    dt = null;
+                                  }
+                                  final ts = dt != null
+                                      ? '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}'
+                                      : created;
+                                  return Text(
+                                    ts,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: colorScheme.onPrimaryContainer
+                                          .withOpacity(0.9),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
