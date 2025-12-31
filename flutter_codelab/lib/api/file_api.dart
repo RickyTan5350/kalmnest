@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
-import 'package:code_play/constants/api_constants.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 class FileApi {
   // Use 10.0.2.2 for Android Emulator, or your machine's IP for real devices.

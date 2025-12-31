@@ -1,4 +1,4 @@
-import 'package:code_play/constants/class_constants.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 /// Validation helper methods for class form inputs
 class ClassValidators {

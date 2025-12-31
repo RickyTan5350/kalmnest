@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:code_play/models/achievement_data.dart';
+import 'package:flutter_codelab/models/achievement_data.dart';
 // Note: Requires adding 'encrypt: ^latest' to pubspec.yaml
 import 'package:encrypt/encrypt.dart' as encrypt;
 // Note: Requires adding 'flutter_secure_storage: ^latest' to pubspec.yaml

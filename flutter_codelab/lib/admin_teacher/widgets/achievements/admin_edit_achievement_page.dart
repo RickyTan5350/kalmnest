@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:code_play/api/achievement_api.dart';
-import 'package:code_play/models/achievement_data.dart';
-import 'package:code_play/constants/achievement_constants.dart';
+import 'package:flutter_codelab/api/achievement_api.dart';
+import 'package:flutter_codelab/models/achievement_data.dart';
+import 'package:flutter_codelab/constants/achievement_constants.dart';
 
 Future<void> showEditAchievementDialog({
   required BuildContext context,

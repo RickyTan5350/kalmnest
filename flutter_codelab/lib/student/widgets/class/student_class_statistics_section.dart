@@ -1,6 +1,6 @@
 // lib/widgets/class_statistics_section.dart
 import 'package:flutter/material.dart';
-import 'package:code_play/constants/class_constants.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class ClassStatisticsSection extends StatelessWidget {
   final int totalStudents;

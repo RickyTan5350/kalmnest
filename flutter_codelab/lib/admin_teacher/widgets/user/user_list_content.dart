@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/user_api.dart';
-import 'package:code_play/models/user_data.dart';
-import 'package:code_play/constants/view_layout.dart';
-import 'package:code_play/enums/sort_enums.dart';
-import 'package:code_play/admin_teacher/widgets/user/user_grid_layout.dart';
+import 'package:flutter_codelab/api/user_api.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/user_grid_layout.dart';
 import 'package:flutter/services.dart';
-import 'package:code_play/admin_teacher/services/selection_gesture_wrapper.dart';
-import 'package:code_play/widgets/user_avatar.dart';
-import 'package:code_play/admin_teacher/services/selection_box_painter.dart';
-import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/admin_teacher/services/selection_gesture_wrapper.dart';
+import 'package:flutter_codelab/widgets/user_avatar.dart';
+import 'package:flutter_codelab/admin_teacher/services/selection_box_painter.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'user_detail_page.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class UserListContent extends StatefulWidget {
   final String searchQuery;

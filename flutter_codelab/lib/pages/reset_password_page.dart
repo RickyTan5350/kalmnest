@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/auth_api.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;

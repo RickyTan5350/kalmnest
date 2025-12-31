@@ -1,4 +1,4 @@
-package com.example.code_play
+package com.example.flutter_codelab
 
 import io.flutter.embedding.android.FlutterActivity
 

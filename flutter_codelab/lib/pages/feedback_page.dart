@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/feedback_api.dart';
-import 'package:code_play/models/models.dart';
-import 'package:code_play/models/user_data.dart';
-import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart' as create_fb;
-import 'package:code_play/admin_teacher/widgets/feedback/edit_feedback.dart' as edit_fb;
-import 'package:code_play/student/widgets/feedback/student_view_feedback_page.dart';
+import 'package:flutter_codelab/api/feedback_api.dart';
+import 'package:flutter_codelab/models/models.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart' as create_fb;
+import 'package:flutter_codelab/admin_teacher/widgets/feedback/edit_feedback.dart' as edit_fb;
+import 'package:flutter_codelab/student/widgets/feedback/student_view_feedback_page.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'package:flutter_codelab/theme.dart';
 class FeedbackPage extends StatefulWidget {
   final String? authToken;
   final UserDetails? currentUser;
@@ -25,13 +28,94 @@ class _FeedbackPageState extends State<FeedbackPage> {
   final List<FeedbackData> _feedbackList = [];
   late FeedbackApiService _apiService;
   bool _isLoading = true;
+  bool _isLoadingStudents = false;
   String? _errorMessage;
+
+  List<Map<String, dynamic>> _topics = [];
+  String _selectedTopicId = 'All';
+  String _selectedStudentId = 'All';
+  String _selectedTeacherId = 'All';
+  List<Map<String, dynamic>> _students = [];
+  List<Map<String, dynamic>> _teachers = [];
+  SortOrder _sortOrder = SortOrder.descending;
+  bool _isLoadingTeachers = false;
+  bool _isLoadingTopics = false;
 
   @override
   void initState() {
     super.initState();
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadFeedback();
+    _loadTopics();
+    if (_isTeacher || widget.currentUser?.isAdmin == true) {
+      _loadStudents();
+    }
+    if (_isStudent) {
+      _loadTeachers();
+    }
+  }
+
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+    try {
+      final topics = await _apiService.getTopics();
+      setState(() {
+        _topics = topics;
+        _isLoadingTopics = false;
+      });
+    } catch (e) {
+      print('Error loading topics: $e');
+      setState(() => _isLoadingTopics = false);
+    }
+  }
+
+  Future<void> _loadStudents() async {
+    setState(() => _isLoadingStudents = true);
+    try {
+      final students = await _apiService.getStudents();
+      setState(() {
+        _students = students;
+        _isLoadingStudents = false;
+      });
+    } catch (e) {
+      print('Error loading students: $e');
+      setState(() => _isLoadingStudents = false);
+    }
+  }
+
+  Future<void> _loadTeachers() async {
+    setState(() => _isLoadingTeachers = true);
+    try {
+      // Use the same list of teachers from feedbacks
+      final feedbacks = await _apiService.getFeedback();
+      final Map<String, String> uniqueTeachers = {};
+      for (var f in feedbacks) {
+        final id = f['teacher_id']?.toString();
+        final name = f['teacher_name'] ?? 
+                    (f['teacher'] is Map ? (f['teacher']['name'] ?? f['teacher']['full_name']) : null) ?? 
+                    'Unknown';
+        if (id != null) uniqueTeachers[id] = name;
+      }
+      
+      setState(() {
+        _teachers = uniqueTeachers.entries.map((e) => {'id': e.key, 'name': e.value}).toList();
+        _isLoadingTeachers = false;
+      });
+    } catch (e) {
+      print('Error loading teachers: $e');
+      setState(() => _isLoadingTeachers = false);
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+    await _loadFeedback();
+    await _loadTopics();
+    if (_isTeacher || widget.currentUser?.isAdmin == true) {
+      await _loadStudents();
+    }
+    if (_isStudent) {
+      await _loadTeachers();
+    }
   }
 
   Future<void> _loadFeedback() async {
@@ -59,7 +143,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
   }
 
   List<FeedbackData> _parseFeedbackList(List<dynamic> feedbacks) {
-    return feedbacks.map((fb) {
+    return feedbacks.map<FeedbackData>((fb) {
       return FeedbackData(
         feedbackId: fb['feedback_id']?.toString() ?? '',
         studentName: fb['student_name'] ?? 'Unknown',
@@ -69,8 +153,10 @@ class _FeedbackPageState extends State<FeedbackPage> {
                 ? (fb['teacher']['name'] ?? fb['teacher']['full_name'])
                 : null) ??
             'Unknown',
-        teacherId: fb['teacher_id'] ?? '',
-        topic: fb['topic'] ?? '',
+        teacherId: fb['teacher_id']?.toString() ?? '',
+        topicId: fb['topic_id']?.toString() ?? '',
+        topicName: fb['topic_name'] ?? 'Unknown',
+        title: fb['title'] ?? 'No Title',
         feedback: fb['feedback'] ?? '',
         createdAt: fb['created_at'] ?? fb['createdAt'],
       );
@@ -136,17 +222,19 @@ class _FeedbackPageState extends State<FeedbackPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Delete Feedback"),
-        content: const Text("Are you sure you want to delete this feedback?"),
+        title: const Text("Delete Feedback?"),
+        content: const Text(
+          "Are you sure you want to delete this feedback? This action cannot be undone.",
+        ),
         actions: [
           TextButton(
             child: const Text("Cancel"),
             onPressed: () => Navigator.pop(context, false),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Delete"),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete"),
           ),
         ],
       ),
@@ -161,6 +249,39 @@ class _FeedbackPageState extends State<FeedbackPage> {
         _showSnackBar(context, 'Delete failed: $e', Colors.red);
       }
     }
+  }
+
+  List<FeedbackData> get _filteredFeedback {
+    List<FeedbackData> filtered = List.from(_feedbackList);
+
+    // Filter by Topic
+    if (_selectedTopicId != 'All') {
+      filtered = filtered.where((f) => f.topicId == _selectedTopicId).toList();
+    }
+
+    // Filter by Student (for Teacher/Admin)
+    if ((_isTeacher || widget.currentUser?.isAdmin == true) && _selectedStudentId != 'All') {
+      filtered = filtered.where((f) => f.studentId == _selectedStudentId).toList();
+    }
+
+    // Filter by Teacher (for Student)
+    if (_isStudent && _selectedTeacherId != 'All') {
+      filtered = filtered.where((f) => f.teacherId == _selectedTeacherId).toList();
+    }
+
+    // Sort by Timestamp
+    filtered.sort((a, b) {
+      final dateA = a.createdAt != null ? DateTime.tryParse(a.createdAt!) ?? DateTime(0) : DateTime(0);
+      final dateB = b.createdAt != null ? DateTime.tryParse(b.createdAt!) ?? DateTime(0) : DateTime(0);
+      
+      if (_sortOrder == SortOrder.ascending) {
+        return dateA.compareTo(dateB);
+      } else {
+        return dateB.compareTo(dateA);
+      }
+    });
+
+    return filtered;
   }
 
   bool get _isTeacher => widget.currentUser?.isTeacher ?? false;
@@ -183,17 +304,59 @@ class _FeedbackPageState extends State<FeedbackPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // --- HEADER ---
-                Text(
-                  "Feedback",
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: colors.onSurface,
-                      ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Feedbacks",
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: colors.onSurface,
+                          ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 16),
+
+                // --- FILTERS & SORT ---
+                _buildFilters(colors),
                 const SizedBox(height: 16),
 
                 // --- CONTENT ---
                 Expanded(
-                  child: _buildBody(),
+                  child: Column(
+                    children: [
+                      if (!_isLoading && _errorMessage == null && _feedbackList.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                SizedBox(
+                                  height: 40,
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      "${_filteredFeedback.length} Results",
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      Expanded(child: _buildBody()),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -221,12 +384,175 @@ class _FeedbackPageState extends State<FeedbackPage> {
       );
     }
 
+    final filtered = _filteredFeedback;
+    if (filtered.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text("No feedback found."),
+          ],
+        ),
+      );
+    }
+
     return _FeedbackListView(
-      feedbackList: _feedbackList,
+      feedbackList: filtered,
       isTeacher: _isTeacher,
       isStudent: _isStudent,
       onEdit: _openEditDialog,
       onDelete: _confirmDelete,
+    );
+  }
+
+  Widget _buildFilters(ColorScheme colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: FilterChip(
+                        label: Text(
+                          'All',
+                          style: TextStyle(
+                            color: _selectedTopicId == 'All' ? colors.primary : colors.onSurface,
+                          ),
+                        ),
+                        selected: _selectedTopicId == 'All',
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedTopicId = 'All';
+                          });
+                        },
+                      ),
+                    ),
+                    ..._topics.map((topic) {
+                      final topicId = topic['topic_id']?.toString() ?? '';
+                      final topicName = topic['topic_name'] ?? 'Unknown';
+                      final isSelected = _selectedTopicId == topicId;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: FilterChip(
+                          label: Text(
+                            topicName,
+                            style: TextStyle(
+                              color: isSelected ? colors.primary : colors.onSurface,
+                            ),
+                          ),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedTopicId = selected ? topicId : 'All';
+                            });
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Sort Button
+            PopupMenuButton<SortOrder>(
+              icon: const Icon(Icons.sort),
+              tooltip: 'Sort by Time',
+              onSelected: (order) {
+                setState(() {
+                  _sortOrder = order;
+                });
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  enabled: false,
+                  child: Text('Sort by Time', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                CheckedPopupMenuItem(
+                  value: SortOrder.descending,
+                  checked: _sortOrder == SortOrder.descending,
+                  child: const Text('Newest First'),
+                ),
+                CheckedPopupMenuItem(
+                  value: SortOrder.ascending,
+                  checked: _sortOrder == SortOrder.ascending,
+                  child: const Text('Oldest First'),
+                ),
+              ],
+            ),
+            const SizedBox(width: 2),
+            IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _handleRefresh,
+                tooltip: "Refresh Feedbacks",
+            ),
+          ],
+        ),
+        if (_isTeacher || widget.currentUser?.isAdmin == true) ...[
+          const SizedBox(height: 8),
+          _isLoadingStudents
+              ? const LinearProgressIndicator()
+              : SizedBox(
+                  width: 300,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedStudentId,
+                    decoration: InputDecoration(
+                      labelText: 'Filter by Student',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: 'All', child: Text('All Students')),
+                      ..._students.map((s) => DropdownMenuItem(
+                            value: s['id'] as String,
+                            child: Text(s['name'] as String),
+                          )),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedStudentId = val ?? 'All';
+                      });
+                    },
+                  ),
+                ),
+        ],
+        if (_isStudent) ...[
+          const SizedBox(height: 8),
+          _isLoadingTeachers
+              ? const LinearProgressIndicator()
+              : SizedBox(
+                  width: 300,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedTeacherId,
+                    decoration: InputDecoration(
+                      labelText: 'Filter by Teacher',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: 'All', child: Text('All Teachers')),
+                      ..._teachers.map((t) => DropdownMenuItem(
+                            value: t['id'] as String,
+                            child: Text(t['name'] as String),
+                          )),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedTeacherId = val ?? 'All';
+                      });
+                    },
+                  ),
+                ),
+        ],
+      ],
     );
   }
 }
@@ -303,11 +629,6 @@ class _EmptyView extends StatelessWidget {
             style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
           ),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onAddFeedback,
-            icon: const Icon(Icons.add),
-            label: const Text('Add Feedback'),
-          ),
         ],
       ),
     );
@@ -377,12 +698,23 @@ class _FeedbackCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Student name (only for teachers/admins)
-            if (!isStudent) _buildStudentHeader(colorScheme),
+            if (!isStudent) _buildTeacherViewHeader(colorScheme),
             if (!isStudent) const SizedBox(height: 8),
 
             // Topic
-            _buildTopic(colorScheme),
+            _buildTopic(context, colorScheme),
             const SizedBox(height: 8),
+
+            // Title
+            Text(
+              feedback.title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 4),
 
             // Feedback content
             _buildFeedbackContent(colorScheme),
@@ -399,7 +731,7 @@ class _FeedbackCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStudentHeader(ColorScheme colorScheme) {
+  Widget _buildTeacherViewHeader(ColorScheme colorScheme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -411,19 +743,31 @@ class _FeedbackCard extends StatelessWidget {
             color: colorScheme.onSurface,
           ),
         ),
-        Icon(Icons.person_outline, color: colorScheme.primary),
       ],
     );
   }
 
-  Widget _buildTopic(ColorScheme colorScheme) {
-    return Text(
-      feedback.topic,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.primary,
-      ),
+  Widget _buildTopic(BuildContext context, ColorScheme colorScheme) {
+    String iconValue = feedback.topicName.toLowerCase();
+    if (iconValue == 'js') iconValue = 'javascript';
+    
+    final icon = getAchievementIcon(iconValue);
+    final color = getAchievementColor(context, iconValue);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 8),
+        Text(
+          feedback.topicName,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 
@@ -508,4 +852,3 @@ class _FeedbackCard extends StatelessWidget {
     );
   }
 }
-

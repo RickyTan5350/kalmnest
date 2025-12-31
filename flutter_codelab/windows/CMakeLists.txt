@@ -3,11 +3,11 @@ cmake_minimum_required(VERSION 3.14)
 
 # --- FIX: Suppress developer warnings from third-party plugins ---
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
-project(code_play LANGUAGES CXX)
+project(flutter_codelab LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "code_play")
+set(BINARY_NAME "flutter_codelab")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
