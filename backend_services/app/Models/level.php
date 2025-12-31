@@ -18,8 +18,7 @@ class Level extends Model
         'level_type_id',
         'level_data',
         'win_condition',
-        'created_by',
-        'timer'
+        'created_by'
     ];
 
     protected function casts(): array

@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async'; // Import Timer
-import 'dart:convert'; // Import jsonEncode
-import 'dart:io'; // Import File
 
 import 'package:code_play/models/level.dart';
 import 'package:code_play/api/game_api.dart';
@@ -56,10 +53,6 @@ class _PlayGamePageState extends State<PlayGamePage> {
   late String selectedValue;
   late String levelName;
   final bool _saving = false;
-  // Timer state
-  int? _timeLeft;
-  bool _isTimerActive = false;
-  Timer? _timer;
 
   final GlobalKey<_IndexFilePreviewState> previewKey =
       GlobalKey<_IndexFilePreviewState>();
@@ -78,23 +71,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
   void initState() {
     super.initState();
     levelName = widget.level.levelName ?? '';
-    levelName = widget.level.levelName ?? '';
     selectedValue = widget.level.levelTypeName ?? 'HTML';
-
-    // Initialize Timer if Quiz
-    if (selectedValue == 'Quiz' &&
-        widget.level.timer != null &&
-        widget.level.timer! > 0) {
-      _timeLeft = widget.level.timer; // Start with full time
-      // If we wanted to load saved time, we'd need to fetch level data first.
-      // For now, let's start fresh or rely on what Unity sends?
-      // Actually, user requirement says "timer.. stores remaining time left".
-      // So checking if we have saved progress might be good, but synchronous initState can't await.
-      // We will handle saved time when we load student progress?
-      // For now, start ticking.
-      _startTimer();
-    }
-
     _initServer();
   }
 
@@ -103,15 +80,15 @@ class _PlayGamePageState extends State<PlayGamePage> {
     _previewServer = LocalAssetServer();
     try {
       await _server!.start(path: 'assets');
-
+      
       // Fetch user ID to pass to Unity
       final user = await AuthApi.getStoredUser();
       final userId = user?['user_id']?.toString();
-
+      
       // Start preview server pointing to local storage base path
       final storageBasePath = await _levelStorage.getBasePath(userId: userId);
       await _previewServer!.start(path: storageBasePath);
-
+      
       setState(() {
         _serverUrl = 'http://localhost:${_server!.port}';
         _previewServerUrl = 'http://localhost:${_previewServer!.port}';
@@ -124,37 +101,9 @@ class _PlayGamePageState extends State<PlayGamePage> {
 
   @override
   void dispose() {
-    _timer?.cancel();
     _server?.stop();
     _previewServer?.stop();
     super.dispose();
-  }
-
-  void _startTimer() {
-    if (_timeLeft == null || _timeLeft! <= 0) return;
-
-    _isTimerActive = true;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(() {
-        if (_timeLeft! > 0) {
-          _timeLeft = _timeLeft! - 1;
-        } else {
-          _isTimerActive = false;
-          timer.cancel();
-          // Optionally auto-submit or notify unity?
-        }
-      });
-    });
-  }
-
-  String _formatTime(int seconds) {
-    final int minutes = seconds ~/ 60;
-    final int remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -185,14 +134,14 @@ class _PlayGamePageState extends State<PlayGamePage> {
                     context,
                   ).textTheme.headlineMedium?.copyWith(color: Colors.cyan),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 24),
                 // Beautiful Level Name Display
                 Container(
                   width: double.infinity,
-                  margin: const EdgeInsets.only(top: 12.0, bottom: 12.0),
+                  margin: const EdgeInsets.symmetric(vertical: 16.0),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24.0,
-                    vertical: 16.0,
+                    vertical: 20.0,
                   ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -270,74 +219,6 @@ class _PlayGamePageState extends State<PlayGamePage> {
                   ),
                 ),
 
-                // Premium Timer Display (Only for Quiz)
-                if (selectedValue == 'Quiz' && _timeLeft != null)
-                  Center(
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: (_timeLeft! < 60)
-                              ? [Colors.red.shade400, Colors.red.shade700]
-                              : [Colors.cyan.shade400, Colors.cyan.shade700],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (_timeLeft! < 60)
-                                ? Colors.red.withOpacity(0.3)
-                                : Colors.cyan.withOpacity(0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.timer_outlined,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                "TIME REMAINING",
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                              Text(
-                                _formatTime(_timeLeft!),
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
                 // Unity WebView preview
                 Center(
                   child: SizedBox(
@@ -376,9 +257,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
                                   ? (args[3] as bool? ?? false)
                                   : false;
 
-                              print(
-                                "levelId : $levelId, type: $type, dataType: $dataType, useProgress: $useProgress",
-                              );
+                                  print("levelId : $levelId, type: $type, dataType: $dataType, useProgress: $useProgress");
 
                               final content = await _levelStorage
                                   .getFileContent(
@@ -388,13 +267,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
                                     useProgress: useProgress,
                                     userId: _userId,
                                   );
-
-                              // Check if we need to set initial timer from saved progress?
-                              // The API.fetchLevelById already did this by saving to storage if it fetched progress.
-                              // But here we are just reading content.
-                              // If we wanted to sync timer from backend, we might need a separate call or pass it in LevelModel.
-                              // For now, assuming timer starts fresh or from LevelModel.
-                              // IMPROVEMENT: If we fetched progress from backend, we should update _timeLeft.
+                                  print("content: $content");
 
                               return content ?? '';
                             }
@@ -474,7 +347,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
                                   ? (args[2] as bool? ?? true)
                                   : true;
 
-                              // Save locally first (standard save)
+                              // Save locally first
                               final localSuccess = await _levelStorage
                                   .saveStudentProgress(
                                     levelId: levelId,
@@ -482,65 +355,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
                                     userId: _userId,
                                   );
 
-                              // Quiz Bundle Logic
-                              if (selectedValue == 'Quiz') {
-                                // 1. Read files from Index folder
-                                final storage = LocalLevelStorage();
-                                Map<String, String> bundle = {};
-                                final types = ['html', 'css', 'js', 'php'];
-
-                                for (final t in types) {
-                                  // Note: getFileContent normally looks in 'progress' if useProgress=true
-                                  // But we want the Index file content which Unity supposedly just updated via saveIndexFile?
-                                  // Or did Unity update the save_data (via saveStudentProgress) which updated the Index folder?
-                                  // LocalLevelStorage.saveStudentProgress updates BOTH saved_data.json AND Index/index.ext
-                                  // So reading from Index folder is safe.
-                                  final validT = t == 'js' ? 'js' : t;
-                                  final path = await storage.getIndexFilePath(
-                                    levelId: levelId,
-                                    type: validT,
-                                    userId: _userId,
-                                  );
-
-                                  if (path != null) {
-                                    final file = File(path); // Need dart:io
-                                    if (await file.exists()) {
-                                      bundle[t] = await file.readAsString();
-                                    } else {
-                                      bundle[t] = "";
-                                    }
-                                  } else {
-                                    bundle[t] = "";
-                                  }
-                                }
-
-                                // 2. Replace savedDataJson with bundle
-                                final bundleJson = jsonEncode(bundle);
-
-                                // 3. Sync to server with Timer
-                                if (syncToServer) {
-                                  try {
-                                    final response =
-                                        await GameAPI.saveStudentProgress(
-                                          levelId: levelId,
-                                          savedData: bundleJson, // Send bundle
-                                          timer: _timeLeft, // Send timer
-                                        );
-                                    if (kDebugMode) {
-                                      print(
-                                        'Synced QUZ progress to server: ${response['message']}',
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (kDebugMode) {
-                                      print('Failed to sync progress: $e');
-                                    }
-                                  }
-                                }
-                                return localSuccess;
-                              }
-
-                              // Standard Sync (Non-Quiz)
+                              // Optionally sync to Laravel
                               if (syncToServer && savedDataJson != null) {
                                 try {
                                   final response =
@@ -579,10 +394,8 @@ class _PlayGamePageState extends State<PlayGamePage> {
                                   args[0] as String? ??
                                   widget.level.levelId ??
                                   '';
-
-                              String? userId = args.length >= 2
-                                  ? args[1] as String?
-                                  : null;
+                              
+                              String? userId = args.length >= 2 ? args[1] as String? : null;
 
                               // If userId is not provided by Unity, try to get it from stored user
                               if (userId == null || userId.isEmpty) {
@@ -596,20 +409,16 @@ class _PlayGamePageState extends State<PlayGamePage> {
                                     levelId: levelId,
                                     userId: userId,
                                   );
-
+                                  
                                   if (kDebugMode) {
-                                    print(
-                                      'Level completion synced to server: ${response['message']}',
-                                    );
+                                    print('Level completion synced to server: ${response['message']}');
                                   }
-
+                                  
                                   // Return true if the backend says it's a success
-                                  return response['success'] != false;
+                                  return response['success'] != false; 
                                 } catch (e) {
                                   if (kDebugMode) {
-                                    print(
-                                      'Failed to sync level completion: $e',
-                                    );
+                                    print('Failed to sync level completion: $e');
                                   }
                                 }
                               }
@@ -693,7 +502,7 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
     if (widget.serverUrl.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-
+    
     // Preview points to the generated index folder within the level
     final url = "${widget.serverUrl}/${widget.levelId}/index/index.html";
 
@@ -713,3 +522,4 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
     });
   }
 }
+
