@@ -33,9 +33,11 @@ class LevelUserController extends Controller
 
             $validatedData = $request->validate([
                 'saved_data' => 'nullable|string',
+                'timer' => 'nullable|integer|min:0', // Validate timer
             ]);
 
             $savedData = $validatedData['saved_data'] ?? null;
+            $timer = $validatedData['timer'] ?? 0; // Get timer
             $userId = $user->user_id;
 
             // Check if entry already exists
@@ -46,6 +48,7 @@ class LevelUserController extends Controller
             if ($levelUser) {
                 // Update existing entry
                 $levelUser->saved_data = $savedData;
+                $levelUser->timer = $timer; // Update timer
                 $levelUser->save();
 
                 Log::info("LEVEL_SAVE_UPDATED: Level {$levelId} data updated for User {$userId}");
@@ -66,6 +69,7 @@ class LevelUserController extends Controller
                     'level_id' => $levelId,
                     'user_id' => $userId,
                     'saved_data' => $savedData,
+                    'timer' => $timer, // Save timer
                 ]);
 
                 Log::info("LEVEL_SAVE_CREATED: New entry created for Level {$levelId} and User {$userId} with default/provided data");
@@ -120,6 +124,7 @@ class LevelUserController extends Controller
                 'saved_data' => $levelUser->saved_data,
                 'created_at' => $levelUser->created_at,
                 'updated_at' => $levelUser->updated_at,
+                'timer' => $levelUser->timer, // Return timer
             ], 200);
         } catch (\Exception $e) {
             Log::error('LEVEL_GET_ERROR: ' . $e->getMessage(), [
@@ -292,6 +297,46 @@ class LevelUserController extends Controller
             File::put($levelDataPath, '');
             File::put($winDataPath, '');
             File::put($indexFilePath, '');
+        }
+    }
+
+    /**
+     * Get all users who have played a specific level (for Teacher View)
+     */
+    public function getLevelUsers(Request $request, $levelId)
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthenticated'], 401);
+            }
+
+            // Verify user is teacher or admin
+            $user->load('role');
+            $roleName = strtolower(trim($user->role?->role_name ?? ''));
+            if ($roleName !== 'teacher' && $roleName !== 'admin') {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            $users = DB::table('level_user')
+                ->join('users', 'level_user.user_id', '=', 'users.user_id')
+                ->where('level_user.level_id', $levelId)
+                ->select(
+                    'users.user_id',
+                    'users.name',
+                    'users.email',
+                    'level_user.created_at as last_played',
+                    'level_user.timer as time_remaining',
+                    'level_user.saved_data' // Include saved data
+                )
+                ->orderBy('level_user.updated_at', 'desc')
+                ->get();
+
+            return response()->json($users, 200);
+
+        } catch (\Exception $e) {
+            Log::error('LEVEL_USERS_GET_ERROR: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch level users'], 500);
         }
     }
 }

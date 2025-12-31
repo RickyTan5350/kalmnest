@@ -65,7 +65,7 @@ class LevelController extends Controller
             }
             // Admin: See all games (no filter)
 
-            $levels = $query->get()->map(function ($level) use ($user) {
+            $levels = $query->get()->map(function ($level) use ($user, $roleName) {
                 // Determine if this level is private (has at least one private assignment)
                 // Check if any class assignment has is_private = true
                 $isPrivate = DB::table('class_levels')
@@ -74,6 +74,17 @@ class LevelController extends Controller
                     ->exists();
                 
                 $isCreatedByMe = $level->created_by === $user->user_id;
+
+                $timer = $level->timer;
+                if ($user && $roleName === 'student') {
+                    $levelUser = DB::table('level_user')
+                        ->where('level_id', $level->level_id)
+                        ->where('user_id', $user->user_id)
+                        ->first();
+                    if ($levelUser && property_exists($levelUser, 'timer')) {
+                        $timer = $levelUser->timer;
+                    }
+                }
 
                 return [
                     'level_id' => $level->level_id,
@@ -85,6 +96,7 @@ class LevelController extends Controller
                     'is_private' => $isPrivate,
                     'is_created_by_me' => $isCreatedByMe,
                     'status' => $isPrivate ? 'private' : 'public',
+                    'timer' => $timer, // Return appropriate timer
                 ];
             });
 
@@ -110,26 +122,29 @@ class LevelController extends Controller
 
         // Logic for Students: Ensure LevelUser entry exists
         $user = Auth::user();
+        $studentTimer = null;
         if ($user) {
             $user->load('role');
             $roleName = strtolower(trim($user->role?->role_name ?? ''));
 
             if ($roleName === 'student') {
-                $existingEntry = LevelUser::where('level_id', $levelId)
+                $levelUser = LevelUser::where('level_id', $levelId)
                     ->where('user_id', $user->user_id)
-                    ->exists();
+                    ->first();
 
-                if (!$existingEntry) {
-                    LevelUser::create([
+                if (!$levelUser) {
+                    $levelUser = LevelUser::create([
                         'level_user_id' => (string) Str::uuid7(),
                         'level_id' => $levelId,
                         'user_id' => $user->user_id,
                         'saved_data' => null,
+                        'timer' => $level->timer ?? 0,
                     ]);
                     Log::info("LEVEL_INIT: Auto-created level_user entry for User {$user->user_id} on Level {$levelId}");
                 } else {
                     Log::info("LEVEL_INIT: Entry already exists for User {$user->user_id} on Level {$levelId}");
                 }
+                $studentTimer = $levelUser->timer;
             }
         }
 
@@ -145,6 +160,7 @@ class LevelController extends Controller
             ] : null,
             'level_data' => $level->level_data,
             'win_condition' => $level->win_condition,
+            'timer' => $studentTimer ?? $level->timer, // Return saved timer for student, or level default
         ];
 
         return response()->json($result);
@@ -172,6 +188,7 @@ class LevelController extends Controller
         $request->validate([
             'level_name' => 'required|string|filled',
             'level_type_name' => 'required|string',
+            'timer' => 'nullable|integer|min:0', // Validate timer
         ]);
 
         $levelType = level_type::where('level_type_name', $request->level_type_name)->first();
@@ -208,6 +225,7 @@ class LevelController extends Controller
                 'level_data' => $request->level_data,
                 'win_condition' => $request->win_condition,
                 'created_by' => $user->user_id,
+                'timer' => $request->input('timer', 0), // Save timer
             ];
         } else {
             // Priority 2: Fall back to existing public folder logic (if any)
@@ -225,6 +243,7 @@ class LevelController extends Controller
                 'level_data' => json_encode($finalLevelDataArr, JSON_PRETTY_PRINT),
                 'win_condition' => json_encode($finalWinDataArr, JSON_PRETTY_PRINT),
                 'created_by' => $user->user_id,
+                'timer' => $request->input('timer', 0), // Save timer
             ];
         }
 
@@ -255,6 +274,7 @@ class LevelController extends Controller
         $request->validate([
             'level_name' => 'required|string|filled',
             'level_type_name' => 'required|string|exists:level_types,level_type_name',
+            'timer' => 'nullable|integer|min:0', // Validate timer
         ]);
 
         $level = Level::find($levelId);
@@ -274,6 +294,7 @@ class LevelController extends Controller
                 'level_type_id' => $levelType->level_type_id,
                 'level_data' => $request->level_data,
                 'win_condition' => $request->win_condition,
+                'timer' => $request->input('timer', 0), // Update timer
             ];
         } else {
             // Priority 2: Fall back to existing public folder logic
@@ -294,6 +315,7 @@ class LevelController extends Controller
                 'level_type_id' => $levelType->level_type_id,
                 'level_data' => json_encode($finalLevelData, JSON_PRETTY_PRINT),
                 'win_condition' => json_encode($finalWinData, JSON_PRETTY_PRINT),
+                'timer' => $request->input('timer', 0), // Update timer
             ];
         }
 
