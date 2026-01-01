@@ -50,6 +50,8 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
   bool _accountStatus = true; // Default to active
   Map<String, String> _serverErrors = {}; // Store server-side errors
 
+  bool _isPasswordVisible = false;
+
   bool _isLoading = false;
 
   final List<String> _genders = ['male', 'female'];
@@ -317,12 +319,24 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                 TextFormField(
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: AppLocalizations.of(context)!.password,
-                    icon: Icons.lock,
-                    colorScheme: colorScheme,
-                  ),
-                  obscureText: true,
+                  decoration:
+                      _inputDecoration(
+                        labelText: AppLocalizations.of(context)!.password,
+                        icon: Icons.lock,
+                        colorScheme: colorScheme,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
+                        ),
+                      ),
+                  obscureText: !_isPasswordVisible,
                   validator: (value) {
                     if (_serverErrors.containsKey('password')) {
                       return _serverErrors['password'];
@@ -345,12 +359,26 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                 TextFormField(
                   controller: _passwordConfirmationController,
                   style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: AppLocalizations.of(context)!.confirmPassword,
-                    icon: Icons.lock_open,
-                    colorScheme: colorScheme,
-                  ),
-                  obscureText: true,
+                  decoration:
+                      _inputDecoration(
+                        labelText: AppLocalizations.of(
+                          context,
+                        )!.confirmPassword,
+                        icon: Icons.lock_open,
+                        colorScheme: colorScheme,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
+                        ),
+                      ),
+                  obscureText: !_isPasswordVisible,
                   validator: (value) {
                     if (value == null || value.isEmpty)
                       return AppLocalizations.of(
