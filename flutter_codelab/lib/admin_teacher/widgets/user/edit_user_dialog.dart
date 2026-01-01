@@ -3,6 +3,7 @@ import 'package:code_play/api/user_api.dart';
 import 'package:code_play/utils/formatters.dart';
 import 'package:code_play/models/user_data.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/password_strength_indicator.dart';
 
 // Utility function to show the dialog
 Future<bool?> showEditUserDialog({
@@ -390,8 +391,10 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     if (_serverErrors.containsKey('password')) {
                       setState(() => _serverErrors.remove('password'));
                     }
+                    setState(() {}); // Trigger rebuild for strength indicator
                   },
                 ),
+                PasswordStrengthIndicator(password: _passwordController.text),
                 const SizedBox(height: 16),
 
                 // Password Confirmation Field
