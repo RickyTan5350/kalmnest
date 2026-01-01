@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_view_achievement_page.dart';
-import 'package:flutter_codelab/student/widgets/achievements/student_view_achievement_page.dart';
-import 'package:flutter_codelab/constants/view_layout.dart' show ViewLayout;
-import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
-import 'package:flutter_codelab/services/layout_preferences.dart'; // Layout Persistence
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_view_achievement_page.dart';
+import 'package:code_play/student/widgets/achievements/student_view_achievement_page.dart';
+import 'package:code_play/constants/view_layout.dart' show ViewLayout;
+import 'package:code_play/enums/sort_enums.dart'; // Shared Enums
+import 'package:code_play/services/layout_preferences.dart'; // Layout Persistence
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class AchievementPage extends StatefulWidget {
   final void Function(BuildContext context, String message, Color color)

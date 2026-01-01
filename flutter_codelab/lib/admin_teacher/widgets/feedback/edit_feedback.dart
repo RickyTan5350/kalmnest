@@ -12,7 +12,6 @@ void showEditFeedbackDialog({
 }) {
   showDialog(
     context: context,
-    barrierDismissible: false,
     builder: (_) => EditFeedbackDialog(
       feedback: feedback,
       onUpdated: onUpdated,
@@ -42,13 +41,9 @@ class EditFeedbackDialog extends StatefulWidget {
 
 class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _titleController;
+  late final TextEditingController _topicController;
   late final TextEditingController _feedbackController;
   late FeedbackApiService _api;
-  String? _selectedTopicId;
-  String? _selectedTopicName;
-  List<Map<String, dynamic>> _topics = [];
-  bool _isLoadingTopics = false;
 
   bool _isSaving = false;
 
@@ -56,32 +51,9 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
   void initState() {
     super.initState();
     _api = FeedbackApiService(token: widget.authToken);
-    _selectedTopicId = widget.feedback.topicId;
-    _selectedTopicName = widget.feedback.topicName;
-    _titleController = TextEditingController(text: widget.feedback.title);
+
+    _topicController = TextEditingController(text: widget.feedback.topic);
     _feedbackController = TextEditingController(text: widget.feedback.feedback);
-    _loadTopics();
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _feedbackController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadTopics() async {
-    setState(() => _isLoadingTopics = true);
-    try {
-      final topics = await _api.getTopics();
-      setState(() => _topics = topics);
-    } catch (e) {
-      print('EditFeedback: Error loading topics: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingTopics = false);
-      }
-    }
   }
 
   Future<void> _save() async {
@@ -92,8 +64,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
     try {
       await _api.editFeedback(
         feedbackId: widget.feedback.feedbackId,
-        topicId: _selectedTopicId!,
-        title: _titleController.text,
+        topic: _topicController.text,
         comment: _feedbackController.text,
       );
 
@@ -102,13 +73,10 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
           feedbackId: widget.feedback.feedbackId,
           studentName: widget.feedback.studentName,
           studentId: widget.feedback.studentId,
-          teacherName: widget.feedback.teacherName,
-          teacherId: widget.feedback.teacherId,
-          topicId: _selectedTopicId!,
-          topicName: _selectedTopicName!,
-          title: _titleController.text,
+          teacherName: widget.feedback.teacherName, // Will be updated from API
+          teacherId: widget.feedback.teacherId, // Will be updated from API
+          topic: _topicController.text,
           feedback: _feedbackController.text,
-          createdAt: widget.feedback.createdAt,
         ),
       );
 
@@ -121,41 +89,8 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
         widget.showSnackBar(context, AppLocalizations.of(context)!.updateFailed(e.toString()), Colors.red);
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+      setState(() => _isSaving = false);
     }
-  }
-
-  InputDecoration _inputDecoration({
-    required String labelText,
-    required IconData icon,
-    String? hintText,
-    required ColorScheme colorScheme,
-  }) {
-    return InputDecoration(
-      labelText: labelText,
-      hintText: hintText,
-      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.outline),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.primary, width: 2),
-      ),
-      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-      hintStyle: TextStyle(
-        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-      ),
-      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-      filled: true,
-    );
   }
 
   @override
@@ -339,3 +274,4 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
     );
   }
 }
+

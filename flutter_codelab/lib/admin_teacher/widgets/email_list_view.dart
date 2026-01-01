@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter_codelab/models/data.dart' as data;
-import 'package:flutter_codelab/models/models.dart';
+import 'package:code_play/models/data.dart' as data;
+import 'package:code_play/models/models.dart';
 import 'email_widget.dart';
 import 'search_bar.dart' as search_bar;
 

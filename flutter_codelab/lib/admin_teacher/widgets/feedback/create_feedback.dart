@@ -39,20 +39,16 @@ class CreateFeedbackDialog extends StatefulWidget {
 
 class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _topicController = TextEditingController();
   final TextEditingController _feedbackController = TextEditingController();
   late final FeedbackApiService _apiService;
 
   String? _selectedStudent;
   String? _selectedStudentId;
-  String? _selectedTopicId;
-  String? _selectedTopicName;
   bool _isLoading = false;
   bool _isLoadingStudents = false;
-  bool _isLoadingTopics = false;
 
   List<Map<String, dynamic>> _students = [];
-  List<Map<String, dynamic>> _topics = [];
 
   @override
   void initState() {
@@ -60,21 +56,6 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     // Initialize FeedbackApiService WITH the auth token
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadStudents();
-    _loadTopics();
-  }
-
-  Future<void> _loadTopics() async {
-    setState(() => _isLoadingTopics = true);
-    try {
-      final topics = await _apiService.getTopics();
-      setState(() => _topics = topics);
-    } catch (e) {
-      print('CreateFeedback: Error loading topics: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingTopics = false);
-      }
-    }
   }
 
   Future<void> _loadStudents() async {
@@ -96,7 +77,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
 
   @override
   void dispose() {
-    _titleController.dispose();
+    _topicController.dispose();
     _feedbackController.dispose();
     super.dispose();
   }
@@ -119,8 +100,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
       // Call the backend API to create feedback
       await _apiService.createFeedback(
         studentId: _selectedStudentId!,
-        topicId: _selectedTopicId!,
-        title: _titleController.text,
+        topic: _topicController.text,
         comment: _feedbackController.text,
       );
 
@@ -131,9 +111,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
         studentId: _selectedStudentId!,
         teacherName: 'Unknown', // Will be updated from API
         teacherId: '', // Will be updated from API
-        topicId: _selectedTopicId!,
-        topicName: _selectedTopicName!,
-        title: _titleController.text,
+        topic: _topicController.text,
         feedback: _feedbackController.text,
       );
 
@@ -310,7 +288,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
 
                 // Title
                 TextFormField(
-                  controller: _titleController,
+                  controller: _topicController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
                     labelText: l10n.title,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/models.dart';
+import 'package:code_play/models/models.dart';
 import 'star_button.dart';
 
 enum EmailType { preview, threaded, primaryThreaded }

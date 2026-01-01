@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/models/user_data.dart'; // Using the UserDetails class from here
-import 'package:flutter_codelab/main.dart'; // Import the Feed structure
-import 'package:flutter_codelab/pages/forgot_password_page.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
-import 'package:flutter_codelab/widgets/language_selector.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/models/user_data.dart'; // Using the UserDetails class from here
+import 'package:code_play/main.dart'; // Import the Feed structure
+import 'package:code_play/pages/forgot_password_page.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/language_selector.dart';
 
 // Define a new page for the login screen
 class LoginPage extends StatefulWidget {

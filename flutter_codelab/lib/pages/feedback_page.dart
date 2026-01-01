@@ -29,94 +29,13 @@ class _FeedbackPageState extends State<FeedbackPage> {
   final List<FeedbackData> _feedbackList = [];
   late FeedbackApiService _apiService;
   bool _isLoading = true;
-  bool _isLoadingStudents = false;
   String? _errorMessage;
-
-  List<Map<String, dynamic>> _topics = [];
-  String _selectedTopicId = 'All';
-  String _selectedStudentId = 'All';
-  String _selectedTeacherId = 'All';
-  List<Map<String, dynamic>> _students = [];
-  List<Map<String, dynamic>> _teachers = [];
-  SortOrder _sortOrder = SortOrder.descending;
-  bool _isLoadingTeachers = false;
-  bool _isLoadingTopics = false;
 
   @override
   void initState() {
     super.initState();
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadFeedback();
-    _loadTopics();
-    if (_isTeacher || widget.currentUser?.isAdmin == true) {
-      _loadStudents();
-    }
-    if (_isStudent) {
-      _loadTeachers();
-    }
-  }
-
-  Future<void> _loadTopics() async {
-    setState(() => _isLoadingTopics = true);
-    try {
-      final topics = await _apiService.getTopics();
-      setState(() {
-        _topics = topics;
-        _isLoadingTopics = false;
-      });
-    } catch (e) {
-      print('Error loading topics: $e');
-      setState(() => _isLoadingTopics = false);
-    }
-  }
-
-  Future<void> _loadStudents() async {
-    setState(() => _isLoadingStudents = true);
-    try {
-      final students = await _apiService.getStudents();
-      setState(() {
-        _students = students;
-        _isLoadingStudents = false;
-      });
-    } catch (e) {
-      print('Error loading students: $e');
-      setState(() => _isLoadingStudents = false);
-    }
-  }
-
-  Future<void> _loadTeachers() async {
-    setState(() => _isLoadingTeachers = true);
-    try {
-      // Use the same list of teachers from feedbacks
-      final feedbacks = await _apiService.getFeedback();
-      final Map<String, String> uniqueTeachers = {};
-      for (var f in feedbacks) {
-        final id = f['teacher_id']?.toString();
-        final name = f['teacher_name'] ?? 
-                    (f['teacher'] is Map ? (f['teacher']['name'] ?? f['teacher']['full_name']) : null) ?? 
-                    'Unknown';
-        if (id != null) uniqueTeachers[id] = name;
-      }
-      
-      setState(() {
-        _teachers = uniqueTeachers.entries.map((e) => {'id': e.key, 'name': e.value}).toList();
-        _isLoadingTeachers = false;
-      });
-    } catch (e) {
-      print('Error loading teachers: $e');
-      setState(() => _isLoadingTeachers = false);
-    }
-  }
-
-  Future<void> _handleRefresh() async {
-    await _loadFeedback();
-    await _loadTopics();
-    if (_isTeacher || widget.currentUser?.isAdmin == true) {
-      await _loadStudents();
-    }
-    if (_isStudent) {
-      await _loadTeachers();
-    }
   }
 
   Future<void> _loadFeedback() async {
@@ -144,7 +63,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
   }
 
   List<FeedbackData> _parseFeedbackList(List<dynamic> feedbacks) {
-    return feedbacks.map<FeedbackData>((fb) {
+    return feedbacks.map((fb) {
       return FeedbackData(
         feedbackId: fb['feedback_id']?.toString() ?? '',
         studentName: fb['student_name'] ?? 'Unknown',
@@ -154,10 +73,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
                 ? (fb['teacher']['name'] ?? fb['teacher']['full_name'])
                 : null) ??
             'Unknown',
-        teacherId: fb['teacher_id']?.toString() ?? '',
-        topicId: fb['topic_id']?.toString() ?? '',
-        topicName: fb['topic_name'] ?? 'Unknown',
-        title: fb['title'] ?? 'No Title',
+        teacherId: fb['teacher_id'] ?? '',
+        topic: fb['topic'] ?? '',
         feedback: fb['feedback'] ?? '',
         createdAt: fb['created_at'] ?? fb['createdAt'],
       );
@@ -402,7 +319,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
     }
 
     return _FeedbackListView(
-      feedbackList: filtered,
+      feedbackList: _feedbackList,
       isTeacher: _isTeacher,
       isStudent: _isStudent,
       onEdit: _openEditDialog,
@@ -633,6 +550,11 @@ class _EmptyView extends StatelessWidget {
             style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
           ),
           const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: onAddFeedback,
+            icon: const Icon(Icons.add),
+            label: const Text('Add Feedback'),
+          ),
         ],
       ),
     );
@@ -702,23 +624,12 @@ class _FeedbackCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Student name (only for teachers/admins)
-            if (!isStudent) _buildTeacherViewHeader(colorScheme),
+            if (!isStudent) _buildStudentHeader(colorScheme),
             if (!isStudent) const SizedBox(height: 8),
 
             // Topic
-            _buildTopic(context, colorScheme),
+            _buildTopic(colorScheme),
             const SizedBox(height: 8),
-
-            // Title
-            Text(
-              feedback.title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
 
             // Feedback content
             _buildFeedbackContent(colorScheme),
@@ -735,7 +646,7 @@ class _FeedbackCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTeacherViewHeader(ColorScheme colorScheme) {
+  Widget _buildStudentHeader(ColorScheme colorScheme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -747,31 +658,19 @@ class _FeedbackCard extends StatelessWidget {
             color: colorScheme.onSurface,
           ),
         ),
+        Icon(Icons.person_outline, color: colorScheme.primary),
       ],
     );
   }
 
-  Widget _buildTopic(BuildContext context, ColorScheme colorScheme) {
-    String iconValue = feedback.topicName.toLowerCase();
-    if (iconValue == 'js') iconValue = 'javascript';
-    
-    final icon = getAchievementIcon(iconValue);
-    final color = getAchievementColor(context, iconValue);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(width: 8),
-        Text(
-          feedback.topicName,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
+  Widget _buildTopic(ColorScheme colorScheme) {
+    return Text(
+      feedback.topic,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: colorScheme.primary,
+      ),
     );
   }
 
@@ -856,3 +755,4 @@ class _FeedbackCard extends StatelessWidget {
     );
   }
 }
+

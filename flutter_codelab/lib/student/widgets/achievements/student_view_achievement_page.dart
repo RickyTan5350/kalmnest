@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/achievement_api.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
-import 'package:flutter_codelab/student/widgets/achievements/student_achievement_detail_page.dart';
+import 'package:code_play/api/achievement_api.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/student/services/local_achievement_storage.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/constants/achievement_constants.dart';
+import 'package:code_play/enums/sort_enums.dart'; // Shared Enums
+import 'package:code_play/student/widgets/achievements/student_achievement_detail_page.dart';
 
 class StudentViewAchievementsPage extends StatefulWidget {
   final ViewLayout layout;
@@ -75,9 +75,9 @@ class StudentViewAchievementsPageState
     });
 
     try {
-      // 1. Attempt to connect to the server for a longer time (2 minutes)
+      // 1. Attempt to connect to the server for a longer time (30 seconds)
       final cloudData = await api.fetchMyUnlockedAchievements().timeout(
-        const Duration(minutes: 2),
+        const Duration(seconds: 30),
       );
 
       // 2. Only cache OBTAINED (unlocked) achievements locally

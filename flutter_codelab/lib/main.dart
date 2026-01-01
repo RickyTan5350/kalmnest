@@ -2,32 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'dart:io'; // For HttpOverrides
 
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
-import 'package:flutter_codelab/controllers/locale_controller.dart';
-import 'package:flutter_codelab/destinations.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/controllers/locale_controller.dart';
 
-import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_create_note_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_create_class_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/profile_header_content.dart';
+import 'package:code_play/admin_teacher/widgets/disappearing_navigation_rail.dart';
+import 'package:code_play/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
+import 'package:code_play/admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/admin_create_note_page.dart';
+import 'package:code_play/admin_teacher/widgets/class/admin_create_class_page.dart';
+import 'package:code_play/admin_teacher/widgets/user/create_account_form.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
+import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart';
+import 'package:code_play/admin_teacher/widgets/user/profile_header_content.dart';
 
-import 'package:flutter_codelab/util.dart';
-import 'package:flutter_codelab/theme.dart';
+import 'package:code_play/util.dart';
+import 'package:code_play/theme.dart';
 
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/models/user_data.dart';
 
-import 'package:flutter_codelab/pages/pages.dart';
-import 'package:flutter_codelab/pages/user_page.dart'; // Explicit import for key
-import 'package:flutter_codelab/pages/login_page.dart';
-import 'package:flutter_codelab/pages/game_page.dart';
+import 'package:code_play/pages/pages.dart';
+import 'package:code_play/pages/user_page.dart'; // Explicit import for key
+import 'package:code_play/pages/login_page.dart';
+import 'package:code_play/pages/game_page.dart';
 
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() async {
@@ -89,19 +88,13 @@ class MainApp extends StatelessWidget {
           supportedLocales: AppLocalizations.supportedLocales,
           locale: locale,
           theme: theme.light(),
-          //darkTheme: theme.dark(),
+          darkTheme: theme.dark(),
           themeMode: ThemeMode.system,
           home: homeWidget,
         );
       },
     );
   }
-}
-
-class _NavigationEntry {
-  final Destination destination;
-  final Widget page;
-  _NavigationEntry(this.destination, this.page);
 }
 
 class Feed extends StatefulWidget {
@@ -217,14 +210,9 @@ class _FeedState extends State<Feed> {
   }
 
   void _onAddButtonPressed() {
-    final filteredDestinations = _getFilteredDestinations();
-    if (selectedIndex >= filteredDestinations.length) return;
-    
-    final currentLabel = filteredDestinations[selectedIndex].label;
-
-    // This switch statement checks the currently selected page by label
-    switch (currentLabel) {
-      case 'User':
+    // This switch statement checks the currently selected page
+    switch (selectedIndex) {
+      case 0: // This is the index for 'UserPage' (Index 0)
         // CHECK if the current user is a Student OR a Teacher
         if (widget.currentUser.isStudent || widget.currentUser.isTeacher) {
           _showSnackBar(
@@ -283,7 +271,7 @@ class _FeedState extends State<Feed> {
         }
         break;
 
-      case 'Game':
+      case 1:
         // Block students from creating games
         if (widget.currentUser.isStudent) {
           _showSnackBar(
@@ -299,7 +287,7 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-      case 'Note':
+      case 2:
         if (widget.currentUser.isStudent) {
           // 2. BLOCK: Show error message
           _showSnackBar(
@@ -313,7 +301,7 @@ class _FeedState extends State<Feed> {
         }
         break;
 
-      case 'Class':
+      case 3: // This is the index for 'ClassPage'
         if (widget.currentUser.isAdmin) {
           _showCreateClassDialog();
         } else {
@@ -325,7 +313,7 @@ class _FeedState extends State<Feed> {
         }
         break;
 
-      case 'Achievement':
+      case 4: // This is the index for 'AchievementPage'
         if (widget.currentUser.isStudent) {
           _showSnackBar(
             context,
@@ -358,31 +346,8 @@ class _FeedState extends State<Feed> {
         }
         break;
       default:
-        print("No 'add' action for label $currentLabel");
+        print("No 'add' action for index $selectedIndex");
     }
-  }
-
-  List<_NavigationEntry> _getFilteredEntries() {
-    final List<_NavigationEntry> allEntries = [
-      _NavigationEntry(destinations[0], UserPage(key: userPageGlobalKey, currentUser: widget.currentUser)),
-      _NavigationEntry(destinations[1], GamePage(key: gamePageGlobalKey, userRole: widget.currentUser.roleName)),
-      _NavigationEntry(destinations[2], NotePage(currentUser: widget.currentUser)),
-      _NavigationEntry(destinations[3], ClassPage(key: classPageGlobalKey, currentUser: widget.currentUser)),
-      _NavigationEntry(destinations[4], AchievementPage(showSnackBar: _showSnackBar, currentUser: widget.currentUser)),
-      _NavigationEntry(destinations[5], AiChatPage(currentUser: widget.currentUser, authToken: widget.currentUser.token)),
-      _NavigationEntry(destinations[6], FeedbackPage(authToken: widget.currentUser.token, currentUser: widget.currentUser)),
-    ];
-
-    return allEntries.where((entry) {
-      if (entry.destination.label == 'AI chat' && !widget.currentUser.isStudent) {
-        return false;
-      }
-      return true;
-    }).toList();
-  }
-
-  List<Destination> _getFilteredDestinations() {
-    return _getFilteredEntries().map((e) => e.destination).toList();
   }
 
   @override
@@ -393,25 +358,42 @@ class _FeedState extends State<Feed> {
       colorScheme.primary.withAlpha(36),
       colorScheme.surface,
     );
-    
-    // Filtered Content
-    final filteredEntries = _getFilteredEntries();
-    final filteredDestinations = filteredEntries.map((e) => e.destination).toList();
-    final filteredPages = filteredEntries.map((e) => e.page).toList();
 
-    // Ensure selectedIndex is within bounds after filtering
-    if (selectedIndex >= filteredDestinations.length) {
-      selectedIndex = 0;
-    }
-
-    final isChatPage = filteredDestinations.isNotEmpty && 
-                      filteredDestinations[selectedIndex].label == 'AI chat';
+    final List<Widget> pages = [
+      UserPage(
+        key: userPageGlobalKey,
+        currentUser: widget.currentUser,
+      ), // Index 0
+      GamePage(
+        key: gamePageGlobalKey,
+        userRole: widget.currentUser.roleName,
+      ), // Index 1
+      NotePage(currentUser: widget.currentUser), // Index 2
+      ClassPage(
+        key: classPageGlobalKey,
+        currentUser: widget.currentUser,
+      ), // Index 3
+      AchievementPage(
+        showSnackBar: _showSnackBar,
+        currentUser: widget.currentUser,
+      ), // Index 4
+      AiChatPage(
+        currentUser: widget.currentUser,
+        authToken: widget.currentUser.token,
+      ), // Index 5
+      FeedbackPage(
+        authToken: widget.currentUser.token,
+        currentUser: widget.currentUser,
+      ), // Index 6
+    ];
+    // --- END OF FIX ---
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor:
+          backgroundColor, // ADDED: Match background preventing white gaps
       body: Column(
         children: [
-          // Profile Header
+          // Profile Header (now always visible at the top)
           Container(
             color: backgroundColor,
             child: ProfileHeaderContent(
@@ -437,7 +419,7 @@ class _FeedState extends State<Feed> {
                         selectedIndex = index;
                       });
                       // Refresh GamePage when navigating to it
-                      if (filteredDestinations[index].label == 'Game') {
+                      if (index == 1) {
                         gamePageGlobalKey.currentState?.refresh();
                       }
                     },
@@ -448,9 +430,7 @@ class _FeedState extends State<Feed> {
                 Expanded(
                   child: Container(
                     color: backgroundColor,
-                    child: filteredPages.isNotEmpty 
-                      ? filteredPages[selectedIndex]
-                      : const Center(child: Text("No pages available")),
+                    child: pages[selectedIndex],
                   ),
                 ),
               ],
@@ -475,11 +455,10 @@ class _FeedState extends State<Feed> {
                   selectedIndex = index;
                 });
                 // Refresh GamePage when navigating to it
-                if (filteredDestinations[index].label == 'Game') {
+                if (index == 1) {
                   gamePageGlobalKey.currentState?.refresh();
                 }
               },
-              destinations: filteredDestinations,
             ),
     );
   }
