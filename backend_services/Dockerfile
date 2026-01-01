@@ -37,17 +37,21 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-script
     (composer update --no-dev --optimize-autoloader --no-interaction --no-scripts && \
      composer install --no-dev --optimize-autoloader --no-interaction --no-scripts)
 
-# Run Laravel optimization commands
-RUN php artisan config:cache || true \
-    && php artisan route:cache || true \
+# Don't cache config during build (env vars not set yet)
+# Cache will be created at runtime via startup script
+RUN php artisan route:cache || true \
     && php artisan view:cache || true
 
 # Copy Apache configuration
 COPY docker/apache-config.conf /etc/apache2/sites-available/000-default.conf
 
+# Copy startup script
+COPY docker/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
 # Expose port 80
 EXPOSE 80
 
-# Start Apache
-CMD ["apache2-foreground"]
+# Start Apache with Laravel config caching
+CMD ["/usr/local/bin/start.sh"]
 
