@@ -5,18 +5,22 @@ Since Render.com doesn't natively support PHP, we need to use Docker to deploy y
 ## 📋 Configuration Steps
 
 ### 1. Language Selection
+
 **Select**: `Docker` (not PHP, as it's not available)
 
 ### 2. Region Selection
+
 **Select**: `Singapore (Southeast Asia)`
 
 **Why Singapore?**
+
 - ✅ Closest region to Malaysia
 - ✅ Lowest latency for Malaysian users
 - ✅ Better performance and faster response times
 - ⚠️ **Note**: Region cannot be changed after deployment, so choose carefully
 
 **Impact of Region Choice:**
+
 - **Latency**: Singapore will give you ~10-50ms latency from Malaysia (vs 200-300ms from US regions)
 - **Performance**: Faster response times for your users
 - **Cost**: Same pricing regardless of region
@@ -24,17 +28,17 @@ Since Render.com doesn't natively support PHP, we need to use Docker to deploy y
 
 ### 3. Complete Configuration
 
-| Field | Value |
-|------|-------|
-| **Name** | `kalmnest-api` |
-| **Language** | `Docker` ⚠️ **Select this** |
-| **Branch** | `class-module-main` |
-| **Region** | `Singapore (Southeast Asia)` ✅ **Best for Malaysia** |
-| **Root Directory** | `backend_services` |
-| **Build Command** | *(Leave empty - Docker will use Dockerfile)* |
-| **Start Command** | *(Leave empty - Docker will use Dockerfile CMD)* |
-| **Instance Type** | `Free` |
-| **Health Check Path** | `/up` or `/api/health` |
+| Field                 | Value                                                 |
+| --------------------- | ----------------------------------------------------- |
+| **Name**              | `kalmnest-api`                                        |
+| **Language**          | `Docker` ⚠️ **Select this**                           |
+| **Branch**            | `class-module-main`                                   |
+| **Region**            | `Singapore (Southeast Asia)` ✅ **Best for Malaysia** |
+| **Root Directory**    | `backend_services`                                    |
+| **Build Command**     | _(Leave empty - Docker will use Dockerfile)_          |
+| **Start Command**     | _(Leave empty - Docker will use Dockerfile CMD)_      |
+| **Instance Type**     | `Free`                                                |
+| **Health Check Path** | `/up` or `/api/health`                                |
 
 ### 4. Environment Variables
 
@@ -98,6 +102,7 @@ php artisan migrate --force
 ## 🔧 After Deployment
 
 1. **Run Database Migrations**:
+
    - Go to Render Dashboard → Your Service → Shell
    - Run: `php artisan migrate --force`
 
@@ -119,4 +124,3 @@ php artisan migrate --force
 ## 🚀 Ready to Deploy!
 
 Follow the checklist above and you're good to go!
-
