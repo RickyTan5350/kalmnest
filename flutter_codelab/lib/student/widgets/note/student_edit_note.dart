@@ -296,21 +296,24 @@ class _ViewNotePageState extends State<ViewNotePage> {
         return null;
       },
       customStylesBuilder: (element) {
-        if (element.localName == 'h1')
+        if (element.localName == 'h1') {
           return {
             'margin-bottom': '10px',
             'font-weight': 'bold',
             'border-bottom':
                 '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
           };
-        if (element.localName == 'table')
+        }
+        if (element.localName == 'table') {
           return {'border-collapse': 'collapse', 'width': '100%'};
-        if (element.localName == 'th' || element.localName == 'td')
+        }
+        if (element.localName == 'th' || element.localName == 'td') {
           return {
             'border':
                 '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
             'padding': '8px',
           };
+        }
         return null;
       },
     );

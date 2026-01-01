@@ -361,7 +361,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                               onPlay: () => _playQuiz(quiz),
                             ),
                           );
-                        }).toList(),
+                        }),
                     ],
                   ),
                 ),

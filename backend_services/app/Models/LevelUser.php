@@ -19,7 +19,8 @@ class LevelUser extends Model
         'level_id',
         'user_id',
         'saved_data',
-        'timer'
+        'timer',
+        'index_files'
     ];
 
     protected function casts(): array

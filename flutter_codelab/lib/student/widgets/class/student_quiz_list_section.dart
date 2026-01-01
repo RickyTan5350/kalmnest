@@ -317,7 +317,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                         ),
                       ),
                     );
-                  }).toList(),
+                  }),
                 ],
 
                 // Show "View All" link if more than 3 quizzes

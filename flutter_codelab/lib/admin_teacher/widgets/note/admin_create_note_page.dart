@@ -273,7 +273,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                           ),
                         ],
                       );
-                    }).toList(),
+                    }),
                     TextButton.icon(
                       icon: const Icon(Icons.add),
                       label: const Text('Add Option'),

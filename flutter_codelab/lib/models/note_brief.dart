@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 /// Represents the brief data from the showAchievementsBrief() API endpoint.
 class NoteBrief {

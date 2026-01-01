@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:code_play/api/game_api.dart';
-import 'package:code_play/constants/api_constants.dart';
-import 'package:code_play/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
+import 'package:code_play/api/achievement_api.dart';
+import 'package:code_play/models/achievement_data.dart';
 import 'package:code_play/utils/local_asset_server.dart';
 import 'package:code_play/api/auth_api.dart';
 
@@ -311,46 +311,41 @@ class _CreateGamePageState extends State<CreateGamePage> {
                             widget.onLevelCreated!(newLevelId);
                           }
 
-                          // Ask to create achievement
-                          // Use parentContext because this context is popped
-                          showDialog(
-                            context: widget.parentContext,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text("Create Linked Achievement?"),
-                              content: const Text(
-                                "Do you want to create an achievement linked to this new level?",
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx),
-                                  child: const Text("No"),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.pop(ctx);
-                                    // Map selectedValue (HTML, CSS...) to icon string
-                                    // e.g. "HTML" -> "html"
-                                    String iconStr = selectedValue
-                                        .toLowerCase();
-                                    if (iconStr == 'js') {
-                                      iconStr = 'javascript';
-                                    }
+                          // --- NEW: Automatically create achievement ---
+                          if (newLevelId != null) {
+                            String iconStr = selectedValue.toLowerCase();
+                            if (iconStr == 'js') {
+                              iconStr = 'javascript';
+                            }
 
-                                    showCreateAchievementDialog(
-                                      context: widget.parentContext,
-                                      showSnackBar: widget.showSnackBar,
-                                      initialName: newLevelName ?? levelName,
-                                      initialIcon: iconStr,
-                                      initialLevelId: newLevelId,
-                                      initialLevelName:
-                                          newLevelName ?? levelName,
-                                    );
-                                  },
-                                  child: const Text("Yes"),
+                            try {
+                              await AchievementApi().createAchievement(
+                                AchievementData(
+                                  achievementName: newLevelName ?? levelName,
+                                  achievementTitle: newLevelName ?? levelName,
+                                  achievementDescription:
+                                      "completion of ${newLevelName ?? levelName}",
+                                  levelId: newLevelId,
+                                  icon: iconStr,
                                 ),
-                              ],
-                            ),
-                          );
+                              );
+                              if (widget.parentContext.mounted) {
+                                widget.showSnackBar(
+                                  widget.parentContext,
+                                  "Achievement created automatically!",
+                                  Colors.green,
+                                );
+                              }
+                            } catch (e) {
+                              if (widget.parentContext.mounted) {
+                                widget.showSnackBar(
+                                  widget.parentContext,
+                                  "Level created, but failed to create automatic achievement: $e",
+                                  Colors.orange,
+                                );
+                              }
+                            }
+                          }
                         }
                       },
                       child: const Text("Create Level"),
@@ -368,7 +363,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "$_serverUrl/unity/index.html?role=${widget.userRole}&user_Id=$_userId&level_Id=temp",
+                          "$_serverUrl/unity/index.html?role=${widget.userRole}&user_Id=$_userId&level_Id=temp&level_Type=$selectedValue",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(

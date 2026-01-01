@@ -413,7 +413,7 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: _buildStudentCard(cs, textTheme, student, index),
                   );
-                }).toList(),
+                }),
             ],
           ),
         ),

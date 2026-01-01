@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:code_play/models/level.dart';
 import 'package:code_play/api/game_api.dart';
-import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:code_play/utils/local_asset_server.dart';
 import 'package:code_play/api/auth_api.dart';
@@ -108,6 +107,14 @@ class _EditGamePageState extends State<EditGamePage> {
       // Fetch user ID to pass to Unity
       final user = await AuthApi.getStoredUser();
       final userId = user?['user_id']?.toString();
+
+      // Clear index files for this level to ensure a fresh preview
+      if (widget.level.levelId != null) {
+        await _levelStorage.clearIndexFiles(
+          levelId: widget.level.levelId!,
+          userId: userId,
+        );
+      }
 
       setState(() {
         _userId = userId;
@@ -357,7 +364,7 @@ class _EditGamePageState extends State<EditGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "$_serverUrl/unity/index.html?role=${widget.userRole}&level_Id=${widget.level.levelId}&user_Id=$_userId",
+                          "$_serverUrl/unity/index.html?role=${widget.userRole}&level_Id=${widget.level.levelId}&user_Id=$_userId&level_Type=$selectedValue",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(

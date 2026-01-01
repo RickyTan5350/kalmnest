@@ -34,7 +34,7 @@ class GameAPI {
   /// FETCH ALL LEVELS (OPTIONALLY FILTER BY TOPIC)
   /// ------------------------------------------------------------
   // Cache per user (using user ID from token)
-  static Map<String, List<LevelModel>?> _cachedLevelsByUser = {};
+  static final Map<String, List<LevelModel>?> _cachedLevelsByUser = {};
 
   /// Clear cache for all users (useful when game is created/updated)
   static void clearCache() {
@@ -351,6 +351,7 @@ class GameAPI {
   static Future<Map<String, dynamic>> saveStudentProgress({
     required String levelId,
     required String? savedData,
+    String? indexFiles, // Add indexFiles
     int? timer, // Add timer
   }) async {
     try {
@@ -362,6 +363,7 @@ class GameAPI {
         headers: headers,
         body: jsonEncode({
           'saved_data': savedData,
+          'index_files': indexFiles, // Send indexFiles
           'timer': timer ?? 0, // Send timer
         }),
       );

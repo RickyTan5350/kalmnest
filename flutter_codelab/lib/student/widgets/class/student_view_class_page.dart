@@ -4,7 +4,6 @@ import 'package:code_play/student/widgets/class/student_quiz_list_section.dart';
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/admin_teacher/widgets/user/user_detail_page.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 class ClassDetailPage extends StatefulWidget {
   final String classId;

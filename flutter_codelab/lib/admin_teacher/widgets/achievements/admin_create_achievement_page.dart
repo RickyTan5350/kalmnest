@@ -570,8 +570,9 @@ class _AdminCreateAchievementDialogState
                                 value.trim().toLowerCase(),
                           );
 
-                          if (isDuplicate)
+                          if (isDuplicate) {
                             return 'This Name is already in use.';
+                          }
 
                           return null;
                         },
@@ -604,8 +605,9 @@ class _AdminCreateAchievementDialogState
                                 value.trim().toLowerCase(),
                           );
 
-                          if (isDuplicate)
+                          if (isDuplicate) {
                             return 'This Title is already in use.';
+                          }
 
                           return null;
                         },

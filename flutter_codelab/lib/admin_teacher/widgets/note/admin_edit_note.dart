@@ -54,7 +54,7 @@ class _EditNotePageState extends State<EditNotePage> {
   final List<String> _topics = ['HTML', 'CSS', 'JS', 'PHP'];
 
   bool _isLoading = false;
-  List<UploadedAttachment> _attachments = [];
+  final List<UploadedAttachment> _attachments = [];
 
   // --- Search State ---
   bool _isSearching = false;
@@ -345,7 +345,7 @@ class _EditNotePageState extends State<EditNotePage> {
                           ),
                         ],
                       );
-                    }).toList(),
+                    }),
                     TextButton.icon(
                       icon: const Icon(Icons.add),
                       label: const Text('Add Option'),
@@ -744,21 +744,24 @@ class _EditNotePageState extends State<EditNotePage> {
         return null;
       },
       customStylesBuilder: (element) {
-        if (element.localName == 'h1')
+        if (element.localName == 'h1') {
           return {
             'margin-bottom': '10px',
             'font-weight': 'bold',
             'border-bottom':
                 '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
           };
-        if (element.localName == 'table')
+        }
+        if (element.localName == 'table') {
           return {'border-collapse': 'collapse', 'width': '100%'};
-        if (element.localName == 'th' || element.localName == 'td')
+        }
+        if (element.localName == 'th' || element.localName == 'td') {
           return {
             'border':
                 '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
             'padding': '8px',
           };
+        }
         return null;
       },
     );
@@ -857,9 +860,9 @@ class _EditNotePageState extends State<EditNotePage> {
                 } else if (isCode) {
                   iconData = Icons.code;
                   if (brandColors != null) {
-                    if (ext == 'html')
+                    if (ext == 'html') {
                       iconColor = brandColors.html;
-                    else if (ext == 'css')
+                    } else if (ext == 'css')
                       iconColor = brandColors.css;
                     else if (ext == 'js')
                       iconColor = brandColors.javascript;
@@ -1032,7 +1035,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                           flex: 1,
                                           child:
                                               DropdownButtonFormField<String>(
-                                                value: _selectedTopic,
+                                                initialValue: _selectedTopic,
                                                 dropdownColor: colorScheme
                                                     .surfaceContainer,
                                                 style: TextStyle(
@@ -1123,7 +1126,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                                               _noteVisibility =
                                                                   value,
                                                         ),
-                                                    activeColor:
+                                                    activeThumbColor:
                                                         colorScheme.primary,
                                                   ),
                                                 ),

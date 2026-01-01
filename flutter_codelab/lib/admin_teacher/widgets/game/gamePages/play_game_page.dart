@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async'; // Import Timer
 import 'dart:convert'; // Import jsonEncode
-import 'dart:io'; // Import File
 
 import 'package:code_play/models/level.dart';
 import 'package:code_play/api/game_api.dart';
-import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:code_play/utils/local_asset_server.dart';
@@ -107,6 +105,14 @@ class _PlayGamePageState extends State<PlayGamePage> {
       // Fetch user ID to pass to Unity
       final user = await AuthApi.getStoredUser();
       final userId = user?['user_id']?.toString();
+
+      // Clear index files for this level to ensure a fresh preview
+      if (widget.level.levelId != null) {
+        await _levelStorage.clearIndexFiles(
+          levelId: widget.level.levelId!,
+          userId: userId,
+        );
+      }
 
       // Start preview server pointing to local storage base path
       final storageBasePath = await _levelStorage.getBasePath(userId: userId);
@@ -346,7 +352,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "$_serverUrl/unity/index.html?role=${widget.userRole}&level_Id=${widget.level.levelId}&user_Id=$_userId",
+                          "$_serverUrl/unity/index.html?role=${widget.userRole}&level_Id=${widget.level.levelId}&user_Id=$_userId&level_Type=${widget.level.levelTypeName}",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
@@ -482,59 +488,41 @@ class _PlayGamePageState extends State<PlayGamePage> {
                                     userId: _userId,
                                   );
 
-                              // Quiz Bundle Logic
-                              if (selectedValue == 'Quiz') {
-                                // 1. Read files from Index folder
-                                final storage = LocalLevelStorage();
-                                Map<String, String> bundle = {};
-                                final types = ['html', 'css', 'js', 'php'];
-
-                                for (final t in types) {
-                                  // Note: getFileContent normally looks in 'progress' if useProgress=true
-                                  // But we want the Index file content which Unity supposedly just updated via saveIndexFile?
-                                  // Or did Unity update the save_data (via saveStudentProgress) which updated the Index folder?
-                                  // LocalLevelStorage.saveStudentProgress updates BOTH saved_data.json AND Index/index.ext
-                                  // So reading from Index folder is safe.
-                                  final validT = t == 'js' ? 'js' : t;
-                                  final path = await storage.getIndexFilePath(
+                              // Capture index files for persistence
+                              final indexFilesMap = await _levelStorage
+                                  .readIndexFiles(
                                     levelId: levelId,
-                                    type: validT,
                                     userId: _userId,
                                   );
+                              final indexFilesJson = jsonEncode(indexFilesMap);
+                              if (kDebugMode) {
+                                print(
+                                  'DEBUG: [play_game_page] index_files captured: ${indexFilesMap.keys.toList()}',
+                                );
+                                indexFilesMap.forEach(
+                                  (k, v) => print(
+                                    'DEBUG: [play_game_page] $k length: ${v.length}',
+                                  ),
+                                );
+                              }
 
-                                  if (path != null) {
-                                    final file = File(path); // Need dart:io
-                                    if (await file.exists()) {
-                                      bundle[t] = await file.readAsString();
-                                    } else {
-                                      bundle[t] = "";
-                                    }
-                                  } else {
-                                    bundle[t] = "";
-                                  }
-                                }
-
-                                // 2. Replace savedDataJson with bundle
-                                final bundleJson = jsonEncode(bundle);
-
-                                // 3. Sync to server with Timer
+                              // Quiz Bundle Logic (Legacy support or internal requirements)
+                              if (selectedValue == 'Quiz') {
+                                // For quizes, we still send the bundle as savedData for compatibility
+                                // But now we also send it officially as indexFiles
                                 if (syncToServer) {
                                   try {
-                                    final response =
-                                        await GameAPI.saveStudentProgress(
-                                          levelId: levelId,
-                                          savedData: bundleJson, // Send bundle
-                                          timer: _timeLeft, // Send timer
-                                        );
-                                    if (kDebugMode) {
-                                      print(
-                                        'Synced QUZ progress to server: ${response['message']}',
-                                      );
-                                    }
+                                    await GameAPI.saveStudentProgress(
+                                      levelId: levelId,
+                                      savedData:
+                                          indexFilesJson, // Bundle as savedData
+                                      indexFiles:
+                                          indexFilesJson, // Also as indexFiles
+                                      timer: _timeLeft,
+                                    );
                                   } catch (e) {
-                                    if (kDebugMode) {
-                                      print('Failed to sync progress: $e');
-                                    }
+                                    if (kDebugMode)
+                                      print('Failed to sync quiz: $e');
                                   }
                                 }
                                 return localSuccess;
@@ -543,23 +531,15 @@ class _PlayGamePageState extends State<PlayGamePage> {
                               // Standard Sync (Non-Quiz)
                               if (syncToServer && savedDataJson != null) {
                                 try {
-                                  final response =
-                                      await GameAPI.saveStudentProgress(
-                                        levelId: levelId,
-                                        savedData: savedDataJson,
-                                      );
-                                  if (kDebugMode) {
-                                    print(
-                                      'Synced progress to server: ${response['message']}',
-                                    );
-                                  }
+                                  await GameAPI.saveStudentProgress(
+                                    levelId: levelId,
+                                    savedData: savedDataJson,
+                                    indexFiles:
+                                        indexFilesJson, // Official index persistence
+                                  );
                                 } catch (e) {
-                                  if (kDebugMode) {
-                                    print(
-                                      'Failed to sync progress to server: $e',
-                                    );
-                                  }
-                                  // Continue even if sync fails - local save succeeded
+                                  if (kDebugMode)
+                                    print('Failed to sync progress: $e');
                                 }
                               }
 
@@ -574,7 +554,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
                           handlerName: 'completeLevel',
                           callback: (args) async {
                             // Unity calls: window.flutter_inappwebview.callHandler('completeLevel', levelId, userId)
-                            if (args.length >= 1) {
+                            if (args.isNotEmpty) {
                               final levelId =
                                   args[0] as String? ??
                                   widget.level.levelId ??
@@ -695,7 +675,7 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
     }
 
     // Preview points to the generated index folder within the level
-    final url = "${widget.serverUrl}/${widget.levelId}/index/index.html";
+    final url = "${widget.serverUrl}/${widget.levelId}/Index/index.html";
 
     return InAppWebView(
       key: _key,

@@ -21,9 +21,8 @@ import 'package:code_play/theme.dart';
 import 'package:code_play/models/user_data.dart';
 
 import 'package:code_play/pages/pages.dart';
-import 'package:code_play/pages/user_page.dart'; // Explicit import for key
+// Explicit import for key
 import 'package:code_play/pages/login_page.dart';
-import 'package:code_play/pages/game_page.dart';
 
 import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/constants/api_constants.dart';

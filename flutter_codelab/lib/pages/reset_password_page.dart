@@ -182,10 +182,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                           ),
                         ),
                         validator: (value) {
-                          if (value != _passwordController.text)
+                          if (value != _passwordController.text) {
                             return AppLocalizations.of(
                               context,
                             )!.passwordsDoNotMatch;
+                          }
                           return null;
                         },
                       ),

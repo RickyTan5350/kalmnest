@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:code_play/admin_teacher/widgets/game/gamePages/play_game_page.dart';
+import 'package:code_play/utils/local_asset_server.dart';
 import 'package:flutter/material.dart';
 import 'package:code_play/api/game_api.dart'; // Ensure this matches your path
 import 'package:code_play/models/level.dart';
 import 'package:intl/intl.dart';
 import 'package:code_play/services/local_level_storage.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter/foundation.dart';
 
 /// ===============================================================
 /// Opens the teacher quiz results in a dialog "window"
@@ -181,7 +182,7 @@ class StudentQuizPreviewPage extends StatefulWidget {
 
 class _StudentQuizPreviewPageState extends State<StudentQuizPreviewPage> {
   bool _loading = true;
-  InAppLocalhostServer? _server;
+  LocalAssetServer? _server;
   String? _serverUrl;
   final LocalLevelStorage _storage = LocalLevelStorage();
 
@@ -193,18 +194,75 @@ class _StudentQuizPreviewPageState extends State<StudentQuizPreviewPage> {
 
   Future<void> _initServerAndData() async {
     // 1. Start Server
-    _server = InAppLocalhostServer(documentRoot: await _storage.getBasePath());
-    await _server!.start();
-    setState(() {
-      _serverUrl = "http://localhost:${_server!.port}";
-    });
+    _server = LocalAssetServer();
+    try {
+      final studentId = widget.student['user_id']?.toString();
+      final storageBasePath = await _storage.getBasePath(userId: studentId);
+      await _server!.start(path: storageBasePath);
+
+      setState(() {
+        _serverUrl = "http://localhost:${_server!.port}";
+      });
+    } catch (e) {
+      print("Error starting local server: $e");
+    }
 
     // 2. Write Student Data to Index folder (overwriting implementation)
+    final indexFilesStr = widget.student['index_files'] as String?;
     final savedDataStr = widget.student['saved_data'] as String?;
-    if (savedDataStr != null) {
+
+    if (kDebugMode) {
+      print(
+        'DEBUG: [TeacherQuizPreviewPage] Student: ${widget.student['name']}',
+      );
+      print(
+        'DEBUG: [TeacherQuizPreviewPage] index_files present: ${indexFilesStr != null}',
+      );
+      if (indexFilesStr != null) {
+        print(
+          'DEBUG: [TeacherQuizPreviewPage] index_files length: ${indexFilesStr.length}',
+        );
+      }
+    }
+
+    if (indexFilesStr != null) {
+      try {
+        final Map<String, dynamic> indexFiles = jsonDecode(indexFilesStr);
+        final levelId = widget.level.levelId!;
+        final studentId = widget.student['user_id']?.toString();
+
+        for (final type in ['html', 'css', 'js', 'php']) {
+          final content = indexFiles[type] as String?;
+          if (content != null) {
+            if (kDebugMode) {
+              print(
+                'DEBUG: [TeacherQuizPreviewPage] Writing index.$type, length: ${content.length}',
+              );
+            }
+            await _storage.saveIndexFile(
+              levelId: levelId,
+              type: type,
+              content: content,
+              userId: studentId,
+            );
+          } else {
+            if (kDebugMode)
+              print(
+                'DEBUG: [TeacherQuizPreviewPage] content for $type is NULL',
+              );
+          }
+        }
+      } catch (e) {
+        print("Error parsing index files: $e");
+      }
+    } else if (savedDataStr != null) {
+      // Fallback to saved_data if index_files is not present (legacy)
+      if (kDebugMode)
+        print('DEBUG: [TeacherQuizPreviewPage] Falling back to saved_data');
       try {
         final Map<String, dynamic> savedData = jsonDecode(savedDataStr);
         final levelId = widget.level.levelId!;
+        final studentId = widget.student['user_id']?.toString();
 
         for (final type in ['html', 'css', 'js', 'php']) {
           final content = savedData[type] as String?;
@@ -213,12 +271,18 @@ class _StudentQuizPreviewPageState extends State<StudentQuizPreviewPage> {
               levelId: levelId,
               type: type,
               content: content,
+              userId: studentId,
             );
           }
         }
       } catch (e) {
         print("Error parsing saved data: $e");
       }
+    } else {
+      if (kDebugMode)
+        print(
+          'DEBUG: [TeacherQuizPreviewPage] NO DATA FOUND for student preview',
+        );
     }
 
     setState(() => _loading = false);
@@ -226,7 +290,7 @@ class _StudentQuizPreviewPageState extends State<StudentQuizPreviewPage> {
 
   @override
   void dispose() {
-    _server?.close();
+    _server?.stop();
     super.dispose();
   }
 

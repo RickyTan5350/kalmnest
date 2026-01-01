@@ -8,21 +8,23 @@ import 'package:path/path.dart' as p;
 /// Handles saving and retrieving level data for Unity to use
 class LocalLevelStorage {
   static const String _folderName = 'unity_levels';
-  
+
   /// Get the base directory for storing level files
   Future<Directory> _getLevelDirectory({String? userId}) async {
     // Switching to ApplicationSupportDirectory as it is more reliable than Documents on Windows/OneDrive
     final directory = await getApplicationSupportDirectory();
-    
+
     String levelDirPath;
     if (userId != null && userId.isNotEmpty && userId != 'null') {
-      levelDirPath = p.normalize(p.join(directory.path, _folderName, 'users', userId));
+      levelDirPath = p.normalize(
+        p.join(directory.path, _folderName, 'users', userId),
+      );
     } else {
       levelDirPath = p.normalize(p.join(directory.path, _folderName));
     }
-    
+
     final levelDir = Directory(levelDirPath);
-    
+
     if (kDebugMode) {
       print('Target level storage directory: "$levelDirPath"');
     }
@@ -40,7 +42,7 @@ class LocalLevelStorage {
         rethrow;
       }
     }
-    
+
     return levelDir;
   }
 
@@ -58,7 +60,7 @@ class LocalLevelStorage {
       final levelDir = await _getLevelDirectory(userId: userId);
       final levelTypeDirPath = p.normalize(p.join(levelDir.path, cleanLevelId));
       final levelTypeDir = Directory(levelTypeDirPath);
-      
+
       if (kDebugMode) {
         print('Creating level type directory: "$levelTypeDirPath"');
       }
@@ -69,11 +71,14 @@ class LocalLevelStorage {
 
       final levelDataObj = jsonDecode(jsonEncode(levelDataJson));
       final winDataObj = jsonDecode(jsonEncode(winConditionJson));
-      
+
       final levelTypes = ['html', 'css', 'js', 'php'];
-      
+
       // Determine if we should create progress folder (not for admins/teachers)
-      final bool skipProgress = userRole != null && (userRole.toLowerCase() == 'admin' || userRole.toLowerCase() == 'teacher');
+      final bool skipProgress =
+          userRole != null &&
+          (userRole.toLowerCase() == 'admin' ||
+              userRole.toLowerCase() == 'teacher');
 
       for (final levelType in levelTypes) {
         final typeDirPath = p.normalize(p.join(levelTypeDir.path, levelType));
@@ -81,27 +86,35 @@ class LocalLevelStorage {
         if (!await typeDir.exists()) {
           await typeDir.create(recursive: true);
         }
-        
+
         // Save levelData
         final levelData = levelDataObj[levelType];
         if (levelData != null) {
-          final levelDataFilePath = p.normalize(p.join(typeDir.path, 'levelData.json'));
+          final levelDataFilePath = p.normalize(
+            p.join(typeDir.path, 'levelData.json'),
+          );
           final levelDataFile = File(levelDataFilePath);
           await levelDataFile.writeAsString(levelData);
 
           // Initialize progress folder with the same data if it doesn't exist AND not skipping
           if (!skipProgress) {
-            final progressTypeDirPath = p.normalize(p.join(levelDir.path, cleanLevelId, 'progress', levelType));
+            final progressTypeDirPath = p.normalize(
+              p.join(levelDir.path, cleanLevelId, 'progress', levelType),
+            );
             final progressTypeDir = Directory(progressTypeDirPath);
             if (!await progressTypeDir.exists()) {
               await progressTypeDir.create(recursive: true);
             }
-            final progressDataFilePath = p.normalize(p.join(progressTypeDir.path, 'saved_data.json'));
+            final progressDataFilePath = p.normalize(
+              p.join(progressTypeDir.path, 'saved_data.json'),
+            );
             final progressDataFile = File(progressDataFilePath);
             if (!await progressDataFile.exists()) {
               await progressDataFile.writeAsString(levelData);
               if (kDebugMode) {
-                print('Initialized default progress for $cleanLevelId/$levelType');
+                print(
+                  'Initialized default progress for $cleanLevelId/$levelType',
+                );
               }
             }
           }
@@ -110,11 +123,13 @@ class LocalLevelStorage {
             print('Saved levelData for $cleanLevelId/$levelType');
           }
         }
-        
+
         // Save winData
         final winData = winDataObj[levelType];
         if (winData != null) {
-          final winDataFilePath = p.normalize(p.join(typeDir.path, 'winData.json'));
+          final winDataFilePath = p.normalize(
+            p.join(typeDir.path, 'winData.json'),
+          );
           final winDataFile = File(winDataFilePath);
           await winDataFile.writeAsString(winData);
           if (kDebugMode) {
@@ -123,23 +138,6 @@ class LocalLevelStorage {
         }
       }
 
-      // --- ADDED: Create index folder for preview ---
-      final indexDirPath = p.normalize(p.join(levelDir.path, cleanLevelId, 'Index'));
-      final indexDir = Directory(indexDirPath);
-      if (!await indexDir.exists()) {
-        await indexDir.create(recursive: true);
-      }
-
-      for (final levelType in levelTypes) {
-        final levelData = levelDataObj[levelType];
-        if (levelData != null) {
-          final ext = levelType == 'js' ? 'js' : levelType;
-          final indexFilePath = p.normalize(p.join(indexDirPath, 'index.$ext'));
-          await File(indexFilePath).writeAsString(levelData);
-        }
-      }
-      // ----------------------------------------------
-      
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -158,47 +156,40 @@ class LocalLevelStorage {
     final cleanLevelId = levelId.trim();
     try {
       if (savedDataJson == null) return true;
-      
+
       final levelDir = await _getLevelDirectory(userId: userId);
-      final progressDirPath = p.normalize(p.join(levelDir.path, cleanLevelId, 'progress'));
+      final progressDirPath = p.normalize(
+        p.join(levelDir.path, cleanLevelId, 'progress'),
+      );
       final progressDir = Directory(progressDirPath);
-      
+
       if (!await progressDir.exists()) {
         await progressDir.create(recursive: true);
       }
 
       final savedDataObj = jsonDecode(savedDataJson);
       final levelTypes = ['html', 'css', 'js', 'php'];
-      
+
       for (final levelType in levelTypes) {
         final typeDirPath = p.normalize(p.join(progressDir.path, levelType));
         final typeDir = Directory(typeDirPath);
         if (!await typeDir.exists()) {
           await typeDir.create(recursive: true);
         }
-        
+
         final progressData = savedDataObj[levelType];
         if (progressData != null) {
-          final progressFilePath = p.normalize(p.join(typeDir.path, 'saved_data.json'));
+          final progressFilePath = p.normalize(
+            p.join(typeDir.path, 'saved_data.json'),
+          );
           final progressFile = File(progressFilePath);
           await progressFile.writeAsString(progressData);
           if (kDebugMode) {
             print('Saved progress for $cleanLevelId/$levelType');
           }
-
-          // --- ADDED: Update index folder for preview ---
-          final indexDirPath = p.normalize(p.join(levelDir.path, cleanLevelId, 'Index'));
-          final indexDir = Directory(indexDirPath);
-          if (!await indexDir.exists()) {
-            await indexDir.create(recursive: true);
-          }
-          final ext = levelType == 'js' ? 'js' : levelType;
-          final indexFilePath = p.normalize(p.join(indexDirPath, 'index.$ext'));
-          await File(indexFilePath).writeAsString(progressData);
-          // ----------------------------------------------
         }
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -220,13 +211,15 @@ class LocalLevelStorage {
     final cleanType = type.trim().toLowerCase();
     try {
       final levelDir = await _getLevelDirectory(userId: userId);
-      final filePath = p.normalize(p.join(levelDir.path, cleanLevelId, cleanType, '${dataType}.json'));
+      final filePath = p.normalize(
+        p.join(levelDir.path, cleanLevelId, cleanType, '$dataType.json'),
+      );
       final file = File(filePath);
-      
+
       if (await file.exists()) {
         return file.path;
       }
-      
+
       return null;
     } catch (e) {
       if (kDebugMode) {
@@ -254,39 +247,52 @@ class LocalLevelStorage {
     } else if (cleanDataType.contains('level')) {
       cleanDataType = 'level';
     } else {
-      cleanDataType = cleanDataType.replaceAll('_data', '').replaceAll('data', '');
+      cleanDataType = cleanDataType
+          .replaceAll('_data', '')
+          .replaceAll('data', '');
     }
-    
+
     // Force useProgress to false for admins and teachers
-    final bool isStaff = userRole != null && (userRole.toLowerCase() == 'admin' || userRole.toLowerCase() == 'teacher');
+    final bool isStaff =
+        userRole != null &&
+        (userRole.toLowerCase() == 'admin' ||
+            userRole.toLowerCase() == 'teacher');
     final bool effectiveUseProgress = isStaff ? false : useProgress;
 
     if (kDebugMode) {
       print('--- getFileContent Debug ---');
       print('Target: $cleanLevelId / $cleanType / $cleanDataType');
       print('UserRole: $userRole | isStaff: $isStaff');
-      print('Requested useProgress: $useProgress | Effective useProgress: $effectiveUseProgress');
+      print(
+        'Requested useProgress: $useProgress | Effective useProgress: $effectiveUseProgress',
+      );
     }
 
     try {
       final levelDir = await _getLevelDirectory(userId: userId);
       final folder = effectiveUseProgress ? 'progress' : '';
-      
+
       // Map level to saved_data.json when using progress folder
-      final fileName = (folder == 'progress' && cleanDataType == 'level') 
-          ? 'saved_data.json' 
+      final fileName = (folder == 'progress' && cleanDataType == 'level')
+          ? 'saved_data.json'
           : '${cleanDataType}Data.json';
-      
+
       if (kDebugMode) {
-        print('Folder: "${folder.isEmpty ? "base" : folder}" | FileName: $fileName');
+        print(
+          'Folder: "${folder.isEmpty ? "base" : folder}" | FileName: $fileName',
+        );
       }
 
       final filePath = folder.isEmpty
-          ? p.normalize(p.join(levelDir.path, cleanLevelId, cleanType, fileName))
-          : p.normalize(p.join(levelDir.path, cleanLevelId, folder, cleanType, fileName));
-      
+          ? p.normalize(
+              p.join(levelDir.path, cleanLevelId, cleanType, fileName),
+            )
+          : p.normalize(
+              p.join(levelDir.path, cleanLevelId, folder, cleanType, fileName),
+            );
+
       final file = File(filePath);
-      
+
       if (kDebugMode) {
         print('getFileContent: checking path "$filePath"');
       }
@@ -306,7 +312,9 @@ class LocalLevelStorage {
       // If progress file doesn't exist, fall back to base level data and initialize progress
       // ONLY if useProgress is true and user is NOT staff
       if (effectiveUseProgress && cleanDataType == 'level' && !isStaff) {
-        final baseFilePath = p.normalize(p.join(levelDir.path, cleanLevelId, cleanType, 'levelData.json'));
+        final baseFilePath = p.normalize(
+          p.join(levelDir.path, cleanLevelId, cleanType, 'levelData.json'),
+        );
         final baseFile = File(baseFilePath);
         if (await baseFile.exists()) {
           final content = await baseFile.readAsString();
@@ -318,12 +326,14 @@ class LocalLevelStorage {
           }
           await progressFile.writeAsString(content);
           if (kDebugMode) {
-            print('Initialized default progress on-demand for $cleanLevelId/$cleanType');
+            print(
+              'Initialized default progress on-demand for $cleanLevelId/$cleanType',
+            );
           }
           return content;
         }
       }
-      
+
       return null;
     } catch (e) {
       if (kDebugMode) {
@@ -343,13 +353,15 @@ class LocalLevelStorage {
     final cleanType = type.trim().toLowerCase();
     try {
       final levelDir = await _getLevelDirectory(userId: userId);
-      final filePath = p.normalize(p.join(levelDir.path, cleanLevelId, 'Index', 'index.$cleanType'));
+      final filePath = p.normalize(
+        p.join(levelDir.path, cleanLevelId, 'Index', 'index.$cleanType'),
+      );
       final file = File(filePath);
-      
+
       if (await file.exists()) {
         return file.path;
       }
-      
+
       return null;
     } catch (e) {
       if (kDebugMode) {
@@ -370,21 +382,29 @@ class LocalLevelStorage {
     final cleanType = type.trim().toLowerCase();
     try {
       final levelDir = await _getLevelDirectory(userId: userId);
-      final typeDirPath = p.normalize(p.join(levelDir.path, cleanLevelId, 'Index')); // Changed to 'Index' folder
+      final typeDirPath = p.normalize(
+        p.join(levelDir.path, cleanLevelId, 'Index'),
+      ); // Changed to 'Index' folder
       final typeDir = Directory(typeDirPath);
-      
+
       if (!await typeDir.exists()) {
         await typeDir.create(recursive: true);
       }
-      
-      final indexFilePath = p.normalize(p.join(typeDir.path, 'index.$cleanType'));
+
+      final indexFilePath = p.normalize(
+        p.join(typeDir.path, 'index.$cleanType'),
+      );
       final indexFile = File(indexFilePath);
+      if (kDebugMode) {
+        print('DEBUG: [LocalLevelStorage] Saving index file: $indexFilePath');
+        print('DEBUG: [LocalLevelStorage] Content length: ${content.length}');
+      }
       await indexFile.writeAsString(content);
-      
+
       if (kDebugMode) {
         print('Saved index file for $levelId/$type');
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -411,31 +431,37 @@ class LocalLevelStorage {
     } else if (cleanDataType.contains('level')) {
       cleanDataType = 'level';
     } else {
-      cleanDataType = cleanDataType.replaceAll('_data', '').replaceAll('data', '');
+      cleanDataType = cleanDataType
+          .replaceAll('_data', '')
+          .replaceAll('data', '');
     }
 
     try {
       final levelDir = await _getLevelDirectory(userId: userId);
-      final typeDirPath = p.normalize(p.join(levelDir.path, cleanLevelId, cleanType));
+      final typeDirPath = p.normalize(
+        p.join(levelDir.path, cleanLevelId, cleanType),
+      );
       final typeDir = Directory(typeDirPath);
-      
+
       if (!await typeDir.exists()) {
         await typeDir.create(recursive: true);
       }
-      
-      final dataFilePath = p.normalize(p.join(typeDir.path, '${cleanDataType}Data.json'));
+
+      final dataFilePath = p.normalize(
+        p.join(typeDir.path, '${cleanDataType}Data.json'),
+      );
       final dataFile = File(dataFilePath);
-      
+
       if (kDebugMode) {
         print('saveDataFile: writing to "$dataFilePath"');
       }
 
       await dataFile.writeAsString(content);
-      
+
       if (kDebugMode) {
         print('saveDataFile: SUCCESS for $levelId/$type');
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -452,14 +478,14 @@ class LocalLevelStorage {
       final levelDir = await _getLevelDirectory(userId: userId);
       final levelTypeDirPath = p.normalize(p.join(levelDir.path, cleanLevelId));
       final levelTypeDir = Directory(levelTypeDirPath);
-      
+
       if (await levelTypeDir.exists()) {
         await levelTypeDir.delete(recursive: true);
         if (kDebugMode) {
           print('Cleared level data for $levelId');
         }
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -469,13 +495,89 @@ class LocalLevelStorage {
     }
   }
 
+  /// Clear index files for a level (ensures Index folder is empty but exists)
+  Future<void> clearIndexFiles({
+    required String levelId,
+    String? userId,
+  }) async {
+    final cleanLevelId = levelId.trim();
+    try {
+      final levelDir = await _getLevelDirectory(userId: userId);
+      final indexDirPath = p.normalize(
+        p.join(levelDir.path, cleanLevelId, 'Index'),
+      );
+      final indexDir = Directory(indexDirPath);
+
+      if (!await indexDir.exists()) {
+        await indexDir.create(recursive: true);
+      }
+
+      final levelTypes = ['html', 'css', 'js', 'php'];
+      for (final type in levelTypes) {
+        final ext = type == 'js' ? 'js' : type;
+        final indexFilePath = p.normalize(p.join(indexDirPath, 'index.$ext'));
+        final indexFile = File(indexFilePath);
+        await indexFile.writeAsString(''); // Clear content
+      }
+
+      if (kDebugMode) {
+        print('Cleared Index files for $cleanLevelId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error clearing index files: $e');
+      }
+    }
+  }
+
+  /// Read all index files for a level
+  Future<Map<String, String>> readIndexFiles({
+    required String levelId,
+    String? userId,
+  }) async {
+    final cleanLevelId = levelId.trim();
+    final Map<String, String> indexFiles = {};
+    try {
+      final levelDir = await _getLevelDirectory(userId: userId);
+      final indexDirPath = p.normalize(
+        p.join(levelDir.path, cleanLevelId, 'Index'),
+      );
+      final indexDir = Directory(indexDirPath);
+
+      if (await indexDir.exists()) {
+        final levelTypes = ['html', 'css', 'js', 'php'];
+        for (final type in levelTypes) {
+          final ext = type == 'js' ? 'js' : type;
+          final indexFilePath = p.normalize(p.join(indexDirPath, 'index.$ext'));
+          final indexFile = File(indexFilePath);
+          if (await indexFile.exists()) {
+            final content = await indexFile.readAsString();
+            indexFiles[type] = content;
+            if (kDebugMode) {
+              print(
+                'DEBUG: [LocalLevelStorage] Read index.$ext: ${content.length} chars',
+              );
+            }
+          }
+        }
+      } else {
+        if (kDebugMode) {
+          print(
+            'DEBUG: [LocalLevelStorage] Index directory NOT found: $indexDirPath',
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error reading index files: $e');
+      }
+    }
+    return indexFiles;
+  }
+
   /// Get the base path for serving files via HTTP (for Unity WebGL)
   Future<String> getBasePath({String? userId}) async {
     final levelDir = await _getLevelDirectory(userId: userId);
-    return levelDir.path;
+    return p.normalize(levelDir.path);
   }
 }
-
-
-
-

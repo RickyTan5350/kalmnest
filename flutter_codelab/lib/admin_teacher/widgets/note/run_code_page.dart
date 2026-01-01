@@ -131,8 +131,9 @@ class _RunCodePageState extends State<RunCodePage> {
           if (entity is Directory) {
             // Get just the folder name and NORMALIZE whitespace (remove newlines/tabs)
             String folderName = entity.path.split(Platform.pathSeparator).last;
-            if (folderName.trim().isEmpty)
+            if (folderName.trim().isEmpty) {
               folderName = entity.path.split('/').last;
+            }
 
             // Replace any whitespace sequence (newline, tab, multi-space) with single space
             folderName = folderName.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -165,9 +166,7 @@ class _RunCodePageState extends State<RunCodePage> {
     }
 
     // If we failed to find a match, just use strict path (will likely fail later but consistent)
-    if (_resolvedContextPath == null) {
-      _resolvedContextPath = strictPath;
-    }
+    _resolvedContextPath ??= strictPath;
   }
 
   Future<void> _loadContextAssets() async {
@@ -323,14 +322,12 @@ class _RunCodePageState extends State<RunCodePage> {
               );
               continue;
             }
-            ;
             if (_files.any((f) => f.name == candidate.name)) {
               print(
                 "DEBUG: Candidate '${candidate.name}' SKIPPED (Already exists)",
               );
               continue;
             }
-            ;
 
             // Apply filter
             if (allowedFiles != null) {
@@ -566,8 +563,9 @@ class _RunCodePageState extends State<RunCodePage> {
           // CRITICAL: Must snapshot current visible files so we don't accidentally hide them
           // by switching from "Default Show All" to "Strict Whitelist".
           final currentVisible = _files.map((f) => f.name).toList();
-          if (!currentVisible.contains(targetFile))
+          if (!currentVisible.contains(targetFile)) {
             currentVisible.add(targetFile);
+          }
           rules[entryName] = currentVisible;
         } else {
           final List<dynamic> currentRule = rules[entryName];
@@ -948,7 +946,7 @@ class _RunCodePageState extends State<RunCodePage> {
         // 2. Serve General Static Assets (from assets/www direct access)
         try {
           // Remove leading slash for asset key
-          final assetKey = 'assets/www${path}';
+          final assetKey = 'assets/www$path';
           final data = await rootBundle.load(assetKey);
 
           final contentType = _getContentType(path);
@@ -974,8 +972,9 @@ class _RunCodePageState extends State<RunCodePage> {
     if (path.endsWith('.js')) return ContentType('application', 'javascript');
     if (path.endsWith('.css')) return ContentType('text', 'css');
     if (path.endsWith('.png')) return ContentType('image', 'png');
-    if (path.endsWith('.jpg') || path.endsWith('.jpeg'))
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
       return ContentType('image', 'jpeg');
+    }
     if (path.endsWith('.json')) return ContentType.json;
     return ContentType.binary;
   }
@@ -1529,10 +1528,12 @@ class _RunCodePageState extends State<RunCodePage> {
                                             ),
                                           ],
                                           onSelected: (value) {
-                                            if (value == 'rename')
+                                            if (value == 'rename') {
                                               _renameFile(index);
-                                            if (value == 'delete')
+                                            }
+                                            if (value == 'delete') {
                                               _deleteFile(index);
+                                            }
                                           },
                                         ),
                                       ],

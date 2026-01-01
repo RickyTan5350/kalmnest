@@ -6,7 +6,6 @@ import 'package:code_play/admin_teacher/widgets/class/teacher_all_students_page.
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 class ClassDetailPage extends StatefulWidget {
   final String classId;

@@ -316,7 +316,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: _buildStudentCard(student, index),
                   );
-                }).toList(),
+                }),
             ],
           ),
         ),

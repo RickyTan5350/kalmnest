@@ -153,9 +153,9 @@ class FileUploadZone extends StatelessWidget {
 
         Color iconColor = colorScheme.primary;
         if (isCode && brandColors != null) {
-          if (ext == 'html')
+          if (ext == 'html') {
             iconColor = brandColors.html;
-          else if (ext == 'css')
+          } else if (ext == 'css')
             iconColor = brandColors.css;
           else if (ext == 'js')
             iconColor = brandColors.javascript;
@@ -163,9 +163,9 @@ class FileUploadZone extends StatelessWidget {
             iconColor = brandColors.php;
         } else if (isCode) {
           // Fallbacks if brandColors missing but code
-          if (ext == 'html')
+          if (ext == 'html') {
             iconColor = Colors.orange;
-          else if (ext == 'css')
+          } else if (ext == 'css')
             iconColor = Colors.blue;
           else if (ext == 'js')
             iconColor = Colors.yellow;

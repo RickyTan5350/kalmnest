@@ -47,7 +47,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
   String? _selectedGender;
   String? _selectedRole = 'Student'; // Default role to student
   bool _accountStatus = true; // Default to active
-  Map<String, String> _serverErrors = {}; // Store server-side errors
+  final Map<String, String> _serverErrors = {}; // Store server-side errors
 
   bool _isLoading = false;
 
@@ -267,8 +267,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     if (_serverErrors.containsKey('name')) {
                       return _serverErrors['name'];
                     }
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseEnterName;
+                    }
                     return null;
                   },
                   onChanged: (value) {
@@ -326,8 +327,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     if (_serverErrors.containsKey('password')) {
                       return _serverErrors['password'];
                     }
-                    if (value == null || value.isEmpty || value.length < 8)
+                    if (value == null || value.isEmpty || value.length < 8) {
                       return AppLocalizations.of(context)!.passwordLengthError;
+                    }
                     return null;
                   },
                   onChanged: (value) {
@@ -349,12 +351,14 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   ),
                   obscureText: true,
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(
                         context,
                       )!.pleaseConfirmPassword;
-                    if (value != _passwordController.text)
+                    }
+                    if (value != _passwordController.text) {
                       return AppLocalizations.of(context)!.passwordsDoNotMatch;
+                    }
                     return null;
                   },
                 ),
@@ -382,8 +386,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     if (_serverErrors.containsKey('phone_no')) {
                       return _serverErrors['phone_no'];
                     }
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseEnterPhone;
+                    }
                     // Regex for Malaysian Phone Numbers:
                     // Matches: +601..., 601..., 01...
                     // Supports dashes or no dashes
@@ -409,8 +414,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   ),
                   maxLines: 2,
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseEnterAddress;
+                    }
                     return null;
                   },
                 ),
@@ -418,7 +424,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
 
                 // Gender Dropdown
                 DropdownButtonFormField<String>(
-                  value:
+                  initialValue:
                       _selectedGender, // Removed initialValue in favor of value
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
@@ -453,8 +459,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   }).toList(),
                   onChanged: (value) => setState(() => _selectedGender = value),
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseSelectGender;
+                    }
                     return null;
                   },
                 ),
@@ -462,7 +469,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
 
                 // Role Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   // FIX: Use colorScheme.surfaceContainer instead of hardcoded dark color
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
@@ -503,8 +510,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   }).toList(),
                   onChanged: (value) => setState(() => _selectedRole = value),
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseSelectRole;
+                    }
                     return null;
                   },
                 ),

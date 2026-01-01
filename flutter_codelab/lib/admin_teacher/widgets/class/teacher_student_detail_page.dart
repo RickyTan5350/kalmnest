@@ -3,7 +3,6 @@ import 'package:code_play/api/class_api.dart';
 import 'package:code_play/api/user_api.dart';
 import 'package:code_play/models/user_data.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 import 'package:intl/intl.dart';
 
 /// Teacher view: Student detail page showing student info and quiz completion status

@@ -58,7 +58,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
   late String _selectedGender;
   late String _selectedRole;
   late bool _accountStatus;
-  Map<String, String> _serverErrors = {}; // Store server-side errors
+  final Map<String, String> _serverErrors = {}; // Store server-side errors
 
   bool _isLoading = false;
 
@@ -325,8 +325,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     if (_serverErrors.containsKey('name')) {
                       return _serverErrors['name'];
                     }
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseEnterName;
+                    }
                     return null;
                   },
                   onChanged: (value) {
@@ -351,8 +352,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     if (_serverErrors.containsKey('email')) {
                       return _serverErrors['email'];
                     }
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseEnterEmail;
+                    }
                     final emailRegex = RegExp(
                       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
                     );
@@ -383,8 +385,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     if (_serverErrors.containsKey('password')) {
                       return _serverErrors['password'];
                     }
-                    if (value != null && value.isNotEmpty && value.length < 8)
+                    if (value != null && value.isNotEmpty && value.length < 8) {
                       return AppLocalizations.of(context)!.passwordLengthError;
+                    }
                     return null;
                   },
                   onChanged: (value) {
@@ -412,8 +415,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                         context,
                       )!.confirmPasswordRequired;
                     }
-                    if (value != _passwordController.text)
+                    if (value != _passwordController.text) {
                       return AppLocalizations.of(context)!.passwordsDoNotMatch;
+                    }
                     return null;
                   },
                 ),
@@ -435,8 +439,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     if (_serverErrors.containsKey('phone_no')) {
                       return _serverErrors['phone_no'];
                     }
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseEnterPhone;
+                    }
                     final phoneRegex = RegExp(
                       r'^(\+?6?0)[0-9]{1,2}-?[0-9]{7,8}$',
                     );
@@ -464,8 +469,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   ),
                   maxLines: 2,
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseEnterAddress;
+                    }
                     return null;
                   },
                 ),
@@ -492,8 +498,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   onChanged: (value) =>
                       setState(() => _selectedGender = value!),
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseSelectGender;
+                    }
                     return null;
                   },
                 ),
@@ -501,7 +508,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
                 // Role Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   onChanged: widget.isSelfEdit
                       ? null
                       : (value) => setState(() => _selectedRole = value!),
@@ -526,8 +533,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       )
                       .toList(),
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseSelectRole;
+                    }
                     return null;
                   },
                 ),

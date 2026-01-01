@@ -588,7 +588,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
                               onRemove: () => _handleRemoveQuiz(quiz['level_id']),
                             ),
                           );
-                        }).toList(),
+                        }),
                     ],
                   ),
                 ),
