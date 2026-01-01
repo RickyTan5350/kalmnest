@@ -151,7 +151,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
       widget.showSnackBar(
         context,
         AppLocalizations.of(context)!.passwordsMatchError,
-        Colors.red,
+        Theme.of(context).colorScheme.error,
       );
       return;
     }
