@@ -62,7 +62,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
   bool _isLoading = false;
 
-  final List<String> _genders = ['Male', 'Female', 'Other'];
+  final List<String> _genders = ['Male', 'Female'];
   final List<String> _roles = ['Admin', 'Student', 'Teacher'];
 
   @override
@@ -112,8 +112,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
         return l10n.male;
       case 'female':
         return l10n.female;
-      case 'other':
-        return l10n.other;
+
       default:
         return gender;
     }
@@ -481,14 +480,30 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     icon: Icons.people,
                     colorScheme: colorScheme,
                   ),
-                  items: _genders
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(_getLocalizedGender(value)),
-                        ),
-                      )
-                      .toList(),
+                  items: _genders.map((value) {
+                    IconData icon;
+                    if (value.toLowerCase() == 'male') {
+                      icon = Icons.male;
+                    } else if (value.toLowerCase() == 'female') {
+                      icon = Icons.female;
+                    } else {
+                      icon = Icons.transgender;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(_getLocalizedGender(value)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (value) =>
                       setState(() => _selectedGender = value!),
                   validator: (value) {
@@ -517,14 +532,36 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     colorScheme: colorScheme,
                     enabled: !widget.isSelfEdit,
                   ),
-                  items: _roles
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(_getLocalizedRole(value)),
-                        ),
-                      )
-                      .toList(),
+                  items: _roles.map((value) {
+                    IconData icon;
+                    switch (value.toLowerCase()) {
+                      case 'admin':
+                        icon = Icons.admin_panel_settings;
+                        break;
+                      case 'teacher':
+                        icon = Icons.school;
+                        break;
+                      case 'student':
+                        icon = Icons.person;
+                        break;
+                      default:
+                        icon = Icons.person_outline;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(_getLocalizedRole(value)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   validator: (value) {
                     if (value == null || value.isEmpty)
                       return AppLocalizations.of(context)!.pleaseSelectRole;
@@ -615,4 +652,3 @@ class _EditUserDialogState extends State<EditUserDialog> {
     );
   }
 }
-
