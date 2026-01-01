@@ -518,7 +518,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     } else if (value.toLowerCase() == 'female') {
                       icon = Icons.female;
                     } else {
-                      icon = Icons.transgender;
+                      icon = Icons.person_outline;
                     }
                     return DropdownMenuItem(
                       value: value,

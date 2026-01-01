@@ -129,6 +129,17 @@ class _UserDetailPageState extends State<UserDetailPage> {
     }
   }
 
+  IconData _getGenderIcon(String gender) {
+    switch (gender.toLowerCase()) {
+      case 'male':
+        return Icons.male;
+      case 'female':
+        return Icons.female;
+      default:
+        return Icons.person_outline;
+    }
+  }
+
   Future<void> _fetchUserDetails() async {
     setState(() {
       _userFuture = _userApi.getUserDetails(widget.userId);
@@ -391,7 +402,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   _buildDivider(context),
                   _buildInfoRow(
                     context,
-                    Icons.transgender,
+                    _getGenderIcon(user.gender),
                     AppLocalizations.of(context)!.genderLabel,
                     _getLocalizedGender(user.gender),
                   ),

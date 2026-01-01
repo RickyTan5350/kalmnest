@@ -465,7 +465,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     } else if (value.toLowerCase() == 'female') {
                       icon = Icons.female;
                     } else {
-                      icon = Icons.transgender;
+                      icon = Icons.person_outline;
                     }
                     return DropdownMenuItem(
                       value: value,
