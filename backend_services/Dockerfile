@@ -32,7 +32,10 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/bootstrap/cache
 
 # Install PHP dependencies (skip scripts to avoid errors)
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+# If composer.lock is outdated, try update instead
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts || \
+    (composer update --no-dev --optimize-autoloader --no-interaction --no-scripts && \
+     composer install --no-dev --optimize-autoloader --no-interaction --no-scripts)
 
 # Run Laravel optimization commands
 RUN php artisan config:cache || true \
