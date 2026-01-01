@@ -49,6 +49,11 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
   bool _isLoadingStudents = false;
 
   List<Map<String, dynamic>> _students = [];
+  
+  bool _isLoadingTopics = false;
+  List<Map<String, dynamic>> _topics = [];
+  String? _selectedTopicId;
+  String? _selectedTopicName;
 
   @override
   void initState() {
@@ -56,6 +61,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     // Initialize FeedbackApiService WITH the auth token
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadStudents();
+    _loadTopics();
   }
 
   Future<void> _loadStudents() async {
@@ -74,6 +80,21 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     }
   }
 }
+
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+    try {
+      final topics = await _apiService.getTopics();
+      // Only keep topics that act as categories if needed, or all.
+      setState(() => _topics = topics);
+    } catch (e) {
+      if (mounted) {
+        widget.showSnackBar(context, 'Failed to load topics: $e', Colors.red);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingTopics = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -111,7 +132,9 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
         studentId: _selectedStudentId!,
         teacherName: 'Unknown', // Will be updated from API
         teacherId: '', // Will be updated from API
-        topic: _topicController.text,
+        topicId: _selectedTopicId ?? '',
+        title: _topicController.text,
+        topic: _selectedTopicName ?? 'General',
         feedback: _feedbackController.text,
       );
 

@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:code_play/theme.dart';
+import 'package:flutter_codelab/theme.dart';
 
 class UploadedAttachment {
   final PlatformFile localFile;

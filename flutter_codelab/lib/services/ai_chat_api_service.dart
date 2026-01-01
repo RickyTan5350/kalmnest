@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:code_play/constants/api_constants.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 /// Service to handle communication with the Laravel backend's chat endpoint.
 class AiChatApiService {
@@ -53,6 +53,51 @@ class AiChatApiService {
       throw Exception('Network error: $errorMessage');
     } catch (e) {
       rethrow;
+    }
+  }
+  /// Get all chat sessions for the current user (History)
+  Future<List<Map<String, dynamic>>> getSessions() async {
+    try {
+      final response = await _dio.get('/chat/sessions');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['status'] == 'success') {
+          return List<Map<String, dynamic>>.from(data['sessions']);
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching sessions: $e');
+      throw Exception('Failed to load chat history');
+    }
+  }
+
+  /// Get messages for a specific session
+  Future<List<Map<String, dynamic>>> getSessionMessages(String sessionId) async {
+    try {
+      final response = await _dio.get('/chat/sessions/$sessionId/messages');
+
+      if (response.statusCode == 200) {
+         final data = response.data;
+         if (data['status'] == 'success') {
+           return List<Map<String, dynamic>>.from(data['messages']);
+         }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching messages: $e');
+      throw Exception('Failed to load messages');
+    }
+  }
+
+  /// Delete a chat session
+  Future<void> deleteSession(String sessionId) async {
+    try {
+      await _dio.delete('/chat/sessions/$sessionId');
+    } catch (e) {
+      print('Error deleting session: $e');
+      throw Exception('Failed to delete chat');
     }
   }
 }

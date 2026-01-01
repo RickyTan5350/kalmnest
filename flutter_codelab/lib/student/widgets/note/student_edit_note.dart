@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import for keyboard shortcuts
-import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
 import 'package:markdown/markdown.dart' as md;
-import 'package:code_play/constants/api_constants.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
 
 class ViewNotePage extends StatefulWidget {
   final String noteId;

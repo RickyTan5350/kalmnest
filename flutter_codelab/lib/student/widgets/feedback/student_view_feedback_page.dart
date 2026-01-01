@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/feedback_api.dart';
-import 'package:code_play/models/models.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/api/feedback_api.dart';
+import 'package:flutter_codelab/models/models.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class StudentViewFeedbackPage extends StatefulWidget {
   final String? authToken;
@@ -77,6 +77,8 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
                   (fb['teacher'] is Map && fb['teacher']['created_at'] != null
                       ? fb['teacher']['created_at']
                       : null),
+              topicId: fb['topic_id']?.toString() ?? '',
+              title: fb['title'] ?? fb['topic'] ?? '',
             ),
           );
         }

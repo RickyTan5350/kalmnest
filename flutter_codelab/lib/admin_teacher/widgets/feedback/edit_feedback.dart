@@ -43,9 +43,15 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _topicController;
   late final TextEditingController _feedbackController;
+  late final TextEditingController _titleController;
   late FeedbackApiService _api;
 
   bool _isSaving = false;
+  
+  bool _isLoadingTopics = false;
+  List<Map<String, dynamic>> _topics = [];
+  String? _selectedTopicId;
+  String? _selectedTopicName;
 
   @override
   void initState() {
@@ -53,7 +59,59 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
     _api = FeedbackApiService(token: widget.authToken);
 
     _topicController = TextEditingController(text: widget.feedback.topic);
+    _titleController = TextEditingController(text: widget.feedback.title);
     _feedbackController = TextEditingController(text: widget.feedback.feedback);
+    
+    // Set initial topic selection
+    _selectedTopicId = widget.feedback.topicId.isNotEmpty ? widget.feedback.topicId : null;
+    _selectedTopicName = widget.feedback.topic;
+
+    _loadTopics();
+  }
+  
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+    try {
+      final topics = await _api.getTopics();
+      setState(() => _topics = topics);
+    } catch (e) {
+      if (mounted) {
+        widget.showSnackBar(context, 'Failed to load topics: $e', Colors.red);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingTopics = false);
+    }
+  }
+
+  InputDecoration _inputDecoration({
+    required String labelText,
+    required IconData icon,
+    String? hintText,
+    required ColorScheme colorScheme,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.outline),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+      ),
+      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      hintStyle: TextStyle(
+        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+      ),
+      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      filled: true,
+    );
   }
 
   Future<void> _save() async {
@@ -64,7 +122,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
     try {
       await _api.editFeedback(
         feedbackId: widget.feedback.feedbackId,
-        topic: _topicController.text,
+        topic: _titleController.text, // Assuming API expects title in 'topic' field, or adjust if API changed
         comment: _feedbackController.text,
       );
 
@@ -75,7 +133,9 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
           studentId: widget.feedback.studentId,
           teacherName: widget.feedback.teacherName, // Will be updated from API
           teacherId: widget.feedback.teacherId, // Will be updated from API
-          topic: _topicController.text,
+          topicId: _selectedTopicId ?? '',
+          title: _titleController.text,
+          topic: _selectedTopicName ?? widget.feedback.topic,
           feedback: _feedbackController.text,
         ),
       );

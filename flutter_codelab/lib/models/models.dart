@@ -50,8 +50,11 @@ class FeedbackData {
   final String studentId;
   final String teacherName;
   final String teacherId;
-  final String topic;
+  final String topicId; // Added
+  final String title;   // Added
+  final String topic;   // Assuming this is used for category name or display
   final String feedback;
+
   final String? createdAt;
 
   FeedbackData({
@@ -60,6 +63,8 @@ class FeedbackData {
     required this.studentId,
     required this.teacherName,
     required this.teacherId,
+    required this.topicId,
+    required this.title,
     required this.topic,
     required this.feedback,
     this.createdAt,

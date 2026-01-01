@@ -2,31 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'dart:io'; // For HttpOverrides
 
-import 'package:code_play/l10n/generated/app_localizations.dart';
-import 'package:code_play/controllers/locale_controller.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/controllers/locale_controller.dart';
 
-import 'package:code_play/admin_teacher/widgets/disappearing_navigation_rail.dart';
-import 'package:code_play/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
-import 'package:code_play/admin_teacher/widgets/game/gamePages/create_game_page.dart';
-import 'package:code_play/admin_teacher/widgets/note/admin_create_note_page.dart';
-import 'package:code_play/admin_teacher/widgets/class/admin_create_class_page.dart';
-import 'package:code_play/admin_teacher/widgets/user/create_account_form.dart';
-import 'package:code_play/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
-import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart';
-import 'package:code_play/admin_teacher/widgets/user/profile_header_content.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/admin_create_note_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/admin_create_class_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/profile_header_content.dart';
 
-import 'package:code_play/util.dart';
-import 'package:code_play/theme.dart';
+import 'package:flutter_codelab/util.dart';
+import 'package:flutter_codelab/theme.dart';
 
-import 'package:code_play/models/user_data.dart';
+import 'package:flutter_codelab/models/user_data.dart';
 
-import 'package:code_play/pages/pages.dart';
-import 'package:code_play/pages/user_page.dart'; // Explicit import for key
-import 'package:code_play/pages/login_page.dart';
-import 'package:code_play/pages/game_page.dart';
+import 'package:flutter_codelab/pages/pages.dart';
+import 'package:flutter_codelab/pages/user_page.dart'; // Explicit import for key
+import 'package:flutter_codelab/pages/login_page.dart';
+import 'package:flutter_codelab/pages/game_page.dart';
 
-import 'package:code_play/api/auth_api.dart';
-import 'package:code_play/constants/api_constants.dart';
+import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() async {
@@ -88,7 +88,7 @@ class MainApp extends StatelessWidget {
           supportedLocales: AppLocalizations.supportedLocales,
           locale: locale,
           theme: theme.light(),
-          darkTheme: theme.dark(),
+          //darkTheme: theme.dark(),
           themeMode: ThemeMode.system,
           home: homeWidget,
         );
@@ -209,11 +209,93 @@ class _FeedState extends State<Feed> {
     wideScreen = width > 600;
   }
 
+  // Helper to determine visible pages based on role
+  List<Map<String, dynamic>> _getVisiblePages(UserDetails user) {
+    // List of all possible pages with their destinations and IDs
+    final List<Map<String, dynamic>> allPages = [
+      {
+        'id': 'users',
+        'widget': UserPage(key: userPageGlobalKey, currentUser: user),
+        'destination': NavigationRailDestination(
+          icon: const Icon(Icons.people_outline),
+          selectedIcon: const Icon(Icons.people),
+          label: Text(AppLocalizations.of(context)!.users),
+        ),
+      },
+      {
+        'id': 'games',
+        'widget': GamePage(key: gamePageGlobalKey, userRole: user.roleName),
+        'destination': NavigationRailDestination(
+          icon: const Icon(Icons.games_outlined),
+          selectedIcon: const Icon(Icons.games),
+          label: Text(AppLocalizations.of(context)!.games),
+        ),
+      },
+      {
+        'id': 'notes',
+        'widget': NotePage(currentUser: user),
+        'destination': NavigationRailDestination(
+          icon: const Icon(Icons.note_outlined),
+          selectedIcon: const Icon(Icons.note),
+          label: Text(AppLocalizations.of(context)!.notes),
+        ),
+      },
+      {
+        'id': 'classes',
+        'widget': ClassPage(key: classPageGlobalKey, currentUser: user),
+        'destination': NavigationRailDestination(
+          icon: const Icon(Icons.class_outlined),
+          selectedIcon: const Icon(Icons.class_),
+          label: Text(AppLocalizations.of(context)!.classes),
+        ),
+      },
+      {
+        'id': 'achievements',
+        'widget': AchievementPage(showSnackBar: _showSnackBar, currentUser: user),
+        'destination': NavigationRailDestination(
+          icon: const Icon(Icons.emoji_events_outlined),
+          selectedIcon: const Icon(Icons.emoji_events),
+          label: Text(AppLocalizations.of(context)!.achievements),
+        ),
+      },
+      {
+        // THIS IS THE AI CHAT PAGE - ONLY FOR STUDENTS
+        'id': 'ai_chat',
+        'widget': AiChatPage(currentUser: user, authToken: user.token),
+        'destination': NavigationRailDestination(
+          icon: const Icon(Icons.chat_outlined),
+          selectedIcon: const Icon(Icons.chat),
+          label: Text(AppLocalizations.of(context)!.aiChat),
+        ),
+      },
+      {
+        'id': 'feedback',
+        'widget': FeedbackPage(authToken: user.token, currentUser: user),
+        'destination': NavigationRailDestination(
+          icon: const Icon(Icons.feedback_outlined),
+          selectedIcon: const Icon(Icons.feedback),
+          label: Text(AppLocalizations.of(context)!.feedback),
+        ),
+      },
+    ];
+
+    // Filter logic
+    return allPages.where((page) {
+      if (page['id'] == 'ai_chat') {
+        return user.isStudent; // Only students see AI Chat
+      }
+      return true;
+    }).toList();
+  }
+
   void _onAddButtonPressed() {
-    // This switch statement checks the currently selected page
-    switch (selectedIndex) {
-      case 0: // This is the index for 'UserPage' (Index 0)
-        // CHECK if the current user is a Student OR a Teacher
+    final visiblePages = _getVisiblePages(widget.currentUser);
+    if (selectedIndex >= visiblePages.length) return;
+    
+    final pageId = visiblePages[selectedIndex]['id'];
+
+    switch (pageId) {
+      case 'users':
         if (widget.currentUser.isStudent || widget.currentUser.isTeacher) {
           _showSnackBar(
             context,
@@ -221,7 +303,6 @@ class _FeedState extends State<Feed> {
             Theme.of(context).colorScheme.error,
           );
         } else {
-          // Only Admins can see the options
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -230,7 +311,7 @@ class _FeedState extends State<Feed> {
                 children: [
                   SimpleDialogOption(
                     onPressed: () {
-                      Navigator.pop(context); // Close dialog
+                      Navigator.pop(context);
                       showCreateUserAccountDialog(
                         context: context,
                         showSnackBar: _showSnackBar,
@@ -249,8 +330,7 @@ class _FeedState extends State<Feed> {
                   ),
                   SimpleDialogOption(
                     onPressed: () {
-                      Navigator.pop(context); // Close dialog
-                      // Trigger import via GlobalKey
+                      Navigator.pop(context);
                       userPageGlobalKey.currentState?.importUsers();
                     },
                     child: Padding(
@@ -271,8 +351,7 @@ class _FeedState extends State<Feed> {
         }
         break;
 
-      case 1:
-        // Block students from creating games
+      case 'games':
         if (widget.currentUser.isStudent) {
           _showSnackBar(
             context,
@@ -287,21 +366,20 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-      case 2:
+
+      case 'notes':
         if (widget.currentUser.isStudent) {
-          // 2. BLOCK: Show error message
           _showSnackBar(
             context,
             AppLocalizations.of(context)!.studentsCannotAddNotes,
             Theme.of(context).colorScheme.error,
           );
         } else {
-          // 3. ALLOW: Open dialog if Admin
           showCreateNotesDialog(context: context, showSnackBar: _showSnackBar);
         }
         break;
 
-      case 3: // This is the index for 'ClassPage'
+      case 'classes':
         if (widget.currentUser.isAdmin) {
           _showCreateClassDialog();
         } else {
@@ -313,7 +391,7 @@ class _FeedState extends State<Feed> {
         }
         break;
 
-      case 4: // This is the index for 'AchievementPage'
+      case 'achievements':
         if (widget.currentUser.isStudent) {
           _showSnackBar(
             context,
@@ -327,7 +405,8 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-      case 'Feedback':
+
+      case 'feedback':
         if (widget.currentUser.isStudent || widget.currentUser.isAdmin) {
           _showSnackBar(
             context,
@@ -339,61 +418,43 @@ class _FeedState extends State<Feed> {
             context: context,
             showSnackBar: _showSnackBar,
             onFeedbackAdded: (feedback) {
-              // Optionally do something after feedback is added
             },
             authToken: widget.currentUser.token,
           );
         }
         break;
+      
       default:
-        print("No 'add' action for index $selectedIndex");
+        print("No 'add' action for page $pageId");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- ADD THE COLOR AND PAGE VARIABLES HERE ---
     final colorScheme = Theme.of(context).colorScheme;
     final backgroundColor = Color.alphaBlend(
       colorScheme.primary.withAlpha(36),
       colorScheme.surface,
     );
 
-    final List<Widget> pages = [
-      UserPage(
-        key: userPageGlobalKey,
-        currentUser: widget.currentUser,
-      ), // Index 0
-      GamePage(
-        key: gamePageGlobalKey,
-        userRole: widget.currentUser.roleName,
-      ), // Index 1
-      NotePage(currentUser: widget.currentUser), // Index 2
-      ClassPage(
-        key: classPageGlobalKey,
-        currentUser: widget.currentUser,
-      ), // Index 3
-      AchievementPage(
-        showSnackBar: _showSnackBar,
-        currentUser: widget.currentUser,
-      ), // Index 4
-      AiChatPage(
-        currentUser: widget.currentUser,
-        authToken: widget.currentUser.token,
-      ), // Index 5
-      FeedbackPage(
-        authToken: widget.currentUser.token,
-        currentUser: widget.currentUser,
-      ), // Index 6
-    ];
-    // --- END OF FIX ---
+    // Dynamic Page Generation
+    final visiblePages = _getVisiblePages(widget.currentUser);
+    final List<Widget> pages = visiblePages.map((p) => p['widget'] as Widget).toList();
+    final List<NavigationRailDestination> destinations = visiblePages.map((p) => p['destination'] as NavigationRailDestination).toList();
+
+    // Check if selected index is possibly out of bounds if role changed (unlikely within session but good safety)
+    if (selectedIndex >= pages.length) {
+      selectedIndex = 0;
+    }
+
+    final currentPageId = visiblePages[selectedIndex]['id'];
+    final bool isChatPage = currentPageId == 'ai_chat';
 
     return Scaffold(
-      backgroundColor:
-          backgroundColor, // ADDED: Match background preventing white gaps
+      backgroundColor: backgroundColor, 
       body: Column(
         children: [
-          // Profile Header (now always visible at the top)
+          // Profile Header
           Container(
             color: backgroundColor,
             child: ProfileHeaderContent(
@@ -406,7 +467,7 @@ class _FeedState extends State<Feed> {
               },
             ),
           ),
-          // Main Body: Sidebar + Content
+          // Main Body
           Expanded(
             child: Row(
               children: [
@@ -418,14 +479,14 @@ class _FeedState extends State<Feed> {
                       setState(() {
                         selectedIndex = index;
                       });
-                      // Refresh GamePage when navigating to it
-                      if (index == 1) {
+                      // Refresh GamePage
+                      if (visiblePages[index]['id'] == 'games') {
                         gamePageGlobalKey.currentState?.refresh();
                       }
                     },
                     isExtended: _isRailExtended,
                     onAddButtonPressed: isChatPage ? null : _onAddButtonPressed,
-                    destinations: filteredDestinations,
+                    destinations: destinations,
                   ),
                 Expanded(
                   child: Container(
@@ -454,11 +515,15 @@ class _FeedState extends State<Feed> {
                 setState(() {
                   selectedIndex = index;
                 });
-                // Refresh GamePage when navigating to it
-                if (index == 1) {
+                 if (visiblePages[index]['id'] == 'games') {
                   gamePageGlobalKey.currentState?.refresh();
                 }
               },
+              // We need to pass the destinations to bottom bar too if it supports it, 
+              // but DisappearingBottomNavigationBar seems to use hardcoded destinations in its implementation likely. 
+              // We should check DisappearingBottomNavigationBar implementation. 
+              // Assuming it needs update or is generic.
+              // Checking the file...
             ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
 import 'package:intl/intl.dart';
 
 /// Teacher view: Quiz detail page showing quiz info and student completion status

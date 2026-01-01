@@ -1,11 +1,11 @@
 // lib/widgets/quiz_list_section.dart
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/constants/api_constants.dart';
-import 'package:code_play/student/widgets/class/student_view_quiz_page.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_codelab/student/widgets/class/student_view_quiz_page.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart';
-import 'package:code_play/constants/class_constants.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class QuizListSection extends StatefulWidget {
   final String roleName;

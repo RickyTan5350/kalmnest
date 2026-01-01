@@ -37,6 +37,16 @@ class ChatMessage {
       isTyping: isTyping ?? this.isTyping,
     );
   }
+  factory ChatMessage.fromMap(Map<String, dynamic> map) {
+    return ChatMessage(
+        id: (map['id'] ?? map['message_id']).toString(),
+        text: map['content'] ?? map['message'] ?? '',
+        isUser: (map['role'] == 'user') || (map['sender'] == 'user'),
+        timestamp: map['created_at'] != null 
+          ? DateTime.tryParse(map['created_at']) 
+          : null,
+      );
+  }
 }
 
 /// AI Chat Page - Main Widget
@@ -64,42 +74,59 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   bool _isSending = false;
   bool _isInitialized = false;
   String? _currentSessionId;
-
-  // Removed hardcoded _suggestedQuestions list. Will use _getSuggestedQuestions(context) instead.
-
+  bool _isNewChat = false;
+  bool _isLoadingHistory = false;
+  List<Map<String, dynamic>> _sessions = [];
+  
+  // Getter for sessionId - assuming it should be generated or retrieved
+  String get sessionId => _currentSessionId ?? DateTime.now().millisecondsSinceEpoch.toString();
 
   @override
   void initState() {
     super.initState();
     _apiService = AiChatApiService(token: widget.authToken);
-    _initializeChat();
+    _loadHistory(); 
+    // _initializeChat(); // Removed as _loadHistory handles initial state better or user picks a chat
   }
 
-  @override
-  void dispose() {
-    _textController.dispose();
-    _scrollController.dispose();
-    _focusNode.dispose();
-    super.dispose();
+
+  Future<void> _loadHistory() async {
+    setState(() => _isLoadingHistory = true);
+    try {
+      final sessions = await _apiService.getSessions();
+      if (mounted) {
+        setState(() {
+          _sessions = sessions;
+          _isLoadingHistory = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingHistory = false);
+        // Silent failure or log
+        print('Error loading history: $e');
+      }
+    }
   }
 
-  void _initializeChat() {
+  Future<void> _loadSessionMessages(String sessionId) async {
     setState(() {
-      _isSending = true; // Use as blocker
-      _messages.clear();
+      _isSending = true;
       _currentSessionId = sessionId;
+      _messages.clear();
       _isNewChat = false;
     });
 
     try {
-      final messagesData = await _apiService.getSessionMessages(sessionId);
+      final messages = await _apiService.getSessionMessages(sessionId);
       if (mounted) {
         setState(() {
-          for (var m in messagesData) {
-            _messages.insert(0, ChatMessage.fromMap(m));
-          }
+          _messages.addAll(messages.map((m) => ChatMessage.fromMap(m)).toList());
+          // Sort if needed, assuming API sends chronologically
+          // _messages.sort((a, b) => b.timestamp.compareTo(a.timestamp)); 
           _isSending = false;
         });
+        _scrollToBottom();
       }
     } catch (e) {
       if (mounted) {
@@ -108,6 +135,11 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
       }
     }
   }
+
+  void _initializeChat() {
+     // Legacy init, keeping for reference if needed but _loadHistory is primary now
+  }
+
 
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -126,11 +158,13 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          0, 
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
       });
     }
   }
@@ -139,18 +173,22 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
     final text = _textController.text.trim();
     if (text.isEmpty || _isSending) return;
 
+    // Set sending state first to hide input box immediately
+    setState(() {
+      _isSending = true;
+    });
+
     final userMessage = ChatMessage(text: text, isUser: true);
     setState(() {
-      _messages.insert(0, userMessage);
+      _messages.add(userMessage); // Add to end (chronological order)
       _textController.clear();
-      _isSending = true;
     });
 
     _scrollToBottom();
     _focusNode.unfocus();
 
     final typingMessage = ChatMessage(text: '', isUser: false, isTyping: true);
-    setState(() => _messages.insert(0, typingMessage));
+    setState(() => _messages.add(typingMessage)); // Add to end
 
     try {
       final responseData = await _apiService.sendMessage(
@@ -165,7 +203,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
         setState(() {
           _currentSessionId = newSessionId;
           _messages.removeWhere((msg) => msg.id == typingMessage.id);
-          _messages.insert(0, ChatMessage(text: aiResponse, isUser: false));
+          _messages.add(ChatMessage(text: aiResponse, isUser: false)); // Add to end
           _isSending = false;
         });
       }
@@ -173,11 +211,11 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
       if (mounted) {
         setState(() {
           _messages.removeWhere((msg) => msg.id == typingMessage.id);
-          _messages.insert(0, ChatMessage(
+          _messages.add(ChatMessage(
             text: 'Connection error. Please ensure the backend is running and reachable.', 
             isUser: false, 
             isError: true
-          ));
+          )); // Add to end
           _isSending = false;
         });
       }
@@ -190,8 +228,8 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
     _handleSendMessage();
   }
 
-  void _clearChat() {
-    showDialog(
+  Future<void> _clearChat() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
@@ -244,7 +282,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
 
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -400,7 +438,6 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
-                    reverse: true,
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     itemCount: _messages.length,
@@ -408,15 +445,11 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                         _MessageBubble(message: _messages[index]),
                   ),
                 ),
-                if (_messages.length == 1 && _isInitialized)
-                  _buildSuggestedQuestions(colorScheme),
-                _buildInputArea(colorScheme),
+                // Only show input area if it's a brand new chat (no session, no messages)
+                if (_messages.isEmpty && _currentSessionId == null && _isNewChat)
+                  _buildInputArea(colorScheme),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
+            );
   }
 
   Widget _buildSuggestedQuestions(ColorScheme colorScheme) {
@@ -644,16 +677,19 @@ class _MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message.text,
-                    style: TextStyle(
-                      color: message.isUser 
-                          ? Colors.white 
-                          : message.isError 
-                              ? colorScheme.onErrorContainer 
-                              : colorScheme.onSurface,
-                      fontSize: 15,
-                      height: 1.4,
+                  MarkdownBody(
+                    data: message.text,
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(
+                        color: message.isUser 
+                            ? Colors.white 
+                            : message.isError 
+                                ? colorScheme.onErrorContainer 
+                                : colorScheme.onSurface,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                      strong: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],

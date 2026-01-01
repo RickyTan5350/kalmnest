@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/models/student.dart';
-import 'package:code_play/constants/class_constants.dart';
+import 'package:flutter_codelab/models/student.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 class StudentPreviewRow extends StatelessWidget {
   final List<Student> students;

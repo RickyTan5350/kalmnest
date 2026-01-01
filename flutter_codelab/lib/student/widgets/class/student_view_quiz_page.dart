@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/constants/api_constants.dart';
-import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart';
-import 'package:code_play/constants/class_constants.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
 
 /// Full-page student view: all quizzes for a single class.
 ///

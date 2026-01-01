@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/note_api.dart';
+import 'package:flutter_codelab/api/note_api.dart';
 
 class DeleteNoteHandler {
   static Future<void> showDeleteDialog(BuildContext context, String noteId) async {

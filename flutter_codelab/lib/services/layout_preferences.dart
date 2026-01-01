@@ -1,5 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:code_play/constants/view_layout.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
 
 class LayoutPreferences {
   static const _storage = FlutterSecureStorage();

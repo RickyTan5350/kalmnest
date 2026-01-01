@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/user_api.dart';
-import 'package:code_play/utils/formatters.dart';
-import 'package:code_play/models/user_data.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/api/user_api.dart';
+import 'package:flutter_codelab/utils/formatters.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 // Utility function to show the dialog
 void showCreateUserAccountDialog({

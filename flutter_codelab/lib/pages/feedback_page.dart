@@ -31,11 +31,33 @@ class _FeedbackPageState extends State<FeedbackPage> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // Filter State
+  List<Map<String, dynamic>> _topics = [];
+  List<Map<String, dynamic>> _students = [];
+  List<Map<String, dynamic>> _teachers = [];
+  
+  bool _isLoadingTopics = false;
+  bool _isLoadingStudents = false;
+  bool _isLoadingTeachers = false;
+
+  String _selectedTopicId = 'All';
+  String _selectedStudentId = 'All';
+  String _selectedTeacherId = 'All';
+  
+  SortOrder _sortOrder = SortOrder.descending;
+
   @override
   void initState() {
     super.initState();
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadFeedback();
+    _loadTopics();
+    if (_isTeacher || widget.currentUser?.isAdmin == true) {
+      _loadStudents();
+    }
+    if (_isStudent) {
+      _loadTeachers();
+    }
   }
 
   Future<void> _loadFeedback() async {
@@ -62,6 +84,46 @@ class _FeedbackPageState extends State<FeedbackPage> {
     }
   }
 
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+    try {
+      final topics = await _apiService.getTopics();
+      setState(() => _topics = topics);
+    } catch (_) {} 
+    finally {
+      if (mounted) setState(() => _isLoadingTopics = false);
+    }
+  }
+
+  Future<void> _loadStudents() async {
+    setState(() => _isLoadingStudents = true);
+    try {
+      final students = await _apiService.getStudents();
+      setState(() => _students = students);
+    } catch (_) {}
+    finally {
+      if (mounted) setState(() => _isLoadingStudents = false);
+    }
+  }
+
+  Future<void> _loadTeachers() async {
+    setState(() => _isLoadingTeachers = true);
+    try {
+      final teachers = await _apiService.getTeachers();
+      setState(() => _teachers = teachers);
+    } catch (_) {}
+    finally {
+      if (mounted) setState(() => _isLoadingTeachers = false);
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+     await _loadFeedback();
+     await _loadTopics();
+     if (_isTeacher || widget.currentUser?.isAdmin == true) await _loadStudents();
+     if (_isStudent) await _loadTeachers();
+  }
+
   List<FeedbackData> _parseFeedbackList(List<dynamic> feedbacks) {
     return feedbacks.map((fb) {
       return FeedbackData(
@@ -74,7 +136,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
                 : null) ??
             'Unknown',
         teacherId: fb['teacher_id'] ?? '',
-        topic: fb['topic'] ?? '',
+        topicId: fb['topic_id']?.toString() ?? '',
+        title: fb['title'] ?? fb['topic_name'] ?? '',
+        topic: fb['topic_name'] ?? fb['topic'] ?? '',
         feedback: fb['feedback'] ?? '',
         createdAt: fb['created_at'] ?? fb['createdAt'],
       );
@@ -212,7 +276,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
     final colors = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -319,7 +383,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
     }
 
     return _FeedbackListView(
-      feedbackList: _feedbackList,
+      feedbackList: filtered, // Use filtered list instead of full list
       isTeacher: _isTeacher,
       isStudent: _isStudent,
       onEdit: _openEditDialog,
@@ -658,19 +722,35 @@ class _FeedbackCard extends StatelessWidget {
             color: colorScheme.onSurface,
           ),
         ),
-        Icon(Icons.person_outline, color: colorScheme.primary),
       ],
     );
   }
 
   Widget _buildTopic(ColorScheme colorScheme) {
-    return Text(
-      feedback.topic,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.primary,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Topic category (e.g., "HTML", "CSS")
+        Text(
+          feedback.topic,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: colorScheme.primary.withOpacity(0.8),
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Feedback title
+        if (feedback.title.isNotEmpty)
+          Text(
+            feedback.title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+          ),
+      ],
     );
   }
 

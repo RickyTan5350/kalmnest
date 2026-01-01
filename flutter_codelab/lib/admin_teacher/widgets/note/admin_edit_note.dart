@@ -5,19 +5,19 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:code_play/admin_teacher/widgets/note/file_picker.dart';
-import 'package:code_play/admin_teacher/widgets/note/file_upload_zone.dart';
-import 'package:code_play/api/note_api.dart';
-import 'package:code_play/api/file_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/file_picker.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/file_upload_zone.dart';
+import 'package:flutter_codelab/api/note_api.dart';
+import 'package:flutter_codelab/api/file_api.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'package:code_play/constants/api_constants.dart';
-import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'run_code_page.dart';
 import 'quiz_widget.dart';
-import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
-import 'package:code_play/theme.dart';
-import 'package:code_play/utils/brand_color_extension.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
+import 'package:flutter_codelab/theme.dart';
+import 'package:flutter_codelab/utils/brand_color_extension.dart';
 
 class EditNotePage extends StatefulWidget {
   final String noteId;
