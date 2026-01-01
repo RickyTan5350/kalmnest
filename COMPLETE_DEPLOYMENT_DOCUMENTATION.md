@@ -6,10 +6,11 @@
 2. [What Was Done](#what-was-done)
 3. [Code Changes Made](#code-changes-made)
 4. [Database Connection Setup](#database-connection-setup)
-5. [Working with Team Repository](#working-with-team-repository)
-6. [Potential Problems & Solutions](#potential-problems--solutions)
-7. [Team Member Instructions](#team-member-instructions)
-8. [Additional Notes](#additional-notes)
+5. [Switching to Local Development](#switching-to-local-development)
+6. [Working with Team Repository](#working-with-team-repository)
+7. [Potential Problems & Solutions](#potential-problems--solutions)
+8. [Team Member Instructions](#team-member-instructions)
+9. [Additional Notes](#additional-notes)
 
 ---
 
@@ -415,7 +416,7 @@ For Flutter Web frontend:
 
 ---
 
-## 6. Potential Problems & Solutions
+## 7. Potential Problems & Solutions
 
 ### 6.1 Backend Issues
 
@@ -524,7 +525,7 @@ For Flutter Web frontend:
 
 ---
 
-## 7. Team Member Instructions
+## 8. Team Member Instructions
 
 ### 7.1 For Members Making Code Changes
 
@@ -616,7 +617,7 @@ For Flutter Web frontend:
 
 ---
 
-## 8. Additional Notes
+## 9. Additional Notes
 
 ### 8.1 Render.com Free Tier Limitations
 
@@ -704,7 +705,7 @@ For Flutter Web frontend:
 
 ---
 
-## 9. Quick Reference Commands
+## 10. Quick Reference Commands
 
 ### Backend
 
@@ -753,7 +754,7 @@ git push origin class-module-main
 
 ---
 
-## 10. Support & Troubleshooting
+## 11. Support & Troubleshooting
 
 ### Getting Help
 
