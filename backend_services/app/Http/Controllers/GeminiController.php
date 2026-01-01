@@ -7,10 +7,18 @@ use Gemini\Laravel\Facades\Gemini;
 use Illuminate\Support\Facades\Log;
 use App\Models\ChatbotSession;
 use App\Models\ChatbotMessage;
+use App\Services\GeminiService;
 use Illuminate\Support\Str;
 
 class GeminiController extends Controller
 {
+    protected GeminiService $geminiService;
+
+    public function __construct(GeminiService $geminiService)
+    {
+        $this->geminiService = $geminiService;
+    }
+
     /**
      * Handles the incoming chat request from the Flutter app, sends it to Gemini,
      * and returns the AI's response.
@@ -30,19 +38,19 @@ class GeminiController extends Controller
             // 1. Get or Create Session
             if (!$sessionId) {
                 $session = ChatbotSession::create([
-                    'id' => (string) Str::uuid(),
+                    'chatbot_session_id' => (string) Str::uuid(),
                     'user_id' => $user->user_id,
                     'title' => Str::limit($userMessage, 40),
                 ]);
-                $sessionId = $session->id;
+                $sessionId = $session->chatbot_session_id;
             } else {
-                $session = ChatbotSession::where('id', $sessionId)
+                $session = ChatbotSession::where('chatbot_session_id', $sessionId)
                     ->where('user_id', $user->user_id)
                     ->firstOrFail();
             }
 
             // 2. Store User Message
-            ChatbotMessage::create([
+            $currentUserMessage = ChatbotMessage::create([
                 'chatbot_session_id' => $sessionId,
                 'role' => 'user',
                 'content' => $userMessage,
@@ -51,6 +59,7 @@ class GeminiController extends Controller
             // 3. Interface with Gemini
             $aiResponse = '(AI unavailable due to an internal error...)';
             try {
+                // Ensure geminiService is available and use correct property
                 $aiResponse = $this->geminiService->generateResponse($sessionId, $userMessage, $currentUserMessage->message_id);
             } catch (\Throwable $e) {
                 $aiResponse = '(AI Error: ' . $e->getMessage() . ')';
@@ -79,5 +88,47 @@ class GeminiController extends Controller
                 'ai_response' => '(AI unavailable due to an internal error: ' . $e->getMessage() . ')'
             ], 200);
         }
+    }
+
+    public function getSessions(Request $request)
+    {
+        $sessions = ChatbotSession::where('user_id', $request->user()->user_id)
+            ->orderBy('updated_at', 'desc')
+            ->get();
+            
+        return response()->json([
+            'status' => 'success',
+            'sessions' => $sessions
+        ]);
+    }
+
+    public function getMessages(Request $request, $sessionId)
+    {
+        $session = ChatbotSession::where('chatbot_session_id', $sessionId)
+            ->where('user_id', $request->user()->user_id)
+            ->firstOrFail();
+            
+        $messages = ChatbotMessage::where('chatbot_session_id', $sessionId)
+            ->orderBy('created_at', 'asc')
+            ->get();
+            
+        return response()->json([
+            'status' => 'success',
+            'messages' => $messages
+        ]);
+    }
+
+    public function deleteSession(Request $request, $sessionId)
+    {
+        $session = ChatbotSession::where('chatbot_session_id', $sessionId)
+            ->where('user_id', $request->user()->user_id)
+            ->firstOrFail();
+            
+        $session->delete();
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Session deleted successfully'
+        ]);
     }
 }

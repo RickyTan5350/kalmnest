@@ -340,10 +340,10 @@ class _FeedState extends State<Feed> {
         }
         break;
       case 'Feedback':
-        if (widget.currentUser.isStudent) {
+        if (widget.currentUser.isStudent || widget.currentUser.isAdmin) {
           _showSnackBar(
             context,
-            AppLocalizations.of(context)!.noAccessCreateFeedback,
+            AppLocalizations.of(context)!.accessDeniedCreateFeedback,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -442,7 +442,7 @@ class _FeedState extends State<Feed> {
                       }
                     },
                     isExtended: _isRailExtended,
-                    onAddButtonPressed: _onAddButtonPressed,
+                    onAddButtonPressed: isChatPage ? null : _onAddButtonPressed,
                     destinations: filteredDestinations,
                   ),
                 Expanded(
@@ -458,7 +458,7 @@ class _FeedState extends State<Feed> {
           ),
         ],
       ),
-      floatingActionButton: wideScreen
+      floatingActionButton: (wideScreen || isChatPage)
           ? null
           : FloatingActionButton(
               backgroundColor: colorScheme.tertiaryContainer,

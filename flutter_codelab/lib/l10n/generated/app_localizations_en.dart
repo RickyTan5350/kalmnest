@@ -498,4 +498,190 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get other => 'Other';
+
+  @override
+  String get feedbacks => 'Feedbacks';
+
+  @override
+  String get results => 'Results';
+
+  @override
+  String get noFeedbackFound => 'No feedback found.';
+
+  @override
+  String get sortByTime => 'Sort by Time';
+
+  @override
+  String get newestFirst => 'Newest First';
+
+  @override
+  String get oldestFirst => 'Oldest First';
+
+  @override
+  String get refreshFeedbacks => 'Refresh Feedbacks';
+
+  @override
+  String get filterByStudent => 'Filter by Student';
+
+  @override
+  String get allStudents => 'All Students';
+
+  @override
+  String get filterByTeacher => 'Filter by Teacher';
+
+  @override
+  String get allTeachers => 'All Teachers';
+
+  @override
+  String get deleteFeedbackTitle => 'Delete Feedback?';
+
+  @override
+  String get deleteFeedbackConfirmation =>
+      'Are you sure you want to delete this feedback? This action cannot be undone.';
+
+  @override
+  String get feedbackDeleted => 'Feedback deleted';
+
+  @override
+  String get editFeedback => 'Edit Feedback';
+
+  @override
+  String get currentTopic => 'Current Topic';
+
+  @override
+  String get discardChangesTitle => 'Discard Changes?';
+
+  @override
+  String get discardChangesConfirmation =>
+      'You have unsaved changes. Are you sure you want to discard them?';
+
+  @override
+  String get discard => 'Discard';
+
+  @override
+  String get changesSavedSuccess => 'Changes saved successfully!';
+
+  @override
+  String updateFailed(String error) {
+    return 'Update failed: $error';
+  }
+
+  @override
+  String from(String name) {
+    return 'From: $name';
+  }
+
+  @override
+  String failedToLoadStudents(String error) {
+    return 'Failed to load students: $error';
+  }
+
+  @override
+  String get pleaseSelectStudent => 'Please select a student';
+
+  @override
+  String feedbackSentTo(String name) {
+    return 'Feedback sent to $name';
+  }
+
+  @override
+  String get accessDeniedCreateFeedback =>
+      'Access Denied: Only teachers can create feedback.';
+
+  @override
+  String get newFeedback => 'New Feedback';
+
+  @override
+  String get selectStudent => 'Select Student';
+
+  @override
+  String get selectAStudent => 'Select a student';
+
+  @override
+  String get noStudentsAvailable => 'No students available';
+
+  @override
+  String get selectTopic => 'Select Topic';
+
+  @override
+  String get selectATopic => 'Select a topic';
+
+  @override
+  String get pleaseSelectTopic => 'Please select a topic';
+
+  @override
+  String get title => 'Title';
+
+  @override
+  String get titleHint => 'e.g., Great Job!';
+
+  @override
+  String get pleaseEnterTitle => 'Please enter a title';
+
+  @override
+  String get feedbackHint => 'Write your feedback here...';
+
+  @override
+  String get pleaseWriteFeedback => 'Please write feedback';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String errorLoadingHistory(String error) {
+    return 'Error loading history: $error';
+  }
+
+  @override
+  String errorLoadingMessages(String error) {
+    return 'Error loading messages: $error';
+  }
+
+  @override
+  String get clearHistory => 'Clear History';
+
+  @override
+  String get clearHistoryConfirmation =>
+      'Are you sure you want to delete this chat session?';
+
+  @override
+  String deleteFailed(String error) {
+    return 'Delete failed: $error';
+  }
+
+  @override
+  String get aiChatTitle => 'KalmNest AI (Gemini-2.0-flash)';
+
+  @override
+  String get howCanIHelp => 'How can I help you today?';
+
+  @override
+  String get askQuestion => 'Ask Question';
+
+  @override
+  String get recentQuestions => 'Recent Questions';
+
+  @override
+  String get noQuestionsFound => 'No previous questions found.';
+
+  @override
+  String get untitledQuestion => 'Untitled Question';
+
+  @override
+  String get quickSuggestions => 'Quick Learning Suggestions';
+
+  @override
+  String get suggestionPrefix => 'Give me Learning Suggestion for ';
+
+  @override
+  String get typeQuestionHint => 'Type your question...';
+
+  @override
+  String get backToHistory => 'Back to History';
+
+  @override
+  String get refreshQuestion => 'Refresh Question';
+
+  @override
+  String get deleteChat => 'Delete Chat';
 }

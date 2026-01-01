@@ -9,7 +9,11 @@ class ChatbotSession extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['id', 'user_id', 'title'];
+    protected $primaryKey = 'chatbot_session_id';
+    protected $keyType = 'string';
+    public $incrementing = false;
+
+    protected $fillable = ['chatbot_session_id', 'user_id', 'title'];
 
     public function user()
     {
@@ -18,6 +22,6 @@ class ChatbotSession extends Model
 
     public function messages()
     {
-        return $this->hasMany(ChatbotMessage::class, 'chatbot_session_id', 'id');
+        return $this->hasMany(ChatbotMessage::class, 'chatbot_session_id', 'chatbot_session_id');
     }
 }

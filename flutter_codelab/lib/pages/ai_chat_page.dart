@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_codelab/models/user_data.dart';
 import 'package:flutter_codelab/services/ai_chat_api_service.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 /// Model for chat messages
 class ChatMessage {
@@ -78,13 +79,8 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   @override
   bool get wantKeepAlive => true;
 
-  final List<String> _suggestedQuestions = [
-    "Give me Learning Suggestion for HTML",
-    "Give me Learning Suggestion for CSS",
-    "Give me Learning Suggestion for JavaScript",
-    "Give me Learning Suggestion for PHP",
-    "Give me Learning suggestion for Web development"
-  ];
+  // Removed hardcoded _suggestedQuestions list. Will use _getSuggestedQuestions(context) instead.
+
 
   @override
   void initState() {
@@ -133,7 +129,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
     } catch (e) {
       if (mounted) {
         setState(() => _isSending = false);
-        _showSnackBar('Error loading messages: $e', Colors.red);
+        _showSnackBar(AppLocalizations.of(context)!.errorLoadingMessages(e.toString()), Colors.red);
       }
     }
   }
@@ -230,17 +226,22 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear History'),
-        content: const Text('Are you sure you want to delete this chat session?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(l10n.clearHistory),
+          content: Text(l10n.clearHistoryConfirmation),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l10n.cancel)),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed == true) {
@@ -254,7 +255,9 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           _loadHistory();
         }
       } catch (e) {
-        _showSnackBar('Delete failed: $e', Colors.red);
+        if (mounted) {
+          _showSnackBar(AppLocalizations.of(context)!.deleteFailed(e.toString()), Colors.red);
+        }
       }
     }
   }
@@ -271,6 +274,8 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -291,6 +296,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   }
 
   Widget _buildLandingView(ColorScheme colorScheme) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -298,7 +304,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "KalmNest AI (Gemini-2.0-flash)",
+              l10n.aiChatTitle,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: colorScheme.onSurface
                   ),
@@ -317,14 +323,14 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
               Icon(Icons.auto_awesome, size: 64, color: colorScheme.primary),
               const SizedBox(height: 16),
               Text(
-                "How can I help you today?",
+                l10n.howCanIHelp,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: _startNewChat,
                 icon: const Icon(Icons.add),
-                label: const Text("Ask Question"),
+                label: Text(l10n.askQuestion),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
@@ -336,7 +342,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
         ),
         const SizedBox(height: 48),
         Text(
-          "Recent Questions",
+          l10n.recentQuestions,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -346,7 +352,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           child: _isLoadingHistory
               ? const Center(child: CircularProgressIndicator())
               : _sessions.isEmpty
-                  ? const Center(child: Text("No previous questions found."))
+                  ? Center(child: Text(l10n.noQuestionsFound))
                   : ListView.builder(
                       itemCount: _sessions.length,
                       itemBuilder: (context, index) {
@@ -354,7 +360,9 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                         return ListTile(
                           leading: const Icon(Icons.chat_bubble_outline),
                           title: Text(
-                            session['title'] ?? 'Untitled Question',
+                            (session['title'] == 'Untitled Question' || session['title'] == null || session['title'].toString().isEmpty)
+                                ? l10n.untitledQuestion
+                                : session['title'],
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -373,6 +381,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   }
 
   Widget _buildChatView(ColorScheme colorScheme) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -390,7 +399,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                     _isNewChat = false;
                     _loadHistory();
                   }),
-                  tooltip: 'Back to History',
+                  tooltip: l10n.backToHistory,
                 ),
                 Text(
                   "KalmNest AI",
@@ -408,12 +417,12 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                   onPressed: _currentSessionId != null 
                     ? () => _loadSessionMessages(_currentSessionId!) 
                     : null,
-                  tooltip: 'Refresh Question',
+                  tooltip: l10n.refreshQuestion,
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
                   onPressed: _messages.isNotEmpty ? _clearChat : null,
-                  tooltip: 'Delete Chat',
+                  tooltip: l10n.deleteChat,
                 ),
               ],
             ),
@@ -438,10 +447,20 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   }
 
   Widget _buildSuggestedQuestions(ColorScheme colorScheme) {
+    final l10n = AppLocalizations.of(context)!;
+    final suggestionPrefix = l10n.suggestionPrefix;
+    final suggestedQuestions = [
+      "${suggestionPrefix}HTML",
+      "${suggestionPrefix}CSS",
+      "${suggestionPrefix}JavaScript",
+      "${suggestionPrefix}PHP",
+      "${suggestionPrefix}Web Development"
+    ];
+
     return Column(
       children: [
         Text(
-          "Quick Learning Suggestions",
+          l10n.quickSuggestions,
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
@@ -454,7 +473,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           spacing: 10,
           runSpacing: 10,
           alignment: WrapAlignment.center,
-          children: _suggestedQuestions.map((question) {
+          children: suggestedQuestions.map((question) {
             IconData icon;
             Color iconColor;
             
@@ -475,9 +494,8 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
               iconColor = colorScheme.primary;
             }
 
-            final label = question
-                .replaceFirst("Give me Learning Suggestion for ", "")
-                .replaceFirst("Give me Learning suggestion for ", "");
+            final label = question.replaceFirst(suggestionPrefix, "");
+
 
             return MouseRegion(
               cursor: SystemMouseCursors.click,
@@ -526,6 +544,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   }
 
   Widget _buildInputArea(ColorScheme colorScheme) {
+  final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       child: SafeArea(
@@ -544,9 +563,9 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                   maxLines: 4,
                   minLines: 1,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    hintText: 'Type your question...',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: InputDecoration(
+                    hintText: l10n.typeQuestionHint,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     border: InputBorder.none,
                   ),
                   onSubmitted: (_) => _handleSendMessage(),

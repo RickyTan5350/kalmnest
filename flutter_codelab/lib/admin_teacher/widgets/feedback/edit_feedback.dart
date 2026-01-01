@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/api/feedback_api.dart';
 import 'package:flutter_codelab/models/models.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 void showEditFeedbackDialog({
   required BuildContext context,
@@ -112,12 +113,12 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
       );
 
       if (mounted) {
-        widget.showSnackBar(context, "Changes saved successfully!", Colors.green);
+        widget.showSnackBar(context, AppLocalizations.of(context)!.changesSavedSuccess, Colors.green);
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        widget.showSnackBar(context, "Update failed: $e", Colors.red);
+        widget.showSnackBar(context, AppLocalizations.of(context)!.updateFailed(e.toString()), Colors.red);
       }
     } finally {
       if (mounted) {
@@ -161,6 +162,8 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
+
 
     return PopScope(
       canPop: false,
@@ -177,23 +180,24 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
 
         final shouldDiscard = await showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Discard Changes?'),
-            content: const Text(
-              'You have unsaved changes. Are you sure you want to discard them?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Discard'),
-              ),
-            ],
-          ),
+          builder: (context) {
+            final l10n = AppLocalizations.of(context)!;
+            return AlertDialog(
+              title: Text(l10n.discardChangesTitle),
+              content: Text(l10n.discardChangesConfirmation),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(l10n.cancel),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  child: Text(l10n.discard),
+                ),
+              ],
+            );
+          },
         );
 
         if (shouldDiscard == true && mounted) {
@@ -213,7 +217,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Edit Feedback',
+                    l10n.editFeedback,
                     style: textTheme.titleLarge?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -227,16 +231,16 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                           dropdownColor: const Color.fromARGB(255, 239, 243, 255),
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: _inputDecoration(
-                            labelText: 'Select Topic',
+                            labelText: l10n.selectTopic,
                             icon: Icons.subject,
                             colorScheme: colorScheme,
                           ),
-                          hint: Text('Select a topic', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                          hint: Text(l10n.selectATopic, style: TextStyle(color: colorScheme.onSurfaceVariant)),
                           items: [
                             if (_topics.isEmpty)
                               DropdownMenuItem<String?>(
                                 value: _selectedTopicId,
-                                child: Text(_selectedTopicName ?? 'Current Topic'),
+                                child: Text(_selectedTopicName ?? l10n.currentTopic),
                               )
                             else
                               ..._topics.map<DropdownMenuItem<String?>>((topic) {
@@ -258,7 +262,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                           },
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please select a topic';
+                              return l10n.pleaseSelectTopic;
                             }
                             return null;
                           },
@@ -268,25 +272,25 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                     controller: _titleController,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
-                      labelText: 'Title',
+                      labelText: l10n.title,
                       icon: Icons.title,
                       colorScheme: colorScheme,
                     ),
                     validator: (val) =>
-                        val == null || val.isEmpty ? 'Please enter a title' : null,
+                        val == null || val.isEmpty ? l10n.pleaseEnterTitle : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _feedbackController,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
-                      labelText: 'Feedback',
+                      labelText: l10n.feedback,
                       icon: Icons.message,
                       colorScheme: colorScheme,
                     ),
                     maxLines: 5,
                     validator: (val) =>
-                        val == null || val.isEmpty ? 'Please write feedback' : null,
+                        val == null || val.isEmpty ? l10n.pleaseWriteFeedback : null,
                   ),
                   const SizedBox(height: 24),
                   Row(
@@ -295,7 +299,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                       TextButton(
                         onPressed: () => Navigator.maybePop(context),
                         child: Text(
-                          'Cancel',
+                          l10n.cancel,
                           style: TextStyle(color: colorScheme.onSurfaceVariant),
                         ),
                       ),
@@ -322,7 +326,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Save Changes'),
+                            : Text(l10n.saveChanges),
                       ),
                     ],
                   ),

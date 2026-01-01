@@ -54,18 +54,24 @@ class DisappearingNavigationRail extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: FloatingActionButton(
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(15)),
+          if (onAddButtonPressed != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: FloatingActionButton(
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(15)),
+                ),
+                backgroundColor: colorScheme.tertiaryContainer,
+                foregroundColor: colorScheme.onTertiaryContainer,
+                onPressed: onAddButtonPressed,
+                child: const Icon(Icons.add),
               ),
-              backgroundColor: colorScheme.tertiaryContainer,
-              foregroundColor: colorScheme.onTertiaryContainer,
-              onPressed: onAddButtonPressed,
-              child: const Icon(Icons.add),
-            ),
-          ),
+            )
+          else
+            // Maintain spacing even if button is hidden, or remove if desired.
+            // Using SizedBox(height: 56) + Padding can keep layout stable, 
+            // but usually hiding it is preferred. Let's hide it but keep top spacing.
+            const SizedBox(height: 56),
           const SizedBox(height: 12),
           Expanded(
             child: NavigationRail(

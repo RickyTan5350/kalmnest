@@ -8,6 +8,7 @@ import 'package:flutter_codelab/student/widgets/feedback/student_view_feedback_p
 import 'package:flutter_codelab/enums/sort_enums.dart';
 import 'package:flutter_codelab/constants/achievement_constants.dart';
 import 'package:flutter_codelab/theme.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 class FeedbackPage extends StatefulWidget {
   final String? authToken;
   final UserDetails? currentUser;
@@ -137,7 +138,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
         _errorMessage = e.toString();
       });
       if (mounted) {
-        _showSnackBar(context, 'Failed to load feedback: $e', Colors.red);
+        _showSnackBar(context, AppLocalizations.of(context)!.failedToLoadFeedback(e.toString()), Colors.red);
       }
     }
   }
@@ -221,32 +222,33 @@ class _FeedbackPageState extends State<FeedbackPage> {
   Future<void> _confirmDelete(FeedbackData feedback) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Delete Feedback?"),
-        content: const Text(
-          "Are you sure you want to delete this feedback? This action cannot be undone.",
-        ),
-        actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Navigator.pop(context, false),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Delete"),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(l10n.deleteFeedbackTitle),
+          content: Text(l10n.deleteFeedbackConfirmation),
+          actions: [
+            TextButton(
+              child: Text(l10n.cancel),
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.delete),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed == true) {
       try {
         await _apiService.deleteFeedback(feedback.feedbackId);
         _deleteFeedback(feedback);
-        _showSnackBar(context, 'Feedback deleted', Colors.green);
+        _showSnackBar(context, AppLocalizations.of(context)!.feedbackDeleted, Colors.green);
       } catch (e) {
-        _showSnackBar(context, 'Delete failed: $e', Colors.red);
+        _showSnackBar(context, AppLocalizations.of(context)!.deleteFailed(e.toString()), Colors.red);
       }
     }
   }
@@ -289,6 +291,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
 
     return Padding(
@@ -308,7 +311,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Feedbacks",
+                      l10n.feedbacks,
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             color: colors.onSurface,
                           ),
@@ -345,7 +348,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                                   child: Align(
                                     alignment: Alignment.centerLeft,
                                     child: Text(
-                                      "${_filteredFeedback.length} Results",
+                                      "${_filteredFeedback.length} ${l10n.results}",
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                   ),
@@ -386,13 +389,13 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
     final filtered = _filteredFeedback;
     if (filtered.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.search_off, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text("No feedback found."),
+            Text(AppLocalizations.of(context)!.noFeedbackFound),
           ],
         ),
       );
@@ -408,6 +411,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
   }
 
   Widget _buildFilters(ColorScheme colors) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -465,26 +469,26 @@ class _FeedbackPageState extends State<FeedbackPage> {
             // Sort Button
             PopupMenuButton<SortOrder>(
               icon: const Icon(Icons.sort),
-              tooltip: 'Sort by Time',
+              tooltip: l10n.sortByTime,
               onSelected: (order) {
                 setState(() {
                   _sortOrder = order;
                 });
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   enabled: false,
-                  child: Text('Sort by Time', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(l10n.sortByTime, style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 CheckedPopupMenuItem(
                   value: SortOrder.descending,
                   checked: _sortOrder == SortOrder.descending,
-                  child: const Text('Newest First'),
+                  child: Text(l10n.newestFirst),
                 ),
                 CheckedPopupMenuItem(
                   value: SortOrder.ascending,
                   checked: _sortOrder == SortOrder.ascending,
-                  child: const Text('Oldest First'),
+                  child: Text(l10n.oldestFirst),
                 ),
               ],
             ),
@@ -492,7 +496,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
             IconButton(
                 icon: const Icon(Icons.refresh),
                 onPressed: _handleRefresh,
-                tooltip: "Refresh Feedbacks",
+                tooltip: l10n.refreshFeedbacks,
             ),
           ],
         ),
@@ -505,7 +509,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                   child: DropdownButtonFormField<String>(
                     value: _selectedStudentId,
                     decoration: InputDecoration(
-                      labelText: 'Filter by Student',
+                      labelText: l10n.filterByStudent,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -533,7 +537,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                   child: DropdownButtonFormField<String>(
                     value: _selectedTeacherId,
                     decoration: InputDecoration(
-                      labelText: 'Filter by Teacher',
+                      labelText: l10n.filterByTeacher,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -588,7 +592,7 @@ class _ErrorView extends StatelessWidget {
           Icon(Icons.error_outline, size: 64, color: colorScheme.error),
           const SizedBox(height: 16),
           Text(
-            'Error loading feedback',
+             AppLocalizations.of(context)!.errorLoadingFeedback,
             style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
           ),
           const SizedBox(height: 8),
@@ -601,7 +605,7 @@ class _ErrorView extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(AppLocalizations.of(context)!.retry),
           ),
         ],
       ),
@@ -625,7 +629,7 @@ class _EmptyView extends StatelessWidget {
           Icon(Icons.feedback_outlined, size: 64, color: colorScheme.outline),
           const SizedBox(height: 16),
           Text(
-            'No feedback yet',
+            AppLocalizations.of(context)!.noFeedbackYet,
             style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
           ),
           const SizedBox(height: 24),
@@ -721,7 +725,7 @@ class _FeedbackCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Teacher info and timestamp
-            _buildTeacherInfo(colorScheme),
+            _buildTeacherInfo(context, colorScheme),
 
             // Action buttons (only for teachers)
             if (isTeacher) _buildActionButtons(),
@@ -783,7 +787,7 @@ class _FeedbackCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTeacherInfo(ColorScheme colorScheme) {
+  Widget _buildTeacherInfo(BuildContext context, ColorScheme colorScheme) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
@@ -794,7 +798,7 @@ class _FeedbackCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'From: ${feedback.teacherName}',
+            AppLocalizations.of(context)!.from(feedback.teacherName),
             style: TextStyle(
               fontSize: 13,
               color: colorScheme.onSurfaceVariant,
