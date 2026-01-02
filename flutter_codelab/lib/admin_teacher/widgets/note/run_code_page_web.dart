@@ -9,6 +9,8 @@ import 'package:code_play/utils/brand_color_extension.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:code_play/constants/api_constants.dart';
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
 
 class RunCodePage extends StatefulWidget {
   final String initialCode;
@@ -45,6 +47,8 @@ class _RunCodePageState extends State<RunCodePage> {
   List<CodeFile> _files = [];
   int _activeFileIndex = 0;
   String _browserTitle = "Preview";
+  late String _webSessionId;
+  StreamSubscription? _messageSubscription;
 
   String? _resolvedContextPath;
 
@@ -61,6 +65,7 @@ class _RunCodePageState extends State<RunCodePage> {
 
     _files = [CodeFile(name: defaultName, content: widget.initialCode)];
     _activeFileIndex = 0;
+    _webSessionId = "web-session-${DateTime.now().millisecondsSinceEpoch}";
 
     _codeController = TextEditingController(text: _files[0].content);
     _codeController.addListener(_onCodeChanged);
@@ -68,12 +73,80 @@ class _RunCodePageState extends State<RunCodePage> {
     _resolveContextPath().then((_) {
       _loadContextAssets();
     });
+
+    // Listen for cross-origin messages from the iframe
+    _messageSubscription = web.window.onMessage.listen((event) {
+      final JSAny? rawData = event.data;
+      if (rawData != null && rawData.isA<JSString>()) {
+        final String data = (rawData as JSString).toDart;
+        if (data.startsWith('FLUTTER_WEB_BRIDGE:')) {
+          try {
+            final jsonStr = data.substring('FLUTTER_WEB_BRIDGE:'.length);
+            final Map<String, dynamic> msg = jsonDecode(jsonStr);
+            final String action = msg['action'];
+            final Map<String, dynamic> msgData = msg['data'];
+
+            print(
+              "DEBUG WEB BRIDGE (postMessage): Action: $action, Data: $msgData",
+            );
+
+            if (action == 'form_submit') {
+              final String urlStr = msgData['url'];
+              final String method = msgData['method'];
+              final Map<String, dynamic> formData = msgData['formData'];
+
+              final uri = Uri.parse(urlStr);
+              String targetFile = uri.path;
+              if (targetFile.startsWith('/'))
+                targetFile = targetFile.substring(1);
+              if (targetFile.isEmpty || targetFile == '#') {
+                targetFile = _files[_activeFileIndex].name;
+              }
+
+              // Merge existing query params if any
+              Map<String, dynamic> getData = Map.from(uri.queryParameters);
+
+              if (method == 'POST') {
+                _executePhp(
+                  formData: formData,
+                  getData: getData.isNotEmpty ? getData : null,
+                  entryPoint: targetFile,
+                );
+              } else {
+                // For GET forms, browser normally replaces query params with form data
+                // but here we might want to merge or prioritize formData.
+                _executePhp(getData: formData, entryPoint: targetFile);
+              }
+            } else if (action == 'link_click') {
+              final String urlStr = msgData['url'];
+              final uri = Uri.parse(urlStr);
+              String targetFile = uri.path;
+              if (targetFile.startsWith('/'))
+                targetFile = targetFile.substring(1);
+              if (targetFile.isEmpty) {
+                targetFile = _files[_activeFileIndex].name;
+              }
+
+              _executePhp(
+                entryPoint: targetFile,
+                getData: uri.queryParameters.isNotEmpty
+                    ? uri.queryParameters
+                    : null,
+              );
+            }
+          } catch (e) {
+            print("Error parsing bridge message: $e");
+          }
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _codeController.dispose();
     _urlBarController.dispose();
+    _messageSubscription?.cancel();
     super.dispose();
   }
 
@@ -106,14 +179,32 @@ class _RunCodePageState extends State<RunCodePage> {
       // Simple strict match check
       final strictPath = 'assets/www/$rawName';
 
-      // Check if any key starts with this path
-      bool hasStrict = assets.any((key) => key.startsWith(strictPath));
+      // Check if any key starts with this path (decode for space handling)
+      print("DEBUG WEB: Searching for strict path: '$strictPath'");
+      bool hasStrict = assets.any((key) {
+        final decoded = Uri.decodeFull(key);
+        return decoded.startsWith(strictPath);
+      });
       if (hasStrict) {
-        _resolvedContextPath = strictPath;
+        // Find the actual encoded path to use as dirPath
+        final matchKey = assets.firstWhere((key) {
+          final decoded = Uri.decodeFull(key);
+          return decoded.startsWith(strictPath);
+        });
+
+        // We want the directory part only
+        final lastSlash = matchKey.lastIndexOf('/');
+        if (lastSlash != -1) {
+          _resolvedContextPath = matchKey.substring(0, lastSlash);
+        } else {
+          _resolvedContextPath = matchKey;
+        }
+        print("DEBUG WEB: STRICT MATCH FOUND: $_resolvedContextPath");
         return;
       }
 
-      // Fuzzy match logic with robust fallback
+      // Fuzzy match logic similar to mobile but iterating manifest keys
+      // This is expensive if manifest is huge, but necessary.
       // Group assets by folder under assets/www
       final wwwAssets = assets.where((k) => k.startsWith('assets/www/'));
       final folders = <String>{};
@@ -131,40 +222,28 @@ class _RunCodePageState extends State<RunCodePage> {
 
       print("DEBUG: looking for clean raw: '$cleanRaw'");
 
-      String? matchedFolder;
-      List<String> candidateFolders = [];
-
       for (var folder in folders) {
+        // Decode the folder name from manifest too, just in case
         final decodedFolder = Uri.decodeFull(folder);
         final cleanFolder = decodedFolder.toLowerCase().replaceAll(
           RegExp(r'[^a-z0-9]'),
           '',
         );
 
-        // 1. Exact Match
+        // print("DEBUG: comparing entry: '$decodedFolder' -> '$cleanFolder'");
+
         if (cleanFolder == cleanRaw) {
-          matchedFolder = folder;
-          print("DEBUG: Exact Match Found: $folder");
-          break;
+          _resolvedContextPath = 'assets/www/$folder';
+          print("DEBUG: Matched! Resolved path: $_resolvedContextPath");
+          return;
         }
 
         // 2. Containment Match
         if (cleanFolder.contains(cleanRaw) || cleanRaw.contains(cleanFolder)) {
-          matchedFolder = folder;
+          _resolvedContextPath = 'assets/www/$folder';
           print("DEBUG: Containment Match Found: $folder");
-          break;
+          return;
         }
-
-        candidateFolders.add(folder);
-      }
-
-      // 3. Fallback: If no match but very similar (manual proximity or assume single result?)
-      // Not implemented here to avoid false positives, but Containment usually catches "truncated" names.
-
-      if (matchedFolder != null) {
-        _resolvedContextPath = 'assets/www/$matchedFolder';
-        print("DEBUG: Matched! Resolved path: $_resolvedContextPath");
-        return;
       }
     } catch (e) {
       print("Error resolving web context: $e");
@@ -218,14 +297,23 @@ class _RunCodePageState extends State<RunCodePage> {
 
         final content = await rootBundle.loadString(assetPath);
 
-        // Calculate relative name
-        String relativeName = assetPath;
-        if (relativeName.startsWith('$dirPath/')) {
-          relativeName = relativeName.substring(dirPath.length + 1);
+        // Calculate relative name (decode for rules matching)
+        String relativeName = Uri.decodeFull(assetPath);
+        final decodedDirPath = Uri.decodeFull(dirPath);
+        if (relativeName.startsWith('$decodedDirPath/')) {
+          relativeName = relativeName.substring(decodedDirPath.length + 1);
         }
 
-        if (detectedRealName == null && content == _files[0].content) {
-          detectedRealName = relativeName;
+        if (detectedRealName == null) {
+          // Normalise for comparison (trim, line endings)
+          final normContent = content.replaceAll('\r\n', '\n').trim();
+          final normInitial = _files[0].content.replaceAll('\r\n', '\n').trim();
+          if (normContent == normInitial) {
+            detectedRealName = relativeName;
+            print(
+              "DEBUG WEB: Detected real name by content: $detectedRealName",
+            );
+          }
         }
 
         loadedCandidates.add(CodeFile(name: relativeName, content: content));
@@ -236,47 +324,73 @@ class _RunCodePageState extends State<RunCodePage> {
       Set<String> privateFiles = {};
       Set<String> allClaimedFiles = {};
 
-      final visibleFileAsset = assets.firstWhere(
-        (k) => k == '$dirPath/visible_files.json',
-        orElse: () => '',
-      );
+      final String decodedDirPath = Uri.decodeFull(dirPath);
+      final visibleFileAsset = assets.firstWhere((k) {
+        final decoded = Uri.decodeFull(k);
+        return decoded == '$decodedDirPath/visible_files.json' ||
+            decoded == '$decodedDirPath/visible.json';
+      }, orElse: () => '');
 
+      print("DEBUG WEB: visibleFileAsset found: '$visibleFileAsset'");
       if (visibleFileAsset.isNotEmpty) {
         try {
           final content = await rootBundle.loadString(visibleFileAsset);
           final Map<String, dynamic> json = jsonDecode(content);
 
-          final effectiveEntryName = detectedRealName ?? _files[0].name;
+          final effectiveEntryName = (detectedRealName ?? _files[0].name)
+              .trim()
+              .toLowerCase();
+          print(
+            "DEBUG WEB: effectiveEntryName (normalized): '$effectiveEntryName'",
+          );
 
-          // Read Rules
+          Map<String, dynamic> rules = {};
           if (json.containsKey('rules')) {
-            final Map<String, dynamic> rules = json['rules'];
-            if (detectedRealName != null &&
-                rules.containsKey(effectiveEntryName)) {
-              final List<dynamic> allowed = rules[effectiveEntryName];
+            rules = Map<String, dynamic>.from(json['rules']);
+          } else if (!json.containsKey('_private')) {
+            // If it has neither 'rules' nor '_private', the root is the rules
+            rules = json;
+          }
+
+          // Case-insensitive / Trimmed search
+          String? matchKey;
+          for (var k in rules.keys) {
+            if (k.toString().trim().toLowerCase() == effectiveEntryName) {
+              matchKey = k.toString();
+              break;
+            }
+          }
+
+          if (matchKey != null) {
+            print("DEBUG WEB: Rule found for '$matchKey'");
+            final dynamic allowed = rules[matchKey];
+            if (allowed is List) {
               final allowedSet = allowed
                   .map((e) => e.toString().trim())
                   .toSet();
               allowedSet.add(effectiveEntryName);
+              allowedSet.add(matchKey.trim());
               allowedFiles = allowedSet;
               print("DEBUG WEB: Whitelist applied: $allowedFiles");
             }
-
-            // Collect all claimed files for Implicit Privacy
-            rules.forEach((key, value) {
-              if (value is List) {
-                allClaimedFiles.addAll(value.map((e) => e.toString().trim()));
-              }
-            });
+          } else {
+            print("DEBUG WEB: No whitelist rule for '$effectiveEntryName'");
           }
 
-          // Read _private
+          // Collect all claimed files for Implicit Privacy
+          rules.forEach((key, value) {
+            if (value is List) {
+              allClaimedFiles.addAll(value.map((e) => e.toString().trim()));
+            }
+          });
+
+          // Read _private (Always at root)
           if (json.containsKey('_private')) {
             final List<dynamic> private = json['_private'];
             privateFiles = private.map((e) => e.toString().trim()).toSet();
           }
         } catch (e) {
-          print("Error parsing web visible_files.json: $e");
+          print("Error parsing web visibility rules: $e");
         }
       }
 
@@ -311,7 +425,6 @@ class _RunCodePageState extends State<RunCodePage> {
             }
           }
 
-          print("DEBUG WEB: Adding visible tab: '$name'");
           _files.add(candidate);
         }
       });
@@ -337,10 +450,13 @@ class _RunCodePageState extends State<RunCodePage> {
     });
   }
 
-  Future<void> _executePhp() async {
+  Future<void> _executePhp({
+    Map<String, dynamic>? formData,
+    Map<String, dynamic>? getData,
+    String? entryPoint,
+  }) async {
     final currentFile = _files[_activeFileIndex];
-    final phpSessionId =
-        "web-session-${DateTime.now().millisecondsSinceEpoch}"; // Simple session ID for web
+    final targetFileName = entryPoint ?? currentFile.name;
 
     // Prepare files payload
     final filesPayload = _files
@@ -352,18 +468,22 @@ class _RunCodePageState extends State<RunCodePage> {
 
       print("DEBUG WEB RUN: Sending request to $url");
       print(
-        "DEBUG WEB RUN: Context: ${widget.contextId}, File: ${currentFile.name}",
+        "DEBUG WEB RUN: Context: ${widget.contextId}, File: $targetFileName",
       );
 
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'code': currentFile.content,
+          'code': (targetFileName == currentFile.name)
+              ? currentFile.content
+              : null,
           'files': filesPayload,
-          'entry_point': currentFile.name,
-          'context_id': widget.contextId, // Use context ID for assets
-          'php_session_id': phpSessionId, // Optional persistence
+          'entry_point': targetFileName,
+          'context_id': widget.contextId,
+          'php_session_id': _webSessionId,
+          'form_data': formData,
+          'get_data': getData,
         }),
       );
 
@@ -373,9 +493,12 @@ class _RunCodePageState extends State<RunCodePage> {
         final data = jsonDecode(response.body);
         final output = data['output'] ?? '';
 
+        // Wrap output with JS Bridge
+        final wrappedOutput = _wrapHtmlWeb(output);
+
         // Load output into WebView
         _webViewController?.loadData(
-          data: output,
+          data: wrappedOutput,
           mimeType: 'text/html',
           encoding: 'utf-8',
           baseUrl: WebUri(
@@ -384,7 +507,6 @@ class _RunCodePageState extends State<RunCodePage> {
         );
       } else {
         _showWebWarning('Execution Failed: ${response.statusCode}');
-        // Show error in webview to be helpful
         _webViewController?.loadData(
           data:
               '<h3 style="color:red">Execution Error: ${response.statusCode}</h3><pre>${response.body}</pre>',
@@ -403,8 +525,74 @@ class _RunCodePageState extends State<RunCodePage> {
     }
   }
 
+  String _wrapHtmlWeb(String content) {
+    if (!content.contains('<html') && !content.contains('<body')) {
+      content = '<body>$content</body>';
+    }
+
+    final String bridgeScript = r'''
+<script>
+(function() {
+  console.log("PHP Web Bridge: Initializing...");
+  
+  function sendToFlutter(action, data) {
+    var msg = { action: action, data: data };
+    var bridgeMsg = 'FLUTTER_WEB_BRIDGE:' + JSON.stringify(msg);
+    if (window.parent !== window) {
+       window.parent.postMessage(bridgeMsg, '*');
+    }
+    console.log(bridgeMsg);
+  }
+
+  // Intercept forms
+  document.addEventListener('submit', function(e) {
+    var form = e.target;
+    // Check if it's a PHP target
+    var action = form.getAttribute('action') || '';
+    if (action.endsWith('.php') || action === '' || action === '#') {
+       e.preventDefault();
+       var formData = {};
+       var formObj = new FormData(form);
+       formObj.forEach(function(value, key) {
+          formData[key] = value;
+       });
+       
+       console.log("PHP Web Bridge: Intercepted Form Submit to " + action);
+       sendToFlutter('form_submit', {
+          url: action,
+          method: form.method ? form.method.toUpperCase() : 'GET',
+          formData: formData
+       });
+    }
+  });
+
+  // Intercept links
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest('a');
+    if (link && link.getAttribute('href')) {
+      var href = link.getAttribute('href');
+      // Match .php followed by ?, #, or end of string
+      if (/\.php(\?|#|$)/i.test(href) && !href.startsWith('http')) {
+        e.preventDefault();
+        console.log("PHP Web Bridge: Intercepted Link Click to " + href);
+        sendToFlutter('link_click', { url: href });
+      }
+    }
+  });
+})();
+</script>
+''';
+
+    if (content.contains('</body>')) {
+      return content.replaceFirst('</body>', '$bridgeScript</body>');
+    } else {
+      return content + bridgeScript;
+    }
+  }
+
   void _runCode() {
-    // On Web, we can't run PHP locally, but we can send it to backend!
+    // On Web, we can't run PHP.
+    // If it's HTML/JS/CSS, we can load it into the iframe/webview.
     final currentFile = _files[_activeFileIndex];
     if (currentFile.name.endsWith('.php')) {
       _executePhp();

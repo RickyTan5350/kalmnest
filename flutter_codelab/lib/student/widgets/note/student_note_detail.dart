@@ -254,16 +254,101 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   String _processMarkdown(String content) {
     debugPrint("DEBUG processMarkdown: Raw content length: ${content.length}");
     final domain = ApiConstants.domain;
-    final processed = content.replaceAll('](/storage/', ']($domain/storage/');
 
-    // Debug: Find image links
-    final imageRegex = RegExp(r'!\[.*?\]\((.*?)\)');
-    final matches = imageRegex.allMatches(processed);
-    for (final match in matches) {
-      debugPrint("DEBUG: Found processed image URL: ${match.group(1)}");
-    }
+    // 1. Resolve relative /storage/ paths to domain
+    String processed = content.replaceAll('](/storage/', ']($domain/storage/');
+
+    // 2. Resolve relative pictures/ paths (if they don't have a protocol)
+    // This helps markdown parsing identify them as images
+    processed = processed.replaceAllMapped(
+      RegExp(r'!\[(.*?)\]\((?!(http|assets|file))(.*?)\)'),
+      (match) {
+        final alt = match.group(1);
+        final path = match.group(3);
+        if (path != null && !path.startsWith('/')) {
+          // Keep it relative, our _buildImageWidget will handle the lookup
+          return '![$alt]($path)';
+        }
+        return match.group(0)!;
+      },
+    );
 
     return processed;
+  }
+
+  Widget _buildImageWidget(String src) {
+    // 1. Handle absolute URLs
+    if (src.startsWith('http')) {
+      return Image.network(
+        src,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.red),
+      );
+    }
+
+    // 2. Handle potential local asset paths
+    // List of folders to search in
+    final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+    final fileName = src.split('/').last;
+
+    return FutureBuilder<String?>(
+      future: _resolveLocalAsset(src, fileName, folders),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final resolvedPath = snapshot.data;
+        if (resolvedPath != null) {
+          return Image.asset(resolvedPath);
+        }
+
+        // 3. Fallback to network if not found in assets
+        final networkUrl = src.startsWith('/')
+            ? "${ApiConstants.domain}$src"
+            : "${ApiConstants.domain}/storage/$src";
+
+        return Image.network(
+          networkUrl,
+          errorBuilder: (context, error, stackTrace) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.broken_image, color: Colors.red),
+              Text(
+                "Failed to load: $fileName",
+                style: const TextStyle(fontSize: 10),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<String?> _resolveLocalAsset(
+    String originalPath,
+    String fileName,
+    List<String> folders,
+  ) async {
+    // Exact match first
+    try {
+      await rootBundle.load(originalPath);
+      return originalPath;
+    } catch (_) {}
+
+    // Search in known picture folders
+    for (final folder in folders) {
+      final candidate = 'assets/www/pictures/$folder/$fileName';
+      try {
+        await rootBundle.load(candidate);
+        return candidate;
+      } catch (_) {}
+    }
+
+    return null;
   }
 
   // --- UI WIDGETS ---
@@ -284,74 +369,39 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
             _currentTitle,
           ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
-          final targetFileName = fileName.toLowerCase();
-
           final wwwKeys = assets.where((k) => k.startsWith('assets/www/'));
           String? resolvedPath;
-          List<String> validFolderCandidates = [];
 
           for (var key in wwwKeys) {
             final parts = key.split('/');
-            if (parts.length < 4) continue;
+            if (parts.length > 3) {
+              final folderName = parts[2];
+              final fName = parts.last;
 
-            final fName = parts.last.toLowerCase();
+              if (fName.toLowerCase() == fileName.toLowerCase()) {
+                final decodedFolder = Uri.decodeFull(folderName);
+                final cleanFolder = decodedFolder.toLowerCase().replaceAll(
+                  RegExp(r'[^a-z0-9]'),
+                  '',
+                );
 
-            if (fName == targetFileName) {
-              final folderNameRaw = parts[2];
-              final decodedFolder = Uri.decodeFull(folderNameRaw);
-              final cleanFolder = decodedFolder.toLowerCase().replaceAll(
-                RegExp(r'[^a-z0-9]'),
-                '',
-              );
+                print("DEBUG (Student): Checking $key");
+                print(
+                  "DEBUG (Student): Folder Clean '$cleanFolder' vs Raw '$cleanRaw'",
+                );
 
-              print("DEBUG (Student) SCANNED: $key");
-              print("   -> Clean Folder: '$cleanFolder' vs Raw '$cleanRaw'");
-
-              // 1a. Exact Match
-              if (cleanFolder == cleanRaw) {
-                resolvedPath = key;
-                break;
+                if (cleanFolder == cleanRaw) {
+                  resolvedPath = key;
+                  break;
+                }
               }
-
-              // 1b. Containment Match
-              if (cleanFolder.contains(cleanRaw) ||
-                  cleanRaw.contains(cleanFolder)) {
-                resolvedPath = key;
-                break;
-              }
-
-              validFolderCandidates.add(folderNameRaw);
             }
-          }
-
-          // Strategy 2: Unique candidate match
-          if (resolvedPath == null && validFolderCandidates.length == 1) {
-            final bestGuessFolder = validFolderCandidates.first;
-            resolvedPath = wwwKeys.firstWhere(
-              (k) =>
-                  k.contains(bestGuessFolder) &&
-                  k.toLowerCase().endsWith('/$targetFileName'),
-            );
-            print(
-              "DEBUG (Student): Fuzzy matched by unique filename in folder: $bestGuessFolder",
-            );
           }
 
           if (resolvedPath != null) {
             final content = await rootBundle.loadString(resolvedPath);
-            return content
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;');
+            return content;
           }
-
-          print(
-            "DEBUG (Student) ERROR: Could not find '$fileName' for note '$_currentTitle'.",
-          );
-          if (validFolderCandidates.isNotEmpty) {
-            return "File not found (Web): $fileName\nCandidates:\n${validFolderCandidates.join('\n')}";
-          }
-
           return "File not found (Web): $fileName";
         } catch (e) {
           return "Error reading file (Web): $e";
@@ -368,10 +418,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
       if (await file.exists()) {
         debugPrint("Debug: Asset found: ${file.path}");
         final content = await file.readAsString();
-        return content
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;');
+        return content;
       }
       return "File not found: $fileName";
     } catch (e) {
@@ -505,7 +552,6 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
     return HtmlWidget(
       htmlContent,
-      baseUrl: Uri.parse(ApiConstants.domain),
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 16),
       customWidgetBuilder: (element) {
         if (element.localName == 'pre') {
@@ -547,14 +593,17 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
               future: _loadLinkedFile(linkedFileName),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
-                  final escapedContent = snapshot.data!;
+                  final rawContent = snapshot.data!;
+                  // Escape for display in HtmlWidget
+                  final escapedForDisplay = rawContent
+                      .replaceAll('&', '&amp;')
+                      .replaceAll('<', '&lt;')
+                      .replaceAll('>', '&gt;');
+
                   final html =
-                      '<pre style="margin: 0; padding: 0;">$escapedContent</pre>';
-                  final raw = escapedContent
-                      .replaceAll('&lt;', '<')
-                      .replaceAll('&gt;', '>')
-                      .replaceAll('&amp;', '&');
-                  return _buildCodeBlockUI(html, raw, linkedFileName);
+                      '<pre style="margin: 0; padding: 0;">$escapedForDisplay</pre>';
+
+                  return _buildCodeBlockUI(html, rawContent, linkedFileName);
                 }
                 return const SizedBox(
                   height: 50,
@@ -572,7 +621,9 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
         if (element.localName == 'img') {
           final src = element.attributes['src'];
-          debugPrint("DEBUG HtmlWidget: Rendering Image with src: $src");
+          if (src != null) {
+            return _buildImageWidget(src);
+          }
         }
 
         if (element.attributes.containsKey('data-scroll-index')) {

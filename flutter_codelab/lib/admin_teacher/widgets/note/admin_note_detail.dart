@@ -19,6 +19,7 @@ import 'package:code_play/utils/brand_color_extension.dart';
 import 'package:flutter/services.dart';
 
 import 'quiz_widget.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 class AdminNoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -392,18 +393,53 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
       final imageUrl = match.group(2); // Group 2 is the URL
       if (imageUrl != null) {
         try {
-          // Download image bytes
-          debugPrint("DEBUG PDF: Downloading image: $imageUrl");
-          final response = await http.get(Uri.parse(imageUrl));
-          debugPrint(
-            "DEBUG PDF: Image download status: ${response.statusCode}",
-          );
-          if (response.statusCode == 200) {
-            final imageBytes = response.bodyBytes;
+          Uint8List? imageBytes;
+
+          // A. Try loading as a local asset first
+          final fileName = imageUrl.split('/').last;
+          final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+
+          // Try original path
+          try {
+            final data = await rootBundle.load(imageUrl);
+            imageBytes = data.buffer.asUint8List();
+          } catch (_) {}
+
+          // Search folders if not found
+          if (imageBytes == null) {
+            for (final folder in folders) {
+              try {
+                final data = await rootBundle.load(
+                  'assets/www/pictures/$folder/$fileName',
+                );
+                imageBytes = data.buffer.asUint8List();
+                break;
+              } catch (_) {}
+            }
+          }
+
+          // B. Fallback to network if not found in assets
+          if (imageBytes == null) {
+            final networkUrl = imageUrl.startsWith('http')
+                ? imageUrl
+                : (imageUrl.startsWith('/')
+                      ? "${ApiConstants.domain}$imageUrl"
+                      : "${ApiConstants.domain}/storage/$imageUrl");
+
+            debugPrint(
+              "DEBUG PDF: Downloading image from network: $networkUrl",
+            );
+            final response = await http.get(Uri.parse(networkUrl));
+            if (response.statusCode == 200) {
+              imageBytes = response.bodyBytes;
+            }
+          }
+
+          if (imageBytes != null) {
             widgets.add(
               pw.Container(
                 alignment: pw.Alignment.center,
-                height: 200, // Constrain height to prevent page overflow issues
+                height: 200,
                 child: pw.Image(
                   pw.MemoryImage(imageBytes),
                   fit: pw.BoxFit.contain,
@@ -414,7 +450,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
           } else {
             widgets.add(
               pw.Text(
-                "[Image failed to load]",
+                "[Image failed to load: $imageUrl]",
                 style: const pw.TextStyle(color: PdfColors.red),
               ),
             );
@@ -422,7 +458,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         } catch (e) {
           widgets.add(
             pw.Text(
-              "[Error loading image]",
+              "[Error loading image: $e]",
               style: const pw.TextStyle(color: PdfColors.red),
             ),
           );
@@ -455,96 +491,63 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
           .trim();
 
       // WEB IMPLEMENTATION
+      // WEB IMPLEMENTATION
       if (kIsWeb) {
         try {
           // 1. Load Manifest
           final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
           final assets = manifest.listAssets();
 
-          // 2. Prepare Match Criteria
+          // 2. Find matching folder
+          // Clean title: "My Note" -> "mynote"
           final cleanRaw = Uri.decodeFull(
             _currentTitle,
           ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-
-          final targetFileName = fileName.toLowerCase();
 
           // Filter keys starting with assets/www
           final wwwKeys = assets.where((k) => k.startsWith('assets/www/'));
 
           String? resolvedPath;
-          List<String> validFolderCandidates = [];
 
-          // Strategy 1: Find all paths that contain the filename
-          // and see if the folder name is a "close enough" match
+          // Check direct match first (optimization)
+          // Note: Manifest keys might be URL encoded
+
+          // Iterate to find folder match
+          // We need to group by folder, or just check each file path?
+          // Checking each file path is easier if we know what file we want.
+
           for (var key in wwwKeys) {
+            // key: assets/www/Some%20Fold/file.html
             final parts = key.split('/');
-            // Ensure it's deep enough: assets/www/FolderName/FILENAME
-            if (parts.length < 4) continue;
+            if (parts.length > 3) {
+              // assets, www, FolderName, [subfolders?], fileName
+              // Let's assume structure is assets/www/FolderName/fileName
+              final folderName = parts[2];
+              final fName = parts.last;
 
-            final fName = parts.last.toLowerCase();
-            if (fName == targetFileName) {
-              final folderNameRaw = parts[2]; // "3.2.10%20Pengesahan..."
-              final decodedFolder = Uri.decodeFull(folderNameRaw);
-              final cleanFolder = decodedFolder.toLowerCase().replaceAll(
-                RegExp(r'[^a-z0-9]'),
-                '',
-              );
+              // Compare filename case-insensitively
+              if (fName.toLowerCase() == fileName.toLowerCase()) {
+                // Potential match, check folder
+                final decodedFolder = Uri.decodeFull(folderName);
+                final cleanFolder = decodedFolder.toLowerCase().replaceAll(
+                  RegExp(r'[^a-z0-9]'),
+                  '',
+                );
 
-              print("DEBUG WEB ASSET SCANNED: $key");
-              print(
-                "   -> Clean Folder: '$cleanFolder' vs Target: '$cleanRaw'",
-              );
+                print("DEBUG: Checking $key");
+                print("DEBUG: Folder Clean '$cleanFolder' vs Raw '$cleanRaw'");
 
-              // 1a. Exact Clean Match
-              if (cleanFolder == cleanRaw) {
-                resolvedPath = key;
-                break; // Found it!
+                if (cleanFolder == cleanRaw) {
+                  resolvedPath = key;
+                  break;
+                }
               }
-
-              // 1b. Containment Match (e.g. title is subset of folder or vice versa)
-              // This helps if the title in DB is short but folder is long
-              if (cleanFolder.contains(cleanRaw) ||
-                  cleanRaw.contains(cleanFolder)) {
-                resolvedPath = key;
-                // Don't break yet, look for better match?
-                // Actually, usually this is unique enough.
-                break;
-              }
-
-              validFolderCandidates.add(folderNameRaw);
             }
-          }
-
-          // Strategy 2: If no resolvedPath, but we have candidates.
-          // If there is EXACTLY ONE candidate folder containing this file,
-          // assume that's the one (since filenames are usually unique per topic/context).
-          if (resolvedPath == null && validFolderCandidates.length == 1) {
-            // Find that key again
-            final bestGuessFolder = validFolderCandidates.first;
-            resolvedPath = wwwKeys.firstWhere(
-              (k) =>
-                  k.contains(bestGuessFolder) &&
-                  k.toLowerCase().endsWith('/$targetFileName'),
-            );
-            print(
-              "DEBUG WEB ASSET: Fuzzy matched by unique filename in folder: $bestGuessFolder",
-            );
           }
 
           if (resolvedPath != null) {
             final content = await rootBundle.loadString(resolvedPath);
-            return content
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;');
-          }
-
-          print(
-            "DEBUG WEB ASSET ERROR: Could not find '$fileName' for note '$_currentTitle'.",
-          );
-          if (validFolderCandidates.isNotEmpty) {
-            print("DEBUG: Found candidates in folders: $validFolderCandidates");
-            return "File not found (Web): $fileName\nCandidates:\n${validFolderCandidates.join('\n')}";
+            return content;
           }
 
           return "File not found (Web): $fileName";
@@ -564,15 +567,103 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         debugPrint("Debug: Asset found: ${file.path}");
         final content = await file.readAsString();
         // Simple HTML escape for display
-        return content
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;');
+        return content;
       }
       return "File not found: $fileName (in $_currentTitle)";
     } catch (e) {
       return "Error reading file: $e";
     }
+  }
+
+  String _processMarkdown(String content) {
+    debugPrint("DEBUG processMarkdown: Raw content length: ${content.length}");
+    final domain = ApiConstants.domain;
+
+    // 1. Resolve relative /storage/ paths to domain
+    String processed = content.replaceAll('](/storage/', ']($domain/storage/');
+
+    // 2. Resolve relative pictures/ paths
+    processed = processed.replaceAllMapped(
+      RegExp(r'!\[(.*?)\]\((?!(http|assets|file))(.*?)\)'),
+      (match) {
+        final alt = match.group(1);
+        final path = match.group(3);
+        if (path != null && !path.startsWith('/')) {
+          return '![$alt]($path)';
+        }
+        return match.group(0)!;
+      },
+    );
+
+    return processed;
+  }
+
+  Widget _buildImageWidget(String src) {
+    if (src.startsWith('http')) {
+      return Image.network(
+        src,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.red),
+      );
+    }
+
+    final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+    final fileName = src.split('/').last;
+
+    return FutureBuilder<String?>(
+      future: _resolveLocalAsset(src, fileName, folders),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final resolvedPath = snapshot.data;
+        if (resolvedPath != null) {
+          return Image.asset(resolvedPath);
+        }
+
+        final networkUrl = src.startsWith('/')
+            ? "${ApiConstants.domain}$src"
+            : "${ApiConstants.domain}/storage/$src";
+
+        return Image.network(
+          networkUrl,
+          errorBuilder: (context, error, stackTrace) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.broken_image, color: Colors.red),
+              Text(
+                "Failed to load: $fileName",
+                style: const TextStyle(fontSize: 10),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<String?> _resolveLocalAsset(
+    String originalPath,
+    String fileName,
+    List<String> folders,
+  ) async {
+    try {
+      await rootBundle.load(originalPath);
+      return originalPath;
+    } catch (_) {}
+
+    for (final folder in folders) {
+      final candidate = 'assets/www/pictures/$folder/$fileName';
+      try {
+        await rootBundle.load(candidate);
+        return candidate;
+      } catch (_) {}
+    }
+    return null;
   }
 
   Widget _buildCodeBlockUI(
@@ -651,7 +742,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
     _matchKeys = [];
 
     String htmlContent = md.markdownToHtml(
-      _markdownContent,
+      _processMarkdown(_markdownContent),
       extensionSet: md.ExtensionSet.gitHubFlavored,
     );
 
@@ -729,24 +820,17 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
               future: _loadLinkedFile(linkedFileName),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
-                  final escapedContent = snapshot.data!;
-                  // Wrap in pre for styling consistency
+                  final rawContent = snapshot.data!;
+                  // Escape for display in HtmlWidget
+                  final escapedForDisplay = rawContent
+                      .replaceAll('&', '&amp;')
+                      .replaceAll('<', '&lt;')
+                      .replaceAll('>', '&gt;');
+
                   final html =
-                      '<pre style="margin: 0; padding: 0;">$escapedContent</pre>';
-                  // Raw content is unescaped for running
-                  final raw = escapedContent
-                      .replaceAll('&lt;', '<')
-                      .replaceAll('&gt;', '>')
-                      .replaceAll('&amp;', '&');
-                  // Wait, loadLinkedFile returned escaped!
-                  // Actually I should have _loadLinkedFile return RAW and then escape it for display.
-                  // I'll fix that.
+                      '<pre style="margin: 0; padding: 0;">$escapedForDisplay</pre>';
 
-                  // Re-decode for running, or just load again?
-                  // Sticking to "load returns escaped" is weird.
-                  // Better: load returns raw.
-
-                  return _buildCodeBlockUI(html, raw, linkedFileName);
+                  return _buildCodeBlockUI(html, rawContent, linkedFileName);
                 }
                 return const SizedBox(
                   height: 50,
@@ -764,7 +848,9 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
         if (element.localName == 'img') {
           final src = element.attributes['src'];
-          debugPrint("DEBUG Admin HtmlWidget: Rendering Image with src: $src");
+          if (src != null) {
+            return _buildImageWidget(src);
+          }
         }
 
         if (element.attributes.containsKey('data-scroll-index')) {

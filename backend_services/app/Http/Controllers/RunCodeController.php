@@ -212,7 +212,7 @@ class RunCodeController extends Controller
                  $mockCode .= "  function custom_header_polyfill(\$h) {\n";
                  $mockCode .= "    if (stripos(\$h, 'Location:') === 0) {\n";
                  $mockCode .= "      \$url = trim(substr(\$h, 9));\n";
-                 $mockCode .= "      echo \"<script>window.location.href='\$url';</script>\";\n";
+                 $mockCode .= "      echo \"<script>var msg = 'FLUTTER_WEB_BRIDGE:' + JSON.stringify({action:'link_click', data:{url:'\$url'}}); if(window.parent !== window){ window.parent.postMessage(msg, '*'); } console.log(msg);</script>\";\n";
                  $mockCode .= "    }\n";
                  $mockCode .= "  }\n";
                  $mockCode .= "}\n";
