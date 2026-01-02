@@ -136,12 +136,13 @@ class _EditUserDialogState extends State<EditUserDialog> {
   }
 
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Clear previous server errors on new submission attempt
+    // 1. Reset Errors
     setState(() {
       _serverErrors.clear();
     });
+
+    // 2. Client-Side Validation
+    if (!_formKey.currentState!.validate()) return;
 
     final newPassword = _passwordController.text.trim();
 
@@ -196,44 +197,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
         // Pop dialog and return 'true' to signal a successful update/refresh needed
         Navigator.of(context).pop(true);
       }
-    } on ValidationException catch (e) {
-      if (mounted) {
-        setState(() {
-          // Map the errors: key -> first error message in list
-          e.errors.forEach((key, value) {
-            if (value is List && value.isNotEmpty) {
-              _serverErrors[key] = value.first.toString();
-            }
-          });
-        });
-        // Re-trigger validation to show the errors in the fields
-        _formKey.currentState!.validate();
-      }
     } catch (e) {
       if (mounted) {
-        // Handle validation and network errors
-        String errorString = e.toString();
-        String displayMessage = 'An unknown error occurred.';
-        Color errorColor = Theme.of(
-          context,
-        ).colorScheme.error; // Standardize color
-
-        if (errorString.contains('403:')) {
-          // Explicit message for 403 Forbidden
-          displayMessage = AppLocalizations.of(
-            context,
-          )!.accessDeniedAdminModify;
-        } else {
-          displayMessage = AppLocalizations.of(
-            context,
-          )!.errorUpdatingProfile(errorString.replaceAll('Exception: ', ''));
-        }
-
-        widget.showSnackBar(
-          context,
-          displayMessage,
-          errorColor,
-        ); // Use theme error color
+        _handleSubmissionError(e);
       }
     } finally {
       if (mounted) {
@@ -241,6 +207,48 @@ class _EditUserDialogState extends State<EditUserDialog> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  void _handleSubmissionError(Object e) {
+    String errorString = e.toString();
+
+    // --- CASE 1: Validation Error ---
+    if (e is ValidationException) {
+      setState(() {
+        // Map the errors: key -> first error message in list
+        e.errors.forEach((key, value) {
+          if (value is List && value.isNotEmpty) {
+            _serverErrors[key] = value.first.toString();
+          }
+        });
+      });
+      // Re-trigger validation to show the errors in the fields
+      _formKey.currentState!.validate();
+
+      widget.showSnackBar(
+        context,
+        'Please fill in all required fields correctly.',
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 2: Forbidden Error ---
+    else if (errorString.contains('403:')) {
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(context)!.accessDeniedAdminModify,
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 3: General Error ---
+    else {
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(
+          context,
+        )!.errorUpdatingProfile(errorString.replaceAll('Exception: ', '')),
+        Theme.of(context).colorScheme.error,
+      );
     }
   }
 

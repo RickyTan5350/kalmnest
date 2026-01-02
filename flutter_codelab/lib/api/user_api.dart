@@ -303,4 +303,3 @@ class ValidationException implements Exception {
     return 'ValidationException: $errors';
   }
 }
-

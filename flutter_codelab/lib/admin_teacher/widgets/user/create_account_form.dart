@@ -96,12 +96,13 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
 
   // Submission logic, mirroring _submitForm
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Clear previous server errors on new submission attempt
+    // 1. Reset Errors
     setState(() {
       _serverErrors.clear();
     });
+
+    // 2. Client-Side Validation
+    if (!_formKey.currentState!.validate()) return;
 
     // Additionally check if password and confirmation match if they are both filled
     if (_passwordController.text != _passwordConfirmationController.text) {
@@ -117,7 +118,6 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
       _isLoading = true;
     });
 
-    // --- UPDATED: Pass passwordConfirmation and roleName ---
     final data = UserData(
       email: _emailController.text,
       name: _nameController.text,
@@ -129,9 +129,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
           : null,
       gender: _selectedGender,
       password: _passwordController.text,
-      passwordConfirmation: _passwordConfirmationController.text, // <--- ADDED
+      passwordConfirmation: _passwordConfirmationController.text,
       accountStatus: _accountStatus,
-      roleName: _selectedRole!, // <--- RENAMED
+      roleName: _selectedRole!,
     );
 
     try {
@@ -143,50 +143,11 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
           AppLocalizations.of(context)!.userAccountCreatedSuccess,
           Colors.green,
         );
-      }
-    } on ValidationException catch (e) {
-      if (mounted) {
-        setState(() {
-          // Map the errors: key -> first error message in list
-          e.errors.forEach((key, value) {
-            if (value is List && value.isNotEmpty) {
-              _serverErrors[key] = value.first.toString();
-            }
-          });
-        });
-        // Re-trigger validation to show the errors in the fields
-        _formKey.currentState!.validate();
-
-        // Optional: Show a snackbar summary if you want, or trust the fields.
-        // For now, removing the generic validation snackbar to rely on inline errors.
+        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        final errorColor = Theme.of(
-          context,
-        ).colorScheme.error; // Standardize color
-        String errorString = e.toString();
-
-        if (errorString.startsWith('Exception: Network Error:')) {
-          // Handles connection refused, incorrect URL, etc.
-          final message = errorString.substring(
-            'Exception: Network Error:'.length,
-          );
-          widget.showSnackBar(
-            context,
-            AppLocalizations.of(context)!.networkErrorCheckApi,
-            errorColor,
-          );
-        } else {
-          // Generic or unexpected server error
-          widget.showSnackBar(
-            context,
-            AppLocalizations.of(
-              context,
-            )!.unknownErrorOccurred(errorString.replaceAll('Exception: ', '')),
-            errorColor,
-          );
-        }
+        _handleSubmissionError(e);
       }
     } finally {
       if (mounted) {
@@ -194,6 +155,49 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  void _handleSubmissionError(Object e) {
+    String errorString = e.toString();
+
+    // --- CASE 1: Validation Error ---
+    if (e is ValidationException) {
+      setState(() {
+        // Map the errors: key -> first error message in list
+        e.errors.forEach((key, value) {
+          if (value is List && value.isNotEmpty) {
+            _serverErrors[key] = value.first.toString();
+          }
+        });
+      });
+      // Re-trigger validation to show the errors in the fields
+      _formKey.currentState!.validate();
+
+      widget.showSnackBar(
+        context,
+        'Please fill in all required fields correctly.',
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 2: Network Error ---
+    else if (errorString.startsWith('Exception: Network Error:')) {
+      final message = errorString.substring('Exception: Network Error:'.length);
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(context)!.networkErrorCheckApi,
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 3: General Error ---
+    else {
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(
+          context,
+        )!.unknownErrorOccurred(errorString.replaceAll('Exception: ', '')),
+        Theme.of(context).colorScheme.error,
+      );
     }
   }
 
