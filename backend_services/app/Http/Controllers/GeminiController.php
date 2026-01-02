@@ -3,12 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Gemini\Laravel\Facades\Gemini;
-use Illuminate\Support\Facades\Log;
+use App\Services\GeminiService;
 use App\Models\ChatbotSession;
 use App\Models\ChatbotMessage;
-use App\Services\GeminiService;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class GeminiController extends Controller
 {
@@ -26,8 +25,8 @@ class GeminiController extends Controller
     public function getResponse(Request $request)
     {
         $request->validate([
-            'message' => 'required|string|max:1000',
-            'session_id' => 'nullable|uuid',
+            'message' => 'required|string',
+            'session_id' => 'nullable|string',
         ]);
 
         $userMessage = $request->input('message');
@@ -35,7 +34,7 @@ class GeminiController extends Controller
         $user = $request->user();
 
         try {
-            // 1. Get or Create Session
+            // 1. Create or Retrieve Session
             if (!$sessionId) {
                 $session = ChatbotSession::create([
                     'chatbot_session_id' => (string) Str::uuid(),
@@ -71,9 +70,9 @@ class GeminiController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'ai_response' => $aiResponse,
-                'session_id' => $sessionId,
-            ], 200);
+                'ai_response' => $aiResponseText,
+                'session_id' => $sessionId, // Return UUID
+            ]);
 
         } catch (\Throwable $e) {
             Log::error("Gemini Chat Error: " . $e->getMessage(), [

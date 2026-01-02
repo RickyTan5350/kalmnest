@@ -5,7 +5,8 @@ class Attachment {
   final String url; // holds the web address (URL)
 }
 
-class Email {  //single email
+class Email {
+  //single email
   const Email({
     required this.sender,
     required this.recipients,
@@ -32,7 +33,8 @@ class Name {
   String get fullName => '$first $last'; // getter combine first and lastname
 }
 
-class User {      //single user
+class User {
+  //single user
   const User({
     required this.name,
     required this.avatarUrl,

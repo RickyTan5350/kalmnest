@@ -69,6 +69,7 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
                       : null) ??
                   'Unknown',
               teacherId: fb['teacher_id'] ?? '',
+              topicId: fb['topic_id']?.toString() ?? '',
               topic: fb['topic'] ?? '',
               feedback: fb['feedback'] ?? '',
               createdAt:

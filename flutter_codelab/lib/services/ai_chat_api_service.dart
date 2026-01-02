@@ -57,6 +57,7 @@ class AiChatApiService {
       rethrow;
     }
   }
+<<<<<<< HEAD
   /// Get all chat sessions for the current user (History)
   Future<List<Map<String, dynamic>>> getSessions() async {
     try {
@@ -77,10 +78,17 @@ class AiChatApiService {
 
   /// Get messages for a specific session
   Future<List<Map<String, dynamic>>> getSessionMessages(String sessionId) async {
+=======
+
+  Future<List<Map<String, dynamic>>> getSessionMessages(
+    String sessionId,
+  ) async {
+>>>>>>> 9781fd312f86e3acdd7af249727fa864683b259a
     try {
       final response = await _dio.get('/chat/sessions/$sessionId/messages');
 
       if (response.statusCode == 200) {
+<<<<<<< HEAD
          final data = response.data;
          if (data['status'] == 'success') {
            return List<Map<String, dynamic>>.from(data['messages']);
@@ -100,6 +108,54 @@ class AiChatApiService {
     } catch (e) {
       print('Error deleting session: $e');
       throw Exception('Failed to delete chat');
+=======
+        final data = response.data;
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        } else if (data['status'] == 'success' && data['messages'] is List) {
+          return List<Map<String, dynamic>>.from(data['messages']);
+        }
+        return [];
+      } else {
+        throw Exception(
+          'Failed to load messages (Code: ${response.statusCode})',
+        );
+      }
+    } catch (e) {
+      throw Exception('Failed to load messages: $e');
+    }
+  }
+
+  Future<void> deleteSession(String sessionId) async {
+    try {
+      final response = await _dio.delete('/chat/sessions/$sessionId');
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to delete session (Code: ${response.statusCode})',
+        );
+      }
+    } catch (e) {
+      throw Exception('Failed to delete session: $e');
+    }
+  }
+
+  Future<List<dynamic>> getSessions() async {
+    try {
+      final response = await _dio.get('/chat/sessions');
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is List) {
+          return data;
+        } else if (data['sessions'] is List) {
+          return data['sessions'];
+        }
+        return [];
+      } else {
+        throw Exception('Failed to load sessions');
+      }
+    } catch (e) {
+      throw Exception('Failed to load sessions: $e');
+>>>>>>> 9781fd312f86e3acdd7af249727fa864683b259a
     }
   }
 }

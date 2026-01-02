@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_codelab/api/achievement_api.dart';
@@ -64,6 +65,19 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     'Level 5',
   ];
 
+  // Undo/Redo State
+  final List<_FormStateData> _undoStack = [];
+  final List<_FormStateData> _redoStack = [];
+  Timer? _debounceTimer;
+
+  _FormStateData get _currentSnapshot => _FormStateData(
+    name: _achievementNameController.text,
+    title: _achievementTitleController.text,
+    description: _achievementDescriptionController.text,
+    icon: _selectedIcon,
+    level: _selectedLevel,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -95,6 +109,74 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     _achievementTitleController.addListener(() {
       if (_titleError != null) setState(() => _titleError = null);
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _saveSnapshot(force: true);
+    });
+  }
+
+  void _saveSnapshot({bool force = false}) {
+    if (force) {
+      _debounceTimer?.cancel();
+      _pushUndo();
+      return;
+    }
+
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), _pushUndo);
+  }
+
+  void _pushUndo() {
+    if (!mounted) return;
+    final current = _currentSnapshot;
+    if (_undoStack.isNotEmpty && _undoStack.last == current) return;
+
+    setState(() {
+      _undoStack.add(current);
+      _redoStack.clear();
+      if (_undoStack.length > 50) _undoStack.removeAt(0);
+    });
+  }
+
+  void _undo() {
+    if (_undoStack.isEmpty) return;
+
+    final currentTip = _currentSnapshot;
+
+    if (_undoStack.isNotEmpty && _undoStack.last == currentTip) {
+      _undoStack.removeLast();
+    }
+
+    if (_undoStack.isEmpty) return;
+
+    _redoStack.add(currentTip);
+
+    final previous = _undoStack.last;
+    _applySnapshot(previous);
+  }
+
+  void _redo() {
+    if (_redoStack.isEmpty) return;
+
+    final next = _redoStack.removeLast();
+    _undoStack.add(next);
+    _applySnapshot(next);
+  }
+
+  void _applySnapshot(_FormStateData data) {
+    setState(() {
+      if (_achievementNameController.text != data.name) {
+        _achievementNameController.text = data.name;
+      }
+      if (_achievementTitleController.text != data.title) {
+        _achievementTitleController.text = data.title;
+      }
+      if (_achievementDescriptionController.text != data.description) {
+        _achievementDescriptionController.text = data.description;
+      }
+      _selectedIcon = data.icon;
+      _selectedLevel = data.level;
+    });
   }
 
   Future<void> _fetchExistingAchievements() async {
@@ -115,6 +197,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     _achievementNameController.dispose();
     _achievementTitleController.dispose();
     _achievementDescriptionController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -280,6 +363,16 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
         const SingleActivator(LogicalKeyboardKey.escape): () {
           Navigator.of(context).maybePop();
         },
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () {
+          _undo();
+        },
+        const SingleActivator(
+          LogicalKeyboardKey.keyZ,
+          control: true,
+          shift: true,
+        ): () {
+          _redo();
+        },
       },
       child: Focus(
         autofocus: true,
@@ -318,6 +411,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                           colorScheme: colorScheme,
                           errorText: _nameError, // Server error
                         ),
+                        onChanged: (value) => _saveSnapshot(),
                         validator: (value) {
                           if (_nameError != null)
                             return _nameError; // Server error priority
@@ -349,6 +443,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                           colorScheme: colorScheme,
                           errorText: _titleError, // Server error
                         ),
+                        onChanged: (value) => _saveSnapshot(),
                         validator: (value) {
                           if (_titleError != null) return _titleError;
 
@@ -379,6 +474,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                           colorScheme: colorScheme,
                         ),
                         maxLines: 3,
+                        onChanged: (value) => _saveSnapshot(),
                         validator: (value) => value!.isEmpty
                             ? 'Please enter a description'
                             : null,
@@ -410,7 +506,12 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                             ),
                           );
                         }).toList(),
-                        onChanged: (val) => setState(() => _selectedIcon = val),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedIcon = val;
+                            _saveSnapshot(force: true);
+                          });
+                        },
                         validator: (val) =>
                             val == null ? 'Please select an icon' : null,
                       ),
@@ -429,8 +530,12 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                         items: _levels.map((val) {
                           return DropdownMenuItem(value: val, child: Text(val));
                         }).toList(),
-                        onChanged: (val) =>
-                            setState(() => _selectedLevel = val),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedLevel = val;
+                            _saveSnapshot(force: true);
+                          });
+                        },
                       ),
                       const SizedBox(height: 24),
 
@@ -525,3 +630,32 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
   }
 }
 
+class _FormStateData {
+  final String name;
+  final String title;
+  final String description;
+  final String? icon;
+  final String? level;
+
+  _FormStateData({
+    required this.name,
+    required this.title,
+    required this.description,
+    this.icon,
+    this.level,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _FormStateData &&
+        other.name == name &&
+        other.title == title &&
+        other.description == description &&
+        other.icon == icon &&
+        other.level == level;
+  }
+
+  @override
+  int get hashCode => Object.hash(name, title, description, icon, level);
+}
