@@ -58,7 +58,6 @@ class _NotePageState extends State<NotePage> {
 
   @override
   void dispose() {
-    _searchFocusNode.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -81,9 +80,6 @@ class _NotePageState extends State<NotePage> {
       setState(() {
         _selectedTopic = newTopic;
       });
-    }
-  }
-
     }
   }
 
@@ -197,9 +193,7 @@ class _NotePageState extends State<NotePage> {
                                   selected: _selectedTopic == topic,
                                   onSelected: (selected) {
                                     if (selected) {
-                                    if (selected) {
                                       setState(() => _selectedTopic = topic);
-                                    }
                                     }
                                   },
                                 ),
