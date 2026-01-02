@@ -1,3 +1,4 @@
+import 'dart:convert'; // Added for JSON parsing
 import 'package:flutter/material.dart';
 import 'package:code_play/api/user_api.dart';
 import 'package:code_play/utils/formatters.dart';
@@ -42,7 +43,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _passwordConfirmationController =
-      TextEditingController(); // <--- ADDED: Controller for password confirmation
+      TextEditingController();
 
   // Variables
   String? _selectedGender;
@@ -64,8 +65,86 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     _phoneNoController.dispose();
     _addressController.dispose();
     _passwordController.dispose();
-    _passwordConfirmationController.dispose(); // <--- ADDED to dispose list
+    _passwordConfirmationController.dispose();
     super.dispose();
+  }
+
+  // --- NEW: JSON Autofill Logic ---
+  void _attemptJsonAutofill(String value) {
+    value = value.trim();
+    if ((value.startsWith('{') && value.endsWith('}')) ||
+        (value.startsWith('[') && value.endsWith(']'))) {
+      try {
+        // Handle potentially wrapped JSON (e.g. [ { ... } ])
+        dynamic decoded = jsonDecode(value);
+        if (decoded is List && decoded.isNotEmpty) {
+          decoded = decoded.first;
+        }
+
+        if (decoded is Map<String, dynamic>) {
+          setState(() {
+            if (decoded.containsKey('name'))
+              _nameController.text = decoded['name'] ?? '';
+            if (decoded.containsKey('email'))
+              _emailController.text = decoded['email'] ?? '';
+            if (decoded.containsKey('phone_no'))
+              _phoneNoController.text = decoded['phone_no'] ?? '';
+            if (decoded.containsKey('address'))
+              _addressController.text = decoded['address'] ?? '';
+
+            // Handle Role
+            if (decoded.containsKey('role')) {
+              String role = decoded['role'].toString();
+              // Capitalize first letter to match dropdown values
+              if (role.isNotEmpty) {
+                role = role[0].toUpperCase() + role.substring(1).toLowerCase();
+                if (_roles.contains(role)) {
+                  _selectedRole = role;
+                }
+              }
+            } else if (decoded.containsKey('roleName')) {
+              // Handle roleName key variation
+              String role = decoded['roleName'].toString();
+              if (role.isNotEmpty) {
+                role = role[0].toUpperCase() + role.substring(1).toLowerCase();
+                if (_roles.contains(role)) {
+                  _selectedRole = role;
+                }
+              }
+            }
+
+            // Handle Gender
+            if (decoded.containsKey('gender')) {
+              String gender = decoded['gender'].toString().toLowerCase();
+              if (_genders.contains(gender)) {
+                _selectedGender = gender;
+              }
+            }
+
+            // Handle Status
+            if (decoded.containsKey('accountStatus')) {
+              var status = decoded['accountStatus'];
+              if (status is bool) {
+                _accountStatus = status;
+              } else if (status is String) {
+                _accountStatus = status.toLowerCase() == 'active';
+              } else if (status is int) {
+                _accountStatus = status == 1; // Assuming 1 is active
+              }
+            }
+          });
+
+          widget.showSnackBar(
+            context,
+            'Form autofilled from pasted JSON',
+            Colors.green,
+          );
+        }
+      } catch (e) {
+        // Not valid JSON, ignore silently or maybe log
+        // print('Paste detected but invalid JSON: $e');
+      }
+    }
   }
 
   String _getLocalizedGender(String gender) {
@@ -279,6 +358,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     return null;
                   },
                   onChanged: (value) {
+                    _attemptJsonAutofill(value); // <--- JSON Check
                     if (_serverErrors.containsKey('name')) {
                       setState(() => _serverErrors.remove('name'));
                     }
@@ -297,6 +377,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                   onChanged: (value) {
+                    _attemptJsonAutofill(value); // <--- JSON Check
                     if (_serverErrors.containsKey('email')) {
                       setState(() => _serverErrors.remove('email'));
                     }
