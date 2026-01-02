@@ -1,3 +1,4 @@
 {
-  "cmake.sourceDirectory": "D:/Github_Project/kalmnest/flutter_codelab/linux/runner"
+  "cmake.sourceDirectory": "D:/Github_Project/kalmnest/flutter_codelab/linux/runner",
+  "java.configuration.updateBuildConfiguration": "interactive"
 }
