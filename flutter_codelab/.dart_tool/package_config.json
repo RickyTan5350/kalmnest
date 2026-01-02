@@ -278,6 +278,12 @@
       "languageVersion": "3.8"
     },
     {
+      "name": "flutter_markdown",
+      "rootUri": "file:///C:/Users/User/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_markdown-0.7.7+1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "flutter_markdown_plus",
       "rootUri": "file:///C:/Users/User/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_markdown_plus-1.0.5",
       "packageUri": "lib/",

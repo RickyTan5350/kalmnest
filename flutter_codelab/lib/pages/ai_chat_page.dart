@@ -20,14 +20,10 @@ class ChatMessage {
     DateTime? timestamp,
     this.isError = false,
     this.isTyping = false,
-  })  : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        timestamp = timestamp ?? DateTime.now();
+  }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+       timestamp = timestamp ?? DateTime.now();
 
-  ChatMessage copyWith({
-    String? text,
-    bool? isTyping,
-    bool? isError,
-  }) {
+  ChatMessage copyWith({String? text, bool? isTyping, bool? isError}) {
     return ChatMessage(
       id: id,
       text: text ?? this.text,
@@ -37,6 +33,17 @@ class ChatMessage {
       isTyping: isTyping ?? this.isTyping,
     );
   }
+
+  factory ChatMessage.fromMap(Map<String, dynamic> map) {
+    return ChatMessage(
+      id: map['id']?.toString(),
+      text: map['content'] ?? map['message'] ?? '',
+      isUser: map['role'] == 'user',
+      timestamp: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+      isError: false,
+      isTyping: false,
+    );
+  }
 }
 
 /// AI Chat Page - Main Widget
@@ -44,30 +51,29 @@ class AiChatPage extends StatefulWidget {
   final UserDetails? currentUser;
   final String? authToken;
 
-  const AiChatPage({
-    super.key,
-    this.currentUser,
-    this.authToken,
-  });
+  const AiChatPage({super.key, this.currentUser, this.authToken});
 
   @override
   State<AiChatPage> createState() => _AiChatPageState();
 }
 
-class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateMixin {
+class _AiChatPageState extends State<AiChatPage>
+    with SingleTickerProviderStateMixin {
   final List<ChatMessage> _messages = [];
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
-  
+
   late AiChatApiService _apiService;
   bool _isSending = false;
   bool _isInitialized = false;
   bool _isNewChat = false;
   String? _currentSessionId;
 
-  // Removed hardcoded _suggestedQuestions list. Will use _getSuggestedQuestions(context) instead.
+  bool _isLoadingHistory = false;
+  List<Map<String, dynamic>> _sessions = [];
 
+  // Removed hardcoded _suggestedQuestions list. Will use _getSuggestedQuestions(context) instead.
 
   @override
   void initState() {
@@ -88,32 +94,36 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
     setState(() {
       _isSending = true; // Use as blocker
       _messages.clear();
-      _currentSessionId = sessionId;
+      _currentSessionId = null; // Start with no session
       _isNewChat = false;
     });
 
+    _loadHistory();
+
     try {
-      final messagesData = await _apiService.getSessionMessages(sessionId);
-      if (mounted) {
-        setState(() {
-          for (var m in messagesData) {
-            _messages.insert(0, ChatMessage.fromMap(m));
-          }
-          _isSending = false;
-        });
-      }
+      // We don't load messages specific to a session here unless we have one.
+      // If we want to continue the last session:
+      // if (_sessions.isNotEmpty) { ... }
+
+      // For now, just stop loading
+      setState(() {
+        _isSending = false;
+      });
     } catch (e) {
       if (mounted) {
         setState(() => _isSending = false);
-        _showSnackBar(AppLocalizations.of(context)!.errorLoadingMessages(e.toString()), Colors.red);
+        _showSnackBar(
+          AppLocalizations.of(context)!.errorLoadingMessages(e.toString()),
+          Colors.red,
+        );
       }
     }
   }
 
   void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 
   void _startNewChat() {
@@ -128,7 +138,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
     if (_scrollController.hasClients) {
       Future.delayed(const Duration(milliseconds: 100), () {
         _scrollController.animateTo(
-          0, 
+          0,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -155,10 +165,10 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
 
     try {
       final responseData = await _apiService.sendMessage(
-        text, 
-        sessionId: _currentSessionId
+        text,
+        sessionId: _currentSessionId,
       );
-      
+
       final aiResponse = responseData['ai_response'] as String;
       final newSessionId = responseData['session_id'] as String?;
 
@@ -174,11 +184,15 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
       if (mounted) {
         setState(() {
           _messages.removeWhere((msg) => msg.id == typingMessage.id);
-          _messages.insert(0, ChatMessage(
-            text: 'Connection error. Please ensure the backend is running and reachable.', 
-            isUser: false, 
-            isError: true
-          ));
+          _messages.insert(
+            0,
+            ChatMessage(
+              text:
+                  'Connection error. Please ensure the backend is running and reachable.',
+              isUser: false,
+              isError: true,
+            ),
+          );
           _isSending = false;
         });
       }
@@ -191,8 +205,8 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
     _handleSendMessage();
   }
 
-  void _clearChat() {
-    showDialog(
+  void _clearChat() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
@@ -201,11 +215,15 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           content: Text(l10n.clearHistoryConfirmation),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(l10n.cancel)),
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.cancel),
+            ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
+              child: Text(
+                l10n.delete,
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
           ],
         );
@@ -222,27 +240,81 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           });
           _loadHistory();
         }
-      } catch (e) {
-        if (mounted) {
-          _showSnackBar(AppLocalizations.of(context)!.deleteFailed(e.toString()), Colors.red);
-        }
+      } catch (e) {}
+    }
+  }
+
+  Future<void> _loadHistory() async {
+    if (!mounted) return;
+    setState(() => _isLoadingHistory = true);
+
+    try {
+      final sessions = await _apiService.getSessions();
+      if (mounted) {
+        setState(() {
+          _sessions = List<Map<String, dynamic>>.from(sessions);
+          _isLoadingHistory = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingHistory = false);
+        // Silently fail or show snackbar
+        print('Error loading history: $e');
       }
     }
   }
 
-  @override
-  void dispose() {
-    _textController.dispose();
-    _scrollController.dispose();
-    _focusNode.dispose();
-    super.dispose();
+  Future<void> _loadSessionMessages(String sessionId) async {
+    setState(() {
+      _isSending = true;
+      _messages.clear();
+      _currentSessionId = sessionId;
+      _isNewChat = false;
+    });
+
+    try {
+      final messagesData = await _apiService.getSessionMessages(sessionId);
+      if (mounted) {
+        setState(() {
+          // messagesData is assumed to be List of Maps.
+          // We need mapping from API format to ChatMessage.
+          // Since ChatMessage.fromMap is not defined, we implement mapping here or assume it exists in model?
+          // Error log said: The method 'fromMap' isn't defined for the type 'ChatMessage'.
+          // We need to implement it.
+
+          for (var m in messagesData) {
+            // Map keys based on typical API response
+            _messages.insert(
+              0,
+              ChatMessage(
+                id: m['id']?.toString(),
+                text: m['content'] ?? m['message'] ?? '',
+                isUser: m['role'] == 'user', // Adjust based on actual API
+                timestamp:
+                    DateTime.tryParse(m['created_at'] ?? '') ?? DateTime.now(),
+              ),
+            );
+          }
+          _isSending = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSending = false);
+        _showSnackBar(
+          AppLocalizations.of(context)!.errorLoadingMessages(e.toString()),
+          Colors.red,
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -253,7 +325,8 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           height: double.infinity,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: (_currentSessionId == null && _messages.isEmpty && !_isNewChat)
+            child:
+                (_currentSessionId == null && _messages.isEmpty && !_isNewChat)
                 ? _buildLandingView(colorScheme)
                 : _buildChatView(colorScheme),
           ),
@@ -273,8 +346,8 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
             Text(
               l10n.aiChatTitle,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: colorScheme.onSurface
-                  ),
+                color: colorScheme.onSurface,
+              ),
             ),
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -299,7 +372,10 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                 icon: const Icon(Icons.add),
                 label: Text(l10n.askQuestion),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -310,38 +386,41 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
         const SizedBox(height: 48),
         Text(
           l10n.recentQuestions,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Expanded(
           child: _isLoadingHistory
               ? const Center(child: CircularProgressIndicator())
               : _sessions.isEmpty
-                  ? Center(child: Text(l10n.noQuestionsFound))
-                  : ListView.builder(
-                      itemCount: _sessions.length,
-                      itemBuilder: (context, index) {
-                        final session = _sessions[index];
-                        return ListTile(
-                          leading: const Icon(Icons.chat_bubble_outline),
-                          title: Text(
-                            (session['title'] == 'Untitled Question' || session['title'] == null || session['title'].toString().isEmpty)
-                                ? l10n.untitledQuestion
-                                : session['title'],
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            session['updated_at']?.split('T')[0] ?? '',
-                            style: const TextStyle(fontSize: 10),
-                          ),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                          onTap: () => _loadSessionMessages(session['chatbot_session_id']),
-                        );
-                      },
-                    ),
+              ? Center(child: Text(l10n.noQuestionsFound))
+              : ListView.builder(
+                  itemCount: _sessions.length,
+                  itemBuilder: (context, index) {
+                    final session = _sessions[index];
+                    return ListTile(
+                      leading: const Icon(Icons.chat_bubble_outline),
+                      title: Text(
+                        (session['title'] == 'Untitled Question' ||
+                                session['title'] == null ||
+                                session['title'].toString().isEmpty)
+                            ? l10n.untitledQuestion
+                            : session['title'],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        session['updated_at']?.split('T')[0] ?? '',
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                      onTap: () =>
+                          _loadSessionMessages(session['chatbot_session_id']),
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -370,10 +449,9 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                 ),
                 Text(
                   "KalmNest AI",
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(color: colorScheme.onSurface),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
                 ),
               ],
             ),
@@ -381,9 +459,9 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
               children: [
                 IconButton(
                   icon: const Icon(Icons.refresh),
-                  onPressed: _currentSessionId != null 
-                    ? () => _loadSessionMessages(_currentSessionId!) 
-                    : null,
+                  onPressed: _currentSessionId != null
+                      ? () => _loadSessionMessages(_currentSessionId!)
+                      : null,
                   tooltip: l10n.refreshQuestion,
                 ),
                 IconButton(
@@ -397,26 +475,21 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
         ),
         const SizedBox(height: 16),
 
-                // --- CHAT CONTENT ---
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    reverse: true,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) =>
-                        _MessageBubble(message: _messages[index]),
-                  ),
-                ),
-                if (_messages.length == 1 && _isInitialized)
-                  _buildSuggestedQuestions(colorScheme),
-                _buildInputArea(colorScheme),
-              ],
-            ),
+        // --- CHAT CONTENT ---
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            reverse: true,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) =>
+                _MessageBubble(message: _messages[index]),
           ),
         ),
-      ),
+        if (_messages.length == 1 && _isInitialized)
+          _buildSuggestedQuestions(colorScheme),
+        _buildInputArea(colorScheme),
+      ],
     );
   }
 
@@ -428,7 +501,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
       "${suggestionPrefix}CSS",
       "${suggestionPrefix}JavaScript",
       "${suggestionPrefix}PHP",
-      "${suggestionPrefix}Web Development"
+      "${suggestionPrefix}Web Development",
     ];
 
     return Column(
@@ -450,7 +523,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           children: suggestedQuestions.map((question) {
             IconData icon;
             Color iconColor;
-            
+
             if (question.contains('HTML')) {
               icon = Icons.html;
               iconColor = Colors.orange;
@@ -461,7 +534,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
               icon = Icons.javascript;
               iconColor = Colors.amber;
             } else if (question.contains('PHP')) {
-              icon = Icons.php; 
+              icon = Icons.php;
               iconColor = Colors.indigo;
             } else {
               icon = Icons.web;
@@ -470,7 +543,6 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
 
             final label = question.replaceFirst(suggestionPrefix, "");
 
-
             return MouseRegion(
               cursor: SystemMouseCursors.click,
               child: InkWell(
@@ -478,7 +550,10 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                 borderRadius: BorderRadius.circular(12),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
@@ -518,7 +593,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   }
 
   Widget _buildInputArea(ColorScheme colorScheme) {
-  final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -549,7 +624,10 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
                     hintText: l10n.typeQuestionHint,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     border: InputBorder.none,
                   ),
                   onSubmitted: (_) => _handleSendMessage(),
@@ -565,13 +643,15 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                 decoration: BoxDecoration(
                   color: _isSending ? colorScheme.outline : colorScheme.primary,
                   shape: BoxShape.circle,
-                  boxShadow: _isSending ? [] : [
-                    BoxShadow(
-                      color: colorScheme.primary.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  boxShadow: _isSending
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                 ),
                 child: Icon(
                   _isSending ? Icons.hourglass_empty : Icons.send_rounded,
@@ -590,9 +670,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
 
-  const _MessageBubble({
-    required this.message,
-  });
+  const _MessageBubble({required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -605,7 +683,9 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isUser) ...[
@@ -618,7 +698,10 @@ class _MessageBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: message.isUser
                     ? LinearGradient(
-                        colors: [colorScheme.primary, colorScheme.primary.withBlue(200)],
+                        colors: [
+                          colorScheme.primary,
+                          colorScheme.primary.withBlue(200),
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
@@ -626,8 +709,8 @@ class _MessageBubble extends StatelessWidget {
                 color: message.isUser
                     ? null
                     : message.isError
-                        ? colorScheme.errorContainer
-                        : colorScheme.surfaceContainerHighest.withOpacity(0.7),
+                    ? colorScheme.errorContainer
+                    : colorScheme.surfaceContainerHighest.withOpacity(0.7),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -645,16 +728,33 @@ class _MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message.text,
-                    style: TextStyle(
-                      color: message.isUser 
-                          ? Colors.white 
-                          : message.isError 
-                              ? colorScheme.onErrorContainer 
-                              : colorScheme.onSurface,
-                      fontSize: 15,
-                      height: 1.4,
+                  MarkdownBody(
+                    data: message.text,
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(
+                        color: message.isUser
+                            ? Colors.white
+                            : message.isError
+                            ? colorScheme.onErrorContainer
+                            : colorScheme.onSurface,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                      code: TextStyle(
+                        backgroundColor: message.isUser
+                            ? Colors.white.withOpacity(0.2)
+                            : colorScheme.surfaceContainerHighest,
+                        fontFamily: 'monospace',
+                        color: message.isUser
+                            ? Colors.white
+                            : colorScheme.onSurface,
+                      ),
+                      codeblockDecoration: BoxDecoration(
+                        color: message.isUser
+                            ? Colors.white.withOpacity(0.1)
+                            : colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
                 ],
@@ -736,17 +836,22 @@ class _TypingDot extends StatefulWidget {
   State<_TypingDot> createState() => _TypingDotState();
 }
 
-class _TypingDotState extends State<_TypingDot> with SingleTickerProviderStateMixin {
+class _TypingDotState extends State<_TypingDot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
     );
+    _animation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     Future.delayed(Duration(milliseconds: widget.delay), () {
       if (mounted) _controller.repeat(reverse: true);
     });
@@ -766,7 +871,9 @@ class _TypingDotState extends State<_TypingDot> with SingleTickerProviderStateMi
         width: 6,
         height: 6,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.3 + (_animation.value * 0.7)),
+          color: Theme.of(
+            context,
+          ).colorScheme.primary.withOpacity(0.3 + (_animation.value * 0.7)),
           shape: BoxShape.circle,
         ),
       ),

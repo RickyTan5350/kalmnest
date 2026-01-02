@@ -386,7 +386,8 @@ class _FeedState extends State<Feed> {
         currentUser: widget.currentUser,
       ), // Index 6
     ];
-    // --- END OF FIX ---
+
+    bool isChatPage = selectedIndex == 5;
 
     return Scaffold(
       backgroundColor:
@@ -425,7 +426,6 @@ class _FeedState extends State<Feed> {
                     },
                     isExtended: _isRailExtended,
                     onAddButtonPressed: isChatPage ? null : _onAddButtonPressed,
-                    destinations: filteredDestinations,
                   ),
                 Expanded(
                   child: Container(
@@ -472,4 +472,3 @@ class MyHttpOverrides extends HttpOverrides {
           (X509Certificate cert, String host, int port) => true;
   }
 }
-

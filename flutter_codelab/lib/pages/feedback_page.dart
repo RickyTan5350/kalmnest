@@ -65,6 +65,10 @@ class _FeedbackPageState extends State<FeedbackPage> {
     // _teachers = await _apiService.getTeachers();
   }
 
+  void _handleRefresh() {
+    _loadFeedback();
+  }
+
   Future<void> _loadFeedback() async {
     setState(() {
       _isLoading = true;

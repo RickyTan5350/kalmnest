@@ -84,16 +84,10 @@ class GeminiController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
             
-        return response()->json($sessions); // Return list directly or wrapped? 
-        // Diff showed: return response()->json(['status' => 'success', 'sessions' => $sessions]);
-        // I will stick to that format.
-        // Actually, let's match the diff's format:
-        /*
         return response()->json([
             'status' => 'success',
             'sessions' => $sessions
         ]);
-        */
     }
 
     public function getMessages(Request $request, $sessionId)

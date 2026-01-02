@@ -92,4 +92,23 @@ class AiChatApiService {
       throw Exception('Failed to delete session: $e');
     }
   }
+
+  Future<List<dynamic>> getSessions() async {
+    try {
+      final response = await _dio.get('/chat/sessions');
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is List) {
+          return data;
+        } else if (data['sessions'] is List) {
+          return data['sessions'];
+        }
+        return [];
+      } else {
+        throw Exception('Failed to load sessions');
+      }
+    } catch (e) {
+      throw Exception('Failed to load sessions: $e');
+    }
+  }
 }
