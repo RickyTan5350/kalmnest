@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:code_play/api/user_api.dart';
 import 'package:code_play/models/user_data.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-// import 'edit_user_dialog.dart';
+import 'edit_user_dialog.dart';
 import 'package:code_play/api/achievement_api.dart';
 import 'package:code_play/models/achievement_data.dart';
 import 'package:code_play/constants/achievement_constants.dart';
@@ -163,29 +163,19 @@ class _UserDetailPageState extends State<UserDetailPage> {
   }
 
   Future<void> _editUser(UserDetails user) async {
-    // TODO: Edit user dialog was removed - need to implement alternative edit functionality
-    // The edit_user_dialog.dart file was deleted during merge
-    // For now, show a message that edit functionality is not available
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.editUserProfile),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+    final bool? refreshed = await showEditUserDialog(
+      context: context,
+      initialData: user,
+      isSelfEdit: widget.isSelfProfile,
+      showSnackBar: (ctx, msg, color) {
+        ScaffoldMessenger.of(
+          ctx,
+        ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+      },
+    );
+    if (refreshed == true) {
+      _fetchUserDetails();
     }
-    // Original implementation:
-    // final bool? refreshed = await showEditUserDialog(
-    //   context: context,
-    //   initialData: user,
-    //   isSelfEdit: widget.isSelfProfile,
-    //   showSnackBar: (ctx, msg, color) {
-    //     ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
-    //   },
-    // );
-    // if (refreshed == true) {
-    //   _fetchUserDetails();
-    // }
   }
 
   Future<bool> _confirmDelete() async {
