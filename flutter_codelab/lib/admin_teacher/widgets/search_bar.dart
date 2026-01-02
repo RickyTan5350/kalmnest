@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter_codelab/models/models.dart';
+import 'package:code_play/models/models.dart';
 
 class SearchBar extends StatelessWidget {
   const SearchBar({super.key, required this.currentUser});

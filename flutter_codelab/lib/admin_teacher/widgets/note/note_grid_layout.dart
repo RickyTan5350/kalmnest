@@ -1,7 +1,7 @@
 // lib/widgets/note_grid_layout.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/grid_layout_view.dart';
-import 'package:flutter_codelab/theme.dart';
+import 'package:code_play/admin_teacher/widgets/grid_layout_view.dart';
+import 'package:code_play/theme.dart';
 
 class NoteGridLayout extends StatelessWidget {
   final List<Map<String, dynamic>> notes; // Renamed for clarity

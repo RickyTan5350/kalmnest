@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
-import 'package:flutter_codelab/api/note_api.dart';
+import 'package:code_play/api/note_api.dart';
 // Make sure this import path matches where you created the file above
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/constants/api_constants.dart';
 
-import 'package:flutter_codelab/admin_teacher/widgets/note/run_code_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
+import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
 import 'package:path/path.dart' as p;
-import 'package:flutter_codelab/student/widgets/note/pdf_service.dart';
+import 'package:code_play/student/widgets/note/pdf_service.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'dart:convert';
-import 'package:flutter_codelab/admin_teacher/widgets/note/quiz_widget.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:flutter_codelab/utils/brand_color_extension.dart';
+import 'package:code_play/admin_teacher/widgets/note/quiz_widget.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/utils/brand_color_extension.dart';
 
 class StudentNoteDetailPage extends StatefulWidget {
   final String noteId;

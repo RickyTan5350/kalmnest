@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:flutter_codelab/student/services/local_achievement_storage.dart';
+import 'package:code_play/student/services/local_achievement_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/constants/api_constants.dart';
 import 'auth_api.dart';
 
 //server URL: set your own

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/models/user_data.dart';
 
 // 1. Import Admin View normally
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_view_note_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/admin_view_note_page.dart';
 
 // 2. Import Student View
-import 'package:flutter_codelab/student/widgets/note/student_view_page.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart'; // Shared Enums
-import 'package:flutter_codelab/constants/view_layout.dart'; // Shared ViewLayout
-import 'package:flutter_codelab/services/layout_preferences.dart'; // Layout Persistence
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/student/widgets/note/student_view_page.dart';
+import 'package:code_play/enums/sort_enums.dart'; // Shared Enums
+import 'package:code_play/constants/view_layout.dart'; // Shared ViewLayout
+import 'package:code_play/services/layout_preferences.dart'; // Layout Persistence
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class NotePage extends StatefulWidget {
   final UserDetails currentUser;

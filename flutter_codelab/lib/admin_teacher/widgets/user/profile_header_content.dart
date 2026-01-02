@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart'; // ADDED
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
-import 'package:flutter_codelab/pages/help_support_pages.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
-import 'package:flutter_codelab/widgets/language_selector.dart';
-import 'package:flutter_codelab/widgets/user_avatar.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/widgets/user/user_detail_page.dart';
+import 'package:code_play/pages/help_support_pages.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/language_selector.dart';
+import 'package:code_play/widgets/user_avatar.dart';
 
 class ProfileHeaderContent extends StatelessWidget {
   final UserDetails currentUser;
