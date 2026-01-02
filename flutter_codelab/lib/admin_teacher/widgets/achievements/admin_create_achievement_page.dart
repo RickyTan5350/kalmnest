@@ -1,4 +1,5 @@
 import 'dart:convert'; // Required for jsonDecode
+import 'dart:async'; // Required for Timer
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -89,6 +90,20 @@ class _AdminCreateAchievementDialogState
 
   List<LevelModel> _levels = [];
 
+  // Undo/Redo State
+  final List<_FormStateData> _undoStack = [];
+  final List<_FormStateData> _redoStack = [];
+  Timer? _debounceTimer;
+
+  _FormStateData get _currentSnapshot => _FormStateData(
+    name: _achievementNameController.text,
+    title: _achievementTitleController.text,
+    description: _achievementDescriptionController.text,
+    icon: _selectedIcon,
+    levelId: _selectedLevel,
+    levelName: _levelDisplayController.text,
+  );
+
   List<LevelModel> get _filteredLevels {
     if (_selectedIcon == null) return _levels;
     return _levels.where((l) {
@@ -138,13 +153,133 @@ class _AdminCreateAchievementDialogState
       }
     }
 
-    // Clear errors when the user starts typing
+    // Clear errors and check for JSON paste when the user starts typing name
     _achievementNameController.addListener(() {
       if (_nameError != null) setState(() => _nameError = null);
       _checkForJsonPaste();
     });
+
     _achievementTitleController.addListener(() {
       if (_titleError != null) setState(() => _titleError = null);
+    });
+
+    // Initial snapshot
+    // Using simple Future to allow fields to populate first if any sync logic runs
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _saveSnapshot(force: true);
+    });
+  }
+
+  void _saveSnapshot({bool force = false}) {
+    if (force) {
+      _debounceTimer?.cancel();
+      _pushUndo();
+      return;
+    }
+
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), _pushUndo);
+  }
+
+  void _pushUndo() {
+    if (!mounted) return;
+    final current = _currentSnapshot;
+    // Don't push if same as top of stack
+    if (_undoStack.isNotEmpty && _undoStack.last == current) return;
+
+    setState(() {
+      _undoStack.add(current);
+      _redoStack.clear();
+      if (_undoStack.length > 50) _undoStack.removeAt(0);
+    });
+  }
+
+  void _undo() {
+    if (_undoStack.isEmpty) return;
+
+    // Save current "tip" state to redo stack before going back
+    final currentTip = _currentSnapshot;
+
+    // Logic:
+    // If currentTip is different from the top of undoStack, we might want to preserve it in Redo.
+    // If currentTip equals the top of undoStack (which happens if we just saved), we need to go to the ONE BEFORE.
+
+    // If current state matches the last undo state, it means we are "synced" with history.
+    // So to undo, we pop the last one (current state) and go to the one before that.
+    if (_undoStack.isNotEmpty && _undoStack.last == currentTip) {
+      _undoStack.removeLast();
+    }
+
+    if (_undoStack.isEmpty) {
+      // We popped the only state, so we are at "start".
+      // But wait, if we popped it, where did we go?
+      // Let's refine:
+      // Undo Stack represents: [State 0, State 1, State 2]
+      // Current: State 2.
+      // User presses Undo.
+      // We want Current to become State 1.
+      // Redo should get State 2.
+      // So:
+      // 1. Redo.add(State 2)
+      // 2. Undo.pop() -> Removes State 2.
+      // 3. Current = Undo.last (State 1).
+    }
+
+    // Correct Implementation for "Browser-like" undo:
+    // We treat the "Current UI" as something that sits on top of the undo stack IF it has changed.
+    // If we just pushed a snapshot, Current UI == UndoStack.last.
+    // So to undo, we must go to UndoStack[last - 1].
+
+    if (_undoStack.isEmpty) return;
+
+    // 1. Save current state to redo
+    _redoStack.add(currentTip);
+
+    // 2. Remove the "current" state from undo stack (since we are leaving it)
+    // BUT only if the current state IS recorded in undo stack.
+    if (_undoStack.last == currentTip) {
+      _undoStack.removeLast();
+    }
+
+    if (_undoStack.isEmpty) {
+      // We ran out of history.
+      // This implies we are at the initial state.
+      // Revert the pop if needed or handle graceful empty.
+      // If we popped everything, we can't apply anything.
+      // But we should have at least the initial state...
+      // Unless we want to clear fields? No, just stop.
+      return;
+    }
+
+    // 3. Now the top of undo stack is the previous state.
+    final previous = _undoStack.last;
+    _applySnapshot(previous);
+  }
+
+  void _redo() {
+    if (_redoStack.isEmpty) return;
+
+    final next = _redoStack.removeLast();
+    _undoStack.add(next);
+    _applySnapshot(next);
+  }
+
+  void _applySnapshot(_FormStateData data) {
+    setState(() {
+      if (_achievementNameController.text != data.name) {
+        _achievementNameController.text = data.name;
+        // Keep cursor at end if possible, or preserve selection?
+        // For simplicity, just set text. selection might jump.
+      }
+      if (_achievementTitleController.text != data.title) {
+        _achievementTitleController.text = data.title;
+      }
+      if (_achievementDescriptionController.text != data.description) {
+        _achievementDescriptionController.text = data.description;
+      }
+      _selectedIcon = data.icon;
+      _selectedLevel = data.levelId;
+      _levelDisplayController.text = data.levelName;
     });
   }
 
@@ -193,6 +328,7 @@ class _AdminCreateAchievementDialogState
     _nameFocus.dispose();
     _titleFocus.dispose();
     _descFocus.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -276,6 +412,7 @@ class _AdminCreateAchievementDialogState
         _selectedLevel = result.levelId;
         _levelDisplayController.text = result.levelName ?? '';
       });
+      _saveSnapshot(force: true);
     }
   }
 
@@ -309,8 +446,6 @@ class _AdminCreateAchievementDialogState
       'description',
       'desc',
     ]);
-    // final icon = getValue(['icon', 'iconName']);
-    // final levelId = getValue(['levelId', 'level_id']);
 
     setState(() {
       if (name != null) _achievementNameController.text = name;
@@ -318,26 +453,7 @@ class _AdminCreateAchievementDialogState
       if (description != null) {
         _achievementDescriptionController.text = description;
       }
-
-      // if (icon != null) {
-      //   final isValidIcon = iconOptions.any((opt) => opt['value'] == icon);
-      //   if (isValidIcon) {
-      //     _selectedIcon = icon;
-      //     _selectedLevel = null;
-      //     _levelDisplayController.clear();
-      //   }
-      // }
-
-      // if (levelId != null) {
-      //   _selectedLevel = levelId;
-      //   final match = _levels.firstWhere(
-      //     (l) => l.levelId == levelId,
-      //     orElse: () => LevelModel(levelId: '', levelName: ''),
-      //   );
-      //   if (match.levelId?.isNotEmpty ?? false) {
-      //     _levelDisplayController.text = match.levelName ?? '';
-      //   }
-      // }
+      _saveSnapshot(force: true);
     });
 
     if (mounted) {
@@ -528,6 +644,18 @@ class _AdminCreateAchievementDialogState
         const SingleActivator(LogicalKeyboardKey.escape): () {
           Navigator.of(context).maybePop();
         },
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () {
+          _undo();
+        },
+        const SingleActivator(
+          LogicalKeyboardKey.keyZ,
+          control: true,
+          shift: true,
+        ): () {
+          _redo();
+        },
+        // Also support Cmd+Z for Mac users if needed, though specific instruction asked for ctrl z.
+        // Flutter abstracts this usually but Explicit bindings are good.
       },
       child: Focus(
         autofocus: true,
@@ -570,6 +698,8 @@ class _AdminCreateAchievementDialogState
                           errorText: _nameError,
                           isRequired: true,
                         ),
+                        // Note: capturing text changes via onChanged to snapshot state
+                        onChanged: (value) => _saveSnapshot(),
                         validator: (value) {
                           if (_nameError != null) return _nameError;
 
@@ -606,6 +736,7 @@ class _AdminCreateAchievementDialogState
                           errorText: _titleError,
                           isRequired: true,
                         ),
+                        onChanged: (value) => _saveSnapshot(),
                         validator: (value) {
                           if (_titleError != null) return _titleError;
 
@@ -641,6 +772,7 @@ class _AdminCreateAchievementDialogState
                           isRequired: true,
                         ),
                         maxLines: 3,
+                        onChanged: (value) => _saveSnapshot(),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter a description';
@@ -681,9 +813,9 @@ class _AdminCreateAchievementDialogState
                         onChanged: (newValue) {
                           setState(() {
                             _selectedIcon = newValue;
-                            // Clear selected level on icon change to ensure consistency
                             _selectedLevel = null;
                             _levelDisplayController.clear();
+                            _saveSnapshot(force: true);
                           });
                         },
                         validator: (value) =>
@@ -713,11 +845,6 @@ class _AdminCreateAchievementDialogState
                         validator: (value) {
                           // Check if valid level is selected
                           if (_selectedIcon != null && _selectedLevel == null) {
-                            // Only require level if an icon is selected?
-                            // Or maybe level is optional. The original code had a "None" option.
-                            // Let's assume it's optional but if they picked one it's fine.
-                            // Use "None" button in dialog? Or just allow empty?
-                            // Standard: if it's required. Let's make it optional as per original "None" option.
                             return null;
                           }
                           return null;
@@ -811,4 +938,38 @@ class _AdminCreateAchievementDialogState
 
     return shouldDiscard ?? false;
   }
+}
+
+class _FormStateData {
+  final String name;
+  final String title;
+  final String description;
+  final String? icon;
+  final String? levelId;
+  final String levelName;
+
+  _FormStateData({
+    required this.name,
+    required this.title,
+    required this.description,
+    this.icon,
+    this.levelId,
+    required this.levelName,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _FormStateData &&
+        other.name == name &&
+        other.title == title &&
+        other.description == description &&
+        other.icon == icon &&
+        other.levelId == levelId &&
+        other.levelName == levelName;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(name, title, description, icon, levelId, levelName);
 }
