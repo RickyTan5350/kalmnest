@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/achievement_api.dart';
+import 'package:code_play/api/achievement_api.dart';
 import 'package:intl/intl.dart';
 
 class StudentAchievementPeersPage extends StatefulWidget {

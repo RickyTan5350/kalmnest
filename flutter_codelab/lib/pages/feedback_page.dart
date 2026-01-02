@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/feedback_api.dart';
-import 'package:flutter_codelab/models/models.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart'
+import 'package:code_play/api/feedback_api.dart';
+import 'package:code_play/models/models.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart'
     as create_fb;
-import 'package:flutter_codelab/admin_teacher/widgets/feedback/edit_feedback.dart'
+import 'package:code_play/admin_teacher/widgets/feedback/edit_feedback.dart'
     as edit_fb;
-import 'package:flutter_codelab/student/widgets/feedback/student_view_feedback_page.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
-import 'package:flutter_codelab/theme.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/student/widgets/feedback/student_view_feedback_page.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/constants/achievement_constants.dart';
+import 'package:code_play/theme.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class FeedbackPage extends StatefulWidget {
   final String? authToken;

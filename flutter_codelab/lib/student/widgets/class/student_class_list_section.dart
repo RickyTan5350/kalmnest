@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/student/widgets/class/student_view_class_page.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/student/widgets/class/student_view_class_page.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/constants/achievement_constants.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 // Class List Item Widget for Student (no edit/delete buttons)
 class _ClassListItem extends StatefulWidget {

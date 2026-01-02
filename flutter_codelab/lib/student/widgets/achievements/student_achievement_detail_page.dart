@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/api/achievement_api.dart'; // Import API to fetch full details
-import 'package:flutter_codelab/constants/achievement_constants.dart';
-import 'package:flutter_codelab/student/widgets/achievements/student_achievement_peers_page.dart'; // Import for peer view
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/api/achievement_api.dart'; // Import API to fetch full details
+import 'package:code_play/constants/achievement_constants.dart';
+import 'package:code_play/student/widgets/achievements/student_achievement_peers_page.dart'; // Import for peer view
 
 class StudentAchievementDetailPage extends StatefulWidget {
   final AchievementData initialData;

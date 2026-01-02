@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/user_api.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/api/user_api.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 // import 'edit_user_dialog.dart';
-import 'package:flutter_codelab/api/achievement_api.dart';
-import 'package:flutter_codelab/models/achievement_data.dart';
-import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'package:code_play/api/achievement_api.dart';
+import 'package:code_play/models/achievement_data.dart';
+import 'package:code_play/constants/achievement_constants.dart';
 import 'admin_student_achievements_page.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/student/widgets/achievements/student_profile_achievements_page.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
-import 'package:flutter_codelab/widgets/user_avatar.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/student/widgets/achievements/student_profile_achievements_page.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/user_avatar.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String userId;

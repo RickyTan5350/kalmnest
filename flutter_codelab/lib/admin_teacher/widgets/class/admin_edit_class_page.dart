@@ -1,11 +1,11 @@
 // lib/widgets/edit_class_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_theme_extensions.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_validators.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_theme_extensions.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_validators.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class EditClassPage extends StatefulWidget {
   final dynamic classData;

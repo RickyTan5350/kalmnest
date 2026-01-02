@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/api/user_api.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/api/user_api.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 
 import 'package:intl/intl.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 /// Teacher view: Student detail page showing student info and quiz completion status
 class TeacherStudentDetailPage extends StatefulWidget {

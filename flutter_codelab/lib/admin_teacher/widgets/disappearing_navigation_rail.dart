@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
-import 'package:flutter_codelab/destinations.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/destinations.dart';
 
 class DisappearingNavigationRail extends StatelessWidget {
   const DisappearingNavigationRail({

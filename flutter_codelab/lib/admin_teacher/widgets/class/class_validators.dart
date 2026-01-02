@@ -1,5 +1,5 @@
-import 'package:flutter_codelab/constants/class_constants.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 /// Validation helper methods for class form inputs
 class ClassValidators {

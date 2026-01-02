@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/grid_layout_view.dart';
-import 'package:flutter_codelab/widgets/user_avatar.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/admin_teacher/widgets/grid_layout_view.dart';
+import 'package:code_play/widgets/user_avatar.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class UserGridLayout extends StatelessWidget {
   final List<Map<String, dynamic>> users;

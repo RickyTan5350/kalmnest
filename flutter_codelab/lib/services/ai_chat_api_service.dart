@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 /// Service to handle communication with the Laravel backend's chat endpoint.
 class AiChatApiService {

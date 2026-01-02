@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/models/student.dart';
-import 'package:flutter_codelab/student/widgets/class/student_preview_teacher_row.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_quiz_list_section.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_all_students_page.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_edit_class_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
-import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:code_play/models/student.dart';
+import 'package:code_play/student/widgets/class/student_preview_teacher_row.dart';
+import 'package:code_play/admin_teacher/widgets/class/teacher_quiz_list_section.dart';
+import 'package:code_play/admin_teacher/widgets/class/teacher_all_students_page.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
+import 'package:code_play/admin_teacher/widgets/user/user_detail_page.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class AdminViewClassPage extends StatefulWidget {
   final String classId;
