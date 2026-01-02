@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/models/user_data.dart';
-import 'package:code_play/services/ai_chat_api_service.dart';
+import 'package:flutter__codelab/models/user_data.dart';
+import 'package:flutter__codelab/services/ai_chat_api_service.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter__codelab/l10n/generated/app_localizations.dart';
 
 /// Model for chat messages
 class ChatMessage {
