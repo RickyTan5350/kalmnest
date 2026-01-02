@@ -1,10 +1,10 @@
 // lib/widgets/quiz_list_section.dart
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/admin_teacher/widgets/class/teacher_view_quiz_page.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_quiz_page.dart';
 import 'package:intl/intl.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class QuizListSection extends StatefulWidget {
   final String roleName;
@@ -184,7 +184,9 @@ class _QuizListSectionState extends State<QuizListSection> {
                     ),
                     tileColor: cs.surfaceContainerHighest,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
+                      borderRadius: BorderRadius.circular(
+                        ClassConstants.cardBorderRadius * 0.67,
+                      ),
                     ),
                     leading: Icon(Icons.quiz, color: cs.primary),
                     title: Text(
@@ -208,7 +210,9 @@ class _QuizListSectionState extends State<QuizListSection> {
                       ),
                       decoration: BoxDecoration(
                         color: cs.primaryContainer.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 1.67),
+                        borderRadius: BorderRadius.circular(
+                          ClassConstants.cardBorderRadius * 1.67,
+                        ),
                       ),
                       child: Text(
                         levelTypeName,
@@ -240,7 +244,9 @@ class _QuizListSectionState extends State<QuizListSection> {
             // Show "View All" link if more than 3 quizzes
             if (_quizzes.length > 3)
               Padding(
-                padding: EdgeInsets.only(top: ClassConstants.defaultPadding * 0.5),
+                padding: EdgeInsets.only(
+                  top: ClassConstants.defaultPadding * 0.5,
+                ),
                 child: Center(
                   child: TextButton(
                     onPressed: () {
@@ -271,4 +277,3 @@ class _QuizListSectionState extends State<QuizListSection> {
     );
   }
 }
-

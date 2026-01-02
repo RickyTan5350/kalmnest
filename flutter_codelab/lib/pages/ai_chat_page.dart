@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/models/user_data.dart';
-import 'package:code_play/services/ai_chat_api_service.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/services/ai_chat_api_service.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/controllers/locale_controller.dart';
 
 /// Model for chat messages
 class ChatMessage {
@@ -35,13 +36,43 @@ class ChatMessage {
   }
 
   factory ChatMessage.fromMap(Map<String, dynamic> map) {
+    // Safely handle null values - ensure all required fields have defaults
+    final idValue = map['id'] ?? map['message_id'];
+    final id = idValue != null && idValue.toString().isNotEmpty
+        ? idValue.toString()
+        : DateTime.now().millisecondsSinceEpoch.toString();
+
+    // Handle content/message - ensure it's never null
+    final contentValue = map['content'] ?? map['message'];
+    final text = (contentValue != null && contentValue.toString().isNotEmpty)
+        ? contentValue.toString()
+        : '';
+
+    // Handle role/sender - safely check for user role
+    final role = map['role']?.toString() ?? '';
+    final sender = map['sender']?.toString() ?? '';
+    final isUser =
+        role.toLowerCase() == 'user' || sender.toLowerCase() == 'user';
+
+    // Handle timestamp - safely parse
+    DateTime? timestamp;
+    final createdAt = map['created_at'];
+    if (createdAt != null) {
+      try {
+        final createdAtStr = createdAt.toString();
+        if (createdAtStr.isNotEmpty) {
+          timestamp = DateTime.tryParse(createdAtStr);
+        }
+      } catch (e) {
+        // If parsing fails, timestamp remains null (will use default)
+      }
+    }
+
     return ChatMessage(
-      id: map['id']?.toString(),
-      text: map['content'] ?? map['message'] ?? '',
-      isUser: map['role'] == 'user',
-      timestamp: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-      isError: false,
-      isTyping: false,
+      id: id,
+      text: text,
+      isUser: isUser,
+      timestamp: timestamp,
     );
   }
 }
@@ -67,57 +98,101 @@ class _AiChatPageState extends State<AiChatPage>
   late AiChatApiService _apiService;
   bool _isSending = false;
   bool _isInitialized = false;
-  bool _isNewChat = false;
   String? _currentSessionId;
-
+  bool _isNewChat = false;
   bool _isLoadingHistory = false;
   List<Map<String, dynamic>> _sessions = [];
+  bool _hasSentFirstMessage = false;
 
-  // Removed hardcoded _suggestedQuestions list. Will use _getSuggestedQuestions(context) instead.
+  // Getter for sessionId - assuming it should be generated or retrieved
+  String get sessionId =>
+      _currentSessionId ?? DateTime.now().millisecondsSinceEpoch.toString();
 
   @override
   void initState() {
     super.initState();
     _apiService = AiChatApiService(token: widget.authToken);
-    _initializeChat();
+    _loadHistory();
+    // _initializeChat(); // Removed as _loadHistory handles initial state better or user picks a chat
   }
 
-  @override
-  void dispose() {
-    _textController.dispose();
-    _scrollController.dispose();
-    _focusNode.dispose();
-    super.dispose();
+  Future<void> _loadHistory() async {
+    setState(() => _isLoadingHistory = true);
+    try {
+      final sessions = await _apiService.getSessions();
+      if (mounted) {
+        setState(() {
+          _sessions = sessions;
+          _isLoadingHistory = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingHistory = false);
+        // Silent failure or log
+        print('Error loading history: $e');
+      }
+    }
+  }
+
+  Future<void> _loadSessionMessages(String sessionId) async {
+    if (sessionId.isEmpty) {
+      _showSnackBar('Invalid session ID', Colors.red);
+      return;
+    }
+
+    setState(() {
+      _isSending = true;
+      _currentSessionId = sessionId;
+      _messages.clear();
+      _isNewChat = false;
+      _hasSentFirstMessage = false; // Reset when loading a session
+    });
+
+    try {
+      final messages = await _apiService.getSessionMessages(sessionId);
+      if (mounted) {
+        setState(() {
+          // Safely map messages, filtering out any that fail to parse
+          final validMessages = <ChatMessage>[];
+          for (final m in messages) {
+            try {
+              final message = ChatMessage.fromMap(m);
+              // Only add messages with content or typing indicator
+              if (message.text.isNotEmpty || message.isTyping) {
+                validMessages.add(message);
+              }
+            } catch (e) {
+              print('Error parsing message: $e, data: $m');
+              // Skip invalid messages to prevent crashes
+            }
+          }
+          _messages.addAll(validMessages);
+          // Sort if needed, assuming API sends chronologically
+          // _messages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          _isSending = false;
+          // If session has messages, hide input box (first message already sent)
+          if (_messages.isNotEmpty) {
+            _hasSentFirstMessage = true;
+          }
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+          // Keep session ID so chat view is still shown even if loading fails
+          // This allows user to see the error and potentially retry
+        });
+        _showSnackBar('Failed to load messages: ${e.toString()}', Colors.red);
+        print('Error loading session messages: $e');
+      }
+    }
   }
 
   void _initializeChat() {
-    setState(() {
-      _isSending = true; // Use as blocker
-      _messages.clear();
-      _currentSessionId = null; // Start with no session
-      _isNewChat = false;
-    });
-
-    _loadHistory();
-
-    try {
-      // We don't load messages specific to a session here unless we have one.
-      // If we want to continue the last session:
-      // if (_sessions.isNotEmpty) { ... }
-
-      // For now, just stop loading
-      setState(() {
-        _isSending = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSending = false);
-        _showSnackBar(
-          AppLocalizations.of(context)!.errorLoadingMessages(e.toString()),
-          Colors.red,
-        );
-      }
-    }
+    // Legacy init, keeping for reference if needed but _loadHistory is primary now
   }
 
   void _showSnackBar(String message, Color color) {
@@ -131,42 +206,60 @@ class _AiChatPageState extends State<AiChatPage>
       _messages.clear();
       _currentSessionId = null;
       _isNewChat = true;
+      _hasSentFirstMessage = false;
     });
   }
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
       });
     }
   }
 
   Future<void> _handleSendMessage() async {
     final text = _textController.text.trim();
-    if (text.isEmpty || _isSending) return;
+    if (_isSending || _hasSentFirstMessage) return;
+
+    if (text.isEmpty) {
+      _showSnackBar('Please enter a question', Colors.red);
+      return;
+    }
+
+    // Set sending state and mark first message sent
+    setState(() {
+      _isSending = true;
+      _hasSentFirstMessage = true;
+    });
 
     final userMessage = ChatMessage(text: text, isUser: true);
     setState(() {
-      _messages.insert(0, userMessage);
+      _messages.add(userMessage); // Add to end (chronological order)
       _textController.clear();
-      _isSending = true;
     });
 
     _scrollToBottom();
     _focusNode.unfocus();
 
     final typingMessage = ChatMessage(text: '', isUser: false, isTyping: true);
-    setState(() => _messages.insert(0, typingMessage));
+    setState(() => _messages.add(typingMessage)); // Add to end
 
     try {
+      // Get current language from LocaleController
+      final currentLocale = LocaleController.instance.value;
+      final languageCode = currentLocale.languageCode; // 'en' or 'ms'
+
       final responseData = await _apiService.sendMessage(
         text,
         sessionId: _currentSessionId,
+        language: languageCode, // Pass language code to API
       );
 
       final aiResponse = responseData['ai_response'] as String;
@@ -176,24 +269,42 @@ class _AiChatPageState extends State<AiChatPage>
         setState(() {
           _currentSessionId = newSessionId;
           _messages.removeWhere((msg) => msg.id == typingMessage.id);
-          _messages.insert(0, ChatMessage(text: aiResponse, isUser: false));
+          _messages.add(
+            ChatMessage(text: aiResponse, isUser: false),
+          ); // Add to end
           _isSending = false;
+          // Keep _hasSentFirstMessage = true to hide input box after first message
         });
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage =
+            'Connection error. Please ensure the backend is running and reachable.';
+
+        // Provide more specific error messages
+        final errorString = e.toString();
+        if (errorString.contains('500') ||
+            errorString.contains('Server error')) {
+          errorMessage =
+              'Server error. The AI service may not be configured correctly. Please contact the administrator.';
+        } else if (errorString.contains('timeout')) {
+          errorMessage =
+              'Request timeout. Please check your internet connection and try again.';
+        } else if (errorString.contains('401') ||
+            errorString.contains('Authentication')) {
+          errorMessage = 'Authentication required. Please login again.';
+        } else if (errorString.contains('Network error')) {
+          errorMessage =
+              'Network error. Please check your connection and ensure the backend is running.';
+        }
+
         setState(() {
           _messages.removeWhere((msg) => msg.id == typingMessage.id);
-          _messages.insert(
-            0,
-            ChatMessage(
-              text:
-                  'Connection error. Please ensure the backend is running and reachable.',
-              isUser: false,
-              isError: true,
-            ),
-          );
+          _messages.add(
+            ChatMessage(text: errorMessage, isUser: false, isError: true),
+          ); // Add to end
           _isSending = false;
+          // Keep _hasSentFirstMessage = true to hide input box after first message
         });
       }
     }
@@ -205,7 +316,7 @@ class _AiChatPageState extends State<AiChatPage>
     _handleSendMessage();
   }
 
-  void _clearChat() async {
+  Future<void> _clearChat() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -231,84 +342,49 @@ class _AiChatPageState extends State<AiChatPage>
     );
 
     if (confirmed == true) {
+      // Check if there's a session to delete
+      if (_currentSessionId == null || _currentSessionId!.isEmpty) {
+        // If no session, just clear local messages
+        if (mounted) {
+          setState(() {
+            _messages.clear();
+            _currentSessionId = null;
+            _hasSentFirstMessage = false;
+          });
+          _showSnackBar('Chat cleared successfully', Colors.green);
+        }
+        return;
+      }
+
       try {
         await _apiService.deleteSession(_currentSessionId!);
         if (mounted) {
           setState(() {
             _messages.clear();
             _currentSessionId = null;
+            _hasSentFirstMessage = false;
           });
           _loadHistory();
+          // Show success message
+          _showSnackBar('Chat deleted successfully', Colors.green);
         }
-      } catch (e) {}
-    }
-  }
-
-  Future<void> _loadHistory() async {
-    if (!mounted) return;
-    setState(() => _isLoadingHistory = true);
-
-    try {
-      final sessions = await _apiService.getSessions();
-      if (mounted) {
-        setState(() {
-          _sessions = List<Map<String, dynamic>>.from(sessions);
-          _isLoadingHistory = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingHistory = false);
-        // Silently fail or show snackbar
-        print('Error loading history: $e');
+      } catch (e) {
+        if (mounted) {
+          _showSnackBar(
+            AppLocalizations.of(context)!.deleteFailed(e.toString()),
+            Colors.red,
+          );
+        }
       }
     }
   }
 
-  Future<void> _loadSessionMessages(String sessionId) async {
-    setState(() {
-      _isSending = true;
-      _messages.clear();
-      _currentSessionId = sessionId;
-      _isNewChat = false;
-    });
-
-    try {
-      final messagesData = await _apiService.getSessionMessages(sessionId);
-      if (mounted) {
-        setState(() {
-          // messagesData is assumed to be List of Maps.
-          // We need mapping from API format to ChatMessage.
-          // Since ChatMessage.fromMap is not defined, we implement mapping here or assume it exists in model?
-          // Error log said: The method 'fromMap' isn't defined for the type 'ChatMessage'.
-          // We need to implement it.
-
-          for (var m in messagesData) {
-            // Map keys based on typical API response
-            _messages.insert(
-              0,
-              ChatMessage(
-                id: m['id']?.toString(),
-                text: m['content'] ?? m['message'] ?? '',
-                isUser: m['role'] == 'user', // Adjust based on actual API
-                timestamp:
-                    DateTime.tryParse(m['created_at'] ?? '') ?? DateTime.now(),
-              ),
-            );
-          }
-          _isSending = false;
-        });
-        _scrollToBottom();
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSending = false);
-        _showSnackBar(
-          AppLocalizations.of(context)!.errorLoadingMessages(e.toString()),
-          Colors.red,
-        );
-      }
-    }
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -317,7 +393,7 @@ class _AiChatPageState extends State<AiChatPage>
     final l10n = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -403,21 +479,33 @@ class _AiChatPageState extends State<AiChatPage>
                     return ListTile(
                       leading: const Icon(Icons.chat_bubble_outline),
                       title: Text(
-                        (session['title'] == 'Untitled Question' ||
-                                session['title'] == null ||
-                                session['title'].toString().isEmpty)
-                            ? l10n.untitledQuestion
-                            : session['title'],
+                        (session['title'] == null ||
+                                session['title'].toString().isEmpty ||
+                                session['title'] == 'Untitled Question')
+                            ? (session['last_message']?.toString() ??
+                                  l10n.untitledQuestion)
+                            : session['title'].toString(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Text(
-                        session['updated_at']?.split('T')[0] ?? '',
+                        session['updated_at']?.toString().split('T')[0] ??
+                            session['created_at']?.toString().split('T')[0] ??
+                            '',
                         style: const TextStyle(fontSize: 10),
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                      onTap: () =>
-                          _loadSessionMessages(session['chatbot_session_id']),
+                      onTap: () {
+                        final sessionId =
+                            session['session_id'] ??
+                            session['chatbot_session_id'];
+                        if (sessionId != null &&
+                            sessionId.toString().isNotEmpty) {
+                          _loadSessionMessages(sessionId.toString());
+                        } else {
+                          _showSnackBar('Invalid session ID', Colors.red);
+                        }
+                      },
                     );
                   },
                 ),
@@ -479,16 +567,14 @@ class _AiChatPageState extends State<AiChatPage>
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
-            reverse: true,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             itemCount: _messages.length,
             itemBuilder: (context, index) =>
                 _MessageBubble(message: _messages[index]),
           ),
         ),
-        if (_messages.length == 1 && _isInitialized)
-          _buildSuggestedQuestions(colorScheme),
-        _buildInputArea(colorScheme),
+        // Show input area only if first message hasn't been sent yet
+        if (!_isSending && !_hasSentFirstMessage) _buildInputArea(colorScheme),
       ],
     );
   }
@@ -596,69 +682,90 @@ class _AiChatPageState extends State<AiChatPage>
     final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: TextField(
-                  controller: _textController,
-                  focusNode: _focusNode,
-                  maxLines: 4,
-                  minLines: 1,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(
-                    hintText: l10n.typeQuestionHint,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    border: InputBorder.none,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.language_rounded,
+                    size: 14,
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                   ),
-                  onSubmitted: (_) => _handleSendMessage(),
-                ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'AI responds in the same language as your question',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: _isSending ? null : _handleSendMessage,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _isSending ? colorScheme.outline : colorScheme.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: _isSending
-                      ? []
-                      : [
-                          BoxShadow(
-                            color: colorScheme.primary.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(
+                        0.5,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: colorScheme.outlineVariant),
+                    ),
+                    child: TextField(
+                      controller: _textController,
+                      focusNode: _focusNode,
+                      maxLines: 4,
+                      minLines: 1,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        hintText: l10n.typeQuestionHint,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (_) => _handleSendMessage(),
+                    ),
+                  ),
                 ),
-                child: Icon(
-                  _isSending ? Icons.hourglass_empty : Icons.send_rounded,
-                  color: Colors.white,
-                  size: 20,
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: _isSending ? null : _handleSendMessage,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _isSending
+                          ? colorScheme.outline
+                          : colorScheme.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: _isSending
+                          ? []
+                          : [
+                              BoxShadow(
+                                color: colorScheme.primary.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                    ),
+                    child: Icon(
+                      _isSending ? Icons.hourglass_empty : Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -740,21 +847,7 @@ class _MessageBubble extends StatelessWidget {
                         fontSize: 15,
                         height: 1.4,
                       ),
-                      code: TextStyle(
-                        backgroundColor: message.isUser
-                            ? Colors.white.withOpacity(0.2)
-                            : colorScheme.surfaceContainerHighest,
-                        fontFamily: 'monospace',
-                        color: message.isUser
-                            ? Colors.white
-                            : colorScheme.onSurface,
-                      ),
-                      codeblockDecoration: BoxDecoration(
-                        color: message.isUser
-                            ? Colors.white.withOpacity(0.1)
-                            : colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                      strong: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],

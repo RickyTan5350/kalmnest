@@ -1,8 +1,8 @@
 // lib/api/class_api.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:code_play/api/auth_api.dart';
-import 'package:code_play/constants/api_constants.dart';
+import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
 
 class ClassApi {
   // Base URL for API endpoints (already includes /api)
@@ -546,9 +546,9 @@ class ClassApi {
       return false;
     }
 
-    final uri = Uri.parse('$base/classes/check-name').replace(
-      queryParameters: {'class_name': className.trim()},
-    );
+    final uri = Uri.parse(
+      '$base/classes/check-name',
+    ).replace(queryParameters: {'class_name': className.trim()});
 
     try {
       final headers = await _getAuthHeaders(requiresAuth: true);
@@ -609,4 +609,3 @@ class ClassApi {
     }
   }
 }
-

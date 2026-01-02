@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/feedback_api.dart';
-import 'package:code_play/models/models.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/api/feedback_api.dart';
+import 'package:flutter_codelab/models/models.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 void showEditFeedbackDialog({
   required BuildContext context,
@@ -58,11 +58,44 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
     super.initState();
     _api = FeedbackApiService(token: widget.authToken);
 
-    _api = FeedbackApiService(token: widget.authToken);
-
-    _titleController = TextEditingController(text: widget.feedback.topic);
+    _titleController = TextEditingController(text: widget.feedback.title);
     _feedbackController = TextEditingController(text: widget.feedback.feedback);
     _selectedTopicId = widget.feedback.topicId;
+    _selectedTopicName = widget.feedback.title.isNotEmpty
+        ? widget.feedback.title
+        : widget.feedback.topic;
+
+    _loadTopics();
+  }
+
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+    try {
+      final topics = await _api.getTopics();
+      if (mounted) {
+        setState(() {
+          _topics = topics;
+          // If we have a topicId but no name, try to find it in the loaded topics
+          if (_selectedTopicId != null &&
+              _selectedTopicId!.isNotEmpty &&
+              _selectedTopicName == null) {
+            final topic = topics.firstWhere(
+              (t) => t['topic_id'].toString() == _selectedTopicId,
+              orElse: () => {},
+            );
+            if (topic.isNotEmpty) {
+              _selectedTopicName = topic['topic_name'];
+            }
+          }
+        });
+      }
+    } catch (e) {
+      print('Error loading topics: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingTopics = false);
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -71,9 +104,20 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
     setState(() => _isSaving = true);
 
     try {
+      // Validate that topic is selected if required
+      if (_selectedTopicId == null || _selectedTopicId!.isEmpty) {
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.pleaseSelectTopic,
+          Colors.red,
+        );
+        return;
+      }
+
       await _api.editFeedback(
         feedbackId: widget.feedback.feedbackId,
-        topic: _titleController.text,
+        topicId: _selectedTopicId,
+        title: _titleController.text,
         comment: _feedbackController.text,
       );
 
@@ -85,6 +129,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
           teacherName: widget.feedback.teacherName, // Will be updated from API
           teacherId: widget.feedback.teacherId, // Will be updated from API
           topicId: _selectedTopicId ?? widget.feedback.topicId,
+          title: _titleController.text,
           topic: _titleController.text,
           feedback: _feedbackController.text,
         ),
@@ -154,7 +199,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
         if (didPop) return;
         final hasChanges =
             _selectedTopicId != widget.feedback.topicId ||
-            _titleController.text != widget.feedback.topic ||
+            _titleController.text != widget.feedback.title ||
             _feedbackController.text != widget.feedback.feedback;
 
         if (!hasChanges) {

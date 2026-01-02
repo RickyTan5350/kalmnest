@@ -117,9 +117,6 @@ class FeedbackApiService {
         throw Exception(
           'Failed to fetch students: ${response.statusCode} - ${response.body}',
         );
-        throw Exception(
-          'Failed to fetch students: ${response.statusCode} - ${response.body}',
-        );
       }
     } catch (e) {
       throw Exception('Error fetching students: $e');
@@ -275,9 +272,6 @@ class FeedbackApiService {
         throw Exception(
           'Failed to fetch feedback: ${response.statusCode} - ${response.body}',
         );
-        throw Exception(
-          'Failed to fetch feedback: ${response.statusCode} - ${response.body}',
-        );
       }
     } catch (e) {
       throw Exception('Error fetching feedback: $e');
@@ -331,7 +325,8 @@ class FeedbackApiService {
   /// Create new feedback
   Future<Map<String, dynamic>> createFeedback({
     required String studentId,
-    required String topic,
+    required String? topicId,
+    required String title,
     required String comment,
   }) async {
     try {
@@ -340,7 +335,8 @@ class FeedbackApiService {
 
       final body = jsonEncode({
         'student_id': studentId,
-        'topic': topic,
+        'topic_id': topicId,
+        'title': title,
         'comment': comment,
       });
 
@@ -399,7 +395,8 @@ class FeedbackApiService {
 
   Future<void> editFeedback({
     required String feedbackId,
-    required String topic,
+    required String? topicId,
+    required String title,
     required String comment,
   }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/feedback/$feedbackId');
@@ -409,7 +406,11 @@ class FeedbackApiService {
     final response = await http.put(
       url,
       headers: hdrs,
-      body: jsonEncode({'topic': topic, 'comment': comment}),
+      body: jsonEncode({
+        'topic_id': topicId,
+        'title': title,
+        'comment': comment,
+      }),
     );
 
     if (response.statusCode != 200) {

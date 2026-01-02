@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/admin_teacher/widgets/class/teacher_view_class_page.dart';
-import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
-import 'package:code_play/constants/view_layout.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/enums/sort_enums.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_view_class_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/admin_edit_class_page.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 // Class List Item Widget
 class _ClassListItem extends StatefulWidget {
@@ -148,6 +149,35 @@ class _ClassListItemState extends State<_ClassListItem> {
                     ),
                   ],
                 ),
+                // Focus display
+                if (widget.item['focus'] != null &&
+                    widget.item['focus'].toString().isNotEmpty)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        getAchievementIcon(
+                          widget.item['focus'].toString().toLowerCase(),
+                        ),
+                        size: 14,
+                        color: getAchievementColor(
+                          context,
+                          widget.item['focus'].toString().toLowerCase(),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.item['focus'].toString(),
+                        style: widget.textTheme.labelSmall?.copyWith(
+                          color: getAchievementColor(
+                            context,
+                            widget.item['focus'].toString().toLowerCase(),
+                          ),
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ],
@@ -166,7 +196,7 @@ class _ClassListItemState extends State<_ClassListItem> {
                   }
                 },
                 itemBuilder: (BuildContext context) => [
-                      PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'edit',
                     child: Builder(
                       builder: (context) {
@@ -426,6 +456,40 @@ class _ClassGridCard extends StatelessWidget {
                   ),
                 ],
               ),
+              // Focus display
+              if (item['focus'] != null &&
+                  item['focus'].toString().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      getAchievementIcon(
+                        item['focus'].toString().toLowerCase(),
+                      ),
+                      size: 14,
+                      color: getAchievementColor(
+                        context,
+                        item['focus'].toString().toLowerCase(),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        item['focus'].toString(),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: getAchievementColor(
+                            context,
+                            item['focus'].toString().toLowerCase(),
+                          ),
+                          fontWeight: FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -504,9 +568,10 @@ class _ClassListSectionState extends State<ClassListSection> {
 
       // Apply filters
       List<dynamic> filtered = allClasses;
-      
+
       // Apply owner filter (created by me)
-      if (widget.ownerFilter == 'created_by_me' && widget.currentUserId.isNotEmpty) {
+      if (widget.ownerFilter == 'created_by_me' &&
+          widget.currentUserId.isNotEmpty) {
         final role = widget.roleName.toLowerCase();
         if (role == 'admin') {
           // For admin: filter by admin_id
@@ -522,7 +587,7 @@ class _ClassListSectionState extends State<ClassListSection> {
           }).toList();
         }
       }
-      
+
       // Apply focus filter
       if (widget.focusFilter != null && widget.focusFilter!.isNotEmpty) {
         filtered = filtered.where((classItem) {
@@ -530,7 +595,7 @@ class _ClassListSectionState extends State<ClassListSection> {
           return focus == widget.focusFilter;
         }).toList();
       }
-      
+
       // Apply search filter if search query is provided
       if (widget.searchQuery.isNotEmpty) {
         final query = widget.searchQuery.toLowerCase();
@@ -566,9 +631,10 @@ class _ClassListSectionState extends State<ClassListSection> {
   void _applyFiltersAndSort() {
     // Apply filters
     List<dynamic> filtered = classList;
-    
+
     // Apply owner filter (created by me)
-    if (widget.ownerFilter == 'created_by_me' && widget.currentUserId.isNotEmpty) {
+    if (widget.ownerFilter == 'created_by_me' &&
+        widget.currentUserId.isNotEmpty) {
       final role = widget.roleName.toLowerCase();
       if (role == 'admin') {
         // For admin: filter by admin_id
@@ -584,7 +650,7 @@ class _ClassListSectionState extends State<ClassListSection> {
         }).toList();
       }
     }
-    
+
     // Apply focus filter
     if (widget.focusFilter != null && widget.focusFilter!.isNotEmpty) {
       filtered = filtered.where((classItem) {
@@ -592,7 +658,7 @@ class _ClassListSectionState extends State<ClassListSection> {
         return focus == widget.focusFilter;
       }).toList();
     }
-    
+
     // Apply search filter
     if (widget.searchQuery.isNotEmpty) {
       final query = widget.searchQuery.toLowerCase();
@@ -671,9 +737,7 @@ class _ClassListSectionState extends State<ClassListSection> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(l10n.deleteClass),
-          content: Text(
-            l10n.deleteClassConfirmation(item['class_name'] ?? ''),
-          ),
+          content: Text(l10n.deleteClassConfirmation(item['class_name'] ?? '')),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),

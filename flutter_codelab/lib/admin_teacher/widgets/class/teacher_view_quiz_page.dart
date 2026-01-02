@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/api/game_api.dart';
-import 'package:code_play/admin_teacher/widgets/game/gamePages/create_game_page.dart';
-import 'package:code_play/admin_teacher/widgets/class/teacher_quiz_detail_page.dart';
-import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/models/level.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/api/game_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_quiz_detail_page.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/models/level.dart';
 import 'package:intl/intl.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 /// Full-page teacher view: all quizzes for a single class.
 ///
@@ -162,9 +162,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
         if (result['success'] == true) {
           _showSnackBar(
             context,
-            l10n.quizCreatedAndAssignedSuccessfully(
-              isPrivate ? l10n.private : l10n.public,
-            ),
+            l10n.quizCreatedAndAssignedSuccessfully,
             Colors.green,
           );
           // Refresh the quiz list
@@ -201,9 +199,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
             if (result['success'] == true) {
               _showSnackBar(
                 context,
-                l10n.quizCreatedAndAssignedSuccessfully(
-                  isPrivate ? l10n.private : l10n.public,
-                ),
+                l10n.quizCreatedAndAssignedSuccessfully,
                 Theme.of(context).colorScheme.primary,
               );
               _fetchData();
@@ -255,11 +251,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
 
       final l10n = AppLocalizations.of(context)!;
       if (result['success'] == true) {
-        _showSnackBar(
-          context,
-          l10n.quizAssignedSuccessfully,
-          Colors.green,
-        );
+        _showSnackBar(context, l10n.quizAssignedSuccessfully, Colors.green);
         _fetchData();
       } else {
         _showSnackBar(
@@ -620,7 +612,11 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
     );
   }
 
-  Widget _buildEmptyState(ColorScheme cs, TextTheme textTheme, BuildContext context) {
+  Widget _buildEmptyState(
+    ColorScheme cs,
+    TextTheme textTheme,
+    BuildContext context,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(

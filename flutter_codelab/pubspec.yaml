@@ -43,7 +43,6 @@ dependencies:
   markdown_widget: ^2.3.2+8
   desktop_drop: ^0.7.0
   google_fonts: ^6.3.2
-  flutter_markdown: ^0.7.1
   flutter_markdown_plus: ^1.0.5
   url_launcher: ^6.3.2
   path_provider: ^2.1.5  # Finds the correct folder path

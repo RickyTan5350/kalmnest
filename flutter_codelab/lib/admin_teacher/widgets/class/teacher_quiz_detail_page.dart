@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 
 import 'package:intl/intl.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 /// Teacher view: Quiz detail page showing quiz info and student completion status
 class TeacherQuizDetailPage extends StatefulWidget {
@@ -472,7 +472,11 @@ class _TeacherQuizDetailPageState extends State<TeacherQuizDetailPage> {
     );
   }
 
-  Widget _buildEmptyState(ColorScheme cs, TextTheme textTheme, BuildContext context) {
+  Widget _buildEmptyState(
+    ColorScheme cs,
+    TextTheme textTheme,
+    BuildContext context,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     return Card(
       elevation: 0,

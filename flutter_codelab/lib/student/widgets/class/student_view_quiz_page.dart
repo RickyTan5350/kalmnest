@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/api/auth_api.dart';
-import 'package:code_play/constants/api_constants.dart';
-import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 /// Full-page student view: all quizzes for a single class.
 ///
@@ -54,7 +54,7 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
 
     try {
       final classData = await ClassApi.fetchClassById(widget.classId);
-      
+
       // Get current user ID from stored user data
       String? studentId;
       try {
@@ -70,8 +70,11 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
       // Otherwise, fall back to regular quiz list
       List<Map<String, dynamic>> quizzes;
       if (studentId != null && studentId.isNotEmpty) {
-        final result = await ClassApi.getStudentQuizzes(widget.classId, studentId);
-        quizzes = result['success'] == true 
+        final result = await ClassApi.getStudentQuizzes(
+          widget.classId,
+          studentId,
+        );
+        quizzes = result['success'] == true
             ? List<Map<String, dynamic>>.from(result['data'] ?? [])
             : await ClassApi.getClassQuizzes(widget.classId);
       } else {
@@ -116,7 +119,9 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                 Container(
                   padding: EdgeInsets.all(ClassConstants.defaultPadding * 0.5),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     border: Border(
                       bottom: BorderSide(
                         color: Theme.of(context).colorScheme.outlineVariant,
@@ -130,42 +135,42 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
                         quiz['level_name'] ?? l10n.quiz,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-              ),
-              // Unity WebView
-              Expanded(
-                child: InAppWebView(
-                  initialUrlRequest: URLRequest(
-                    url: WebUri(
-                      "${ApiConstants.domain}/unity_build/index.html?role=${widget.roleName}&level=$levelId",
-                    ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
                   ),
-                  initialSettings: InAppWebViewSettings(
-                    javaScriptEnabled: true,
-                    isInspectable: false,
-                  ),
-                  onWebViewCreated: (controller) {},
-                  onLoadStart: (controller, url) {
-                    debugPrint("Started loading: $url");
-                  },
-                  onLoadStop: (controller, url) async {
-                    debugPrint("Finished loading: $url");
-                  },
-                  onLoadError: (controller, url, code, message) {
-                    debugPrint("Failed to load $url: $message");
-                  },
                 ),
-              ),
-            ],
+                // Unity WebView
+                Expanded(
+                  child: InAppWebView(
+                    initialUrlRequest: URLRequest(
+                      url: WebUri(
+                        "${ApiConstants.domain}/unity_build/index.html?role=${widget.roleName}&level=$levelId",
+                      ),
+                    ),
+                    initialSettings: InAppWebViewSettings(
+                      javaScriptEnabled: true,
+                      isInspectable: false,
+                    ),
+                    onWebViewCreated: (controller) {},
+                    onLoadStart: (controller, url) {
+                      debugPrint("Started loading: $url");
+                    },
+                    onLoadStop: (controller, url) async {
+                      debugPrint("Finished loading: $url");
+                    },
+                    onLoadError: (controller, url, code, message) {
+                      debugPrint("Failed to load $url: $message");
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
+        );
+      },
     );
   }
 
@@ -540,10 +545,7 @@ class _StudentQuizItem extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.green.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Colors.green,
-                              width: 1,
-                            ),
+                            border: Border.all(color: Colors.green, width: 1),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -585,11 +587,7 @@ class _StudentQuizItem extends StatelessWidget {
                 quiz['is_completed'] == true ? Icons.replay : Icons.play_arrow,
                 size: 18,
               ),
-              label: Text(
-                quiz['is_completed'] == true 
-                    ? 'Replay'
-                    : l10n.play,
-              ),
+              label: Text(quiz['is_completed'] == true ? 'Replay' : l10n.play),
               style: FilledButton.styleFrom(
                 backgroundColor: quiz['is_completed'] == true
                     ? cs.tertiary

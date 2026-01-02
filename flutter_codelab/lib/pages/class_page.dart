@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/admin_teacher/widgets/class/teacher_class_list_section.dart'
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_class_list_section.dart'
     as teacher;
-import 'package:code_play/student/widgets/class/student_class_list_section.dart'
+import 'package:flutter_codelab/student/widgets/class/student_class_list_section.dart'
     as student;
 // import '../widgets/search_bar.dart';
-import 'package:code_play/models/user_data.dart';
-import 'package:code_play/constants/view_layout.dart';
-import 'package:code_play/services/layout_preferences.dart';
-import 'package:code_play/enums/sort_enums.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/constants/view_layout.dart';
+import 'package:flutter_codelab/services/layout_preferences.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 // Global key to access ClassPage state for reloading from main.dart
 final GlobalKey<_ClassPageState> classPageGlobalKey =
@@ -30,7 +30,7 @@ class _ClassPageState extends State<ClassPage> {
   ViewLayout _viewLayout = ViewLayout.grid;
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
-  
+
   // Filter states
   String _selectedOwnerFilter = 'all'; // 'all' or 'created_by_me'
   String? _selectedFocusFilter; // null, 'HTML', 'CSS', 'JavaScript', 'PHP'
@@ -80,9 +80,12 @@ class _ClassPageState extends State<ClassPage> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(
+      padding: const EdgeInsets.fromLTRB(
+        2.0,
+        2.0,
         16.0,
-      ), // Outer padding (same as AchievementPage)
+        16.0,
+      ), // Outer padding (same as FeedbackPage)
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -91,7 +94,7 @@ class _ClassPageState extends State<ClassPage> {
           child: Padding(
             padding: const EdgeInsets.all(
               16.0,
-            ), // Inner padding (same as AchievementPage)
+            ), // Inner padding (same as FeedbackPage)
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -169,23 +172,32 @@ class _ClassPageState extends State<ClassPage> {
                                 selected: _selectedOwnerFilter == 'all',
                                 onSelected: (selected) {
                                   if (selected) {
-                                    setState(() => _selectedOwnerFilter = 'all');
+                                    setState(
+                                      () => _selectedOwnerFilter = 'all',
+                                    );
                                   }
                                 },
                               ),
                               FilterChip(
                                 label: Text(l10n.createdByMe),
-                                selected: _selectedOwnerFilter == 'created_by_me',
+                                selected:
+                                    _selectedOwnerFilter == 'created_by_me',
                                 onSelected: (selected) {
                                   if (selected) {
-                                    setState(() => _selectedOwnerFilter = 'created_by_me');
+                                    setState(
+                                      () => _selectedOwnerFilter =
+                                          'created_by_me',
+                                    );
                                   }
                                 },
                               ),
                               // Separator (only if there are owner filters)
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                child: Text('|', style: TextStyle(color: Colors.grey)),
+                                child: Text(
+                                  '|',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
                               ),
                             ],
                             // Focus filter chips (for admin, teacher, and student)
@@ -194,7 +206,9 @@ class _ClassPageState extends State<ClassPage> {
                               selected: _selectedFocusFilter == 'HTML',
                               onSelected: (selected) {
                                 setState(() {
-                                  _selectedFocusFilter = selected ? 'HTML' : null;
+                                  _selectedFocusFilter = selected
+                                      ? 'HTML'
+                                      : null;
                                 });
                               },
                             ),
@@ -203,7 +217,9 @@ class _ClassPageState extends State<ClassPage> {
                               selected: _selectedFocusFilter == 'CSS',
                               onSelected: (selected) {
                                 setState(() {
-                                  _selectedFocusFilter = selected ? 'CSS' : null;
+                                  _selectedFocusFilter = selected
+                                      ? 'CSS'
+                                      : null;
                                 });
                               },
                             ),
@@ -212,7 +228,9 @@ class _ClassPageState extends State<ClassPage> {
                               selected: _selectedFocusFilter == 'JavaScript',
                               onSelected: (selected) {
                                 setState(() {
-                                  _selectedFocusFilter = selected ? 'JavaScript' : null;
+                                  _selectedFocusFilter = selected
+                                      ? 'JavaScript'
+                                      : null;
                                 });
                               },
                             ),
@@ -221,7 +239,9 @@ class _ClassPageState extends State<ClassPage> {
                               selected: _selectedFocusFilter == 'PHP',
                               onSelected: (selected) {
                                 setState(() {
-                                  _selectedFocusFilter = selected ? 'PHP' : null;
+                                  _selectedFocusFilter = selected
+                                      ? 'PHP'
+                                      : null;
                                 });
                               },
                             ),
@@ -233,26 +253,28 @@ class _ClassPageState extends State<ClassPage> {
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.filter_list),
                         tooltip: l10n.sortOptions,
-                      onSelected: (value) {
-                        setState(() {
-                          if (value == 'Name') {
-                            _sortType = SortType.alphabetical;
-                          } else if (value == 'Date') {
-                            _sortType = SortType.updated;
-                          } else if (value == 'Ascending') {
-                            _sortOrder = SortOrder.ascending;
-                          } else if (value == 'Descending') {
-                            _sortOrder = SortOrder.descending;
-                          }
-                        });
-                      },
+                        onSelected: (value) {
+                          setState(() {
+                            if (value == 'Name') {
+                              _sortType = SortType.alphabetical;
+                            } else if (value == 'Date') {
+                              _sortType = SortType.updated;
+                            } else if (value == 'Ascending') {
+                              _sortOrder = SortOrder.ascending;
+                            } else if (value == 'Descending') {
+                              _sortOrder = SortOrder.descending;
+                            }
+                          });
+                        },
                         itemBuilder: (BuildContext context) =>
                             <PopupMenuEntry<String>>[
                               PopupMenuItem<String>(
                                 enabled: false,
                                 child: Text(
                                   l10n.sortBy,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               CheckedPopupMenuItem<String>(
@@ -270,7 +292,9 @@ class _ClassPageState extends State<ClassPage> {
                                 enabled: false,
                                 child: Text(
                                   l10n.order,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               CheckedPopupMenuItem<String>(
@@ -329,6 +353,7 @@ class _ClassPageState extends State<ClassPage> {
       layout: _viewLayout,
       sortType: _sortType,
       sortOrder: _sortOrder,
+      focusFilter: _selectedFocusFilter, // Add focus filter support
     );
   }
 }

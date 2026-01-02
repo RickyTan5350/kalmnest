@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/feedback_api.dart';
-import 'package:code_play/models/models.dart';
-import 'package:code_play/models/user_data.dart';
-import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart'
+import 'package:flutter_codelab/api/feedback_api.dart';
+import 'package:flutter_codelab/models/models.dart';
+import 'package:flutter_codelab/models/user_data.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart'
     as create_fb;
-import 'package:code_play/admin_teacher/widgets/feedback/edit_feedback.dart'
+import 'package:flutter_codelab/admin_teacher/widgets/feedback/edit_feedback.dart'
     as edit_fb;
-import 'package:code_play/student/widgets/feedback/student_view_feedback_page.dart';
-import 'package:code_play/enums/sort_enums.dart';
-import 'package:code_play/constants/achievement_constants.dart';
-import 'package:code_play/theme.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/student/widgets/feedback/student_view_feedback_page.dart';
+import 'package:flutter_codelab/enums/sort_enums.dart';
+import 'package:flutter_codelab/constants/achievement_constants.dart';
+import 'package:flutter_codelab/theme.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class FeedbackPage extends StatefulWidget {
   final String? authToken;
@@ -34,12 +34,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Filter/Sort State
-  String _selectedTopicId = 'All';
-  String _selectedStudentId = 'All';
-  String _selectedTeacherId = 'All';
-  SortOrder _sortOrder = SortOrder.descending;
-
+  // Filter State
   List<Map<String, dynamic>> _topics = [];
   List<Map<String, dynamic>> _students = [];
   List<Map<String, dynamic>> _teachers = [];
@@ -48,25 +43,24 @@ class _FeedbackPageState extends State<FeedbackPage> {
   bool _isLoadingStudents = false;
   bool _isLoadingTeachers = false;
 
+  String _selectedTopicId = 'All';
+  String _selectedStudentId = 'All';
+  String _selectedTeacherId = 'All';
+
+  SortOrder _sortOrder = SortOrder.descending;
+
   @override
   void initState() {
     super.initState();
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadFeedback();
-    _loadFilters();
-  }
-
-  Future<void> _loadFilters() async {
-    // TODO: Implement loading of filters (topics, students, teachers)
-    // For now we initialize with empty to prevent UI crashes,
-    // but ideally we fetch these from API.
-    // _topics = await _apiService.getTopics();
-    // _students = await _apiService.getStudents();
-    // _teachers = await _apiService.getTeachers();
-  }
-
-  void _handleRefresh() {
-    _loadFeedback();
+    _loadTopics();
+    if (_isTeacher || widget.currentUser?.isAdmin == true) {
+      _loadStudents();
+    }
+    if (_isStudent) {
+      _loadTeachers();
+    }
   }
 
   Future<void> _loadFeedback() async {
@@ -97,6 +91,47 @@ class _FeedbackPageState extends State<FeedbackPage> {
     }
   }
 
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+    try {
+      final topics = await _apiService.getTopics();
+      setState(() => _topics = topics);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingTopics = false);
+    }
+  }
+
+  Future<void> _loadStudents() async {
+    setState(() => _isLoadingStudents = true);
+    try {
+      final students = await _apiService.getStudents();
+      setState(() => _students = students);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingStudents = false);
+    }
+  }
+
+  Future<void> _loadTeachers() async {
+    setState(() => _isLoadingTeachers = true);
+    try {
+      final teachers = await _apiService.getTeachers();
+      setState(() => _teachers = teachers);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingTeachers = false);
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+    await _loadFeedback();
+    await _loadTopics();
+    if (_isTeacher || widget.currentUser?.isAdmin == true)
+      await _loadStudents();
+    if (_isStudent) await _loadTeachers();
+  }
+
   List<FeedbackData> _parseFeedbackList(List<dynamic> feedbacks) {
     return feedbacks.map((fb) {
       return FeedbackData(
@@ -111,7 +146,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
             'Unknown',
         teacherId: fb['teacher_id'] ?? '',
         topicId: fb['topic_id']?.toString() ?? '',
-        topic: fb['topic'] ?? '',
+        title: fb['title'] ?? fb['topic_name'] ?? '',
+        topic: fb['topic_name'] ?? fb['topic'] ?? '',
         feedback: fb['feedback'] ?? '',
         createdAt: fb['created_at'] ?? fb['createdAt'],
       );
@@ -268,7 +304,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
     final colors = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -375,7 +411,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
     }
 
     return _FeedbackListView(
-      feedbackList: _feedbackList,
+      feedbackList: filtered, // Use filtered list instead of full list
       isTeacher: _isTeacher,
       isStudent: _isStudent,
       onEdit: _openEditDialog,
@@ -706,7 +742,7 @@ class _FeedbackCard extends StatelessWidget {
             if (!isStudent) const SizedBox(height: 8),
 
             // Topic
-            _buildTopic(colorScheme),
+            _buildTopic(context, colorScheme),
             const SizedBox(height: 8),
 
             // Feedback content
@@ -717,7 +753,7 @@ class _FeedbackCard extends StatelessWidget {
             _buildTeacherInfo(context, colorScheme),
 
             // Action buttons (only for teachers)
-            if (isTeacher) _buildActionButtons(),
+            if (isTeacher) _buildActionButtons(colorScheme),
           ],
         ),
       ),
@@ -736,19 +772,47 @@ class _FeedbackCard extends StatelessWidget {
             color: colorScheme.onSurface,
           ),
         ),
-        Icon(Icons.person_outline, color: colorScheme.primary),
       ],
     );
   }
 
-  Widget _buildTopic(ColorScheme colorScheme) {
-    return Text(
-      feedback.topic,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.primary,
-      ),
+  Widget _buildTopic(BuildContext context, ColorScheme colorScheme) {
+    final topicColor = getAchievementColor(
+      context,
+      feedback.topic.toLowerCase(),
+    );
+    final topicIcon = getAchievementIcon(feedback.topic.toLowerCase());
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Topic category (e.g., "HTML", "CSS") with Logo
+        Row(
+          children: [
+            Icon(topicIcon, size: 16, color: topicColor),
+            const SizedBox(width: 8),
+            Text(
+              feedback.topic,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: topicColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        // Feedback title
+        if (feedback.title.isNotEmpty)
+          Text(
+            feedback.title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+          ),
+      ],
     );
   }
 
@@ -812,17 +876,17 @@ class _FeedbackCard extends StatelessWidget {
     }
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(ColorScheme colorScheme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         IconButton(
-          icon: const Icon(Icons.edit, color: Colors.blue),
+          icon: const Icon(Icons.edit),
           onPressed: onEdit,
           tooltip: 'Edit feedback',
         ),
         IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
+          icon: Icon(Icons.delete_outline, color: colorScheme.error),
           onPressed: onDelete,
           tooltip: 'Delete feedback',
         ),

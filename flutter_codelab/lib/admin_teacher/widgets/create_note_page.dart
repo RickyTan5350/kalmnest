@@ -47,7 +47,6 @@ class _CreateNotePageState extends State<CreateNotePage> {
   // State Variables (unchanged)
   String path = '';
   String? _selectedTopic;
-  List<String> _selectedFileNames = [];
   bool _noteVisibility = true;
   bool _isLoading = false;
 
@@ -69,12 +68,6 @@ class _CreateNotePageState extends State<CreateNotePage> {
 
   void _onMarkdownChanged() {
     setState(() {});
-  }
-
-  void _updateSelectedFiles(List<String> fileNames) {
-    setState(() {
-      _selectedFileNames = fileNames;
-    });
   }
 
   Future<void> _submitForm() async {

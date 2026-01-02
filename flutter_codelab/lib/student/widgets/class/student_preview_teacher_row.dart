@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class TeacherPreviewRow extends StatelessWidget {
   final String teacherName;
@@ -29,9 +29,9 @@ class TeacherPreviewRow extends StatelessWidget {
       children: [
         Text(
           l10n.assignedTeacher,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         SizedBox(height: ClassConstants.defaultPadding * 0.75),
 
@@ -45,9 +45,13 @@ class TeacherPreviewRow extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
+              borderRadius: BorderRadius.circular(
+                ClassConstants.cardBorderRadius,
+              ),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.2),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withOpacity(0.2),
               ),
             ),
             child: Row(
@@ -73,9 +77,8 @@ class TeacherPreviewRow extends StatelessWidget {
                     children: [
                       Text(
                         teacherName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
                       SizedBox(height: ClassConstants.defaultPadding * 0.25),
                       Text(
@@ -101,4 +104,3 @@ class TeacherPreviewRow extends StatelessWidget {
     );
   }
 }
-

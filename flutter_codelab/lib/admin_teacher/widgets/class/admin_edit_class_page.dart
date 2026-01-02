@@ -1,11 +1,11 @@
 // lib/widgets/edit_class_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_theme_extensions.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_validators.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_theme_extensions.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/class_validators.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class EditClassPage extends StatefulWidget {
   final dynamic classData;
@@ -222,7 +222,8 @@ class _EditClassPageState extends State<EditClassPage> {
       setState(() {
         _isCheckingClassName = false;
         if (exists) {
-          _classNameValidationError = 'The classname is already exist. Please choose a different name.';
+          _classNameValidationError =
+              'The classname is already exist. Please choose a different name.';
         } else {
           _classNameValidationError = null;
         }
@@ -251,7 +252,7 @@ class _EditClassPageState extends State<EditClassPage> {
 
   Future<void> saveChanges() async {
     final l10n = AppLocalizations.of(context)!;
-    
+
     // Validate all fields before submission
     if (!(_formKey.currentState?.validate() ?? false)) {
       // Show error message if validation fails
@@ -421,7 +422,9 @@ class _EditClassPageState extends State<EditClassPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      color: colorScheme.surfaceContainerHighest.withOpacity(
+                        0.3,
+                      ),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: colorScheme.outlineVariant.withOpacity(0.5),
@@ -453,29 +456,30 @@ class _EditClassPageState extends State<EditClassPage> {
                   TextFormField(
                     controller: classNameController,
                     style: TextStyle(color: colorScheme.onSurface),
-                    decoration: _inputDecoration(
-                      context: context,
-                      labelText: l10n.className,
-                      hintText: l10n.enterClassName,
-                      icon: Icons.class_,
-                      isRequired: true,
-                    ).copyWith(
-                      suffixIcon: _isCheckingClassName
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    colorScheme.primary,
+                    decoration:
+                        _inputDecoration(
+                          context: context,
+                          labelText: l10n.className,
+                          hintText: l10n.enterClassName,
+                          icon: Icons.class_,
+                          isRequired: true,
+                        ).copyWith(
+                          suffixIcon: _isCheckingClassName
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        colorScheme.primary,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            )
-                          : null,
-                    ),
+                                )
+                              : null,
+                        ),
                     onChanged: (value) {
                       _checkClassNameExists(value);
                     },
@@ -510,7 +514,10 @@ class _EditClassPageState extends State<EditClassPage> {
                         value: null,
                         child: Text(l10n.noneOptional),
                       ),
-                      const DropdownMenuItem(value: 'HTML', child: Text('HTML')),
+                      const DropdownMenuItem(
+                        value: 'HTML',
+                        child: Text('HTML'),
+                      ),
                       const DropdownMenuItem(value: 'CSS', child: Text('CSS')),
                       const DropdownMenuItem(
                         value: 'JavaScript',
@@ -620,7 +627,9 @@ class _EditClassPageState extends State<EditClassPage> {
                                     color: isActive
                                         ? colorScheme.primaryContainer
                                         : colorScheme.errorContainer,
-                                    borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.33),
+                                    borderRadius: BorderRadius.circular(
+                                      ClassConstants.cardBorderRadius * 0.33,
+                                    ),
                                   ),
                                   child: Text(
                                     status.toUpperCase(),
@@ -823,11 +832,13 @@ class _EditClassPageState extends State<EditClassPage> {
                     decoration: _inputDecoration(
                       context: context,
                       labelText: l10n.description,
-                      hintText: '${l10n.enterDescription} (${l10n.atLeast10Words})',
+                      hintText:
+                          '${l10n.enterDescription} (${l10n.atLeast10Words})',
                       icon: Icons.description,
                       isRequired: true,
                     ),
-                    validator: (value) => ClassValidators.description(value, l10n),
+                    validator: (value) =>
+                        ClassValidators.description(value, l10n),
                   ),
 
                   SizedBox(height: ClassConstants.sectionSpacing),
@@ -859,7 +870,9 @@ class _EditClassPageState extends State<EditClassPage> {
                             vertical: 12,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(ClassConstants.inputBorderRadius),
+                            borderRadius: BorderRadius.circular(
+                              ClassConstants.inputBorderRadius,
+                            ),
                           ),
                         ),
                         child: loading

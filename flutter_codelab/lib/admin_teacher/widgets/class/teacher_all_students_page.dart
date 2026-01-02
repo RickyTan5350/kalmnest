@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/admin_teacher/widgets/class/teacher_student_detail_page.dart';
-import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_student_detail_page.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 /// Teacher view: All students in a class with search and scrollable list.
 class TeacherAllStudentsPage extends StatefulWidget {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/student/widgets/class/student_preview_teacher_row.dart';
-import 'package:code_play/student/widgets/class/student_quiz_list_section.dart';
-import 'package:code_play/api/class_api.dart';
-import 'package:code_play/admin_teacher/widgets/user/user_detail_page.dart';
-import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/student/widgets/class/student_preview_teacher_row.dart';
+import 'package:flutter_codelab/student/widgets/class/student_quiz_list_section.dart';
+import 'package:flutter_codelab/api/class_api.dart';
+import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
+import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 class ClassDetailPage extends StatefulWidget {
   final String classId;
@@ -188,6 +188,38 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                   ],
                 ),
               ),
+              // Focus display
+              if (classData?['focus'] != null &&
+                  classData!['focus'].toString().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 120,
+                        child: Text(
+                          'Focus:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          classData!['focus'].toString(),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
               const Divider(height: 30),
 
@@ -225,9 +257,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                   final l10n = AppLocalizations.of(context)!;
                   if (teacher == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.noTeacherAssignedToClass),
-                      ),
+                      SnackBar(content: Text(l10n.noTeacherAssignedToClass)),
                     );
                     return;
                   }
@@ -239,9 +269,7 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
                       teacher['teacher_id'];
                   if (rawId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.cannotOpenTeacherProfile),
-                      ),
+                      SnackBar(content: Text(l10n.cannotOpenTeacherProfile)),
                     );
                     return;
                   }

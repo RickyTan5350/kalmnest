@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_codelab/admin_teacher/widgets/grid_layout_view.dart';
-import 'package:flutter_codelab/theme.dart';
 import 'package:flutter_codelab/widgets/user_avatar.dart';
 import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 

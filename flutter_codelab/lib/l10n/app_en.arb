@@ -364,6 +364,8 @@
   },
   "clearHistory": "Clear History",
   "clearHistoryConfirmation": "Are you sure you want to delete this chat session?",
+  "chatDeletedSuccessfully": "Chat deleted successfully",
+  "chatClearedSuccessfully": "Chat cleared successfully",
   "deleteFailed": "Delete failed: {error}",
   "@deleteFailed": {
     "placeholders": {
@@ -383,5 +385,189 @@
   "typeQuestionHint": "Type your question...",
   "backToHistory": "Back to History",
   "refreshQuestion": "Refresh Question",
-  "deleteChat": "Delete Chat"
+  "deleteChat": "Delete Chat",
+  "classCreatedSuccessfully": "Class created successfully!",
+  "failedToCreateClass": "Failed to create class",
+  "ok": "OK",
+  "createNewClass": "Create New Class",
+  "indicatesRequiredFields": "* indicates required fields",
+  "className": "Class Name",
+  "enterClassName": "Enter class name",
+  "description": "Description",
+  "enterDescription": "Enter description (at least 10 words)",
+  "atLeast10Words": "At least 10 words",
+  "focusOptional": "Focus (Optional)",
+  "noneOptional": "None (Optional)",
+  "assignTeacherOptional": "Assign Teacher (Optional)",
+  "classUpdatedSuccessfully": "Class updated successfully!",
+  "failedToUpdateClass": "Failed to update class",
+  "editClass": "Edit Class",
+  "editClassDetails": "Edit Class Details",
+  "loading": "Loading...",
+  "selectTeacher": "Select Teacher",
+  "classNameRequired": "Class name is required",
+  "classNameMinCharacters": "Class name must be at least 3 characters",
+  "classNameMaxCharacters": "Class name cannot exceed 100 characters",
+  "descriptionRequired": "Description is required",
+  "descriptionMaxCharacters": "Description cannot exceed 500 characters",
+  "descriptionMinWords": "Description must contain at least 10 words",
+  "thisClass": "this class",
+  "deleteClassConfirmation": "Are you sure you want to delete {className}? This action cannot be undone.",
+  "@deleteClassConfirmation": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "classDeletedSuccessfully": "Class deleted successfully!",
+  "errorDeletingClass": "Error deleting class: {error}",
+  "@errorDeletingClass": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unknown": "Unknown",
+  "nA": "N/A",
+  "details": "Details",
+  "refresh": "Refresh",
+  "deleteClass": "Delete Class",
+  "noName": "No Name",
+  "noTeacherAssigned": "No Teacher Assigned",
+  "generalInfo": "General Information",
+  "searchStudents": "Search Students",
+  "totalStudents": "Total Students",
+  "completionRate": "Completion Rate",
+  "quizzesAssigned": "Quizzes Assigned",
+  "moreOptions": "More Options",
+  "viewDetails": "View Details",
+  "completed": "Completed",
+  "quizzes": "Quizzes",
+  "courseProgress": "Course Progress",
+  "noStudentsFound": "No students found",
+  "tryAdjustingSearchCriteria": "Try adjusting your search criteria",
+  "edit": "Edit",
+  "noClassesFound": "No classes found",
+  "tryAdjustingSearchQuery": "Try adjusting your search query",
+  "notEnrolledInAnyClasses": "You are not enrolled in any classes",
+  "classFocusUpdatedSuccessfully": "Class focus updated successfully!",
+  "failedToUpdateClassFocus": "Failed to update class focus",
+  "editClassFocus": "Edit Class Focus",
+  "editFocusFor": "Edit Focus for {className}",
+  "@editFocusFor": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "youCanOnlyEditFocus": "You can only edit the focus for your own classes",
+  "failedToLoadQuizStudentData": "Failed to load quiz student data",
+  "never": "Never",
+  "allQuizzes": "All Quizzes",
+  "statistics": "Statistics",
+  "pending": "Pending",
+  "failedToLoadStudentQuizData": "Failed to load student quiz data",
+  "gender": "Gender",
+  "joinedDate": "Joined Date",
+  "accountStatus": "Account Status",
+  "totalQuizzes": "Total Quizzes",
+  "noQuizzesFound": "No quizzes found",
+  "quizVisibility": "Quiz Visibility",
+  "howShouldQuizBeVisible": "How should this quiz be visible?",
+  "onlyVisibleToThisClass": "Only visible to this class",
+  "visibleToEveryone": "Visible to everyone",
+  "quizCreatedAndAssignedSuccessfully": "Quiz created and assigned successfully!",
+  "failedToAssignQuiz": "Failed to assign quiz",
+  "quizAssignedSuccessfully": "Quiz assigned successfully!",
+  "removeQuiz": "Remove Quiz",
+  "areYouSureRemoveQuiz": "Are you sure you want to remove this quiz from the class?",
+  "remove": "Remove",
+  "quizRemovedSuccessfully": "Quiz removed successfully!",
+  "quizzesAvailable": "{count} quizzes available",
+  "@quizzesAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewAllQuizzes": "View All Quizzes",
+  "noQuizzesYet": "No quizzes yet",
+  "createOrAssignQuizzes": "Create or assign quizzes to get started",
+  "uploaded": "Uploaded {date}",
+  "@uploaded": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "viewAllXQuizzes": "View All {count} Quizzes",
+  "@viewAllXQuizzes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unknownTeacher": "Unknown Teacher",
+  "noTeacher": "No Teacher",
+  "studentSingular": "student",
+  "studentsPlural": "students",
+  "noStudents": "No students",
+  "assignedTeacher": "Assigned Teacher",
+  "play": "Play",
+  "allClasses": "All Classes",
+  "myClasses": "My Classes",
+  "enrolledClasses": "Enrolled Classes",
+  "searchByClassName": "Search by class name",
+  "noDescriptionAvailable": "No description available",
+  "timestamps": "Timestamps",
+  "createdAt": "Created At",
+  "updatedAt": "Updated At",
+  "assignStudentsOptional": "Assign Students (Optional)",
+  "studentNumber": "Student {number}",
+  "@studentNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "selectStudents": "Select Students",
+  "addStudent": "Add Student",
+  "reset": "Reset",
+  "create": "Create",
+  "creator": "Creator",
+  "focus": "Focus",
+  "notSet": "Not Set",
+  "cannotOpenTeacherProfile": "Cannot open teacher profile",
+  "noTeacherAssignedToClass": "No teacher assigned to this class",
+  "lastUpdated": "Last Updated",
+  "students": "Students",
+  "moreStudents": "and {count} more students",
+  "@moreStudents": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noStudentsEnrolled": "No students enrolled",
+  "listOfEnrolledStudents": "List of Enrolled Students",
+  "status": "Status",
+  "assigned": "Assigned",
+  "failedToRemoveQuiz": "Failed to remove quiz",
+  "searchQuizzes": "Search Quizzes",
+  "assignQuiz": "Assign Quiz",
+  "createQuiz": "Create Quiz",
+  "tapToViewStudentCompletion": "Tap to view student completion",
+  "assignQuizToClass": "Assign Quiz to Class",
+  "reloadQuizzes": "Reload Quizzes",
+  "noQuizzesAssigned": "No quizzes assigned",
+  "pleaseEnterQuestion": "Please enter a question",
+  "aiLanguageNotice": "AI responds in the same language as your question"
 }
