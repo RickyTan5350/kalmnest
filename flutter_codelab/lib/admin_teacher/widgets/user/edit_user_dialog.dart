@@ -1,4 +1,3 @@
-import 'dart:convert'; // Added for JSON parsing
 import 'package:flutter/material.dart';
 import 'package:code_play/api/user_api.dart';
 import 'package:code_play/utils/formatters.dart';
@@ -7,56 +6,96 @@ import 'package:code_play/l10n/generated/app_localizations.dart';
 import 'package:code_play/widgets/password_strength_indicator.dart';
 
 // Utility function to show the dialog
-void showCreateUserAccountDialog({
+Future<bool?> showEditUserDialog({
   required BuildContext context,
+  required UserDetails initialData,
+  bool isSelfEdit = false,
   required void Function(BuildContext context, String message, Color color)
   showSnackBar,
 }) {
-  showDialog(
+  return showDialog<bool>(
     context: context,
     builder: (BuildContext dialogContext) {
-      // Use AlertDialog for a floating modal design, matching the achievement dialog
-      return CreateUserAccountDialog(showSnackBar: showSnackBar);
+      return EditUserDialog(
+        initialData: initialData,
+        isSelfEdit: isSelfEdit,
+        showSnackBar: showSnackBar,
+      );
     },
   );
 }
 
-class CreateUserAccountDialog extends StatefulWidget {
+class EditUserDialog extends StatefulWidget {
+  final UserDetails initialData;
+  final bool isSelfEdit;
   final void Function(BuildContext context, String message, Color color)
   showSnackBar;
 
-  const CreateUserAccountDialog({super.key, required this.showSnackBar});
+  const EditUserDialog({
+    super.key,
+    required this.initialData,
+    this.isSelfEdit = false,
+    required this.showSnackBar,
+  });
 
   @override
-  State<CreateUserAccountDialog> createState() =>
-      _CreateUserAccountDialogState();
+  State<EditUserDialog> createState() => _EditUserDialogState();
 }
 
-class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
+class _EditUserDialogState extends State<EditUserDialog> {
   final _formKey = GlobalKey<FormState>();
   final UserApi _userApi = UserApi();
 
   // Controllers
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _phoneNoController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
+  late final TextEditingController _emailController;
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneNoController;
+  late final TextEditingController _addressController;
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _passwordConfirmationController =
       TextEditingController();
 
   // Variables
-  String? _selectedGender;
-  String? _selectedRole = 'Student'; // Default role to student
-  bool _accountStatus = true; // Default to active
+  late String _selectedGender;
+  late String _selectedRole;
+  late bool _accountStatus;
   Map<String, String> _serverErrors = {}; // Store server-side errors
 
   bool _isPasswordVisible = false;
 
   bool _isLoading = false;
 
-  final List<String> _genders = ['male', 'female'];
+  final List<String> _genders = ['Male', 'Female'];
   final List<String> _roles = ['Admin', 'Student', 'Teacher'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with existing data
+    _emailController = TextEditingController(text: widget.initialData.email);
+    _nameController = TextEditingController(text: widget.initialData.name);
+    _phoneNoController = TextEditingController(
+      text: widget.initialData.phoneNo == 'N/A'
+          ? ''
+          : widget.initialData.phoneNo,
+    );
+    _addressController = TextEditingController(
+      text: widget.initialData.address == 'N/A'
+          ? ''
+          : widget.initialData.address,
+    );
+
+    // Initialize state variables
+    _selectedGender = widget.initialData.gender;
+    _selectedRole = widget.initialData.roleName;
+    _accountStatus = widget.initialData.accountStatus == 'active';
+
+    // Ensure initial dropdown values are in the list, otherwise default to first valid option.
+    if (!_genders.contains(_selectedGender)) {
+      _selectedGender =
+          _genders[0]; // Defaulting gender to Male if 'N/A' is stored
+    }
+  }
 
   @override
   void dispose() {
@@ -69,84 +108,6 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     super.dispose();
   }
 
-  // --- NEW: JSON Autofill Logic ---
-  void _attemptJsonAutofill(String value) {
-    value = value.trim();
-    if ((value.startsWith('{') && value.endsWith('}')) ||
-        (value.startsWith('[') && value.endsWith(']'))) {
-      try {
-        // Handle potentially wrapped JSON (e.g. [ { ... } ])
-        dynamic decoded = jsonDecode(value);
-        if (decoded is List && decoded.isNotEmpty) {
-          decoded = decoded.first;
-        }
-
-        if (decoded is Map<String, dynamic>) {
-          setState(() {
-            if (decoded.containsKey('name'))
-              _nameController.text = decoded['name'] ?? '';
-            if (decoded.containsKey('email'))
-              _emailController.text = decoded['email'] ?? '';
-            if (decoded.containsKey('phone_no'))
-              _phoneNoController.text = decoded['phone_no'] ?? '';
-            if (decoded.containsKey('address'))
-              _addressController.text = decoded['address'] ?? '';
-
-            // Handle Role
-            if (decoded.containsKey('role')) {
-              String role = decoded['role'].toString();
-              // Capitalize first letter to match dropdown values
-              if (role.isNotEmpty) {
-                role = role[0].toUpperCase() + role.substring(1).toLowerCase();
-                if (_roles.contains(role)) {
-                  _selectedRole = role;
-                }
-              }
-            } else if (decoded.containsKey('roleName')) {
-              // Handle roleName key variation
-              String role = decoded['roleName'].toString();
-              if (role.isNotEmpty) {
-                role = role[0].toUpperCase() + role.substring(1).toLowerCase();
-                if (_roles.contains(role)) {
-                  _selectedRole = role;
-                }
-              }
-            }
-
-            // Handle Gender
-            if (decoded.containsKey('gender')) {
-              String gender = decoded['gender'].toString().toLowerCase();
-              if (_genders.contains(gender)) {
-                _selectedGender = gender;
-              }
-            }
-
-            // Handle Status
-            if (decoded.containsKey('accountStatus')) {
-              var status = decoded['accountStatus'];
-              if (status is bool) {
-                _accountStatus = status;
-              } else if (status is String) {
-                _accountStatus = status.toLowerCase() == 'active';
-              } else if (status is int) {
-                _accountStatus = status == 1; // Assuming 1 is active
-              }
-            }
-          });
-
-          widget.showSnackBar(
-            context,
-            'Form autofilled from pasted JSON',
-            Colors.green,
-          );
-        }
-      } catch (e) {
-        // Not valid JSON, ignore silently or maybe log
-        // print('Paste detected but invalid JSON: $e');
-      }
-    }
-  }
-
   String _getLocalizedGender(String gender) {
     final l10n = AppLocalizations.of(context)!;
     switch (gender.toLowerCase()) {
@@ -154,6 +115,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
         return l10n.male;
       case 'female':
         return l10n.female;
+
       default:
         return gender;
     }
@@ -173,7 +135,6 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     }
   }
 
-  // Submission logic, mirroring _submitForm
   Future<void> _submitForm() async {
     // 1. Reset Errors
     setState(() {
@@ -183,8 +144,11 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     // 2. Client-Side Validation
     if (!_formKey.currentState!.validate()) return;
 
-    // Additionally check if password and confirmation match if they are both filled
-    if (_passwordController.text != _passwordConfirmationController.text) {
+    final newPassword = _passwordController.text.trim();
+
+    // Check if passwords are provided but don't match
+    if (newPassword.isNotEmpty &&
+        newPassword != _passwordConfirmationController.text.trim()) {
       widget.showSnackBar(
         context,
         AppLocalizations.of(context)!.passwordsMatchError,
@@ -197,32 +161,41 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
       _isLoading = true;
     });
 
-    final data = UserData(
-      email: _emailController.text,
-      name: _nameController.text,
-      phone_no: _phoneNoController.text.isNotEmpty
-          ? _phoneNoController.text
-          : null,
-      address: _addressController.text.isNotEmpty
-          ? _addressController.text
-          : null,
-      gender: _selectedGender,
-      password: _passwordController.text,
-      passwordConfirmation: _passwordConfirmationController.text,
-      accountStatus: _accountStatus,
-      roleName: _selectedRole!,
-    );
+    // --- Build the Update Payload (Only send fields that might change) ---
+    final Map<String, dynamic> updatePayload = {
+      'name': _nameController.text.trim(),
+      'email': _emailController.text.trim(),
+      'phone_no': _phoneNoController.text.trim().isEmpty
+          ? null
+          : _phoneNoController.text.trim(),
+      'address': _addressController.text.trim().isEmpty
+          ? null
+          : _addressController.text.trim(),
+      'gender': _selectedGender,
+    };
+
+    // Only allow updating Role and Status if NOT self-edit
+    if (!widget.isSelfEdit) {
+      updatePayload['role_name'] = _selectedRole;
+      updatePayload['account_status'] = _accountStatus ? 'active' : 'inactive';
+    }
+
+    // Only include password if a new one was entered
+    if (newPassword.isNotEmpty) {
+      updatePayload['password'] = newPassword;
+    }
 
     try {
-      await _userApi.createUser(data);
+      await _userApi.updateUser(widget.initialData.id, updatePayload);
 
       if (mounted) {
         widget.showSnackBar(
           context,
-          AppLocalizations.of(context)!.userAccountCreatedSuccess,
+          AppLocalizations.of(context)!.userProfileUpdated,
           Colors.green,
         );
-        Navigator.of(context).pop();
+        // Pop dialog and return 'true' to signal a successful update/refresh needed
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -259,12 +232,11 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
         Theme.of(context).colorScheme.error,
       );
     }
-    // --- CASE 2: Network Error ---
-    else if (errorString.startsWith('Exception: Network Error:')) {
-      final message = errorString.substring('Exception: Network Error:'.length);
+    // --- CASE 2: Forbidden Error ---
+    else if (errorString.contains('403:')) {
       widget.showSnackBar(
         context,
-        AppLocalizations.of(context)!.networkErrorCheckApi,
+        AppLocalizations.of(context)!.accessDeniedAdminModify,
         Theme.of(context).colorScheme.error,
       );
     }
@@ -274,18 +246,18 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
         context,
         AppLocalizations.of(
           context,
-        )!.unknownErrorOccurred(errorString.replaceAll('Exception: ', '')),
+        )!.errorUpdatingProfile(errorString.replaceAll('Exception: ', '')),
         Theme.of(context).colorScheme.error,
       );
     }
   }
 
-  // Input decoration helper, mirroring the _inputDecoration in admin_create_achievement_page.dart
   InputDecoration _inputDecoration({
     required String labelText,
     required IconData icon,
     String? hintText,
     required ColorScheme colorScheme,
+    bool enabled = true,
     bool isMandatory = false,
   }) {
     return InputDecoration(
@@ -302,7 +274,12 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
         ),
       ),
       hintText: hintText,
-      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
+      prefixIcon: Icon(
+        icon,
+        color: enabled
+            ? colorScheme.onSurfaceVariant
+            : colorScheme.onSurfaceVariant.withOpacity(0.5),
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.outline),
@@ -315,12 +292,19 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.primary, width: 2),
       ),
-      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      labelStyle: TextStyle(
+        color: enabled
+            ? colorScheme.onSurfaceVariant
+            : colorScheme.onSurfaceVariant.withOpacity(0.5),
+      ),
       hintStyle: TextStyle(
         color: colorScheme.onSurfaceVariant.withOpacity(0.6),
       ),
-      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      fillColor: enabled
+          ? colorScheme.surfaceContainerHighest.withOpacity(0.3)
+          : colorScheme.surfaceContainerHighest.withOpacity(0.1),
       filled: true,
+      enabled: enabled,
     );
   }
 
@@ -329,11 +313,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return AlertDialog(
-      // FIX: Use colorScheme.surface instead of hardcoded dark color
       backgroundColor: colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.all(24.0),
-      // Use SizedBox to constrain the width of the dialog, matching the achievement dialog
       content: SizedBox(
         width: 360,
         child: SingleChildScrollView(
@@ -343,7 +325,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  AppLocalizations.of(context)!.createNewUser,
+                  AppLocalizations.of(context)!.editUserProfile,
                   style: TextStyle(
                     color: colorScheme.onSurface,
                     fontSize: 20,
@@ -371,7 +353,6 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     return null;
                   },
                   onChanged: (value) {
-                    _attemptJsonAutofill(value); // <--- JSON Check
                     if (_serverErrors.containsKey('name')) {
                       setState(() => _serverErrors.remove('name'));
                     }
@@ -390,19 +371,12 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     isMandatory: true,
                   ),
                   keyboardType: TextInputType.emailAddress,
-                  onChanged: (value) {
-                    _attemptJsonAutofill(value); // <--- JSON Check
-                    if (_serverErrors.containsKey('email')) {
-                      setState(() => _serverErrors.remove('email'));
-                    }
-                  },
                   validator: (value) {
                     if (_serverErrors.containsKey('email')) {
                       return _serverErrors['email'];
                     }
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return AppLocalizations.of(context)!.pleaseEnterEmail;
-                    }
                     final emailRegex = RegExp(
                       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
                     );
@@ -411,19 +385,23 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     }
                     return null;
                   },
+                  onChanged: (value) {
+                    if (_serverErrors.containsKey('email')) {
+                      setState(() => _serverErrors.remove('email'));
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
 
-                // Password
+                // New Password
                 TextFormField(
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration:
                       _inputDecoration(
-                        labelText: AppLocalizations.of(context)!.password,
+                        labelText: AppLocalizations.of(context)!.newPassword,
                         icon: Icons.lock,
                         colorScheme: colorScheme,
-                        isMandatory: true,
                       ).copyWith(
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -441,7 +419,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     if (_serverErrors.containsKey('password')) {
                       return _serverErrors['password'];
                     }
-                    if (value == null || value.isEmpty || value.length < 8)
+                    if (value != null && value.isNotEmpty && value.length < 8)
                       return AppLocalizations.of(context)!.passwordLengthError;
                     return null;
                   },
@@ -455,7 +433,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                 PasswordStrengthIndicator(password: _passwordController.text),
                 const SizedBox(height: 16),
 
-                // --- ADDED: Password Confirmation Field ---
+                // Password Confirmation Field
                 TextFormField(
                   controller: _passwordConfirmationController,
                   style: TextStyle(color: colorScheme.onSurface),
@@ -463,10 +441,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       _inputDecoration(
                         labelText: AppLocalizations.of(
                           context,
-                        )!.confirmPassword,
+                        )!.confirmNewPassword,
                         icon: Icons.lock_open,
                         colorScheme: colorScheme,
-                        isMandatory: true,
                       ).copyWith(
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -481,17 +458,18 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       ),
                   obscureText: !_isPasswordVisible,
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (_passwordController.text.isNotEmpty &&
+                        (value == null || value.isEmpty)) {
                       return AppLocalizations.of(
                         context,
-                      )!.pleaseConfirmPassword;
+                      )!.confirmPasswordRequired;
+                    }
                     if (value != _passwordController.text)
                       return AppLocalizations.of(context)!.passwordsDoNotMatch;
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                // --- END ADDED ---
 
                 // Phone Number
                 TextFormField(
@@ -506,20 +484,12 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   ),
                   keyboardType: TextInputType.phone,
                   inputFormatters: [MalaysianPhoneFormatter()],
-                  onChanged: (value) {
-                    if (_serverErrors.containsKey('phone_no')) {
-                      setState(() => _serverErrors.remove('phone_no'));
-                    }
-                  },
                   validator: (value) {
                     if (_serverErrors.containsKey('phone_no')) {
                       return _serverErrors['phone_no'];
                     }
                     if (value == null || value.isEmpty)
                       return AppLocalizations.of(context)!.pleaseEnterPhone;
-                    // Regex for Malaysian Phone Numbers:
-                    // Matches: +601..., 601..., 01...
-                    // Supports dashes or no dashes
                     final phoneRegex = RegExp(
                       r'^(\+?6?0)[0-9]{1,2}-?[0-9]{7,8}$',
                     );
@@ -527,6 +497,11 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       return AppLocalizations.of(context)!.enterValidPhone;
                     }
                     return null;
+                  },
+                  onChanged: (value) {
+                    if (_serverErrors.containsKey('phone_no')) {
+                      setState(() => _serverErrors.remove('phone_no'));
+                    }
                   },
                 ),
                 const SizedBox(height: 16),
@@ -552,8 +527,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
 
                 // Gender Dropdown
                 DropdownButtonFormField<String>(
-                  value:
-                      _selectedGender, // Removed initialValue in favor of value
+                  value: _selectedGender,
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
@@ -581,12 +555,13 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                             color: colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 12),
-                          Text(value),
+                          Text(_getLocalizedGender(value)),
                         ],
                       ),
                     );
                   }).toList(),
-                  onChanged: (value) => setState(() => _selectedGender = value),
+                  onChanged: (value) =>
+                      setState(() => _selectedGender = value!),
                   validator: (value) {
                     if (value == null || value.isEmpty)
                       return AppLocalizations.of(context)!.pleaseSelectGender;
@@ -598,13 +573,20 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                 // Role Dropdown
                 DropdownButtonFormField<String>(
                   value: _selectedRole,
-                  // FIX: Use colorScheme.surfaceContainer instead of hardcoded dark color
+                  onChanged: widget.isSelfEdit
+                      ? null
+                      : (value) => setState(() => _selectedRole = value!),
                   dropdownColor: colorScheme.surfaceContainer,
-                  style: TextStyle(color: colorScheme.onSurface),
+                  style: TextStyle(
+                    color: widget.isSelfEdit
+                        ? colorScheme.onSurface.withOpacity(0.5)
+                        : colorScheme.onSurface,
+                  ),
                   decoration: _inputDecoration(
                     labelText: AppLocalizations.of(context)!.roleLabel,
                     icon: Icons.badge,
                     colorScheme: colorScheme,
+                    enabled: !widget.isSelfEdit,
                     isMandatory: true,
                   ),
                   items: _roles.map((value) {
@@ -632,12 +614,11 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                             color: colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 12),
-                          Text(value),
+                          Text(_getLocalizedRole(value)),
                         ],
                       ),
                     );
                   }).toList(),
-                  onChanged: (value) => setState(() => _selectedRole = value),
                   validator: (value) {
                     if (value == null || value.isEmpty)
                       return AppLocalizations.of(context)!.pleaseSelectRole;
@@ -661,11 +642,13 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       ),
                       Switch(
                         value: _accountStatus,
-                        onChanged: (bool value) {
-                          setState(() {
-                            _accountStatus = value;
-                          });
-                        },
+                        onChanged: widget.isSelfEdit
+                            ? null
+                            : (bool value) {
+                                setState(() {
+                                  _accountStatus = value;
+                                });
+                              },
                       ),
                       Text(
                         _accountStatus
@@ -683,7 +666,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => Navigator.of(context).pop(false),
                       child: Text(
                         AppLocalizations.of(context)!.cancel,
                         style: TextStyle(color: colorScheme.onSurfaceVariant),
@@ -692,7 +675,6 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: _isLoading ? null : _submitForm,
-                      // The button style matches the one used in create_achievement_page.dart
                       style: ElevatedButton.styleFrom(
                         backgroundColor: colorScheme.primary,
                         foregroundColor: colorScheme.onPrimary,
@@ -715,7 +697,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                                 ),
                               ),
                             )
-                          : Text(AppLocalizations.of(context)!.createUser),
+                          : Text(AppLocalizations.of(context)!.saveChanges),
                     ),
                   ],
                 ),
