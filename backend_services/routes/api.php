@@ -10,6 +10,7 @@ use App\Http\Controllers\FeedbackController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\RunCodeController;
 use App\Http\Requests\DeleteUserRequest;
 use App\Http\Controllers\GeminiController;
 /*
@@ -170,6 +171,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/level-user/{levelId}/save', [LevelUserController::class, 'saveLevelData']);
     Route::post('/level-user/{levelId}/{userId}/save-file', [LevelUserController::class, 'storeProgressFromFiles']);
     Route::get('/level-user/{levelId}', [LevelUserController::class, 'getLevelData']);
+    Route::get('/level-users/{levelId}', [LevelUserController::class, 'getLevelUsers']);
     Route::post('/level-user/{levelId}/{userId}/complete', [LevelUserController::class, 'completeLevel']);
 
 });

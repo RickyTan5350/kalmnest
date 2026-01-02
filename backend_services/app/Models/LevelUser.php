@@ -19,6 +19,8 @@ class LevelUser extends Model
         'level_id',
         'user_id',
         'saved_data',
+        'timer',
+        'index_files'
     ];
 
     protected function casts(): array
@@ -41,4 +43,3 @@ class LevelUser extends Model
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 }
-

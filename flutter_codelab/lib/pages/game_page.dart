@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:code_play/admin_teacher/widgets/game/gamePages/play_game_page.dart';
 import 'package:code_play/models/level.dart';
 import 'package:code_play/api/game_api.dart';
-import 'package:code_play/admin_teacher/widgets/game/gamePages/create_game_page.dart';
 import 'package:code_play/admin_teacher/widgets/game/gamePages/edit_game_page.dart';
+import 'package:code_play/admin_teacher/widgets/game/gamePages/teacher_quiz_view.dart'; // Import TeacherQuizView
 import 'package:code_play/api/achievement_api.dart';
 import 'package:code_play/models/achievement_data.dart';
 import 'package:code_play/constants/view_layout.dart' show ViewLayout;
@@ -26,7 +26,7 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage> {
   final List<String> _topics = ['All', 'HTML', 'CSS', 'JS', 'PHP', 'Quiz'];
   String _selectedTopic = 'All';
-  
+
   // Visibility filter (only for teachers/admins)
   final List<String> _visibilityFilters = ['All', 'Public', 'Private'];
   String _selectedVisibility = 'All';
@@ -81,12 +81,12 @@ class _GamePageState extends State<GamePage> {
 
   Future<void> fetchLevels({String? topic, bool forceRefresh = false}) async {
     setState(() => _loading = true);
-    
+
     // Fetch levels and completed achievements in parallel
     final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
     final results = await Future.wait([
       GameAPI.fetchLevels(topic: topic, forceRefresh: forceRefresh),
-      isStudent 
+      isStudent
           ? AchievementApi().fetchMyUnlockedAchievements()
           : Future.value(<AchievementData>[]),
     ]);
@@ -99,6 +99,7 @@ class _GamePageState extends State<GamePage> {
     setState(() {
       _levels = levels;
       _completedLevelIds = achievements
+          .where((a) => a.unlockedAt != null)
           .map((a) => a.levelId?.toString())
           .whereType<String>()
           .toSet();
@@ -109,17 +110,19 @@ class _GamePageState extends State<GamePage> {
 
   List<LevelModel> _applyFilters(List<LevelModel> levels) {
     var filtered = List<LevelModel>.from(levels);
-    
+
     // Apply visibility filter (only for teachers/admins)
     final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
     if (!isStudent && _selectedVisibility != 'All') {
       if (_selectedVisibility == 'Public') {
-        filtered = filtered.where((level) => !(level.isPrivate ?? false)).toList();
+        filtered = filtered
+            .where((level) => !(level.isPrivate ?? false))
+            .toList();
       } else if (_selectedVisibility == 'Private') {
         filtered = filtered.where((level) => level.isPrivate == true).toList();
       }
     }
-    
+
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered
@@ -142,7 +145,7 @@ class _GamePageState extends State<GamePage> {
       }
       return _sortOrder == SortOrder.ascending ? result : -result;
     });
-    
+
     return filtered;
   }
 
@@ -168,23 +171,6 @@ class _GamePageState extends State<GamePage> {
       context,
     ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
-
-  void _onAddLevelPressed() {
-    showCreateGamePage(
-      context: context,
-      showSnackBar: showSnackBar,
-      userRole: widget.userRole,
-      onLevelCreated: (levelId) {
-        // Refresh after game creation
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            fetchLevels(topic: _selectedTopic, forceRefresh: true);
-          }
-        });
-      },
-    );
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -213,14 +199,6 @@ class _GamePageState extends State<GamePage> {
                     ),
                     Row(
                       children: [
-                        if (!isStudent)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: ElevatedButton(
-                              onPressed: _onAddLevelPressed,
-                              child: const Text('Add Level'),
-                            ),
-                          ),
                         SegmentedButton<ViewLayout>(
                           segments: const <ButtonSegment<ViewLayout>>[
                             ButtonSegment<ViewLayout>(
@@ -236,7 +214,10 @@ class _GamePageState extends State<GamePage> {
                           onSelectionChanged: (Set<ViewLayout> newSelection) {
                             final newLayout = newSelection.first;
                             setState(() => _viewLayout = newLayout);
-                            LayoutPreferences.saveLayout('global_layout', newLayout);
+                            LayoutPreferences.saveLayout(
+                              'global_layout',
+                              newLayout,
+                            );
                           },
                         ),
                       ],
@@ -366,7 +347,7 @@ class _GamePageState extends State<GamePage> {
                     ),
                   ],
                 ),
-                
+
                 // VISIBILITY FILTER (Only for teachers/admins)
                 if (!isStudent) ...[
                   const SizedBox(height: 12),
@@ -381,15 +362,24 @@ class _GamePageState extends State<GamePage> {
                         spacing: 8.0,
                         runSpacing: 8.0,
                         children: _visibilityFilters.map((visibility) {
-                          final bool selected = _selectedVisibility == visibility;
+                          final bool selected =
+                              _selectedVisibility == visibility;
                           return FilterChip(
                             label: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (visibility == 'Private')
-                                  const Icon(Icons.lock, size: 16, color: Colors.orange)
+                                  const Icon(
+                                    Icons.lock,
+                                    size: 16,
+                                    color: Colors.orange,
+                                  )
                                 else if (visibility == 'Public')
-                                  const Icon(Icons.public, size: 16, color: Colors.blue),
+                                  const Icon(
+                                    Icons.public,
+                                    size: 16,
+                                    color: Colors.blue,
+                                  ),
                                 const SizedBox(width: 4),
                                 Text(visibility),
                               ],
@@ -418,8 +408,8 @@ class _GamePageState extends State<GamePage> {
                       : _filteredLevels.isEmpty
                       ? const Center(child: Text('No levels found'))
                       : _viewLayout == ViewLayout.list
-                          ? _buildLevelList()
-                          : _buildLevelGrid(),
+                      ? _buildLevelList()
+                      : _buildLevelGrid(),
                 ),
               ],
             ),
@@ -446,29 +436,41 @@ class _GamePageState extends State<GamePage> {
     final iconValue = levelTypeName.toLowerCase();
     final icon = getAchievementIcon(iconValue);
     final color = getAchievementColor(context, iconValue);
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return ListTile(
-      tileColor: isCompleted ? Colors.green.withOpacity(0.1) : null,
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              level.levelName ?? '',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      elevation: 1.0,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: colorScheme.outline.withOpacity(0.3),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: ListTile(
+        tileColor: isCompleted ? Colors.green.withOpacity(0.1) : null,
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                level.levelName ?? '',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          _buildVisibilityBadge(level),
-        ],
+            const SizedBox(width: 8),
+            _buildVisibilityBadge(level),
+          ],
+        ),
+        subtitle: Text(levelTypeName),
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.1),
+          foregroundColor: color,
+          child: Icon(icon),
+        ),
+        trailing: isStudent ? null : _buildAdminActions(level, iconSize: 20),
+        onTap: () => _onLevelTap(level),
       ),
-      subtitle: Text(levelTypeName),
-      leading: CircleAvatar(
-        backgroundColor: color.withOpacity(0.1),
-        foregroundColor: color,
-        child: Icon(icon),
-      ),
-      trailing: isStudent ? null : _buildAdminActions(level, iconSize: 20),
-      onTap: isStudent ? () => _onLevelTap(level) : null,
     );
   }
 
@@ -508,7 +510,7 @@ class _GamePageState extends State<GamePage> {
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: InkWell(
-        onTap: isStudent ? () => _onLevelTap(level) : null,
+        onTap: () => _onLevelTap(level),
         child: Stack(
           children: [
             // Background Icon
@@ -540,8 +542,11 @@ class _GamePageState extends State<GamePage> {
                         ),
                       ),
                       if (isCompleted)
-                        const Icon(Icons.check_circle,
-                            color: Colors.green, size: 18),
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 18,
+                        ),
                     ],
                   ),
                 ),
@@ -594,45 +599,43 @@ class _GamePageState extends State<GamePage> {
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(fontSize: 10, color: color),
-          ),
+          Text(label, style: TextStyle(fontSize: 10, color: color)),
         ],
       ),
     );
   }
 
   Widget _buildAdminActions(LevelModel level, {double iconSize = 20}) {
+    final bool isQuiz = level.levelTypeName == 'Quiz';
+    final String role = widget.userRole.trim().toLowerCase();
+    final bool isAdmin = role == 'admin';
+    final bool isTeacher = role == 'teacher';
+    final bool isStaff = isAdmin || isTeacher;
+    final bool canViewResults =
+        isAdmin || (isTeacher && (level.isCreatedByMe ?? false));
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          icon: Icon(Icons.edit, color: Colors.blue, size: iconSize),
-          onPressed: () async {
-            final currentLevel = await GameAPI.fetchLevelById(level.levelId!);
-            if (currentLevel == null) {
-              showSnackBar(context, "Failed to load level data", Colors.red);
-              return;
-            }
-            await showEditGamePage(
-              context: context,
-              showSnackBar: showSnackBar,
-              level: currentLevel,
-              userRole: widget.userRole,
-            );
-            fetchLevels(topic: _selectedTopic, forceRefresh: true);
-          },
-          constraints: const BoxConstraints(),
-          padding: EdgeInsets.zero,
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: Icon(Icons.delete, color: Colors.red, size: iconSize),
-          onPressed: () => _confirmDelete(level),
-          constraints: const BoxConstraints(),
-          padding: EdgeInsets.zero,
-        ),
+        if (isQuiz && isStaff && canViewResults) ...[
+          IconButton(
+            icon: Icon(Icons.bar_chart, color: Colors.green, size: iconSize),
+            tooltip: 'View Quiz Results',
+            onPressed: () {
+              showTeacherQuizResults(context: context, level: level);
+            },
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(width: 8),
+        ],
+        if (isAdmin || (isTeacher && (level.isCreatedByMe ?? false)))
+          IconButton(
+            icon: Icon(Icons.delete, color: Colors.red, size: iconSize),
+            onPressed: () => _confirmDelete(level),
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+          ),
       ],
     );
   }
@@ -661,6 +664,31 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _onLevelTap(LevelModel level) async {
+    final String role = widget.userRole.trim().toLowerCase();
+    final bool isAdmin = role == 'admin';
+    final bool isTeacher = role == 'teacher';
+    final bool canEdit =
+        isAdmin || (isTeacher && (level.isCreatedByMe ?? false));
+
+    if (canEdit) {
+      // Trigger Edit for Staff
+      final currentLevel = await GameAPI.fetchLevelById(level.levelId!);
+      if (currentLevel == null) {
+        showSnackBar(context, "Failed to load level data", Colors.red);
+        return;
+      }
+      if (!context.mounted) return;
+      await showEditGamePage(
+        context: context,
+        showSnackBar: showSnackBar,
+        level: currentLevel,
+        userRole: widget.userRole,
+      );
+      fetchLevels(topic: _selectedTopic, forceRefresh: true);
+      return;
+    }
+
+    // For students or staff viewing shared levels, trigger Play
     final currentLevel = await GameAPI.fetchLevelById(level.levelId!);
     if (currentLevel == null) {
       showSnackBar(context, "Failed to load level data", Colors.red);
