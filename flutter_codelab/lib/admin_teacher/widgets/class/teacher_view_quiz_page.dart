@@ -165,7 +165,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
             l10n.quizCreatedAndAssignedSuccessfully(
               isPrivate ? l10n.private : l10n.public,
             ),
-            Theme.of(context).colorScheme.primary,
+            Colors.green,
           );
           // Refresh the quiz list
           _fetchData();
@@ -244,48 +244,11 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
     );
 
     if (selectedLevel != null) {
-      // Ask teacher: Private or Public?
-      final isPrivate = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          final l10n = AppLocalizations.of(context)!;
-          return AlertDialog(
-            title: Text(l10n.quizVisibility),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(l10n.howShouldQuizBeVisible),
-                SizedBox(height: ClassConstants.defaultPadding),
-                ListTile(
-                  leading: Icon(
-                    Icons.lock,
-                    color: Theme.of(context).colorScheme.tertiary,
-                  ),
-                  title: Text(l10n.private),
-                  subtitle: Text(l10n.onlyVisibleToThisClass),
-                  onTap: () => Navigator.pop(context, true),
-                ),
-                ListTile(
-                  leading: Icon(
-                    Icons.public,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  title: Text(l10n.public),
-                  subtitle: Text(l10n.visibleToEveryone),
-                  onTap: () => Navigator.pop(context, false),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-
-      if (isPrivate == null) return; // User cancelled
-
+      // When assigning existing quiz to class, always set as public (no dialog needed)
       final result = await ClassApi.assignQuizToClass(
         classId: widget.classId,
         levelId: selectedLevel.levelId!,
-        isPrivate: isPrivate,
+        isPrivate: false, // Always public when assigning existing quiz
       );
 
       if (!mounted) return;
@@ -295,7 +258,7 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
         _showSnackBar(
           context,
           l10n.quizAssignedSuccessfully,
-          Theme.of(context).colorScheme.primary,
+          Colors.green,
         );
         _fetchData();
       } else {

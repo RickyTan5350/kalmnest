@@ -483,5 +483,12 @@
   "searchStudents": "Search students...",
   "viewDetails": "View Details",
   "noStudentsFound": "No students found",
-  "tapToViewStudentCompletion": "Tap to view student completion"
+  "tapToViewStudentCompletion": "Tap to view student completion",
+  "indicatesRequiredFields": "* indicates required fields",
+  "classNameMinCharacters": "Class name must be at least 3 characters",
+  "classNameMaxCharacters": "Class name cannot exceed 100 characters",
+  "descriptionRequired": "Description is required",
+  "descriptionMinWords": "Description must contain at least 10 words",
+  "descriptionMaxCharacters": "Description cannot exceed 500 characters",
+  "atLeast10Words": "at least 10 words"
 }

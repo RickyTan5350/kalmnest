@@ -905,4 +905,29 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get tapToViewStudentCompletion =>
       'Ketik untuk melihat penyiapan pelajar';
+
+  @override
+  String get indicatesRequiredFields => '* menandakan medan wajib';
+
+  @override
+  String get classNameMinCharacters =>
+      'Nama kelas mestilah sekurang-kurangnya 3 aksara';
+
+  @override
+  String get classNameMaxCharacters =>
+      'Nama kelas tidak boleh melebihi 100 aksara';
+
+  @override
+  String get descriptionRequired => 'Penerangan diperlukan';
+
+  @override
+  String get descriptionMinWords =>
+      'Penerangan mestilah mengandungi sekurang-kurangnya 10 perkataan';
+
+  @override
+  String get descriptionMaxCharacters =>
+      'Penerangan tidak boleh melebihi 500 aksara';
+
+  @override
+  String get atLeast10Words => 'sekurang-kurangnya 10 perkataan';
 }

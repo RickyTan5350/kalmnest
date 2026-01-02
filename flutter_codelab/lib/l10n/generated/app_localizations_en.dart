@@ -914,4 +914,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tapToViewStudentCompletion => 'Tap to view student completion';
+
+  @override
+  String get indicatesRequiredFields => '* indicates required fields';
+
+  @override
+  String get classNameMinCharacters =>
+      'Class name must be at least 3 characters';
+
+  @override
+  String get classNameMaxCharacters =>
+      'Class name cannot exceed 100 characters';
+
+  @override
+  String get descriptionRequired => 'Description is required';
+
+  @override
+  String get descriptionMinWords =>
+      'Description must contain at least 10 words';
+
+  @override
+  String get descriptionMaxCharacters =>
+      'Description cannot exceed 500 characters';
+
+  @override
+  String get atLeast10Words => 'at least 10 words';
 }

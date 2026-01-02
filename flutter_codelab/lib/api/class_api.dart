@@ -539,6 +539,34 @@ class ClassApi {
     }
   }
 
+  /// Check if class name exists (case-insensitive)
+  /// Used for real-time validation
+  static Future<bool> checkClassNameExists(String className) async {
+    if (className.trim().isEmpty) {
+      return false;
+    }
+
+    final uri = Uri.parse('$base/classes/check-name').replace(
+      queryParameters: {'class_name': className.trim()},
+    );
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.get(uri, headers: headers);
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return decoded['exists'] ?? false;
+      } else {
+        print("Error checking class name: ${res.statusCode} ${res.body}");
+        return false;
+      }
+    } catch (e) {
+      print("Network error checking class name: $e");
+      return false;
+    }
+  }
+
   /// Get quiz's student completion status for all students in a class
   static Future<Map<String, dynamic>> getQuizStudents(
     String classId,

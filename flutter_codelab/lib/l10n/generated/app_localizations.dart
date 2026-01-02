@@ -1723,6 +1723,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap to view student completion'**
   String get tapToViewStudentCompletion;
+
+  /// No description provided for @indicatesRequiredFields.
+  ///
+  /// In en, this message translates to:
+  /// **'* indicates required fields'**
+  String get indicatesRequiredFields;
+
+  /// No description provided for @classNameMinCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Class name must be at least 3 characters'**
+  String get classNameMinCharacters;
+
+  /// No description provided for @classNameMaxCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Class name cannot exceed 100 characters'**
+  String get classNameMaxCharacters;
+
+  /// No description provided for @descriptionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Description is required'**
+  String get descriptionRequired;
+
+  /// No description provided for @descriptionMinWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Description must contain at least 10 words'**
+  String get descriptionMinWords;
+
+  /// No description provided for @descriptionMaxCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Description cannot exceed 500 characters'**
+  String get descriptionMaxCharacters;
+
+  /// No description provided for @atLeast10Words.
+  ///
+  /// In en, this message translates to:
+  /// **'at least 10 words'**
+  String get atLeast10Words;
 }
 
 class _AppLocalizationsDelegate

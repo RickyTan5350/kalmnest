@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/api/class_api.dart';
+import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/constants/api_constants.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -53,7 +54,29 @@ class _StudentViewQuizPageState extends State<StudentViewQuizPage> {
 
     try {
       final classData = await ClassApi.fetchClassById(widget.classId);
-      final quizzes = await ClassApi.getClassQuizzes(widget.classId);
+      
+      // Get current user ID from stored user data
+      String? studentId;
+      try {
+        final storedUserJson = await AuthApi.getStoredUser();
+        if (storedUserJson != null && storedUserJson['user_id'] != null) {
+          studentId = storedUserJson['user_id'].toString();
+        }
+      } catch (e) {
+        print('Error getting user ID: $e');
+      }
+
+      // If we have student ID, fetch quizzes with completion status
+      // Otherwise, fall back to regular quiz list
+      List<Map<String, dynamic>> quizzes;
+      if (studentId != null && studentId.isNotEmpty) {
+        final result = await ClassApi.getStudentQuizzes(widget.classId, studentId);
+        quizzes = result['success'] == true 
+            ? List<Map<String, dynamic>>.from(result['data'] ?? [])
+            : await ClassApi.getClassQuizzes(widget.classId);
+      } else {
+        quizzes = await ClassApi.getClassQuizzes(widget.classId);
+      }
 
       if (!mounted) return;
       setState(() {
@@ -493,14 +516,56 @@ class _StudentQuizItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    quiz['level_name'] ?? l10n.noName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          quiz['level_name'] ?? l10n.noName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                      ),
+                      // Completion status indicator
+                      if (quiz['is_completed'] == true) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.green,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                size: 14,
+                                color: Colors.green,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Completed',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -513,14 +578,25 @@ class _StudentQuizItem extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Play button
+            // Play button (change text if completed)
             FilledButton.icon(
               onPressed: onPlay,
-              icon: const Icon(Icons.play_arrow, size: 18),
-              label: Text(l10n.play),
+              icon: Icon(
+                quiz['is_completed'] == true ? Icons.replay : Icons.play_arrow,
+                size: 18,
+              ),
+              label: Text(
+                quiz['is_completed'] == true 
+                    ? 'Replay'
+                    : l10n.play,
+              ),
               style: FilledButton.styleFrom(
-                backgroundColor: cs.primary,
-                foregroundColor: cs.onPrimary,
+                backgroundColor: quiz['is_completed'] == true
+                    ? cs.tertiary
+                    : cs.primary,
+                foregroundColor: quiz['is_completed'] == true
+                    ? cs.onTertiary
+                    : cs.onPrimary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,

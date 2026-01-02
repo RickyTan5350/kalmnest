@@ -279,5 +279,12 @@
   "searchStudents": "Cari pelajar...",
   "viewDetails": "Lihat Butiran",
   "noStudentsFound": "Tiada pelajar dijumpai",
-  "tapToViewStudentCompletion": "Ketik untuk melihat penyiapan pelajar"
+  "tapToViewStudentCompletion": "Ketik untuk melihat penyiapan pelajar",
+  "indicatesRequiredFields": "* menandakan medan wajib",
+  "classNameMinCharacters": "Nama kelas mestilah sekurang-kurangnya 3 aksara",
+  "classNameMaxCharacters": "Nama kelas tidak boleh melebihi 100 aksara",
+  "descriptionRequired": "Penerangan diperlukan",
+  "descriptionMinWords": "Penerangan mestilah mengandungi sekurang-kurangnya 10 perkataan",
+  "descriptionMaxCharacters": "Penerangan tidak boleh melebihi 500 aksara",
+  "atLeast10Words": "sekurang-kurangnya 10 perkataan"
 }

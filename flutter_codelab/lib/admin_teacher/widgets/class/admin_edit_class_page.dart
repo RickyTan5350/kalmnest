@@ -1,8 +1,10 @@
 // lib/widgets/edit_class_page.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/constants/class_constants.dart';
 import 'package:code_play/admin_teacher/widgets/class/class_theme_extensions.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_validators.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class EditClassPage extends StatefulWidget {
@@ -30,6 +32,12 @@ class _EditClassPageState extends State<EditClassPage> {
   bool _loadingTeachers = true;
   bool _loadingStudents = true;
   bool loading = false;
+
+  // Real-time validation state
+  String? _classNameValidationError;
+  bool _isCheckingClassName = false;
+  Timer? _classNameDebounceTimer;
+  late final String _originalClassName;
 
   // Get available students for a specific dropdown (excludes already selected students)
   List<Map<String, dynamic>> _getAvailableStudents(int currentIndex) {
@@ -171,7 +179,58 @@ class _EditClassPageState extends State<EditClassPage> {
   void dispose() {
     classNameController.dispose();
     descriptionController.dispose();
+    _classNameDebounceTimer?.cancel();
     super.dispose();
+  }
+
+  /// Check if class name exists (with debounce)
+  Future<void> _checkClassNameExists(String className) async {
+    // Cancel previous timer
+    _classNameDebounceTimer?.cancel();
+
+    // Clear error if input is too short or same as original
+    if (className.trim().length < 3) {
+      setState(() {
+        _classNameValidationError = null;
+        _isCheckingClassName = false;
+      });
+      return;
+    }
+
+    // If name hasn't changed, no need to check
+    if (className.trim().toLowerCase() == _originalClassName.toLowerCase()) {
+      setState(() {
+        _classNameValidationError = null;
+        _isCheckingClassName = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingClassName = true;
+      _classNameValidationError = null;
+    });
+
+    // Debounce: wait 500ms before checking
+    _classNameDebounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      if (!mounted) return;
+
+      final exists = await ClassApi.checkClassNameExists(className.trim());
+
+      if (!mounted) return;
+
+      setState(() {
+        _isCheckingClassName = false;
+        if (exists) {
+          _classNameValidationError = 'The classname is already exist. Please choose a different name.';
+        } else {
+          _classNameValidationError = null;
+        }
+      });
+
+      // Trigger form validation to update error display
+      _formKey.currentState?.validate();
+    });
   }
 
   InputDecoration _inputDecoration({
@@ -179,22 +238,65 @@ class _EditClassPageState extends State<EditClassPage> {
     required IconData icon,
     String? hintText,
     required BuildContext context,
+    bool isRequired = false,
   }) {
     return ClassTheme.inputDecoration(
       context: context,
       labelText: labelText,
       icon: icon,
       hintText: hintText,
+      isRequired: isRequired,
     );
   }
 
   Future<void> saveChanges() async {
-    if (!_formKey.currentState!.validate()) return;
+    final l10n = AppLocalizations.of(context)!;
+    
+    // Validate all fields before submission
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      // Show error message if validation fails
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please fix the errors before submitting'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Additional validation using ClassValidators
+    final studentIds = _selectedStudents.whereType<String>().toList();
+    final validationErrors = ClassValidators.validateClassForm(
+      className: classNameController.text.trim(),
+      description: descriptionController.text.trim(),
+      teacherId: _selectedTeacher,
+      focus: _selectedFocus,
+      studentIds: studentIds.isEmpty ? null : studentIds,
+      l10n: l10n,
+    );
+
+    if (!ClassValidators.isFormValid(validationErrors)) {
+      // Find first error and show it
+      final firstError = validationErrors.values.firstWhere(
+        (error) => error != null,
+        orElse: () => null,
+      );
+      if (firstError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(firstError!),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() => loading = true);
-
-    // Collect student ids (non-null)
-    final studentIds = _selectedStudents.whereType<String>().toList();
 
     final data = {
       "class_name": classNameController.text.trim(),
@@ -212,7 +314,6 @@ class _EditClassPageState extends State<EditClassPage> {
 
     setState(() => loading = false);
 
-    final l10n = AppLocalizations.of(context)!;
     if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -302,6 +403,7 @@ class _EditClassPageState extends State<EditClassPage> {
             padding: EdgeInsets.all(ClassConstants.cardPadding),
             child: Form(
               key: _formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -315,6 +417,38 @@ class _EditClassPageState extends State<EditClassPage> {
                   ),
                   SizedBox(height: ClassConstants.sectionSpacing),
 
+                  // Required fields hint
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withOpacity(0.5),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l10n.indicatesRequiredFields,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: ClassConstants.formSpacing),
+
                   // CLASS NAME
                   TextFormField(
                     controller: classNameController,
@@ -324,9 +458,39 @@ class _EditClassPageState extends State<EditClassPage> {
                       labelText: l10n.className,
                       hintText: l10n.enterClassName,
                       icon: Icons.class_,
+                      isRequired: true,
+                    ).copyWith(
+                      suffixIcon: _isCheckingClassName
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : null,
                     ),
-                    validator: (v) =>
-                        v!.trim().isEmpty ? l10n.classNameRequired : null,
+                    onChanged: (value) {
+                      _checkClassNameExists(value);
+                    },
+                    validator: (value) {
+                      // First check basic validation
+                      final basicError = ClassValidators.className(value, l10n);
+                      if (basicError != null) {
+                        return basicError;
+                      }
+                      // Then check if class name exists (real-time validation)
+                      if (_classNameValidationError != null) {
+                        return _classNameValidationError;
+                      }
+                      return null;
+                    },
                   ),
                   SizedBox(height: ClassConstants.formSpacing),
 
@@ -354,8 +518,11 @@ class _EditClassPageState extends State<EditClassPage> {
                       ),
                       const DropdownMenuItem(value: 'PHP', child: Text('PHP')),
                     ],
+                    validator: ClassValidators.focus,
                     onChanged: (value) {
                       setState(() => _selectedFocus = value);
+                      // Trigger validation after change
+                      _formKey.currentState?.validate();
                     },
                   ),
                   SizedBox(height: ClassConstants.formSpacing),
@@ -656,12 +823,11 @@ class _EditClassPageState extends State<EditClassPage> {
                     decoration: _inputDecoration(
                       context: context,
                       labelText: l10n.description,
-                      hintText: l10n.enterDescription,
+                      hintText: '${l10n.enterDescription} (${l10n.atLeast10Words})',
                       icon: Icons.description,
+                      isRequired: true,
                     ),
-                    validator: (value) => (value == null || value.isEmpty)
-                        ? l10n.pleaseEnterDescription
-                        : null,
+                    validator: (value) => ClassValidators.description(value, l10n),
                   ),
 
                   SizedBox(height: ClassConstants.sectionSpacing),
@@ -678,7 +844,13 @@ class _EditClassPageState extends State<EditClassPage> {
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: loading ? null : saveChanges,
+                        onPressed: loading
+                            ? null
+                            : () {
+                                // Trigger validation on all fields
+                                _formKey.currentState?.validate();
+                                saveChanges();
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colorScheme.primary,
                           foregroundColor: colorScheme.onPrimary,
