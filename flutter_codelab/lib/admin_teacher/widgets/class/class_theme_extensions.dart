@@ -9,10 +9,24 @@ class ClassTheme {
     required String labelText,
     required IconData icon,
     String? hintText,
+    bool isRequired = false,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     return InputDecoration(
-      labelText: labelText,
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(labelText),
+          if (isRequired)
+            Text(
+              ' *',
+              style: TextStyle(
+                color: colorScheme.error,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+        ],
+      ),
       hintText: hintText,
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
       border: OutlineInputBorder(

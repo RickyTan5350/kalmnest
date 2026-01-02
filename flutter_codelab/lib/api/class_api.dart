@@ -1,12 +1,12 @@
 // lib/api/class_api.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 class ClassApi {
-  // Replace with your PC's local IP
-  static String get base => ApiConstants.baseUrl;
+  // Base URL for API endpoints (already includes /api)
+  static String base = ApiConstants.baseUrl;
 
   // Helper function to get headers with authentication
   static Future<Map<String, String>> _getAuthHeaders({
@@ -15,6 +15,7 @@ class ClassApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     final token = await AuthApi.getToken();
@@ -36,6 +37,7 @@ class ClassApi {
     String? teacherId,
     String? description,
     String? adminId,
+    String? focus,
     List<String>? studentIds,
   }) async {
     final uri = Uri.parse('$base/classes');
@@ -44,6 +46,7 @@ class ClassApi {
       'teacher_id': teacherId,
       'description': description ?? '',
       'admin_id': adminId,
+      'focus': focus,
       'student_ids': studentIds,
     };
 
@@ -167,6 +170,33 @@ class ClassApi {
     } catch (e) {
       print("Error fetching all classes: $e");
       return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateClassFocus(
+    String classId,
+    String? focus,
+  ) async {
+    final uri = Uri.parse('$base/classes/$classId/focus');
+    final body = jsonEncode({'focus': focus});
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final response = await http.patch(uri, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        return {'success': true, 'data': decoded['data']};
+      } else {
+        final decoded = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': decoded['message'] ?? 'Failed to update class focus',
+        };
+      }
+    } catch (e) {
+      print("Error updating class focus: $e");
+      return {'success': false, 'message': 'Network error: $e'};
     }
   }
 
@@ -369,13 +399,10 @@ class ClassApi {
   static Future<Map<String, dynamic>> assignQuizToClass({
     required String classId,
     required String levelId,
-    bool isPrivate = true,
+    bool isPrivate = false,
   }) async {
     final uri = Uri.parse('$base/classes/$classId/quizzes');
-    final body = jsonEncode({
-      'level_id': levelId,
-      'is_private': isPrivate,
-    });
+    final body = jsonEncode({'level_id': levelId, 'is_private': isPrivate});
 
     try {
       final headers = await _getAuthHeaders(requiresAuth: true);
@@ -436,6 +463,7 @@ class ClassApi {
   }
 
   /// Get student completion data for a class
+  /// Returns a list of students with their completion statistics
   static Future<Map<String, dynamic>> getStudentCompletion(
     String classId,
   ) async {
@@ -446,18 +474,33 @@ class ClassApi {
       final res = await http.get(uri, headers: headers);
 
       if (res.statusCode == 200) {
-        return jsonDecode(res.body);
+        final decoded = jsonDecode(res.body);
+        return {
+          'success': true,
+          'data': List<Map<String, dynamic>>.from(decoded['data'] ?? []),
+          'total_quizzes_assigned': decoded['total_quizzes_assigned'] ?? 0,
+        };
       } else {
-        print("Error fetching student completion: ${res.statusCode} ${res.body}");
-        return {'success': false, 'message': 'Failed to fetch student completion'};
+        print(
+          "Error fetching student completion: ${res.statusCode} ${res.body}",
+        );
+        return {
+          'success': false,
+          'data': <Map<String, dynamic>>[],
+          'total_quizzes_assigned': 0,
+        };
       }
     } catch (e) {
       print("Network error fetching student completion: $e");
-      return {'success': false, 'message': 'Network error: $e'};
+      return {
+        'success': false,
+        'data': <Map<String, dynamic>>[],
+        'total_quizzes_assigned': 0,
+      };
     }
   }
 
-  /// Get specific student's quiz data for a class
+  /// Get student's quiz completion status for all quizzes in a class
   static Future<Map<String, dynamic>> getStudentQuizzes(
     String classId,
     String studentId,
@@ -469,18 +512,62 @@ class ClassApi {
       final res = await http.get(uri, headers: headers);
 
       if (res.statusCode == 200) {
-        return jsonDecode(res.body);
+        final decoded = jsonDecode(res.body);
+        return {
+          'success': true,
+          'data': List<Map<String, dynamic>>.from(decoded['data'] ?? []),
+          'total_quizzes': decoded['total_quizzes'] ?? 0,
+          'completed_quizzes': decoded['completed_quizzes'] ?? 0,
+        };
       } else {
         print("Error fetching student quizzes: ${res.statusCode} ${res.body}");
-        return {'success': false, 'message': 'Failed to fetch student quizzes'};
+        return {
+          'success': false,
+          'data': <Map<String, dynamic>>[],
+          'total_quizzes': 0,
+          'completed_quizzes': 0,
+        };
       }
     } catch (e) {
       print("Network error fetching student quizzes: $e");
-      return {'success': false, 'message': 'Network error: $e'};
+      return {
+        'success': false,
+        'data': <Map<String, dynamic>>[],
+        'total_quizzes': 0,
+        'completed_quizzes': 0,
+      };
     }
   }
 
-  /// Get specific quiz's student data for a class
+  /// Check if class name exists (case-insensitive)
+  /// Used for real-time validation
+  static Future<bool> checkClassNameExists(String className) async {
+    if (className.trim().isEmpty) {
+      return false;
+    }
+
+    final uri = Uri.parse('$base/classes/check-name').replace(
+      queryParameters: {'class_name': className.trim()},
+    );
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.get(uri, headers: headers);
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return decoded['exists'] ?? false;
+      } else {
+        print("Error checking class name: ${res.statusCode} ${res.body}");
+        return false;
+      }
+    } catch (e) {
+      print("Network error checking class name: $e");
+      return false;
+    }
+  }
+
+  /// Get quiz's student completion status for all students in a class
   static Future<Map<String, dynamic>> getQuizStudents(
     String classId,
     String levelId,
@@ -492,14 +579,34 @@ class ClassApi {
       final res = await http.get(uri, headers: headers);
 
       if (res.statusCode == 200) {
-        return jsonDecode(res.body);
+        final decoded = jsonDecode(res.body);
+        return {
+          'success': true,
+          'quiz': decoded['quiz'],
+          'data': List<Map<String, dynamic>>.from(decoded['data'] ?? []),
+          'total_students': decoded['total_students'] ?? 0,
+          'completed_students': decoded['completed_students'] ?? 0,
+        };
       } else {
         print("Error fetching quiz students: ${res.statusCode} ${res.body}");
-        return {'success': false, 'message': 'Failed to fetch quiz students'};
+        return {
+          'success': false,
+          'quiz': null,
+          'data': <Map<String, dynamic>>[],
+          'total_students': 0,
+          'completed_students': 0,
+        };
       }
     } catch (e) {
       print("Network error fetching quiz students: $e");
-      return {'success': false, 'message': 'Network error: $e'};
+      return {
+        'success': false,
+        'quiz': null,
+        'data': <Map<String, dynamic>>[],
+        'total_students': 0,
+        'completed_students': 0,
+      };
     }
   }
 }
+
