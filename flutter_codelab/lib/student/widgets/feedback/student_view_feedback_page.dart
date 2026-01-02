@@ -78,7 +78,6 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
                   (fb['teacher'] is Map && fb['teacher']['created_at'] != null
                       ? fb['teacher']['created_at']
                       : null),
-              topicId: fb['topic_id']?.toString() ?? '',
               title: fb['title'] ?? fb['topic'] ?? '',
             ),
           );

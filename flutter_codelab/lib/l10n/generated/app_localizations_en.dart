@@ -645,6 +645,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Are you sure you want to delete this chat session?';
 
   @override
+  String get chatDeletedSuccessfully => 'Chat deleted successfully';
+
+  @override
+  String get chatClearedSuccessfully => 'Chat cleared successfully';
+
+  @override
   String deleteFailed(String error) {
     return 'Delete failed: $error';
   }
@@ -684,4 +690,413 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteChat => 'Delete Chat';
+
+  @override
+  String get classCreatedSuccessfully => 'Class created successfully!';
+
+  @override
+  String get failedToCreateClass => 'Failed to create class';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get createNewClass => 'Create New Class';
+
+  @override
+  String get indicatesRequiredFields => '* indicates required fields';
+
+  @override
+  String get className => 'Class Name';
+
+  @override
+  String get enterClassName => 'Enter class name';
+
+  @override
+  String get description => 'Description';
+
+  @override
+  String get enterDescription => 'Enter description (at least 10 words)';
+
+  @override
+  String get atLeast10Words => 'At least 10 words';
+
+  @override
+  String get focusOptional => 'Focus (Optional)';
+
+  @override
+  String get noneOptional => 'None (Optional)';
+
+  @override
+  String get assignTeacherOptional => 'Assign Teacher (Optional)';
+
+  @override
+  String get classUpdatedSuccessfully => 'Class updated successfully!';
+
+  @override
+  String get failedToUpdateClass => 'Failed to update class';
+
+  @override
+  String get editClass => 'Edit Class';
+
+  @override
+  String get editClassDetails => 'Edit Class Details';
+
+  @override
+  String get loading => 'Loading...';
+
+  @override
+  String get selectTeacher => 'Select Teacher';
+
+  @override
+  String get classNameRequired => 'Class name is required';
+
+  @override
+  String get classNameMinCharacters =>
+      'Class name must be at least 3 characters';
+
+  @override
+  String get classNameMaxCharacters =>
+      'Class name cannot exceed 100 characters';
+
+  @override
+  String get descriptionRequired => 'Description is required';
+
+  @override
+  String get descriptionMaxCharacters =>
+      'Description cannot exceed 500 characters';
+
+  @override
+  String get descriptionMinWords =>
+      'Description must contain at least 10 words';
+
+  @override
+  String get thisClass => 'this class';
+
+  @override
+  String deleteClassConfirmation(String className) {
+    return 'Are you sure you want to delete $className? This action cannot be undone.';
+  }
+
+  @override
+  String get classDeletedSuccessfully => 'Class deleted successfully!';
+
+  @override
+  String errorDeletingClass(String error) {
+    return 'Error deleting class: $error';
+  }
+
+  @override
+  String get unknown => 'Unknown';
+
+  @override
+  String get nA => 'N/A';
+
+  @override
+  String get details => 'Details';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get deleteClass => 'Delete Class';
+
+  @override
+  String get noName => 'No Name';
+
+  @override
+  String get noTeacherAssigned => 'No Teacher Assigned';
+
+  @override
+  String get generalInfo => 'General Information';
+
+  @override
+  String get searchStudents => 'Search Students';
+
+  @override
+  String get totalStudents => 'Total Students';
+
+  @override
+  String get completionRate => 'Completion Rate';
+
+  @override
+  String get quizzesAssigned => 'Quizzes Assigned';
+
+  @override
+  String get moreOptions => 'More Options';
+
+  @override
+  String get viewDetails => 'View Details';
+
+  @override
+  String get completed => 'Completed';
+
+  @override
+  String get quizzes => 'Quizzes';
+
+  @override
+  String get courseProgress => 'Course Progress';
+
+  @override
+  String get noStudentsFound => 'No students found';
+
+  @override
+  String get tryAdjustingSearchCriteria => 'Try adjusting your search criteria';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get noClassesFound => 'No classes found';
+
+  @override
+  String get tryAdjustingSearchQuery => 'Try adjusting your search query';
+
+  @override
+  String get notEnrolledInAnyClasses => 'You are not enrolled in any classes';
+
+  @override
+  String get classFocusUpdatedSuccessfully =>
+      'Class focus updated successfully!';
+
+  @override
+  String get failedToUpdateClassFocus => 'Failed to update class focus';
+
+  @override
+  String get editClassFocus => 'Edit Class Focus';
+
+  @override
+  String editFocusFor(String className) {
+    return 'Edit Focus for $className';
+  }
+
+  @override
+  String get youCanOnlyEditFocus =>
+      'You can only edit the focus for your own classes';
+
+  @override
+  String get failedToLoadQuizStudentData => 'Failed to load quiz student data';
+
+  @override
+  String get never => 'Never';
+
+  @override
+  String get allQuizzes => 'All Quizzes';
+
+  @override
+  String get statistics => 'Statistics';
+
+  @override
+  String get pending => 'Pending';
+
+  @override
+  String get failedToLoadStudentQuizData => 'Failed to load student quiz data';
+
+  @override
+  String get gender => 'Gender';
+
+  @override
+  String get joinedDate => 'Joined Date';
+
+  @override
+  String get accountStatus => 'Account Status';
+
+  @override
+  String get totalQuizzes => 'Total Quizzes';
+
+  @override
+  String get noQuizzesFound => 'No quizzes found';
+
+  @override
+  String get quizVisibility => 'Quiz Visibility';
+
+  @override
+  String get howShouldQuizBeVisible => 'How should this quiz be visible?';
+
+  @override
+  String get onlyVisibleToThisClass => 'Only visible to this class';
+
+  @override
+  String get visibleToEveryone => 'Visible to everyone';
+
+  @override
+  String get quizCreatedAndAssignedSuccessfully =>
+      'Quiz created and assigned successfully!';
+
+  @override
+  String get failedToAssignQuiz => 'Failed to assign quiz';
+
+  @override
+  String get quizAssignedSuccessfully => 'Quiz assigned successfully!';
+
+  @override
+  String get removeQuiz => 'Remove Quiz';
+
+  @override
+  String get areYouSureRemoveQuiz =>
+      'Are you sure you want to remove this quiz from the class?';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get quizRemovedSuccessfully => 'Quiz removed successfully!';
+
+  @override
+  String quizzesAvailable(int count) {
+    return '$count quizzes available';
+  }
+
+  @override
+  String get viewAllQuizzes => 'View All Quizzes';
+
+  @override
+  String get noQuizzesYet => 'No quizzes yet';
+
+  @override
+  String get createOrAssignQuizzes => 'Create or assign quizzes to get started';
+
+  @override
+  String uploaded(String date) {
+    return 'Uploaded $date';
+  }
+
+  @override
+  String viewAllXQuizzes(int count) {
+    return 'View All $count Quizzes';
+  }
+
+  @override
+  String get unknownTeacher => 'Unknown Teacher';
+
+  @override
+  String get noTeacher => 'No Teacher';
+
+  @override
+  String get studentSingular => 'student';
+
+  @override
+  String get studentsPlural => 'students';
+
+  @override
+  String get noStudents => 'No students';
+
+  @override
+  String get assignedTeacher => 'Assigned Teacher';
+
+  @override
+  String get play => 'Play';
+
+  @override
+  String get allClasses => 'All Classes';
+
+  @override
+  String get myClasses => 'My Classes';
+
+  @override
+  String get enrolledClasses => 'Enrolled Classes';
+
+  @override
+  String get searchByClassName => 'Search by class name';
+
+  @override
+  String get noDescriptionAvailable => 'No description available';
+
+  @override
+  String get timestamps => 'Timestamps';
+
+  @override
+  String get createdAt => 'Created At';
+
+  @override
+  String get updatedAt => 'Updated At';
+
+  @override
+  String get assignStudentsOptional => 'Assign Students (Optional)';
+
+  @override
+  String studentNumber(int number) {
+    return 'Student $number';
+  }
+
+  @override
+  String get selectStudents => 'Select Students';
+
+  @override
+  String get addStudent => 'Add Student';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get create => 'Create';
+
+  @override
+  String get creator => 'Creator';
+
+  @override
+  String get focus => 'Focus';
+
+  @override
+  String get notSet => 'Not Set';
+
+  @override
+  String get cannotOpenTeacherProfile => 'Cannot open teacher profile';
+
+  @override
+  String get noTeacherAssignedToClass => 'No teacher assigned to this class';
+
+  @override
+  String get lastUpdated => 'Last Updated';
+
+  @override
+  String get students => 'Students';
+
+  @override
+  String moreStudents(int count) {
+    return 'and $count more students';
+  }
+
+  @override
+  String get noStudentsEnrolled => 'No students enrolled';
+
+  @override
+  String get listOfEnrolledStudents => 'List of Enrolled Students';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get assigned => 'Assigned';
+
+  @override
+  String get failedToRemoveQuiz => 'Failed to remove quiz';
+
+  @override
+  String get searchQuizzes => 'Search Quizzes';
+
+  @override
+  String get assignQuiz => 'Assign Quiz';
+
+  @override
+  String get createQuiz => 'Create Quiz';
+
+  @override
+  String get tapToViewStudentCompletion => 'Tap to view student completion';
+
+  @override
+  String get assignQuizToClass => 'Assign Quiz to Class';
+
+  @override
+  String get reloadQuizzes => 'Reload Quizzes';
+
+  @override
+  String get noQuizzesAssigned => 'No quizzes assigned';
+
+  @override
+  String get pleaseEnterQuestion => 'Please enter a question';
+
+  @override
+  String get aiLanguageNotice =>
+      'AI responds in the same language as your question';
 }

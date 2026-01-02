@@ -647,6 +647,12 @@ class AppLocalizationsMs extends AppLocalizations {
       'Adakah anda pasti mahu memadamkan sesi sembang ini?';
 
   @override
+  String get chatDeletedSuccessfully => 'Sembang berjaya dipadam';
+
+  @override
+  String get chatClearedSuccessfully => 'Sembang berjaya dikosongkan';
+
+  @override
   String deleteFailed(String error) {
     return 'Gagal memadam: $error';
   }
@@ -686,4 +692,417 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get deleteChat => 'Padam Sembang';
+
+  @override
+  String get classCreatedSuccessfully => 'Kelas berjaya dicipta!';
+
+  @override
+  String get failedToCreateClass => 'Gagal mencipta kelas';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get createNewClass => 'Cipta Kelas Baru';
+
+  @override
+  String get indicatesRequiredFields => '* menunjukkan medan wajib';
+
+  @override
+  String get className => 'Nama Kelas';
+
+  @override
+  String get enterClassName => 'Masukkan nama kelas';
+
+  @override
+  String get description => 'Penerangan';
+
+  @override
+  String get enterDescription =>
+      'Masukkan penerangan (sekurang-kurangnya 10 perkataan)';
+
+  @override
+  String get atLeast10Words => 'Sekurang-kurangnya 10 perkataan';
+
+  @override
+  String get focusOptional => 'Fokus (Pilihan)';
+
+  @override
+  String get noneOptional => 'Tiada (Pilihan)';
+
+  @override
+  String get assignTeacherOptional => 'Tugaskan Guru (Pilihan)';
+
+  @override
+  String get classUpdatedSuccessfully => 'Kelas berjaya dikemas kini!';
+
+  @override
+  String get failedToUpdateClass => 'Gagal mengemas kini kelas';
+
+  @override
+  String get editClass => 'Edit Kelas';
+
+  @override
+  String get editClassDetails => 'Edit Butiran Kelas';
+
+  @override
+  String get loading => 'Memuatkan...';
+
+  @override
+  String get selectTeacher => 'Pilih Guru';
+
+  @override
+  String get classNameRequired => 'Nama kelas diperlukan';
+
+  @override
+  String get classNameMinCharacters =>
+      'Nama kelas mestilah sekurang-kurangnya 3 aksara';
+
+  @override
+  String get classNameMaxCharacters =>
+      'Nama kelas tidak boleh melebihi 100 aksara';
+
+  @override
+  String get descriptionRequired => 'Penerangan diperlukan';
+
+  @override
+  String get descriptionMaxCharacters =>
+      'Penerangan tidak boleh melebihi 500 aksara';
+
+  @override
+  String get descriptionMinWords =>
+      'Penerangan mesti mengandungi sekurang-kurangnya 10 perkataan';
+
+  @override
+  String get thisClass => 'kelas ini';
+
+  @override
+  String deleteClassConfirmation(String className) {
+    return 'Adakah anda pasti mahu memadamkan $className? Tindakan ini tidak boleh dibatalkan.';
+  }
+
+  @override
+  String get classDeletedSuccessfully => 'Kelas berjaya dipadam!';
+
+  @override
+  String errorDeletingClass(String error) {
+    return 'Ralat memadamkan kelas: $error';
+  }
+
+  @override
+  String get unknown => 'Tidak Diketahui';
+
+  @override
+  String get nA => 'T/A';
+
+  @override
+  String get details => 'Butiran';
+
+  @override
+  String get refresh => 'Segarkan';
+
+  @override
+  String get deleteClass => 'Padam Kelas';
+
+  @override
+  String get noName => 'Tiada Nama';
+
+  @override
+  String get noTeacherAssigned => 'Tiada Guru Ditugaskan';
+
+  @override
+  String get generalInfo => 'Maklumat Am';
+
+  @override
+  String get searchStudents => 'Cari Pelajar';
+
+  @override
+  String get totalStudents => 'Jumlah Pelajar';
+
+  @override
+  String get completionRate => 'Kadar Penyiapan';
+
+  @override
+  String get quizzesAssigned => 'Kuiz Ditugaskan';
+
+  @override
+  String get moreOptions => 'Lebih Banyak Pilihan';
+
+  @override
+  String get viewDetails => 'Lihat Butiran';
+
+  @override
+  String get completed => 'Selesai';
+
+  @override
+  String get quizzes => 'Kuiz';
+
+  @override
+  String get courseProgress => 'Kemajuan Kursus';
+
+  @override
+  String get noStudentsFound => 'Tiada pelajar dijumpai';
+
+  @override
+  String get tryAdjustingSearchCriteria => 'Cuba laraskan kriteria carian anda';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get noClassesFound => 'Tiada kelas dijumpai';
+
+  @override
+  String get tryAdjustingSearchQuery => 'Cuba laraskan pertanyaan carian anda';
+
+  @override
+  String get notEnrolledInAnyClasses =>
+      'Anda tidak mendaftar dalam mana-mana kelas';
+
+  @override
+  String get classFocusUpdatedSuccessfully =>
+      'Fokus kelas berjaya dikemas kini!';
+
+  @override
+  String get failedToUpdateClassFocus => 'Gagal mengemas kini fokus kelas';
+
+  @override
+  String get editClassFocus => 'Edit Fokus Kelas';
+
+  @override
+  String editFocusFor(String className) {
+    return 'Edit Fokus untuk $className';
+  }
+
+  @override
+  String get youCanOnlyEditFocus =>
+      'Anda hanya boleh mengedit fokus untuk kelas anda sendiri';
+
+  @override
+  String get failedToLoadQuizStudentData => 'Gagal memuatkan data pelajar kuiz';
+
+  @override
+  String get never => 'Tidak Pernah';
+
+  @override
+  String get allQuizzes => 'Semua Kuiz';
+
+  @override
+  String get statistics => 'Statistik';
+
+  @override
+  String get pending => 'Menunggu';
+
+  @override
+  String get failedToLoadStudentQuizData => 'Gagal memuatkan data kuiz pelajar';
+
+  @override
+  String get gender => 'Jantina';
+
+  @override
+  String get joinedDate => 'Tarikh Menyertai';
+
+  @override
+  String get accountStatus => 'Status Akaun';
+
+  @override
+  String get totalQuizzes => 'Jumlah Kuiz';
+
+  @override
+  String get noQuizzesFound => 'Tiada kuiz dijumpai';
+
+  @override
+  String get quizVisibility => 'Kebolehlihatan Kuiz';
+
+  @override
+  String get howShouldQuizBeVisible => 'Bagaimanakah kuiz ini harus kelihatan?';
+
+  @override
+  String get onlyVisibleToThisClass => 'Hanya kelihatan kepada kelas ini';
+
+  @override
+  String get visibleToEveryone => 'Kelihatan kepada semua orang';
+
+  @override
+  String get quizCreatedAndAssignedSuccessfully =>
+      'Kuiz berjaya dicipta dan ditugaskan!';
+
+  @override
+  String get failedToAssignQuiz => 'Gagal menugaskan kuiz';
+
+  @override
+  String get quizAssignedSuccessfully => 'Kuiz berjaya ditugaskan!';
+
+  @override
+  String get removeQuiz => 'Buang Kuiz';
+
+  @override
+  String get areYouSureRemoveQuiz =>
+      'Adakah anda pasti mahu membuang kuiz ini dari kelas?';
+
+  @override
+  String get remove => 'Buang';
+
+  @override
+  String get quizRemovedSuccessfully => 'Kuiz berjaya dibuang!';
+
+  @override
+  String quizzesAvailable(int count) {
+    return '$count kuiz tersedia';
+  }
+
+  @override
+  String get viewAllQuizzes => 'Lihat Semua Kuiz';
+
+  @override
+  String get noQuizzesYet => 'Tiada kuiz lagi';
+
+  @override
+  String get createOrAssignQuizzes => 'Cipta atau tugaskan kuiz untuk bermula';
+
+  @override
+  String uploaded(String date) {
+    return 'Dimuat naik $date';
+  }
+
+  @override
+  String viewAllXQuizzes(int count) {
+    return 'Lihat Semua $count Kuiz';
+  }
+
+  @override
+  String get unknownTeacher => 'Guru Tidak Diketahui';
+
+  @override
+  String get noTeacher => 'Tiada Guru';
+
+  @override
+  String get studentSingular => 'pelajar';
+
+  @override
+  String get studentsPlural => 'pelajar';
+
+  @override
+  String get noStudents => 'Tiada pelajar';
+
+  @override
+  String get assignedTeacher => 'Guru Ditugaskan';
+
+  @override
+  String get play => 'Main';
+
+  @override
+  String get allClasses => 'Semua Kelas';
+
+  @override
+  String get myClasses => 'Kelas Saya';
+
+  @override
+  String get enrolledClasses => 'Kelas yang Didaftarkan';
+
+  @override
+  String get searchByClassName => 'Cari mengikut nama kelas';
+
+  @override
+  String get noDescriptionAvailable => 'Tiada penerangan tersedia';
+
+  @override
+  String get timestamps => 'Cap Masa';
+
+  @override
+  String get createdAt => 'Dicipta Pada';
+
+  @override
+  String get updatedAt => 'Dikemas Kini Pada';
+
+  @override
+  String get assignStudentsOptional => 'Tugaskan Pelajar (Pilihan)';
+
+  @override
+  String studentNumber(int number) {
+    return 'Pelajar $number';
+  }
+
+  @override
+  String get selectStudents => 'Pilih Pelajar';
+
+  @override
+  String get addStudent => 'Tambah Pelajar';
+
+  @override
+  String get reset => 'Tetapkan Semula';
+
+  @override
+  String get create => 'Cipta';
+
+  @override
+  String get creator => 'Pencipta';
+
+  @override
+  String get focus => 'Fokus';
+
+  @override
+  String get notSet => 'Tidak Ditentukan';
+
+  @override
+  String get cannotOpenTeacherProfile => 'Tidak boleh membuka profil guru';
+
+  @override
+  String get noTeacherAssignedToClass =>
+      'Tiada guru ditugaskan kepada kelas ini';
+
+  @override
+  String get lastUpdated => 'Kemas Kini Terakhir';
+
+  @override
+  String get students => 'Pelajar';
+
+  @override
+  String moreStudents(int count) {
+    return 'dan $count pelajar lagi';
+  }
+
+  @override
+  String get noStudentsEnrolled => 'Tiada pelajar mendaftar';
+
+  @override
+  String get listOfEnrolledStudents => 'Senarai Pelajar yang Didaftarkan';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get assigned => 'Ditugaskan';
+
+  @override
+  String get failedToRemoveQuiz => 'Gagal membuang kuiz';
+
+  @override
+  String get searchQuizzes => 'Cari Kuiz';
+
+  @override
+  String get assignQuiz => 'Tugaskan Kuiz';
+
+  @override
+  String get createQuiz => 'Cipta Kuiz';
+
+  @override
+  String get tapToViewStudentCompletion =>
+      'Ketuk untuk melihat penyiapan pelajar';
+
+  @override
+  String get assignQuizToClass => 'Tugaskan Kuiz kepada Kelas';
+
+  @override
+  String get reloadQuizzes => 'Muat Semula Kuiz';
+
+  @override
+  String get noQuizzesAssigned => 'Tiada kuiz ditugaskan';
+
+  @override
+  String get pleaseEnterQuestion => 'Sila masukkan soalan';
+
+  @override
+  String get aiLanguageNotice =>
+      'AI akan menjawab dalam bahasa yang sama dengan soalan anda';
 }

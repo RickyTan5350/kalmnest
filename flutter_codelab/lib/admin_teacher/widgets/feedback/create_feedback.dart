@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:code_play/api/feedback_api.dart';
-import 'package:code_play/models/models.dart';
-import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:flutter_codelab/api/feedback_api.dart';
+import 'package:flutter_codelab/models/models.dart';
+import 'package:flutter_codelab/l10n/generated/app_localizations.dart';
 
 void showCreateFeedbackDialog({
   required BuildContext context,
@@ -49,6 +49,10 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
   String? _selectedStudentId;
   bool _isLoading = false;
   bool _isLoadingStudents = false;
+  bool _isLoadingTopics = false;
+  String? _selectedTopicId;
+  String? _selectedTopicName;
+  List<Map<String, dynamic>> _topics = [];
 
   List<Map<String, dynamic>> _students = [];
 
@@ -64,19 +68,41 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
   Future<void> _loadStudents() async {
     setState(() => _isLoadingStudents = true);
 
-  try {
-    final students = await _apiService.getStudents(); // Call Laravel API
-    setState(() => _students = students);
-  } catch (e) {
-    if (mounted) {
-      widget.showSnackBar(context, AppLocalizations.of(context)!.failedToLoadStudents(e.toString()), Colors.red);
-    }
-  } finally {
-    if (mounted) {
-      setState(() => _isLoadingStudents = false);
+    try {
+      final students = await _apiService.getStudents(); // Call Laravel API
+      setState(() => _students = students);
+    } catch (e) {
+      if (mounted) {
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.failedToLoadStudents(e.toString()),
+          Colors.red,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingStudents = false);
+      }
     }
   }
-}
+
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+
+    try {
+      final topics = await _apiService.getTopics();
+      setState(() => _topics = topics);
+    } catch (e) {
+      if (mounted) {
+        print('Error loading topics: $e');
+        // Don't show error to user, topics are optional
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingTopics = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -104,10 +130,21 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     });
 
     try {
+      // Validate that topic is selected if required
+      if (_selectedTopicId == null || _selectedTopicId!.isEmpty) {
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.pleaseSelectTopic,
+          Colors.red,
+        );
+        return;
+      }
+
       // Call the backend API to create feedback
       await _apiService.createFeedback(
         studentId: _selectedStudentId!,
-        topic: _topicController.text,
+        topicId: _selectedTopicId,
+        title: _topicController.text,
         comment: _feedbackController.text,
       );
 
@@ -118,6 +155,8 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
         studentId: _selectedStudentId!,
         teacherName: 'Unknown', // Will be updated from API
         teacherId: '', // Will be updated from API
+        topicId: _selectedTopicId ?? '',
+        title: _selectedTopicName ?? _topicController.text,
         topic: _topicController.text,
         feedback: _feedbackController.text,
       );
