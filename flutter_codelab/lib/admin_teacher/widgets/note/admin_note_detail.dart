@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // Required for downloading images
+import 'package:flutter/foundation.dart';
 import 'package:code_play/admin_teacher/widgets/note/admin_edit_note.dart';
 import 'package:code_play/api/note_api.dart';
-import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/run_code_launcher.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -15,7 +17,7 @@ import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:code_play/utils/brand_color_extension.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
+
 import 'quiz_widget.dart';
 
 class AdminNoteDetailPage extends StatefulWidget {
@@ -287,6 +289,12 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
   }
 
   Future<void> _downloadPdf() async {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PDF download is not supported on Web.')),
+      );
+      return;
+    }
     // Show a different loading indicator for PDF download
     setState(() => _isDownloadingPdf = true);
 
@@ -442,12 +450,112 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
   Future<String> _loadLinkedFile(String fileName) async {
     try {
-      final cwd = Directory.current;
-      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
-      // sanitize title for path: replace newlines with space and trim
       final cleanTitle = _currentTitle
           .replaceAll(RegExp(r'[\r\n]+'), ' ')
           .trim();
+
+      // WEB IMPLEMENTATION
+      if (kIsWeb) {
+        try {
+          // 1. Load Manifest
+          final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+          final assets = manifest.listAssets();
+
+          // 2. Prepare Match Criteria
+          final cleanRaw = Uri.decodeFull(
+            _currentTitle,
+          ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+          final targetFileName = fileName.toLowerCase();
+
+          // Filter keys starting with assets/www
+          final wwwKeys = assets.where((k) => k.startsWith('assets/www/'));
+
+          String? resolvedPath;
+          List<String> validFolderCandidates = [];
+
+          // Strategy 1: Find all paths that contain the filename
+          // and see if the folder name is a "close enough" match
+          for (var key in wwwKeys) {
+            final parts = key.split('/');
+            // Ensure it's deep enough: assets/www/FolderName/FILENAME
+            if (parts.length < 4) continue;
+
+            final fName = parts.last.toLowerCase();
+            if (fName == targetFileName) {
+              final folderNameRaw = parts[2]; // "3.2.10%20Pengesahan..."
+              final decodedFolder = Uri.decodeFull(folderNameRaw);
+              final cleanFolder = decodedFolder.toLowerCase().replaceAll(
+                RegExp(r'[^a-z0-9]'),
+                '',
+              );
+
+              print("DEBUG WEB ASSET SCANNED: $key");
+              print(
+                "   -> Clean Folder: '$cleanFolder' vs Target: '$cleanRaw'",
+              );
+
+              // 1a. Exact Clean Match
+              if (cleanFolder == cleanRaw) {
+                resolvedPath = key;
+                break; // Found it!
+              }
+
+              // 1b. Containment Match (e.g. title is subset of folder or vice versa)
+              // This helps if the title in DB is short but folder is long
+              if (cleanFolder.contains(cleanRaw) ||
+                  cleanRaw.contains(cleanFolder)) {
+                resolvedPath = key;
+                // Don't break yet, look for better match?
+                // Actually, usually this is unique enough.
+                break;
+              }
+
+              validFolderCandidates.add(folderNameRaw);
+            }
+          }
+
+          // Strategy 2: If no resolvedPath, but we have candidates.
+          // If there is EXACTLY ONE candidate folder containing this file,
+          // assume that's the one (since filenames are usually unique per topic/context).
+          if (resolvedPath == null && validFolderCandidates.length == 1) {
+            // Find that key again
+            final bestGuessFolder = validFolderCandidates.first;
+            resolvedPath = wwwKeys.firstWhere(
+              (k) =>
+                  k.contains(bestGuessFolder) &&
+                  k.toLowerCase().endsWith('/$targetFileName'),
+            );
+            print(
+              "DEBUG WEB ASSET: Fuzzy matched by unique filename in folder: $bestGuessFolder",
+            );
+          }
+
+          if (resolvedPath != null) {
+            final content = await rootBundle.loadString(resolvedPath);
+            return content
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;');
+          }
+
+          print(
+            "DEBUG WEB ASSET ERROR: Could not find '$fileName' for note '$_currentTitle'.",
+          );
+          if (validFolderCandidates.isNotEmpty) {
+            print("DEBUG: Found candidates in folders: $validFolderCandidates");
+            return "File not found (Web): $fileName\nCandidates:\n${validFolderCandidates.join('\n')}";
+          }
+
+          return "File not found (Web): $fileName";
+        } catch (e) {
+          return "Error reading file (Web): $e";
+        }
+      }
+
+      // MOBILE IMPLEMENTATION
+      final cwd = Directory.current;
+      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
       final file = File(p.join(assetsWwwPath, cleanTitle, fileName));
       debugPrint(
         "Debug: Trying to load asset using clean title: '$cleanTitle', path: ${file.path}",

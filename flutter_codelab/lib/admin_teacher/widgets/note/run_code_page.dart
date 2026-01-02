@@ -11,11 +11,7 @@ import '../../../../constants/api_constants.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:code_play/utils/brand_color_extension.dart';
 
-class CodeFile {
-  String name;
-  String content;
-  CodeFile({required this.name, required this.content});
-}
+import 'package:code_play/admin_teacher/widgets/note/models/code_file.dart';
 
 class RunCodePage extends StatefulWidget {
   final String initialCode;

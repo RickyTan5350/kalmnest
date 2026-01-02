@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:code_play/api/note_api.dart';
 // Make sure this import path matches where you created the file above
 import 'package:code_play/constants/api_constants.dart';
 
-import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/run_code_launcher.dart';
 import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
 import 'package:path/path.dart' as p;
 import 'package:code_play/student/widgets/note/pdf_service.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
-import 'dart:convert';
+
 import 'package:code_play/admin_teacher/widgets/note/quiz_widget.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:code_play/utils/brand_color_extension.dart';
@@ -129,6 +131,10 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
   // --- PDF Logic (Now using Service) ---
   Future<void> _downloadPdf() async {
+    if (kIsWeb) {
+      _showSnackBar('PDF download is not supported on Web.', isError: true);
+      return;
+    }
     setState(() => _isDownloadingPdf = true);
 
     try {
@@ -263,11 +269,98 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   // --- UI WIDGETS ---
   Future<String> _loadLinkedFile(String fileName) async {
     try {
-      final cwd = Directory.current;
-      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
       final cleanTitle = _currentTitle
           .replaceAll(RegExp(r'[\r\n]+'), ' ')
           .trim();
+
+      // WEB IMPLEMENTATION
+      // WEB IMPLEMENTATION
+      if (kIsWeb) {
+        try {
+          final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+          final assets = manifest.listAssets();
+
+          final cleanRaw = Uri.decodeFull(
+            _currentTitle,
+          ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+          final targetFileName = fileName.toLowerCase();
+
+          final wwwKeys = assets.where((k) => k.startsWith('assets/www/'));
+          String? resolvedPath;
+          List<String> validFolderCandidates = [];
+
+          for (var key in wwwKeys) {
+            final parts = key.split('/');
+            if (parts.length < 4) continue;
+
+            final fName = parts.last.toLowerCase();
+
+            if (fName == targetFileName) {
+              final folderNameRaw = parts[2];
+              final decodedFolder = Uri.decodeFull(folderNameRaw);
+              final cleanFolder = decodedFolder.toLowerCase().replaceAll(
+                RegExp(r'[^a-z0-9]'),
+                '',
+              );
+
+              print("DEBUG (Student) SCANNED: $key");
+              print("   -> Clean Folder: '$cleanFolder' vs Raw '$cleanRaw'");
+
+              // 1a. Exact Match
+              if (cleanFolder == cleanRaw) {
+                resolvedPath = key;
+                break;
+              }
+
+              // 1b. Containment Match
+              if (cleanFolder.contains(cleanRaw) ||
+                  cleanRaw.contains(cleanFolder)) {
+                resolvedPath = key;
+                break;
+              }
+
+              validFolderCandidates.add(folderNameRaw);
+            }
+          }
+
+          // Strategy 2: Unique candidate match
+          if (resolvedPath == null && validFolderCandidates.length == 1) {
+            final bestGuessFolder = validFolderCandidates.first;
+            resolvedPath = wwwKeys.firstWhere(
+              (k) =>
+                  k.contains(bestGuessFolder) &&
+                  k.toLowerCase().endsWith('/$targetFileName'),
+            );
+            print(
+              "DEBUG (Student): Fuzzy matched by unique filename in folder: $bestGuessFolder",
+            );
+          }
+
+          if (resolvedPath != null) {
+            final content = await rootBundle.loadString(resolvedPath);
+            return content
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;');
+          }
+
+          print(
+            "DEBUG (Student) ERROR: Could not find '$fileName' for note '$_currentTitle'.",
+          );
+          if (validFolderCandidates.isNotEmpty) {
+            return "File not found (Web): $fileName\nCandidates:\n${validFolderCandidates.join('\n')}";
+          }
+
+          return "File not found (Web): $fileName";
+        } catch (e) {
+          return "Error reading file (Web): $e";
+        }
+      }
+
+      // MOBILE IMPLEMENTATION
+      final cwd = Directory.current;
+      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
       final file = File(p.join(assetsWwwPath, cleanTitle, fileName));
       debugPrint(
         "Debug: Trying to load asset using clean title: '$cleanTitle', path: ${file.path}",

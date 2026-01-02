@@ -152,7 +152,10 @@ class RunCodeController extends Controller
                  // If we have a provided session ID, force PHP to use it.
                  // This ensures that session_start() picks up the same session across requests.
                  if (!empty($providedSessionId)) {
-                     $mockCode .= "if(session_status() === PHP_SESSION_NONE) session_id('$providedSessionId');\n";
+                     $mockCode .= "if(session_status() === PHP_SESSION_NONE) {\n";
+                     $mockCode .= "  session_save_path('" . addslashes($tempDir) . "');\n";
+                     $mockCode .= "  session_id('$providedSessionId');\n";
+                     $mockCode .= "}\n";
                  }
 
                  // 1. MOCK $_SERVER REQUEST METHOD

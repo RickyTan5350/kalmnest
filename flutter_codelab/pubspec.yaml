@@ -99,13 +99,27 @@ flutter:
     - assets/unity_webgl/
     - assets/CodePlay.png
     - assets/www/
+    # Explicitly list all subdirectories because Flutter doesn't recurse automatically
+    - assets/www/3.1.1 Keperluan Bahasa Penskripan Klien dalam Laman Web/
+    - assets/www/3.1.2 Atur Cara dan Carta Alir bagi Bahasa Penskripan Klien/
+    - assets/www/3.1.5 Kelebihan Standard Library/
     - assets/www/3.1.9 Atur Cara lnteraktif yang Mengandungi Pengisytiharan Data, Struktur Kawalan, Procedure dan Function serta Tatasusunan/
     - assets/www/3.2.2 Penghasilan dan Penyimpanan Data dalam Fail Teks (.txt)/
     - assets/www/3.2.3 Penggunaan Bahasa Penskripan Pelayan untuk Membina Laman Web yang Unik bagi Setiap Pengguna/
     - assets/www/3.2.4 Penggunaan Data yang Diimport daripada Fail Teks untuk Menyelesaikan Masalah/
     - assets/www/3.2.5 Menggunakan Data yang Diimport dari Fail Pangkalan Data untuk Menyelesaikan Masalah/
+    - assets/www/3.2.7 Pengurusan Pangkalan Data (MySQL & phpMyAdmin)/
     - assets/www/3.2.8 Melaksanakan Beberapa Bentuk Pertanyaan (Ouery) Pangkalan Data/
     - assets/www/3.2.9 Membina Daftar (Sign Up) dan Log Masuk (Login) dalam Suatu Laman Web/
+    - assets/www/3.2.10 Pengesahan Pengguna dan Pengemaskinian Data dalam Pangkalan Data/
+    - assets/www/3.3.3 Membina Laman Web Mudah dengan Menggunakan HTML/
+    - assets/www/3.3.4 Menggunakan Cascading Style Sheets (CSS) untuk Menggayakan Text  Font  Bankground  Table  Borders dan Position/
+    - assets/www/3.3.5 Membina Laman Web Pengguna yang lnteraktif  yang Mengandungi Fitur Pengesahan Data Butang Pilihan dan Kotak Popup/
+    - assets/www/3.3.6 Penggunaan Bahasa Penskripan Pelayan untuk Membina Lama Web yang Boleh Mencapai dan Mengemas kini Data dalam Pangkalan Data/
+    - assets/www/pictures/
+    - assets/www/pictures/CSS/
+    - assets/www/pictures/JS/
+    - assets/www/pictures/PHP/
     - assets/txt/
 
 
