@@ -111,6 +111,37 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
     }
   }
 
+  InputDecoration _inputDecoration({
+    required String labelText,
+    required IconData icon,
+    String? hintText,
+    required ColorScheme colorScheme,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.outline),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+      ),
+      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      hintStyle: TextStyle(
+        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+      ),
+      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      filled: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
