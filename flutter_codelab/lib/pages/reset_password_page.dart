@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
-import 'package:code_play/widgets/password_strength_indicator.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -33,16 +32,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         _passwordController.text,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.passwordResetSuccess,
-              style: const TextStyle(color: Colors.white),
-            ),
+            content: Text(AppLocalizations.of(context)!.passwordResetSuccess),
             backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
           ),
         );
         // Pop back to Login (remove Forgot and Reset pages from stack)
@@ -50,29 +43,16 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       }
     } catch (e) {
       if (mounted) {
-        _handleSubmissionError(e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _handleSubmissionError(Object e) {
-    String errorString = e.toString();
-
-    // --- CASE 1: Generic Error Display matching standard ---
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          errorString.replaceAll('Exception: ', ''),
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-      ),
-    );
   }
 
   @override
@@ -186,10 +166,6 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                             (value == null || value.length < 8)
                             ? 'Min 8 characters'
                             : null,
-                        onChanged: (value) => setState(() {}),
-                      ),
-                      PasswordStrengthIndicator(
-                        password: _passwordController.text,
                       ),
                       const SizedBox(height: 16),
                       // Confirm Password
@@ -203,16 +179,6 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                           prefixIcon: const Icon(Icons.lock_reset),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () => setState(
-                              () => _isPasswordVisible = !_isPasswordVisible,
-                            ),
                           ),
                         ),
                         validator: (value) {
@@ -257,3 +223,4 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     );
   }
 }
+

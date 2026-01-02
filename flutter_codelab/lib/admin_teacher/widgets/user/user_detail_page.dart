@@ -129,17 +129,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
     }
   }
 
-  IconData _getGenderIcon(String gender) {
-    switch (gender.toLowerCase()) {
-      case 'male':
-        return Icons.male;
-      case 'female':
-        return Icons.female;
-      default:
-        return Icons.person_outline;
-    }
-  }
-
   Future<void> _fetchUserDetails() async {
     setState(() {
       _userFuture = _userApi.getUserDetails(widget.userId);
@@ -179,15 +168,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
       initialData: user,
       isSelfEdit: widget.isSelfProfile,
       showSnackBar: (ctx, msg, color) {
-        ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(
-            content: Text(msg, style: const TextStyle(color: Colors.white)),
-            backgroundColor: color,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        ScaffoldMessenger.of(
+          ctx,
+        ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
       },
     );
 
@@ -236,16 +219,12 @@ class _UserDetailPageState extends State<UserDetailPage> {
     try {
       await _userApi.deleteUser(widget.userId);
 
-      ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
       ScaffoldMessenger.of(scaffoldContext).showSnackBar(
         SnackBar(
           content: Text(
             AppLocalizations.of(context)!.deletedUserSuccess(widget.userName),
-            style: const TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
         ),
       );
 
@@ -270,16 +249,10 @@ class _UserDetailPageState extends State<UserDetailPage> {
             ? AppLocalizations.of(context)!.accessDeniedAdminOnly
             : AppLocalizations.of(context)!.errorDeletingUser(cleanError);
 
-        ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
         ScaffoldMessenger.of(scaffoldContext).showSnackBar(
           SnackBar(
-            content: Text(
-              snackBarText,
-              style: const TextStyle(color: Colors.white),
-            ),
+            content: Text(snackBarText),
             backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -418,7 +391,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                   _buildDivider(context),
                   _buildInfoRow(
                     context,
-                    _getGenderIcon(user.gender),
+                    Icons.transgender,
                     AppLocalizations.of(context)!.genderLabel,
                     _getLocalizedGender(user.gender),
                   ),

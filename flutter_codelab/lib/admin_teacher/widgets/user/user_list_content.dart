@@ -285,11 +285,15 @@ class UserListContentState extends State<UserListContent> {
     );
 
     if (confirm == true) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.deletingUsers)),
+      );
+
       try {
         await _userApi.deleteUsers(_selectedIds.toList());
 
         if (!mounted) return;
-
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -297,11 +301,8 @@ class UserListContentState extends State<UserListContent> {
               AppLocalizations.of(
                 context,
               )!.deletedUsersSuccess(_selectedIds.length),
-              style: const TextStyle(color: Colors.white),
             ),
             backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
           ),
         );
 
@@ -310,7 +311,6 @@ class UserListContentState extends State<UserListContent> {
         refreshData();
       } catch (e) {
         if (!mounted) return;
-
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -318,11 +318,8 @@ class UserListContentState extends State<UserListContent> {
               AppLocalizations.of(
                 context,
               )!.errorDeletingUsers(e.toString().replaceAll('Exception: ', '')),
-              style: const TextStyle(color: Colors.white),
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
           ),
         );
       }

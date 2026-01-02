@@ -112,6 +112,15 @@ class UserPageState extends State<UserPage> {
       );
 
       if (result != null && result.files.single.path != null) {
+        // 2. Show loading
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.importingUsers),
+            duration: const Duration(days: 1), // Indefinite until dismissed
+          ),
+        );
+
         final filePath = result.files.single.path!;
         final fileName = result.files.single.name;
 
@@ -123,13 +132,8 @@ class UserPageState extends State<UserPage> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.usersImportedSuccess,
-              style: const TextStyle(color: Colors.white),
-            ),
+            content: Text(AppLocalizations.of(context)!.usersImportedSuccess),
             backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
           ),
         );
         _handleRefresh(); // Refresh list via key
@@ -141,11 +145,8 @@ class UserPageState extends State<UserPage> {
         SnackBar(
           content: Text(
             AppLocalizations.of(context)!.importFailed(e.toString()),
-            style: const TextStyle(color: Colors.white),
           ),
           backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -393,3 +394,4 @@ class UserPageState extends State<UserPage> {
     );
   }
 }
+
