@@ -276,7 +276,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                     controller: _titleController,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
-                      labelText: l10n.title,
+                      labelText: l10n.,title
                       icon: Icons.title,
                       colorScheme: colorScheme,
                     ),
