@@ -327,11 +327,11 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-      case 6: // This is the index for 'Feedback Page'
-        if (widget.currentUser.isStudent) {
+      case 'Feedback':
+        if (widget.currentUser.isStudent || widget.currentUser.isAdmin) {
           _showSnackBar(
             context,
-            AppLocalizations.of(context)!.noAccessCreateFeedback,
+            AppLocalizations.of(context)!.accessDeniedCreateFeedback,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -424,8 +424,8 @@ class _FeedState extends State<Feed> {
                       }
                     },
                     isExtended: _isRailExtended,
-                    // REMOVED: onMenuPressed (moved to header)
-                    onAddButtonPressed: _onAddButtonPressed,
+                    onAddButtonPressed: isChatPage ? null : _onAddButtonPressed,
+                    destinations: filteredDestinations,
                   ),
                 Expanded(
                   child: Container(
@@ -438,7 +438,7 @@ class _FeedState extends State<Feed> {
           ),
         ],
       ),
-      floatingActionButton: wideScreen
+      floatingActionButton: (wideScreen || isChatPage)
           ? null
           : FloatingActionButton(
               backgroundColor: colorScheme.tertiaryContainer,

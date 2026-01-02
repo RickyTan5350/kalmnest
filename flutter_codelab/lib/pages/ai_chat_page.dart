@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/models/user_data.dart';
 import 'package:code_play/services/ai_chat_api_service.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 /// Model for chat messages
 class ChatMessage {
@@ -61,14 +63,11 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   late AiChatApiService _apiService;
   bool _isSending = false;
   bool _isInitialized = false;
+  bool _isNewChat = false;
   String? _currentSessionId;
 
-  final List<String> _suggestedQuestions = [
-    "Give me Learning Suggestion for HTML",
-    "Give me Learning Suggestion for CSS",
-    "Give me Learning Suggestion for JavaScript",
-    "Give me Learning suggestion for Web development"
-  ];
+  // Removed hardcoded _suggestedQuestions list. Will use _getSuggestedQuestions(context) instead.
+
 
   @override
   void initState() {
@@ -87,11 +86,41 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
 
   void _initializeChat() {
     setState(() {
-      _messages.add(ChatMessage(
-        text: 'Hello${widget.currentUser != null ? ' ${widget.currentUser!.name.split(' ')[0]}' : ''}! 👋 I\'m your AI assistant. How can I help you today?',
-        isUser: false,
-      ));
-      _isInitialized = true;
+      _isSending = true; // Use as blocker
+      _messages.clear();
+      _currentSessionId = sessionId;
+      _isNewChat = false;
+    });
+
+    try {
+      final messagesData = await _apiService.getSessionMessages(sessionId);
+      if (mounted) {
+        setState(() {
+          for (var m in messagesData) {
+            _messages.insert(0, ChatMessage.fromMap(m));
+          }
+          _isSending = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSending = false);
+        _showSnackBar(AppLocalizations.of(context)!.errorLoadingMessages(e.toString()), Colors.red);
+      }
+    }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
+  }
+
+  void _startNewChat() {
+    setState(() {
+      _messages.clear();
+      _currentSessionId = null;
+      _isNewChat = true;
     });
   }
 
@@ -165,33 +194,55 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   void _clearChat() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Chat'),
-        content: const Text('Are you sure you want to clear all messages?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _messages.clear();
-                _currentSessionId = null;
-                _initializeChat();
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(l10n.clearHistory),
+          content: Text(l10n.clearHistoryConfirmation),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l10n.cancel)),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
+
+    if (confirmed == true) {
+      try {
+        await _apiService.deleteSession(_currentSessionId!);
+        if (mounted) {
+          setState(() {
+            _messages.clear();
+            _currentSessionId = null;
+          });
+          _loadHistory();
+        }
+      } catch (e) {
+        if (mounted) {
+          _showSnackBar(AppLocalizations.of(context)!.deleteFailed(e.toString()), Colors.red);
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -202,28 +253,149 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           height: double.infinity,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- HEADER ---
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "KalmNest Assistant",
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(color: colorScheme.onSurface),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: _messages.length > 1 ? _clearChat : null,
-                      tooltip: 'Clear Chat',
-                    ),
-                  ],
+            child: (_currentSessionId == null && _messages.isEmpty && !_isNewChat)
+                ? _buildLandingView(colorScheme)
+                : _buildChatView(colorScheme),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLandingView(ColorScheme colorScheme) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              l10n.aiChatTitle,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: colorScheme.onSurface
+                  ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadHistory,
+              tooltip: 'Refresh',
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.auto_awesome, size: 64, color: colorScheme.primary),
+              const SizedBox(height: 16),
+              Text(
+                l10n.howCanIHelp,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _startNewChat,
+                icon: const Icon(Icons.add),
+                label: Text(l10n.askQuestion),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 24),
+              _buildSuggestedQuestions(colorScheme),
+            ],
+          ),
+        ),
+        const SizedBox(height: 48),
+        Text(
+          l10n.recentQuestions,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: _isLoadingHistory
+              ? const Center(child: CircularProgressIndicator())
+              : _sessions.isEmpty
+                  ? Center(child: Text(l10n.noQuestionsFound))
+                  : ListView.builder(
+                      itemCount: _sessions.length,
+                      itemBuilder: (context, index) {
+                        final session = _sessions[index];
+                        return ListTile(
+                          leading: const Icon(Icons.chat_bubble_outline),
+                          title: Text(
+                            (session['title'] == 'Untitled Question' || session['title'] == null || session['title'].toString().isEmpty)
+                                ? l10n.untitledQuestion
+                                : session['title'],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            session['updated_at']?.split('T')[0] ?? '',
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                          onTap: () => _loadSessionMessages(session['chatbot_session_id']),
+                        );
+                      },
+                    ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChatView(ColorScheme colorScheme) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // --- HEADER ---
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => setState(() {
+                    _messages.clear();
+                    _currentSessionId = null;
+                    _isNewChat = false;
+                    _loadHistory();
+                  }),
+                  tooltip: l10n.backToHistory,
+                ),
+                Text(
+                  "KalmNest AI",
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(color: colorScheme.onSurface),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _currentSessionId != null 
+                    ? () => _loadSessionMessages(_currentSessionId!) 
+                    : null,
+                  tooltip: l10n.refreshQuestion,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: _messages.isNotEmpty ? _clearChat : null,
+                  tooltip: l10n.deleteChat,
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
 
                 // --- CHAT CONTENT ---
                 Expanded(
@@ -249,34 +421,104 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
   }
 
   Widget _buildSuggestedQuestions(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      height: 50,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _suggestedQuestions.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ActionChip(
-              label: Text(_suggestedQuestions[index]),
-              labelStyle: TextStyle(
-                fontSize: 12,
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w600,
+    final l10n = AppLocalizations.of(context)!;
+    final suggestionPrefix = l10n.suggestionPrefix;
+    final suggestedQuestions = [
+      "${suggestionPrefix}HTML",
+      "${suggestionPrefix}CSS",
+      "${suggestionPrefix}JavaScript",
+      "${suggestionPrefix}PHP",
+      "${suggestionPrefix}Web Development"
+    ];
+
+    return Column(
+      children: [
+        Text(
+          l10n.quickSuggestions,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          alignment: WrapAlignment.center,
+          children: suggestedQuestions.map((question) {
+            IconData icon;
+            Color iconColor;
+            
+            if (question.contains('HTML')) {
+              icon = Icons.html;
+              iconColor = Colors.orange;
+            } else if (question.contains('CSS')) {
+              icon = Icons.css;
+              iconColor = Colors.blue;
+            } else if (question.contains('JavaScript')) {
+              icon = Icons.javascript;
+              iconColor = Colors.amber;
+            } else if (question.contains('PHP')) {
+              icon = Icons.php; 
+              iconColor = Colors.indigo;
+            } else {
+              icon = Icons.web;
+              iconColor = colorScheme.primary;
+            }
+
+            final label = question.replaceFirst(suggestionPrefix, "");
+
+
+            return MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: InkWell(
+                onTap: () => _handleSuggestedQuestion(question),
+                borderRadius: BorderRadius.circular(12),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withOpacity(0.5),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 20, color: iconColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              backgroundColor: colorScheme.primaryContainer.withOpacity(0.4),
-              side: BorderSide(color: colorScheme.primary.withOpacity(0.2)),
-              onPressed: () => _handleSuggestedQuestion(_suggestedQuestions[index]),
-            ),
-          );
-        },
-      ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
   Widget _buildInputArea(ColorScheme colorScheme) {
+  final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -305,9 +547,9 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
                   maxLines: 4,
                   minLines: 1,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    hintText: 'Type your message...',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: InputDecoration(
+                    hintText: l10n.typeQuestionHint,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     border: InputBorder.none,
                   ),
                   onSubmitted: (_) => _handleSendMessage(),

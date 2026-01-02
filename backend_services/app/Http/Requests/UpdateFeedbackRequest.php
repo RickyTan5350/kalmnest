@@ -53,7 +53,8 @@ class UpdateFeedbackRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'topic' => ['required', 'string', 'max:255'],
+            'topic_id' => ['required', 'string', 'exists:topics,topic_id'],
+            'title' => ['required', 'string', 'max:255'],
             'comment' => ['required', 'string', 'max:5000'],
         ];
     }
@@ -66,8 +67,10 @@ class UpdateFeedbackRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'topic.required' => 'The feedback topic is required.',
-            'topic.max' => 'The topic cannot exceed 255 characters.',
+            'topic_id.required' => 'The feedback topic is required.',
+            'topic_id.exists' => 'The selected topic does not exist.',
+            'title.required' => 'The feedback title is required.',
+            'title.max' => 'The title cannot exceed 255 characters.',
             'comment.required' => 'The feedback comment is required.',
             'comment.max' => 'The comment cannot exceed 5000 characters.',
         ];

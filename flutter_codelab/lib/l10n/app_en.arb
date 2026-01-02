@@ -275,5 +275,113 @@
   "roleLabel": "Role",
   "male": "Male",
   "female": "Female",
-  "other": "Other"
+  "other": "Other",
+  "feedbacks": "Feedbacks",
+  "results": "Results",
+  "errorLoadingFeedback": "Error loading feedback",
+  "noFeedbackYet": "No feedback yet",
+  "noFeedbackFound": "No feedback found.",
+  "all": "All",
+  "sortByTime": "Sort by Time",
+  "newestFirst": "Newest First",
+  "oldestFirst": "Oldest First",
+  "refreshFeedbacks": "Refresh Feedbacks",
+  "filterByStudent": "Filter by Student",
+  "allStudents": "All Students",
+  "filterByTeacher": "Filter by Teacher",
+  "allTeachers": "All Teachers",
+  "deleteFeedbackTitle": "Delete Feedback?",
+  "deleteFeedbackConfirmation": "Are you sure you want to delete this feedback? This action cannot be undone.",
+  "feedbackDeleted": "Feedback deleted",
+  "editFeedback": "Edit Feedback",
+  "currentTopic": "Current Topic",
+  "discardChangesTitle": "Discard Changes?",
+  "discardChangesConfirmation": "You have unsaved changes. Are you sure you want to discard them?",
+  "discard": "Discard",
+  "changesSavedSuccess": "Changes saved successfully!",
+  "updateFailed": "Update failed: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "from": "From: {name}",
+  "@from": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToLoadStudents": "Failed to load students: {error}",
+  "@failedToLoadStudents": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectStudent": "Please select a student",
+  "feedbackSentTo": "Feedback sent to {name}",
+  "@feedbackSentTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "accessDeniedCreateFeedback": "Access Denied: Only teachers can create feedback.",
+  "newFeedback": "New Feedback",
+  "selectStudent": "Select Student",
+  "selectAStudent": "Select a student",
+  "noStudentsAvailable": "No students available",
+  "selectTopic": "Select Topic",
+  "selectATopic": "Select a topic",
+  "pleaseSelectTopic": "Please select a topic",
+  "title": "Title",
+  "titleHint": "e.g., Great Job!",
+  "pleaseEnterTitle": "Please enter a title",
+  "feedbackHint": "Write your feedback here...",
+  "pleaseWriteFeedback": "Please write feedback",
+  "send": "Send",
+  "errorLoadingHistory": "Error loading history: {error}",
+  "@errorLoadingHistory": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingMessages": "Error loading messages: {error}",
+  "@errorLoadingMessages": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearHistory": "Clear History",
+  "clearHistoryConfirmation": "Are you sure you want to delete this chat session?",
+  "deleteFailed": "Delete failed: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aiChatTitle": "KalmNest AI (Gemini-2.0-flash)",
+  "howCanIHelp": "How can I help you today?",
+  "askQuestion": "Ask Question",
+  "recentQuestions": "Recent Questions",
+  "noQuestionsFound": "No previous questions found.",
+  "untitledQuestion": "Untitled Question",
+  "quickSuggestions": "Quick Learning Suggestions",
+  "suggestionPrefix": "Give me Learning Suggestion for ",
+  "typeQuestionHint": "Type your question...",
+  "backToHistory": "Back to History",
+  "refreshQuestion": "Refresh Question",
+  "deleteChat": "Delete Chat"
 }

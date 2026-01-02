@@ -500,4 +500,190 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get other => 'Lain-lain';
+
+  @override
+  String get feedbacks => 'Maklum Balas';
+
+  @override
+  String get results => 'Keputusan';
+
+  @override
+  String get noFeedbackFound => 'Tiada maklum balas dijumpai.';
+
+  @override
+  String get sortByTime => 'Susun Mengikut Masa';
+
+  @override
+  String get newestFirst => 'Terkini Dahulu';
+
+  @override
+  String get oldestFirst => 'Terlama Dahulu';
+
+  @override
+  String get refreshFeedbacks => 'Segarkan Maklum Balas';
+
+  @override
+  String get filterByStudent => 'Tapis Mengikut Pelajar';
+
+  @override
+  String get allStudents => 'Semua Pelajar';
+
+  @override
+  String get filterByTeacher => 'Tapis Mengikut Guru';
+
+  @override
+  String get allTeachers => 'Semua Guru';
+
+  @override
+  String get deleteFeedbackTitle => 'Padam Maklum Balas?';
+
+  @override
+  String get deleteFeedbackConfirmation =>
+      'Adakah anda pasti mahu memadamkan maklum balas ini? Tindakan ini tidak boleh dibatalkan.';
+
+  @override
+  String get feedbackDeleted => 'Maklum balas dipadam';
+
+  @override
+  String get editFeedback => 'Edit Maklum Balas';
+
+  @override
+  String get currentTopic => 'Topik Semasa';
+
+  @override
+  String get discardChangesTitle => 'Abaikan Perubahan?';
+
+  @override
+  String get discardChangesConfirmation =>
+      'Anda mempunyai perubahan yang belum disimpan. Adakah anda pasti mahu mengabaikannya?';
+
+  @override
+  String get discard => 'Abaikan';
+
+  @override
+  String get changesSavedSuccess => 'Perubahan berjaya disimpan!';
+
+  @override
+  String updateFailed(String error) {
+    return 'Kemas kini gagal: $error';
+  }
+
+  @override
+  String from(String name) {
+    return 'Daripada: $name';
+  }
+
+  @override
+  String failedToLoadStudents(String error) {
+    return 'Gagal memuatkan pelajar: $error';
+  }
+
+  @override
+  String get pleaseSelectStudent => 'Sila pilih pelajar';
+
+  @override
+  String feedbackSentTo(String name) {
+    return 'Maklum balas dihantar kepada $name';
+  }
+
+  @override
+  String get accessDeniedCreateFeedback =>
+      'Akses Ditolak: Hanya guru boleh membuat maklum balas.';
+
+  @override
+  String get newFeedback => 'Maklum Balas Baru';
+
+  @override
+  String get selectStudent => 'Pilih Pelajar';
+
+  @override
+  String get selectAStudent => 'Pilih seorang pelajar';
+
+  @override
+  String get noStudentsAvailable => 'Tiada pelajar tersedia';
+
+  @override
+  String get selectTopic => 'Pilih Topik';
+
+  @override
+  String get selectATopic => 'Pilih satu topik';
+
+  @override
+  String get pleaseSelectTopic => 'Sila pilih topik';
+
+  @override
+  String get title => 'Tajuk';
+
+  @override
+  String get titleHint => 'cth., Kerja Bagus!';
+
+  @override
+  String get pleaseEnterTitle => 'Sila masukkan tajuk';
+
+  @override
+  String get feedbackHint => 'Tulis maklum balas anda di sini...';
+
+  @override
+  String get pleaseWriteFeedback => 'Sila tulis maklum balas';
+
+  @override
+  String get send => 'Hantar';
+
+  @override
+  String errorLoadingHistory(String error) {
+    return 'Ralat memuatkan sejarah: $error';
+  }
+
+  @override
+  String errorLoadingMessages(String error) {
+    return 'Ralat memuatkan mesej: $error';
+  }
+
+  @override
+  String get clearHistory => 'Kosongkan Sejarah';
+
+  @override
+  String get clearHistoryConfirmation =>
+      'Adakah anda pasti mahu memadamkan sesi sembang ini?';
+
+  @override
+  String deleteFailed(String error) {
+    return 'Gagal memadam: $error';
+  }
+
+  @override
+  String get aiChatTitle => 'KalmNest AI (Gemini-2.0-flash)';
+
+  @override
+  String get howCanIHelp => 'Bagaimana saya boleh membantu anda hari ini?';
+
+  @override
+  String get askQuestion => 'Tanya Soalan';
+
+  @override
+  String get recentQuestions => 'Soalan Terkini';
+
+  @override
+  String get noQuestionsFound => 'Tiada soalan terdahulu ditemui.';
+
+  @override
+  String get untitledQuestion => 'Soalan Tanpa Tajuk';
+
+  @override
+  String get quickSuggestions => 'Cadangan Pembelajaran Pantas';
+
+  @override
+  String get suggestionPrefix => 'Berikan Cadangan Pembelajaran untuk ';
+
+  @override
+  String get typeQuestionHint => 'Taip soalan anda...';
+
+  @override
+  String get backToHistory => 'Kembali ke Sejarah';
+
+  @override
+  String get refreshQuestion => 'Segarkan Soalan';
+
+  @override
+  String get deleteChat => 'Padam Sembang';
 }

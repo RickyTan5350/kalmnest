@@ -55,4 +55,41 @@ class AiChatApiService {
       rethrow;
     }
   }
+
+  Future<List<Map<String, dynamic>>> getSessionMessages(
+    String sessionId,
+  ) async {
+    try {
+      final response = await _dio.get('/chat/sessions/$sessionId/messages');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        } else if (data['status'] == 'success' && data['messages'] is List) {
+          return List<Map<String, dynamic>>.from(data['messages']);
+        }
+        return [];
+      } else {
+        throw Exception(
+          'Failed to load messages (Code: ${response.statusCode})',
+        );
+      }
+    } catch (e) {
+      throw Exception('Failed to load messages: $e');
+    }
+  }
+
+  Future<void> deleteSession(String sessionId) async {
+    try {
+      final response = await _dio.delete('/chat/sessions/$sessionId');
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to delete session (Code: ${response.statusCode})',
+        );
+      }
+    } catch (e) {
+      throw Exception('Failed to delete session: $e');
+    }
+  }
 }
