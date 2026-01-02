@@ -478,9 +478,22 @@ class _AdminCreateAchievementDialogState
     String? hintText,
     String? errorText,
     required ColorScheme colorScheme,
+    bool isRequired = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: isRequired
+          ? Text.rich(
+              TextSpan(
+                text: labelText,
+                children: [
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: colorScheme.error),
+                  ),
+                ],
+              ),
+            )
+          : Text(labelText),
       hintText: hintText,
       errorText: errorText, // Displays server error here
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
@@ -555,6 +568,7 @@ class _AdminCreateAchievementDialogState
                           icon: Icons.emoji_events,
                           colorScheme: colorScheme,
                           errorText: _nameError,
+                          isRequired: true,
                         ),
                         validator: (value) {
                           if (_nameError != null) return _nameError;
@@ -590,6 +604,7 @@ class _AdminCreateAchievementDialogState
                           icon: Icons.title,
                           colorScheme: colorScheme,
                           errorText: _titleError,
+                          isRequired: true,
                         ),
                         validator: (value) {
                           if (_titleError != null) return _titleError;
@@ -623,6 +638,7 @@ class _AdminCreateAchievementDialogState
                           hintText: 'Describe the achievement...',
                           icon: Icons.description,
                           colorScheme: colorScheme,
+                          isRequired: true,
                         ),
                         maxLines: 3,
                         validator: (value) {
@@ -643,6 +659,7 @@ class _AdminCreateAchievementDialogState
                           labelText: 'Achievement Icon',
                           icon: Icons.photo_library,
                           colorScheme: colorScheme,
+                          isRequired: true,
                         ),
                         items: iconOptions
                             .map(
@@ -795,4 +812,3 @@ class _AdminCreateAchievementDialogState
     return shouldDiscard ?? false;
   }
 }
-
