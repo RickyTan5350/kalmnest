@@ -98,8 +98,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('classes')->group(function () {
         Route::get('/', [ClassController::class, 'index']); // List classes (role-based)
         Route::post('/', [ClassController::class, 'store']); // Create class (admin only)
+        Route::get('/check-name', [ClassController::class, 'checkClassNameExists']); // Check if class name exists (case-insensitive)
         Route::get('/{id}', [ClassController::class, 'show']); // Get class details
         Route::put('/{id}', [ClassController::class, 'update']); // Update class (admin only)
+        Route::patch('/{id}/focus', [ClassController::class, 'updateClassFocus']); // Update class focus (teacher only)
         Route::delete('/{id}', [ClassController::class, 'destroy']); // Delete class (admin only)
 
         // Quiz (Level) management for classes

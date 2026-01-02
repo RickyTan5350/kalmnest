@@ -194,11 +194,6 @@ class _FeedState extends State<Feed> {
     if (result == true) {
       // Use GlobalKey to access ClassPage's reload method (similar to feedback callback)
       classPageGlobalKey.currentState?.reloadClassList();
-      _showSnackBar(
-        context,
-        AppLocalizations.of(context)!.classCreatedSuccess,
-        Theme.of(context).colorScheme.primary,
-      );
     }
   }
 

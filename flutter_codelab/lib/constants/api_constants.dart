@@ -29,8 +29,8 @@ class ApiConstants {
     }
 
     if (kIsWeb) {
-         return 'https://kalmnest.test/api';
-      
+      // Local development API URL (Laravel Herd)
+      return 'https://kalmnest.test/api';
     }
 
     // If we are debugging on a physical device (Android OR iOS)
@@ -48,8 +48,7 @@ class ApiConstants {
       return 'https://10.0.2.2/api';
     } else {
       // Fallback for iOS Simulator
-        return 'https://kalmnest.test/api';
-     
+      return 'https://kalmnest.test/api';
     }
   }
 
@@ -62,8 +61,8 @@ class ApiConstants {
     }
 
     if (kIsWeb) {
-       return 'https://kalmnest.test';
-    
+      // Local development domain (Laravel Herd)
+      return 'https://kalmnest.test';
     }
 
     // Physical Device Support
@@ -77,8 +76,7 @@ class ApiConstants {
     if (Platform.isAndroid) {
       return 'https://10.0.2.2';
     } else {
-       return 'https://kalmnest.test';
-    
+      return 'https://kalmnest.test';
     }
   }
 }

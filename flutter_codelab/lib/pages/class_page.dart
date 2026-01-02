@@ -8,6 +8,7 @@ import 'package:code_play/models/user_data.dart';
 import 'package:code_play/constants/view_layout.dart';
 import 'package:code_play/services/layout_preferences.dart';
 import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 // Global key to access ClassPage state for reloading from main.dart
 final GlobalKey<_ClassPageState> classPageGlobalKey =
@@ -29,6 +30,10 @@ class _ClassPageState extends State<ClassPage> {
   ViewLayout _viewLayout = ViewLayout.grid;
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
+  
+  // Filter states
+  String _selectedOwnerFilter = 'all'; // 'all' or 'created_by_me'
+  String? _selectedFocusFilter; // null, 'HTML', 'CSS', 'JavaScript', 'PHP'
 
   @override
   void initState() {
@@ -60,17 +65,18 @@ class _ClassPageState extends State<ClassPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final ColorScheme colors = Theme.of(context).colorScheme;
     final String role = widget.currentUser.roleName.trim().toLowerCase();
 
     // Determine title based on role
     String pageTitle;
     if (role == 'admin') {
-      pageTitle = "All classes";
+      pageTitle = l10n.allClasses;
     } else if (role == 'teacher') {
-      pageTitle = "My Classes";
+      pageTitle = l10n.myClasses;
     } else {
-      pageTitle = "Enrolled Classes";
+      pageTitle = l10n.enrolledClasses;
     }
 
     return Padding(
@@ -118,7 +124,7 @@ class _ClassPageState extends State<ClassPage> {
                   width: 300,
                   child: SearchBar(
                     controller: _searchController,
-                    hintText: "Search by class name",
+                    hintText: l10n.searchByClassName,
                     padding: const WidgetStatePropertyAll<EdgeInsets>(
                       EdgeInsets.symmetric(horizontal: 16.0),
                     ),
@@ -145,15 +151,88 @@ class _ClassPageState extends State<ClassPage> {
 
                 const SizedBox(height: 16),
 
-                // Filter and Sort Row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Spacer(),
-                    // Filter Icon (Sort)
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.filter_list),
-                      tooltip: 'Sort Options',
+                // Filter Chips and Sort/Refresh Row
+                if (role == 'admin' || role == 'teacher' || role == 'student')
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Filter Chips
+                      Expanded(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            // Owner filter chips (only for admin)
+                            if (role == 'admin') ...[
+                              FilterChip(
+                                label: Text(l10n.all),
+                                selected: _selectedOwnerFilter == 'all',
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setState(() => _selectedOwnerFilter = 'all');
+                                  }
+                                },
+                              ),
+                              FilterChip(
+                                label: Text(l10n.createdByMe),
+                                selected: _selectedOwnerFilter == 'created_by_me',
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setState(() => _selectedOwnerFilter = 'created_by_me');
+                                  }
+                                },
+                              ),
+                              // Separator (only if there are owner filters)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text('|', style: TextStyle(color: Colors.grey)),
+                              ),
+                            ],
+                            // Focus filter chips (for admin, teacher, and student)
+                            FilterChip(
+                              label: const Text('HTML'),
+                              selected: _selectedFocusFilter == 'HTML',
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedFocusFilter = selected ? 'HTML' : null;
+                                });
+                              },
+                            ),
+                            FilterChip(
+                              label: const Text('CSS'),
+                              selected: _selectedFocusFilter == 'CSS',
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedFocusFilter = selected ? 'CSS' : null;
+                                });
+                              },
+                            ),
+                            FilterChip(
+                              label: const Text('JavaScript'),
+                              selected: _selectedFocusFilter == 'JavaScript',
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedFocusFilter = selected ? 'JavaScript' : null;
+                                });
+                              },
+                            ),
+                            FilterChip(
+                              label: const Text('PHP'),
+                              selected: _selectedFocusFilter == 'PHP',
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedFocusFilter = selected ? 'PHP' : null;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Filter Icon (Sort)
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.filter_list),
+                        tooltip: l10n.sortOptions,
                       onSelected: (value) {
                         setState(() {
                           if (value == 'Name') {
@@ -167,54 +246,54 @@ class _ClassPageState extends State<ClassPage> {
                           }
                         });
                       },
-                      itemBuilder: (BuildContext context) =>
-                          <PopupMenuEntry<String>>[
-                            const PopupMenuItem<String>(
-                              enabled: false,
-                              child: Text(
-                                'Sort By',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                        itemBuilder: (BuildContext context) =>
+                            <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                enabled: false,
+                                child: Text(
+                                  l10n.sortBy,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
                               ),
-                            ),
-                            CheckedPopupMenuItem<String>(
-                              value: 'Name',
-                              checked: _sortType == SortType.alphabetical,
-                              child: const Text('Name'),
-                            ),
-                            CheckedPopupMenuItem<String>(
-                              value: 'Date',
-                              checked: _sortType == SortType.updated,
-                              child: const Text('Date'),
-                            ),
-                            const PopupMenuDivider(),
-                            const PopupMenuItem<String>(
-                              enabled: false,
-                              child: Text(
-                                'Order',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Name',
+                                checked: _sortType == SortType.alphabetical,
+                                child: Text(l10n.name),
                               ),
-                            ),
-                            CheckedPopupMenuItem<String>(
-                              value: 'Ascending',
-                              checked: _sortOrder == SortOrder.ascending,
-                              child: const Text('Ascending'),
-                            ),
-                            CheckedPopupMenuItem<String>(
-                              value: 'Descending',
-                              checked: _sortOrder == SortOrder.descending,
-                              child: const Text('Descending'),
-                            ),
-                          ],
-                    ),
-                    const SizedBox(width: 4),
-                    // Refresh Icon
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: reloadClassList,
-                      tooltip: "Refresh List",
-                    ),
-                  ],
-                ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Date',
+                                checked: _sortType == SortType.updated,
+                                child: Text(l10n.date),
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem<String>(
+                                enabled: false,
+                                child: Text(
+                                  l10n.order,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Ascending',
+                                checked: _sortOrder == SortOrder.ascending,
+                                child: Text(l10n.ascending),
+                              ),
+                              CheckedPopupMenuItem<String>(
+                                value: 'Descending',
+                                checked: _sortOrder == SortOrder.descending,
+                                child: Text(l10n.descending),
+                              ),
+                            ],
+                      ),
+                      const SizedBox(width: 4),
+                      // Refresh Icon
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: reloadClassList,
+                        tooltip: l10n.refreshList,
+                      ),
+                    ],
+                  ),
 
                 const SizedBox(height: 16),
 
@@ -238,6 +317,9 @@ class _ClassPageState extends State<ClassPage> {
         layout: _viewLayout,
         sortType: _sortType,
         sortOrder: _sortOrder,
+        ownerFilter: _selectedOwnerFilter,
+        focusFilter: _selectedFocusFilter,
+        currentUserId: widget.currentUser.id,
       );
     }
     return student.ClassListSection(
