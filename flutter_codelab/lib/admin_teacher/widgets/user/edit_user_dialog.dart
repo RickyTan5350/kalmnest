@@ -258,9 +258,21 @@ class _EditUserDialogState extends State<EditUserDialog> {
     String? hintText,
     required ColorScheme colorScheme,
     bool enabled = true,
+    bool isMandatory = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: labelText),
+            if (isMandatory)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       hintText: hintText,
       prefixIcon: Icon(
         icon,
@@ -330,6 +342,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     labelText: AppLocalizations.of(context)!.name,
                     icon: Icons.person,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   validator: (value) {
                     if (_serverErrors.containsKey('name')) {
@@ -355,6 +368,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     labelText: AppLocalizations.of(context)!.email,
                     icon: Icons.email,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -466,6 +480,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     icon: Icons.phone,
                     colorScheme: colorScheme,
                     hintText: 'e.g. 012-3456789',
+                    isMandatory: true,
                   ),
                   keyboardType: TextInputType.phone,
                   inputFormatters: [MalaysianPhoneFormatter()],
@@ -499,6 +514,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     labelText: AppLocalizations.of(context)!.address,
                     icon: Icons.location_on,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   maxLines: 2,
                   validator: (value) {
@@ -518,6 +534,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     labelText: AppLocalizations.of(context)!.genderLabel,
                     icon: Icons.people,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   items: _genders.map((value) {
                     IconData icon;
@@ -570,6 +587,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     icon: Icons.badge,
                     colorScheme: colorScheme,
                     enabled: !widget.isSelfEdit,
+                    isMandatory: true,
                   ),
                   items: _roles.map((value) {
                     IconData icon;
