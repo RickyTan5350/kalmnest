@@ -12,12 +12,12 @@ import 'package:code_play/api/file_api.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:code_play/constants/api_constants.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'run_code_page.dart';
 import 'quiz_widget.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/search_note.dart';
-import 'package:flutter_codelab/theme.dart';
-import 'package:flutter_codelab/utils/brand_color_extension.dart';
+import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
+import 'package:code_play/theme.dart';
+import 'package:code_play/utils/brand_color_extension.dart';
 
 class EditNotePage extends StatefulWidget {
   final String noteId;
@@ -54,7 +54,7 @@ class _EditNotePageState extends State<EditNotePage> {
   final List<String> _topics = ['HTML', 'CSS', 'JS', 'PHP'];
 
   bool _isLoading = false;
-  List<UploadedAttachment> _attachments = [];
+  final List<UploadedAttachment> _attachments = [];
 
   // --- Search State ---
   bool _isSearching = false;
@@ -95,8 +95,9 @@ class _EditNotePageState extends State<EditNotePage> {
       if (widget.initialCursorIndex != null) {
         int idx = widget.initialCursorIndex!;
         if (idx < 0) idx = 0;
-        if (idx > _contentController.text.length)
+        if (idx > _contentController.text.length) {
           idx = _contentController.text.length;
+        }
         _contentController.selection = TextSelection.collapsed(offset: idx);
       }
     });
@@ -239,9 +240,11 @@ class _EditNotePageState extends State<EditNotePage> {
         content = await File(file.path!).readAsString();
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to read file: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to read file: $e')));
+      }
       return;
     }
 
@@ -272,12 +275,14 @@ class _EditNotePageState extends State<EditNotePage> {
         selection: TextSelection.collapsed(offset: newCursorPos),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Code block inserted!'),
-          duration: Duration(seconds: 1),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Code block inserted!'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
       setState(() {});
     }
   }
@@ -309,9 +314,12 @@ class _EditNotePageState extends State<EditNotePage> {
                       int idx = entry.key;
                       return Row(
                         children: [
+                          // ignore: deprecated_member_use
                           Radio<int>(
                             value: idx,
+                            // ignore: deprecated_member_use
                             groupValue: correctIndex,
+                            // ignore: deprecated_member_use
                             onChanged: (val) {
                               setStateDialog(() => correctIndex = val!);
                             },
@@ -344,7 +352,7 @@ class _EditNotePageState extends State<EditNotePage> {
                           ),
                         ],
                       );
-                    }).toList(),
+                    }),
                     TextButton.icon(
                       icon: const Icon(Icons.add),
                       label: const Text('Add Option'),
@@ -598,13 +606,13 @@ class _EditNotePageState extends State<EditNotePage> {
     );
 
     final String activeBg =
-        '#${colorScheme.primary.value.toRadixString(16).substring(2)}';
+        '#${colorScheme.primary.toARGB32().toRadixString(16).substring(2)}';
     final String activeText =
-        '#${colorScheme.onPrimary.value.toRadixString(16).substring(2)}';
+        '#${colorScheme.onPrimary.toARGB32().toRadixString(16).substring(2)}';
     final String inactiveBg =
-        '#${colorScheme.primaryContainer.value.toRadixString(16).substring(2)}';
+        '#${colorScheme.primaryContainer.toARGB32().toRadixString(16).substring(2)}';
     final String inactiveText =
-        '#${colorScheme.onPrimaryContainer.value.toRadixString(16).substring(2)}';
+        '#${colorScheme.onPrimaryContainer.toARGB32().toRadixString(16).substring(2)}';
 
     if (_searchTerm.isNotEmpty) {
       try {
@@ -743,21 +751,24 @@ class _EditNotePageState extends State<EditNotePage> {
         return null;
       },
       customStylesBuilder: (element) {
-        if (element.localName == 'h1')
+        if (element.localName == 'h1') {
           return {
             'margin-bottom': '10px',
             'font-weight': 'bold',
             'border-bottom':
-                '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
+                '1px solid ${colorScheme.outlineVariant.toARGB32().toRadixString(16).substring(2)}',
           };
-        if (element.localName == 'table')
+        }
+        if (element.localName == 'table') {
           return {'border-collapse': 'collapse', 'width': '100%'};
-        if (element.localName == 'th' || element.localName == 'td')
+        }
+        if (element.localName == 'th' || element.localName == 'td') {
           return {
             'border':
-                '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
+                '1px solid ${colorScheme.outlineVariant.toARGB32().toRadixString(16).substring(2)}',
             'padding': '8px',
           };
+        }
         return null;
       },
     );
@@ -856,14 +867,15 @@ class _EditNotePageState extends State<EditNotePage> {
                 } else if (isCode) {
                   iconData = Icons.code;
                   if (brandColors != null) {
-                    if (ext == 'html')
+                    if (ext == 'html') {
                       iconColor = brandColors.html;
-                    else if (ext == 'css')
+                    } else if (ext == 'css') {
                       iconColor = brandColors.css;
-                    else if (ext == 'js')
+                    } else if (ext == 'js') {
                       iconColor = brandColors.javascript;
-                    else if (ext == 'php')
+                    } else if (ext == 'php') {
                       iconColor = brandColors.php;
+                    }
                   }
                 } else {
                   if (brandColors != null) iconColor = brandColors.other;
@@ -987,7 +999,7 @@ class _EditNotePageState extends State<EditNotePage> {
               ),
               backgroundColor: context
                   .getBrandColorForTopic(_selectedTopic ?? widget.currentTopic)
-                  .withOpacity(0.2),
+                  .withValues(alpha: 0.2),
               elevation: 0,
               iconTheme: IconThemeData(color: colorScheme.onSurface),
               actions: [
@@ -1031,7 +1043,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                           flex: 1,
                                           child:
                                               DropdownButtonFormField<String>(
-                                                value: _selectedTopic,
+                                                initialValue: _selectedTopic,
                                                 dropdownColor: colorScheme
                                                     .surfaceContainer,
                                                 style: TextStyle(
@@ -1122,7 +1134,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                                               _noteVisibility =
                                                                   value,
                                                         ),
-                                                    activeColor:
+                                                    activeThumbColor:
                                                         colorScheme.primary,
                                                   ),
                                                 ),
@@ -1410,4 +1422,3 @@ class _EditNotePageState extends State<EditNotePage> {
     );
   }
 }
-

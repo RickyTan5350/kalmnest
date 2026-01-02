@@ -1,0 +1,16 @@
+Analyzing admin_edit_note.dart...                               
+
+   info - The private field _attachments could be 'final' - lib\admin_teacher\widgets\note\admin_edit_note.dart:57:28 - prefer_final_fields
+   info - Statements in an if should be enclosed in a block - lib\admin_teacher\widgets\note\admin_edit_note.dart:99:11 - curly_braces_in_flow_control_structures
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\admin_teacher\widgets\note\admin_edit_note.dart:318:29 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\admin_teacher\widgets\note\admin_edit_note.dart:319:29 - deprecated_member_use
+   info - Unnecessary use of 'toList' in a spread - lib\admin_teacher\widgets\note\admin_edit_note.dart:351:24 - unnecessary_to_list_in_spreads
+   info - Statements in an if should be enclosed in a block - lib\admin_teacher\widgets\note\admin_edit_note.dart:751:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\admin_teacher\widgets\note\admin_edit_note.dart:758:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\admin_teacher\widgets\note\admin_edit_note.dart:760:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\admin_teacher\widgets\note\admin_edit_note.dart:864:23 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\admin_teacher\widgets\note\admin_edit_note.dart:866:23 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\admin_teacher\widgets\note\admin_edit_note.dart:868:23 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\admin_teacher\widgets\note\admin_edit_note.dart:870:23 - curly_braces_in_flow_control_structures
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\admin_teacher\widgets\note\admin_edit_note.dart:994:20 - deprecated_member_use
+

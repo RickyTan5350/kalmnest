@@ -33,8 +33,6 @@ class _NotePageState extends State<NotePage> {
 
   final FocusNode _searchFocusNode = FocusNode();
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _searchController =
-      TextEditingController(); // ADDED
 
   final GlobalKey<StudentViewPageState> _studentKey =
       GlobalKey<StudentViewPageState>();
@@ -60,7 +58,6 @@ class _NotePageState extends State<NotePage> {
 
   @override
   void dispose() {
-    _searchController.dispose(); // ADDED
     _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
@@ -195,8 +192,9 @@ class _NotePageState extends State<NotePage> {
                                   label: Text(_getLocalizedTopic(topic)),
                                   selected: _selectedTopic == topic,
                                   onSelected: (selected) {
-                                    if (selected)
+                                    if (selected) {
                                       setState(() => _selectedTopic = topic);
+                                    }
                                   },
                                 ),
                               )
@@ -314,4 +312,3 @@ class _NotePageState extends State<NotePage> {
     );
   }
 }
-
