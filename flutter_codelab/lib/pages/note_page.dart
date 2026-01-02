@@ -60,7 +60,6 @@ class _NotePageState extends State<NotePage> {
   void dispose() {
     _searchFocusNode.dispose();
     _searchController.dispose();
-    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -83,8 +82,6 @@ class _NotePageState extends State<NotePage> {
       });
     }
   }
-
-    }
 
   String _getLocalizedTopic(String topic) {
     final l10n = AppLocalizations.of(context)!;
@@ -196,9 +193,7 @@ class _NotePageState extends State<NotePage> {
                                   selected: _selectedTopic == topic,
                                   onSelected: (selected) {
                                     if (selected) {
-                                    if (selected) {
                                       setState(() => _selectedTopic = topic);
-                                    }
                                     }
                                   },
                                 ),

@@ -10,7 +10,7 @@ class DisappearingNavigationRail extends StatelessWidget {
     this.onDestinationSelected,
     required this.isExtended,
     this.onAddButtonPressed,
-    required this.destinations,
+    //required this.destinations,
   });
 
   final Color backgroundColor;
@@ -18,7 +18,7 @@ class DisappearingNavigationRail extends StatelessWidget {
   final ValueChanged<int>? onDestinationSelected;
   final bool isExtended;
   final VoidCallback? onAddButtonPressed;
-  final List<Destination> destinations;
+ // final List<Destination> destinations;
 
   @override
   Widget build(BuildContext context) {

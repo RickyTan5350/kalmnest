@@ -286,5 +286,22 @@
   "descriptionRequired": "Penerangan diperlukan",
   "descriptionMinWords": "Penerangan mestilah mengandungi sekurang-kurangnya 10 perkataan",
   "descriptionMaxCharacters": "Penerangan tidak boleh melebihi 500 aksara",
-  "atLeast10Words": "sekurang-kurangnya 10 perkataan"
+  "atLeast10Words": "sekurang-kurangnya 10 perkataan",
+  "topicId": "ID Topik",
+  "failedToLoadStudents": "Gagal memuatkan pelajar: {error}",
+  "pleaseSelectStudent": "Sila pilih pelajar",
+  "feedbackSentTo": "Maklum balas dihantar kepada {studentName}",
+  "newFeedback": "Maklum Balas Baru",
+  "selectStudent": "Pilih Pelajar",
+  "selectAStudent": "Pilih pelajar",
+  "noStudentsAvailable": "Tiada pelajar tersedia",
+  "selectTopic": "Pilih Topik",
+  "selectATopic": "Pilih topik",
+  "pleaseSelectTopic": "Sila pilih topik",
+  "title": "Tajuk",
+  "titleHint": "Masukkan tajuk maklum balas",
+  "pleaseEnterTitle": "Sila masukkan tajuk",
+  "feedbackHint": "Tulis maklum balas anda di sini",
+  "pleaseWriteFeedback": "Sila tulis maklum balas anda",
+  "send": "Hantar"
 }

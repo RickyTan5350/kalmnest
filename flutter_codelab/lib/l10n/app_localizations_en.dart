@@ -76,7 +76,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resetCodeSent => 'Reset code sent! Check your email.';
 
   @override
-  String get enterEmailInstructions => 'Enter your email address to receive a 6-digit verification code.';
+  String get enterEmailInstructions =>
+      'Enter your email address to receive a 6-digit verification code.';
 
   @override
   String get sendResetCode => 'Send Reset Code';
@@ -85,7 +86,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quiz => 'Quiz';
 
   @override
-  String get passwordResetSuccess => 'Password reset successfully! Please login.';
+  String get passwordResetSuccess =>
+      'Password reset successfully! Please login.';
 
   @override
   String get setNewPassword => 'Set New Password';
@@ -183,7 +185,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteLevel => 'Delete Level';
 
   @override
-  String get deleteLevelConfirmation => 'Are you sure you want to delete this level?';
+  String get deleteLevelConfirmation =>
+      'Are you sure you want to delete this level?';
 
   @override
   String get failedToLoadLevel => 'Failed to load level data';
@@ -259,7 +262,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noFeedbackYet => 'No feedback yet';
 
   @override
-  String get teachersFeedbackInstructions => 'Your teachers will provide feedback here';
+  String get teachersFeedbackInstructions =>
+      'Your teachers will provide feedback here';
 
   @override
   String fromTeacher(String teacherName) {
@@ -270,7 +274,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get classCreatedSuccess => 'Class created successfully!';
 
   @override
-  String get noPermissionCreateUser => 'You do not have permission to create user accounts.';
+  String get noPermissionCreateUser =>
+      'You do not have permission to create user accounts.';
 
   @override
   String get selectAction => 'Select Action';
@@ -282,16 +287,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importUserProfile => 'Import User Profile';
 
   @override
-  String get studentsCannotCreateGames => 'Students cannot create games. This is for Teachers and Admins only.';
+  String get studentsCannotCreateGames =>
+      'Students cannot create games. This is for Teachers and Admins only.';
 
   @override
-  String get studentsCannotAddNotes => 'Students cannot add notes. This is for Admins only.';
+  String get studentsCannotAddNotes =>
+      'Students cannot add notes. This is for Admins only.';
 
   @override
   String get noAccessFunction => 'You do not have access to this function';
 
   @override
-  String get noAccessCreateFeedback => 'You do not have access to create feedback';
+  String get noAccessCreateFeedback =>
+      'You do not have access to create feedback';
 
   @override
   String userAchievements(String name) {
@@ -308,7 +316,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userAccountCreatedSuccess => 'User account successfully created!';
 
   @override
-  String get networkErrorCheckApi => 'Network Error: Check API URL and server status.';
+  String get networkErrorCheckApi =>
+      'Network Error: Check API URL and server status.';
 
   @override
   String unknownErrorOccurred(String error) {
@@ -374,7 +383,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get accessDeniedAdminOnly => 'Access Denied: Only Administrators can delete user accounts.';
+  String get accessDeniedAdminOnly =>
+      'Access Denied: Only Administrators can delete user accounts.';
 
   @override
   String errorDeletingUser(String error) {
@@ -432,13 +442,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmNewPassword => 'Confirm New Password';
 
   @override
-  String get passwordsMatchError => 'Error: New password and confirmation must match.';
+  String get passwordsMatchError =>
+      'Error: New password and confirmation must match.';
 
   @override
   String get userProfileUpdated => 'User profile successfully updated!';
 
   @override
-  String get accessDeniedAdminModify => 'Access Denied: Only Administrators can modify user profiles.';
+  String get accessDeniedAdminModify =>
+      'Access Denied: Only Administrators can modify user profiles.';
 
   @override
   String errorUpdatingProfile(String error) {
@@ -486,4 +498,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get other => 'Other';
+
+  @override
+  String get topicId => 'Topic ID';
+
+  @override
+  String failedToLoadStudents(String error) {
+    return 'Failed to load students: $error';
+  }
+
+  @override
+  String get pleaseSelectStudent => 'Please select a student';
+
+  @override
+  String feedbackSentTo(String studentName) {
+    return 'Feedback sent to $studentName';
+  }
+
+  @override
+  String get newFeedback => 'New Feedback';
+
+  @override
+  String get selectStudent => 'Select Student';
+
+  @override
+  String get selectAStudent => 'Select a student';
+
+  @override
+  String get noStudentsAvailable => 'No students available';
+
+  @override
+  String get selectTopic => 'Select Topic';
+
+  @override
+  String get selectATopic => 'Select a topic';
+
+  @override
+  String get pleaseSelectTopic => 'Please select a topic';
+
+  @override
+  String get title => 'Title';
+
+  @override
+  String get titleHint => 'Enter feedback title';
+
+  @override
+  String get pleaseEnterTitle => 'Please enter a title';
+
+  @override
+  String get feedbackHint => 'Write your feedback here';
+
+  @override
+  String get pleaseWriteFeedback => 'Please write your feedback';
+
+  @override
+  String get send => 'Send';
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/api/feedback_api.dart';
-import 'package:code_play/models/models.dart';
+import 'package:code_play/models/feedback.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class StudentViewFeedbackPage extends StatefulWidget {
@@ -69,7 +69,7 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
                       : null) ??
                   'Unknown',
               teacherId: fb['teacher_id'] ?? '',
-              topicId: fb['topic_id']?.toString() ?? '',
+              //topicId: fb['topic_id']?.toString() ?? '',
               topic: fb['topic'] ?? '',
               feedback: fb['feedback'] ?? '',
               createdAt:
@@ -79,7 +79,7 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
                       ? fb['teacher']['created_at']
                       : null),
               //topicId: fb['topic_id']?.toString() ?? '',
-              title: fb['title'] ?? fb['topic'] ?? '',
+              //title: fb['title'] ?? fb['topic'] ?? '',
             ),
           );
         }

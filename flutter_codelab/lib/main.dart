@@ -322,7 +322,7 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-      case 'Feedback':
+      case 5:
         if (widget.currentUser.isStudent || widget.currentUser.isAdmin) {
           _showSnackBar(
             context,

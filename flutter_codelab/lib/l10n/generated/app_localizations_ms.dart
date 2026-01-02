@@ -930,4 +930,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get atLeast10Words => 'sekurang-kurangnya 10 perkataan';
+
+  @override
+  String get topicId => 'ID Topik';
 }

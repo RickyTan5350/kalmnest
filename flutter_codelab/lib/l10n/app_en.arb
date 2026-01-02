@@ -490,5 +490,36 @@
   "descriptionRequired": "Description is required",
   "descriptionMinWords": "Description must contain at least 10 words",
   "descriptionMaxCharacters": "Description cannot exceed 500 characters",
-  "atLeast10Words": "at least 10 words"
+  "atLeast10Words": "at least 10 words",
+  "topicId": "Topic ID",
+  "failedToLoadStudents": "Failed to load students: {error}",
+  "@failedToLoadStudents": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectStudent": "Please select a student",
+  "feedbackSentTo": "Feedback sent to {studentName}",
+  "@feedbackSentTo": {
+    "placeholders": {
+      "studentName": {
+        "type": "String"
+      }
+    }
+  },
+  "newFeedback": "New Feedback",
+  "selectStudent": "Select Student",
+  "selectAStudent": "Select a student",
+  "noStudentsAvailable": "No students available",
+  "selectTopic": "Select Topic",
+  "selectATopic": "Select a topic",
+  "pleaseSelectTopic": "Please select a topic",
+  "title": "Title",
+  "titleHint": "Enter feedback title",
+  "pleaseEnterTitle": "Please enter a title",
+  "feedbackHint": "Write your feedback here",
+  "pleaseWriteFeedback": "Please write your feedback",
+  "send": "Send"
 }

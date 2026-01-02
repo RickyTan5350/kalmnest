@@ -1765,6 +1765,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'at least 10 words'**
   String get atLeast10Words;
+
+  /// No description provided for @topicId.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic ID'**
+  String get topicId;
 }
 
 class _AppLocalizationsDelegate

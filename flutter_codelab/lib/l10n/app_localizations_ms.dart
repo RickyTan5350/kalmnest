@@ -46,7 +46,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get emailValidation => 'Sila masukkan alamat e-mel yang sah';
 
   @override
-  String get passwordValidation => 'Kata laluan mestilah sekurang-kurangnya 6 aksara';
+  String get passwordValidation =>
+      'Kata laluan mestilah sekurang-kurangnya 6 aksara';
 
   @override
   String get email => 'E-mel';
@@ -76,7 +77,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get resetCodeSent => 'Kod tetapan semula dihantar! Semak e-mel anda.';
 
   @override
-  String get enterEmailInstructions => 'Masukkan alamat e-mel anda untuk menerima kod pengesahan 6 digit.';
+  String get enterEmailInstructions =>
+      'Masukkan alamat e-mel anda untuk menerima kod pengesahan 6 digit.';
 
   @override
   String get sendResetCode => 'Hantar Kod Tetapan Semula';
@@ -85,7 +87,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get quiz => 'Kuiz';
 
   @override
-  String get passwordResetSuccess => 'Kata laluan berjaya ditetapkan semula! Sila log masuk.';
+  String get passwordResetSuccess =>
+      'Kata laluan berjaya ditetapkan semula! Sila log masuk.';
 
   @override
   String get setNewPassword => 'Tetapkan Kata Laluan Baru';
@@ -183,7 +186,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get deleteLevel => 'Padam Tahap';
 
   @override
-  String get deleteLevelConfirmation => 'Adakah anda pasti mahu memadamkan tahap ini?';
+  String get deleteLevelConfirmation =>
+      'Adakah anda pasti mahu memadamkan tahap ini?';
 
   @override
   String get failedToLoadLevel => 'Gagal memuatkan data tahap';
@@ -259,7 +263,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get noFeedbackYet => 'Tiada maklum balas lagi';
 
   @override
-  String get teachersFeedbackInstructions => 'Guru anda akan memberikan maklum balas di sini';
+  String get teachersFeedbackInstructions =>
+      'Guru anda akan memberikan maklum balas di sini';
 
   @override
   String fromTeacher(String teacherName) {
@@ -270,7 +275,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get classCreatedSuccess => 'Kelas berjaya dicipta!';
 
   @override
-  String get noPermissionCreateUser => 'Anda tidak mempunyai kebenaran untuk mencipta akaun pengguna.';
+  String get noPermissionCreateUser =>
+      'Anda tidak mempunyai kebenaran untuk mencipta akaun pengguna.';
 
   @override
   String get selectAction => 'Pilih Tindakan';
@@ -282,16 +288,19 @@ class AppLocalizationsMs extends AppLocalizations {
   String get importUserProfile => 'Import Profil Pengguna';
 
   @override
-  String get studentsCannotCreateGames => 'Pelajar tidak boleh mencipta permainan. Ini hanya untuk Guru dan Admin sahaja.';
+  String get studentsCannotCreateGames =>
+      'Pelajar tidak boleh mencipta permainan. Ini hanya untuk Guru dan Admin sahaja.';
 
   @override
-  String get studentsCannotAddNotes => 'Pelajar tidak boleh menambah nota. Ini hanya untuk Admin sahaja.';
+  String get studentsCannotAddNotes =>
+      'Pelajar tidak boleh menambah nota. Ini hanya untuk Admin sahaja.';
 
   @override
   String get noAccessFunction => 'Anda tidak mempunyai akses kepada fungsi ini';
 
   @override
-  String get noAccessCreateFeedback => 'Anda tidak mempunyai akses untuk mencipta maklum balas';
+  String get noAccessCreateFeedback =>
+      'Anda tidak mempunyai akses untuk mencipta maklum balas';
 
   @override
   String userAchievements(String name) {
@@ -308,7 +317,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get userAccountCreatedSuccess => 'Akaun pengguna berjaya dicipta!';
 
   @override
-  String get networkErrorCheckApi => 'Ralat Rangkaian: Semak URL API dan status pelayan.';
+  String get networkErrorCheckApi =>
+      'Ralat Rangkaian: Semak URL API dan status pelayan.';
 
   @override
   String unknownErrorOccurred(String error) {
@@ -374,7 +384,8 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get accessDeniedAdminOnly => 'Akses Dinafikan: Hanya Administrator yang boleh memadamkan akaun pengguna.';
+  String get accessDeniedAdminOnly =>
+      'Akses Dinafikan: Hanya Administrator yang boleh memadamkan akaun pengguna.';
 
   @override
   String errorDeletingUser(String error) {
@@ -432,13 +443,15 @@ class AppLocalizationsMs extends AppLocalizations {
   String get confirmNewPassword => 'Sahkan Kata Laluan Baru';
 
   @override
-  String get passwordsMatchError => 'Ralat: Kata laluan baru dan pengesahan mestilah sama.';
+  String get passwordsMatchError =>
+      'Ralat: Kata laluan baru dan pengesahan mestilah sama.';
 
   @override
   String get userProfileUpdated => 'Profil pengguna berjaya dikemas kini!';
 
   @override
-  String get accessDeniedAdminModify => 'Akses Dinafikan: Hanya Administrator yang boleh mengubah profil pengguna.';
+  String get accessDeniedAdminModify =>
+      'Akses Dinafikan: Hanya Administrator yang boleh mengubah profil pengguna.';
 
   @override
   String errorUpdatingProfile(String error) {
@@ -455,7 +468,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get enterValidEmail => 'Masukkan alamat e-mel yang sah';
 
   @override
-  String get passwordLengthError => 'Kata laluan mestilah sekurang-kurangnya 8 aksara';
+  String get passwordLengthError =>
+      'Kata laluan mestilah sekurang-kurangnya 8 aksara';
 
   @override
   String get confirmPasswordRequired => 'Sila sahkan kata laluan baru';
@@ -486,4 +500,59 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get other => 'Lain-lain';
+
+  @override
+  String get topicId => 'ID Topik';
+
+  @override
+  String failedToLoadStudents(String error) {
+    return 'Gagal memuatkan pelajar: $error';
+  }
+
+  @override
+  String get pleaseSelectStudent => 'Sila pilih pelajar';
+
+  @override
+  String feedbackSentTo(String studentName) {
+    return 'Maklum balas dihantar kepada $studentName';
+  }
+
+  @override
+  String get newFeedback => 'Maklum Balas Baru';
+
+  @override
+  String get selectStudent => 'Pilih Pelajar';
+
+  @override
+  String get selectAStudent => 'Pilih pelajar';
+
+  @override
+  String get noStudentsAvailable => 'Tiada pelajar tersedia';
+
+  @override
+  String get selectTopic => 'Pilih Topik';
+
+  @override
+  String get selectATopic => 'Pilih topik';
+
+  @override
+  String get pleaseSelectTopic => 'Sila pilih topik';
+
+  @override
+  String get title => 'Tajuk';
+
+  @override
+  String get titleHint => 'Masukkan tajuk maklum balas';
+
+  @override
+  String get pleaseEnterTitle => 'Sila masukkan tajuk';
+
+  @override
+  String get feedbackHint => 'Tulis maklum balas anda di sini';
+
+  @override
+  String get pleaseWriteFeedback => 'Sila tulis maklum balas anda';
+
+  @override
+  String get send => 'Hantar';
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/api/feedback_api.dart';
-import 'package:code_play/models/models.dart';
+import 'package:code_play/models/feedback.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 
 void showEditFeedbackDialog({
@@ -84,7 +84,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
           studentId: widget.feedback.studentId,
           teacherName: widget.feedback.teacherName, // Will be updated from API
           teacherId: widget.feedback.teacherId, // Will be updated from API
-          topicId: _selectedTopicId ?? widget.feedback.topicId,
+          //topicId: _selectedTopicId ?? widget.feedback.topicId,
           topic: _titleController.text,
           feedback: _feedbackController.text,
         ),

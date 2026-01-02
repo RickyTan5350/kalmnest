@@ -939,4 +939,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get atLeast10Words => 'at least 10 words';
+
+  @override
+  String get topicId => 'Topic ID';
 }
