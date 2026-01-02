@@ -410,9 +410,22 @@ class _CreateNotePageState extends State<CreateNotePage> {
     required IconData icon,
     String? hintText,
     required ColorScheme colorScheme,
+    bool isMandatory = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: RichText(
+        text: TextSpan(
+          text: labelText,
+          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
+          children: [
+            if (isMandatory)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       hintText: hintText,
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -489,6 +502,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                       labelText: 'Topic',
                       icon: Icons.category,
                       colorScheme: colorScheme,
+                      isMandatory: true,
                     ),
                     items: _topic
                         .map(
@@ -515,6 +529,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                       hintText: 'Enter a title',
                       icon: Icons.title,
                       colorScheme: colorScheme,
+                      isMandatory: true,
                     ),
                     validator: (value) => value == null || value.isEmpty
                         ? 'Please enter a title'
@@ -584,6 +599,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                           'Type notes or HTML here. Images insert automatically.',
                       icon: Icons.description,
                       colorScheme: colorScheme,
+                      isMandatory: true,
                     ),
                     maxLines: 8,
                     validator: (value) => value == null || value.isEmpty
@@ -700,4 +716,3 @@ class _CreateNotePageState extends State<CreateNotePage> {
     );
   }
 }
-
