@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 /// Service to handle communication with the Laravel backend's chat endpoint.
 class AiChatApiService {
@@ -40,6 +40,8 @@ class AiChatApiService {
             'ai_response': data['ai_response'].toString(),
             'session_id': data['session_id']?.toString(),
           };
+        } else if (data['status'] == 'error') {
+          throw Exception(data['message'] ?? 'Server error occurred.');
         }
         throw Exception('Invalid AI response format from server.');
       } else {

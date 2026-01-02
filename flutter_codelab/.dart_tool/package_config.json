@@ -201,7 +201,7 @@
     },
     {
       "name": "flutter",
-      "rootUri": "file:///C:/Flutter/packages/flutter",
+      "rootUri": "file:///C:/Users/ricky/OneDrive/Desktop/flutter/packages/flutter",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -273,7 +273,7 @@
     },
     {
       "name": "flutter_localizations",
-      "rootUri": "file:///C:/Flutter/packages/flutter_localizations",
+      "rootUri": "file:///C:/Users/ricky/OneDrive/Desktop/flutter/packages/flutter_localizations",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -339,13 +339,13 @@
     },
     {
       "name": "flutter_test",
-      "rootUri": "file:///C:/Flutter/packages/flutter_test",
+      "rootUri": "file:///C:/Users/ricky/OneDrive/Desktop/flutter/packages/flutter_test",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
     {
       "name": "flutter_web_plugins",
-      "rootUri": "file:///C:/Flutter/packages/flutter_web_plugins",
+      "rootUri": "file:///C:/Users/ricky/OneDrive/Desktop/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -537,9 +537,9 @@
     },
     {
       "name": "meta",
-      "rootUri": "file:///C:/Users/ricky/AppData/Local/Pub/Cache/hosted/pub.dev/meta-1.16.0",
+      "rootUri": "file:///C:/Users/ricky/AppData/Local/Pub/Cache/hosted/pub.dev/meta-1.17.0",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.5"
     },
     {
       "name": "mime",
@@ -705,7 +705,7 @@
     },
     {
       "name": "sky_engine",
-      "rootUri": "file:///C:/Flutter/bin/cache/pkg/sky_engine",
+      "rootUri": "file:///C:/Users/ricky/OneDrive/Desktop/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -777,7 +777,7 @@
     },
     {
       "name": "test_api",
-      "rootUri": "file:///C:/Users/ricky/AppData/Local/Pub/Cache/hosted/pub.dev/test_api-0.7.6",
+      "rootUri": "file:///C:/Users/ricky/AppData/Local/Pub/Cache/hosted/pub.dev/test_api-0.7.7",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
@@ -999,8 +999,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.9.2",
-  "flutterRoot": "file:///C:/Flutter",
-  "flutterVersion": "3.35.7",
+  "generatorVersion": "3.10.4",
+  "flutterRoot": "file:///C:/Users/ricky/OneDrive/Desktop/flutter",
+  "flutterVersion": "3.38.5",
   "pubCache": "file:///C:/Users/ricky/AppData/Local/Pub/Cache"
 }
