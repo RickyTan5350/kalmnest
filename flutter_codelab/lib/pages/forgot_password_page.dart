@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/pages/reset_password_page.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/pages/reset_password_page.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -24,8 +25,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       await _authApi.forgotPassword(_emailController.text.trim());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Reset code sent! Check your email.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.resetCodeSent),
             backgroundColor: Colors.green,
           ),
         );
@@ -58,7 +59,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Account Recovery'),
+        title: Text(AppLocalizations.of(context)!.accountRecovery),
         centerTitle: true,
         elevation: 0,
       ),
@@ -103,7 +104,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       const SizedBox(height: 24),
 
                       Text(
-                        'Forgot Password?',
+                        AppLocalizations.of(context)!.forgotPassword,
                         style: textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
@@ -112,7 +113,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Enter your email address to receive a 6-digit verification code.',
+                        AppLocalizations.of(context)!.enterEmailInstructions,
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -125,7 +126,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          labelText: 'Email Address',
+                          labelText: AppLocalizations.of(context)!.email,
                           prefixIcon: const Icon(Icons.email_outlined),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -139,7 +140,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         ),
                         validator: (value) =>
                             (value == null || !value.contains('@'))
-                            ? 'Valid email required'
+                            ? AppLocalizations.of(context)!.emailValidation
                             : null,
                       ),
                       const SizedBox(height: 24),
@@ -162,9 +163,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                   color: colorScheme.onPrimary,
                                 ),
                               )
-                            : const Text(
-                                'Send Reset Code',
-                                style: TextStyle(
+                            : Text(
+                                AppLocalizations.of(context)!.sendResetCode,
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -181,3 +182,4 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     );
   }
 }
+

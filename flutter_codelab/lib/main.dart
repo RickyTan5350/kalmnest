@@ -2,27 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'dart:io'; // For HttpOverrides
 
-import 'package:flutter_codelab/admin_teacher/widgets/disappearing_navigation_rail.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/game/gamePages/create_game_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/note/admin_create_note_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/admin_create_class_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/create_account_form.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/feedback/create_feedback.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/profile_header_content.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/controllers/locale_controller.dart';
 
-import 'package:flutter_codelab/util.dart';
-import 'package:flutter_codelab/theme.dart';
+import 'package:code_play/admin_teacher/widgets/disappearing_navigation_rail.dart';
+import 'package:code_play/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
+import 'package:code_play/admin_teacher/widgets/game/gamePages/create_game_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/admin_create_note_page.dart';
+import 'package:code_play/admin_teacher/widgets/class/admin_create_class_page.dart';
+import 'package:code_play/admin_teacher/widgets/user/create_account_form.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
+import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart';
+import 'package:code_play/admin_teacher/widgets/user/profile_header_content.dart';
 
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/util.dart';
+import 'package:code_play/theme.dart';
 
-import 'package:flutter_codelab/pages/pages.dart';
-import 'package:flutter_codelab/pages/login_page.dart';
-import 'package:flutter_codelab/pages/game_page.dart';
+import 'package:code_play/models/user_data.dart';
 
-import 'package:flutter_codelab/api/auth_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
+import 'package:code_play/pages/pages.dart';
+import 'package:code_play/pages/user_page.dart'; // Explicit import for key
+import 'package:code_play/pages/login_page.dart';
+import 'package:code_play/pages/game_page.dart';
+
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() async {
@@ -71,12 +75,20 @@ class MainApp extends StatelessWidget {
         ? Feed(currentUser: initialUser!) // Go straight to feed if logged in
         : const LoginPage(); // Go to login if not logged in
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false, // <--- ADD THIS LINE HERE
-      theme: theme.light(),
-      darkTheme: theme.dark(),
-      themeMode: ThemeMode.system,
-      home: homeWidget, // Use the determined home widget
+    return ValueListenableBuilder<Locale>(
+      valueListenable: LocaleController.instance,
+      builder: (context, locale, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: locale,
+          theme: theme.light(),
+          darkTheme: theme.dark(),
+          themeMode: ThemeMode.system,
+          home: homeWidget,
+        );
+      },
     );
   }
 }
@@ -125,16 +137,16 @@ class _FeedState extends State<Feed> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Log out of your account?'),
+          title: Text(AppLocalizations.of(dialogContext)!.logoutConfirmation),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(dialogContext)!.cancel),
             ),
             // Use FilledButton for the primary action (Logout)
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Logout'),
+              child: Text(AppLocalizations.of(dialogContext)!.logout),
             ),
           ],
         );
@@ -180,7 +192,7 @@ class _FeedState extends State<Feed> {
       classPageGlobalKey.currentState?.reloadClassList();
       _showSnackBar(
         context,
-        'Class created successfully!',
+        AppLocalizations.of(context)!.classCreatedSuccess,
         Theme.of(context).colorScheme.primary,
       );
     }
@@ -201,14 +213,56 @@ class _FeedState extends State<Feed> {
         if (widget.currentUser.isStudent || widget.currentUser.isTeacher) {
           _showSnackBar(
             context,
-            'You do not have permission to create user accounts.',
+            AppLocalizations.of(context)!.noPermissionCreateUser,
             Theme.of(context).colorScheme.error,
           );
         } else {
-          // Only Admins can proceed to create a new user account
-          showCreateUserAccountDialog(
+          // Only Admins can see the options
+          showDialog(
             context: context,
-            showSnackBar: _showSnackBar,
+            builder: (BuildContext context) {
+              return SimpleDialog(
+                title: Text(AppLocalizations.of(context)!.selectAction),
+                children: [
+                  SimpleDialogOption(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      showCreateUserAccountDialog(
+                        context: context,
+                        showSnackBar: _showSnackBar,
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person_add),
+                          const SizedBox(width: 12),
+                          Text(AppLocalizations.of(context)!.createUserProfile),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      // Trigger import via GlobalKey
+                      userPageGlobalKey.currentState?.importUsers();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.file_upload),
+                          const SizedBox(width: 12),
+                          Text(AppLocalizations.of(context)!.importUserProfile),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         }
         break;
@@ -218,7 +272,7 @@ class _FeedState extends State<Feed> {
         if (widget.currentUser.isStudent) {
           _showSnackBar(
             context,
-            'Students cannot create games. This is for Teachers and Admins only.',
+            AppLocalizations.of(context)!.studentsCannotCreateGames,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -234,7 +288,7 @@ class _FeedState extends State<Feed> {
           // 2. BLOCK: Show error message
           _showSnackBar(
             context,
-            'Students cannot add notes. This is for Admins only.',
+            AppLocalizations.of(context)!.studentsCannotAddNotes,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -249,7 +303,7 @@ class _FeedState extends State<Feed> {
         } else {
           _showSnackBar(
             context,
-            'You do not have access to this function',
+            AppLocalizations.of(context)!.noAccessFunction,
             Theme.of(context).colorScheme.error,
           );
         }
@@ -259,7 +313,7 @@ class _FeedState extends State<Feed> {
         if (widget.currentUser.isStudent) {
           _showSnackBar(
             context,
-            'You do not have access to this function',
+            AppLocalizations.of(context)!.noAccessFunction,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -273,7 +327,7 @@ class _FeedState extends State<Feed> {
         if (widget.currentUser.isStudent) {
           _showSnackBar(
             context,
-            'You do not have access to create feedback',
+            AppLocalizations.of(context)!.noAccessCreateFeedback,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -302,16 +356,19 @@ class _FeedState extends State<Feed> {
     );
 
     final List<Widget> pages = [
-      const UserPage(), // Index 0
+      UserPage(
+        key: userPageGlobalKey,
+        currentUser: widget.currentUser,
+      ), // Index 0
       GamePage(
         key: gamePageGlobalKey,
         userRole: widget.currentUser.roleName,
       ), // Index 1
-      NotePage(currentUser: widget.currentUser),
+      NotePage(currentUser: widget.currentUser), // Index 2
       ClassPage(
         key: classPageGlobalKey,
         currentUser: widget.currentUser,
-      ), //utter Index 3
+      ), // Index 3
       AchievementPage(
         showSnackBar: _showSnackBar,
         currentUser: widget.currentUser,
@@ -325,45 +382,51 @@ class _FeedState extends State<Feed> {
     // --- END OF FIX ---
 
     return Scaffold(
-      body: Row(
+      backgroundColor:
+          backgroundColor, // ADDED: Match background preventing white gaps
+      body: Column(
         children: [
-          if (wideScreen)
-            DisappearingNavigationRail(
-              selectedIndex: selectedIndex,
-              backgroundColor: backgroundColor, // <-- Now uses the fresh color
-              onDestinationSelected: (index) {
-                setState(() {
-                  selectedIndex = index;
-                });
-                // Refresh GamePage when navigating to it
-                if (index == 1) {
-                  gamePageGlobalKey.currentState?.refresh();
-                }
-              },
-              // REMOVED onLogoutPressed
-              isExtended: _isRailExtended,
+          // Profile Header (now always visible at the top)
+          Container(
+            color: backgroundColor,
+            child: ProfileHeaderContent(
+              currentUser: widget.currentUser,
+              onLogoutPressed: _handleLogout,
               onMenuPressed: () {
                 setState(() {
                   _isRailExtended = !_isRailExtended;
                 });
               },
-              onAddButtonPressed: _onAddButtonPressed,
             ),
+          ),
+          // Main Body: Sidebar + Content
           Expanded(
-            child: Container(
-              color: backgroundColor, // <-- Now uses the fresh color
-              // MODIFIED: Always use a Column for header + content
-              child: Column(
-                children: [
-                  // Profile Header (now always visible)
-                  ProfileHeaderContent(
-                    currentUser: widget.currentUser,
-                    onLogoutPressed: _handleLogout,
+            child: Row(
+              children: [
+                if (wideScreen)
+                  DisappearingNavigationRail(
+                    selectedIndex: selectedIndex,
+                    backgroundColor: backgroundColor,
+                    onDestinationSelected: (index) {
+                      setState(() {
+                        selectedIndex = index;
+                      });
+                      // Refresh GamePage when navigating to it
+                      if (index == 1) {
+                        gamePageGlobalKey.currentState?.refresh();
+                      }
+                    },
+                    isExtended: _isRailExtended,
+                    // REMOVED: onMenuPressed (moved to header)
+                    onAddButtonPressed: _onAddButtonPressed,
                   ),
-                  // Main Page Content (Expanded to fill the remaining space)
-                  Expanded(child: pages[selectedIndex]),
-                ],
-              ),
+                Expanded(
+                  child: Container(
+                    color: backgroundColor,
+                    child: pages[selectedIndex],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -402,3 +465,4 @@ class MyHttpOverrides extends HttpOverrides {
           (X509Certificate cert, String host, int port) => true;
   }
 }
+

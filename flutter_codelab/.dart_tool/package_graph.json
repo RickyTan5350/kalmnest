@@ -1,10 +1,10 @@
 {
   "roots": [
-    "flutter_codelab"
+    "code_play"
   ],
   "packages": [
     {
-      "name": "flutter_codelab",
+      "name": "code_play",
       "version": "1.0.0+1",
       "dependencies": [
         "cross_file",
@@ -18,6 +18,7 @@
         "flutter_highlight",
         "flutter_inappwebview",
         "flutter_lints",
+        "flutter_localizations",
         "flutter_markdown_plus",
         "flutter_secure_storage",
         "flutter_widget_from_html",
@@ -342,6 +343,15 @@
         "pdf_widget_wrapper",
         "plugin_platform_interface",
         "web"
+      ]
+    },
+    {
+      "name": "flutter_localizations",
+      "version": "0.0.0",
+      "dependencies": [
+        "flutter",
+        "intl",
+        "path"
       ]
     },
     {

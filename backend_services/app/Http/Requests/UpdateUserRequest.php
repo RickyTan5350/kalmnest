@@ -25,9 +25,12 @@ public function authorize(): bool
                             ->join('roles', 'users.role_id', '=', 'roles.role_id')
                             ->where('users.user_id', Auth::id())
                             ->value('roles.role_name');
+        
+        // 3. Get the target user ID from the route
+        $targetUserId = $this->route('user')->user_id;
 
-        // The request is authorized only if the user is an Admin.
-        return $userRoleName === 'Admin'; 
+        // The request is authorized if the user is an Admin OR updating their own profile
+        return $userRoleName === 'Admin' || Auth::id() === $targetUserId; 
     }
 
     protected function failedAuthorization()
@@ -48,7 +51,13 @@ public function authorize(): bool
 
         return [
             // Basic User fields
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('users', 'name')->ignore($userId, 'user_id'),
+            ],
             'email' => [
                 'sometimes', // Only validate if present
                 'required', 

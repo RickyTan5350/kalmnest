@@ -22,7 +22,7 @@ class RegisterRequest extends FormRequest
     {
         // Rules based on your User model and database table schema
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', 'unique:users'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'phone_no' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string'],

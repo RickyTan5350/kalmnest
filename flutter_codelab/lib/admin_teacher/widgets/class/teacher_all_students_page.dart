@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/teacher_student_detail_page.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/admin_teacher/widgets/class/teacher_student_detail_page.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 /// Teacher view: All students in a class with search and scrollable list.
 class TeacherAllStudentsPage extends StatefulWidget {
@@ -200,8 +200,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     }
 
     // Get class color for AppBar
-    final classColor = ClassCustomization.getColorByName(_classData?['color']);
-    final color = classColor?.color ?? Theme.of(context).colorScheme.primary;
+    final color = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(
@@ -248,21 +247,14 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               Center(
                 child: Column(
                   children: [
-                    Builder(
-                      builder: (context) {
-                        final classIcon = ClassCustomization.getIconByName(
-                          _classData?['icon'],
-                        );
-                        return CircleAvatar(
-                          radius: 40,
-                          backgroundColor: color.withOpacity(0.1),
-                          child: Icon(
-                            classIcon?.icon ?? Icons.school_rounded,
-                            color: color,
-                            size: 40,
-                          ),
-                        );
-                      },
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: color.withOpacity(0.1),
+                      child: Icon(
+                        Icons.school_rounded,
+                        color: color,
+                        size: 40,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -710,3 +702,4 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     );
   }
 }
+

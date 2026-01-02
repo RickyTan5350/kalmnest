@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/student/widgets/class/student_preview_teacher_row.dart';
-import 'package:flutter_codelab/student/widgets/class/student_quiz_list_section.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/user_detail_page.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/student/widgets/class/student_preview_teacher_row.dart';
+import 'package:code_play/student/widgets/class/student_quiz_list_section.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/admin_teacher/widgets/user/user_detail_page.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 
 class ClassDetailPage extends StatefulWidget {
   final String classId;
@@ -58,10 +58,8 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
       );
     }
 
-    final classColor = ClassCustomization.getColorByName(classData?['color']);
-    final classIcon = ClassCustomization.getIconByName(classData?['icon']);
-    final color = classColor?.color ?? Theme.of(context).colorScheme.primary;
-    final icon = classIcon?.icon ?? Icons.school_rounded;
+    final color = Theme.of(context).colorScheme.primary;
+    final icon = Icons.school_rounded;
 
     return Scaffold(
       appBar: AppBar(
@@ -330,4 +328,5 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
     );
   }
 }
+
 

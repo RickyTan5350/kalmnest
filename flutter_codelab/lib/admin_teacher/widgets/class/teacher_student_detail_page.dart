@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/class_api.dart';
-import 'package:flutter_codelab/api/user_api.dart';
-import 'package:flutter_codelab/models/user_data.dart';
-import 'package:flutter_codelab/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/api/class_api.dart';
+import 'package:code_play/api/user_api.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
+import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
 import 'package:intl/intl.dart';
 
 /// Teacher view: Student detail page showing student info and quiz completion status
@@ -140,8 +140,7 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
     final textTheme = Theme.of(context).textTheme;
 
     // Get class color for AppBar
-    final classColor = ClassCustomization.getColorByName(_classData?['color']);
-    final color = classColor?.color ?? cs.primary;
+    final color = cs.primary;
 
     return Scaffold(
       appBar: AppBar(
@@ -678,4 +677,5 @@ class _TeacherStudentDetailPageState extends State<TeacherStudentDetailPage> {
     );
   }
 }
+
 

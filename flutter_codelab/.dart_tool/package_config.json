@@ -260,6 +260,12 @@
       "languageVersion": "3.8"
     },
     {
+      "name": "flutter_localizations",
+      "rootUri": "file:///C:/Users/manis/flutter/packages/flutter_localizations",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
       "name": "flutter_markdown_plus",
       "rootUri": "file:///C:/Users/ASUS/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_markdown_plus-1.0.5",
       "packageUri": "lib/",
@@ -950,7 +956,7 @@
       "languageVersion": "3.8"
     },
     {
-      "name": "flutter_codelab",
+      "name": "code_play",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "3.9"

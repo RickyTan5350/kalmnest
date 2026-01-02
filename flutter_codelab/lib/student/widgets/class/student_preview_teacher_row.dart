@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/constants/class_constants.dart';
+import 'package:code_play/constants/class_constants.dart';
 
 class TeacherPreviewRow extends StatelessWidget {
   final String teacherName;
@@ -99,3 +99,4 @@ class TeacherPreviewRow extends StatelessWidget {
     );
   }
 }
+

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_codelab/api/game_api.dart';
-import 'package:flutter_codelab/constants/api_constants.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
+import 'package:code_play/api/game_api.dart';
+import 'package:code_play/constants/api_constants.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_create_achievement_page.dart';
 
 /// ===============================================================
 /// Platform helper (SAFE for Web)
@@ -322,3 +322,4 @@ class _IndexFilePreviewState extends State<IndexFilePreview> {
     });
   }
 }
+

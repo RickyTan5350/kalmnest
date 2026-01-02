@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/auth_api.dart';
+import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/password_strength_indicator.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -31,10 +33,16 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         _passwordController.text,
       );
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset successfully! Please login.'),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.passwordResetSuccess,
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
           ),
         );
         // Pop back to Login (remove Forgot and Reset pages from stack)
@@ -42,16 +50,29 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _handleSubmissionError(e);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _handleSubmissionError(Object e) {
+    String errorString = e.toString();
+
+    // --- CASE 1: Generic Error Display matching standard ---
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          errorString.replaceAll('Exception: ', ''),
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   @override
@@ -60,7 +81,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password'), centerTitle: true),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.resetPassword),
+        centerTitle: true,
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -101,7 +125,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Set New Password',
+                        AppLocalizations.of(context)!.setNewPassword,
                         style: textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
@@ -111,7 +135,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       const SizedBox(height: 8),
                       Text(
                         // Show email but shorten if too long
-                        'for ${widget.email}',
+                        AppLocalizations.of(context)!.forUser(widget.email),
                         style: textTheme.labelLarge?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.w600,
@@ -125,7 +149,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         controller: _codeController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: '6-Digit Code',
+                          labelText: AppLocalizations.of(context)!.sixDigitCode,
                           prefixIcon: const Icon(Icons.pin),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -142,7 +166,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         controller: _passwordController,
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
-                          labelText: 'New Password',
+                          labelText: AppLocalizations.of(context)!.newPassword,
                           prefixIcon: const Icon(Icons.lock_outline),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -162,6 +186,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                             (value == null || value.length < 8)
                             ? 'Min 8 characters'
                             : null,
+                        onChanged: (value) => setState(() {}),
+                      ),
+                      PasswordStrengthIndicator(
+                        password: _passwordController.text,
                       ),
                       const SizedBox(height: 16),
                       // Confirm Password
@@ -169,15 +197,29 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         controller: _confirmPasswordController,
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
-                          labelText: 'Confirm Password',
+                          labelText: AppLocalizations.of(
+                            context,
+                          )!.confirmPassword,
                           prefixIcon: const Icon(Icons.lock_reset),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () => setState(
+                              () => _isPasswordVisible = !_isPasswordVisible,
+                            ),
+                          ),
                         ),
                         validator: (value) {
                           if (value != _passwordController.text)
-                            return 'Passwords do not match';
+                            return AppLocalizations.of(
+                              context,
+                            )!.passwordsDoNotMatch;
                           return null;
                         },
                       ),
@@ -199,9 +241,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                                   color: colorScheme.onPrimary,
                                 ),
                               )
-                            : const Text(
-                                'Reset Password',
-                                style: TextStyle(fontSize: 16),
+                            : Text(
+                                AppLocalizations.of(context)!.resetPassword,
+                                style: const TextStyle(fontSize: 16),
                               ),
                       ),
                     ],

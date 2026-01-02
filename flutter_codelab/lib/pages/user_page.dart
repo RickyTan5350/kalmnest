@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_codelab/admin_teacher/widgets/user/user_list_content.dart';
-import 'package:flutter_codelab/constants/view_layout.dart';
-import 'package:flutter_codelab/enums/sort_enums.dart';
-import 'package:flutter_codelab/services/layout_preferences.dart';
+import 'package:code_play/admin_teacher/widgets/user/user_list_content.dart';
+import 'package:code_play/api/user_api.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:code_play/constants/view_layout.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/services/layout_preferences.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class UserPage extends StatefulWidget {
-  const UserPage({super.key});
+  final UserDetails?
+  currentUser; // Make it optional to avoid breaking if not passed immediately, but ideally required
+  const UserPage({super.key, this.currentUser});
 
   @override
-  State<UserPage> createState() => _UserPageState();
+  State<UserPage> createState() => UserPageState();
 }
 
-class _UserPageState extends State<UserPage> {
+final GlobalKey<UserPageState> userPageGlobalKey = GlobalKey<UserPageState>();
+
+class UserPageState extends State<UserPage> {
   // Filter States
   final List<String> _roles = ['All', 'Student', 'Teacher', 'Admin'];
   final List<String> _statuses = ['All Status', 'Active', 'Inactive'];
@@ -21,13 +29,17 @@ class _UserPageState extends State<UserPage> {
   String _searchQuery = '';
 
   // Layout & Sort States
-  ViewLayout _viewLayout = ViewLayout.grid;
+  ViewLayout _viewLayout = LayoutPreferences.getLayoutSync(
+    LayoutPreferences.globalLayoutKey,
+  );
   SortType _sortType = SortType.alphabetical;
   SortOrder _sortOrder = SortOrder.ascending;
 
+  final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final GlobalKey<UserListContentState> _userListKey =
       GlobalKey<UserListContentState>();
+  final UserApi _userApi = UserApi();
 
   @override
   void initState() {
@@ -36,7 +48,9 @@ class _UserPageState extends State<UserPage> {
   }
 
   Future<void> _loadLayoutPreference() async {
-    final savedLayout = await LayoutPreferences.getLayout('user_layout');
+    final savedLayout = await LayoutPreferences.getLayout(
+      LayoutPreferences.globalLayoutKey,
+    );
     if (mounted) {
       setState(() {
         _viewLayout = savedLayout;
@@ -46,6 +60,7 @@ class _UserPageState extends State<UserPage> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
@@ -56,6 +71,84 @@ class _UserPageState extends State<UserPage> {
 
   Future<void> _handleRefresh() async {
     _userListKey.currentState?.refreshData();
+  }
+
+  String _getLocalizedRole(String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role) {
+      case 'All':
+        return l10n.all;
+      case 'Student':
+        return l10n.student;
+      case 'Teacher':
+        return l10n.teacher;
+      case 'Admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
+  String _getLocalizedStatus(String status) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (status) {
+      case 'All Status':
+        return l10n.allStatus;
+      case 'Active':
+        return l10n.active;
+      case 'Inactive':
+        return l10n.inactive;
+      default:
+        return status;
+    }
+  }
+
+  Future<void> importUsers() async {
+    try {
+      // 1. Pick the file
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+        final fileName = result.files.single.name;
+
+        // 3. Call API
+        await _userApi.importUsers(filePath, fileName);
+
+        // 4. Success handling
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.usersImportedSuccess,
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        _handleRefresh(); // Refresh list via key
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.importFailed(e.toString()),
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override
@@ -71,7 +164,7 @@ class _UserPageState extends State<UserPage> {
       child: Focus(
         autofocus: true,
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
           child: Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -83,7 +176,7 @@ class _UserPageState extends State<UserPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Users",
+                        AppLocalizations.of(context)!.users,
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       Row(
@@ -104,7 +197,7 @@ class _UserPageState extends State<UserPage> {
                               final newLayout = val.first;
                               setState(() => _viewLayout = newLayout);
                               LayoutPreferences.saveLayout(
-                                'user_layout',
+                                LayoutPreferences.globalLayoutKey,
                                 newLayout,
                               );
                             },
@@ -116,24 +209,38 @@ class _UserPageState extends State<UserPage> {
                   const SizedBox(height: 16),
 
                   // --- Search Bar (Left Aligned) ---
-                  SizedBox(
-                    width: 300,
-                    child: SearchBar(
-                      focusNode: _searchFocusNode,
-                      hintText: "Search user...",
-                      padding: const WidgetStatePropertyAll<EdgeInsets>(
-                        EdgeInsets.symmetric(horizontal: 16.0),
-                      ),
-                      onChanged: (val) => setState(() => _searchQuery = val),
-                      leading: const Icon(Icons.search),
-                      trailing: [
-                        if (_searchQuery.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () => setState(() => _searchQuery = ''),
+                  // --- Search Bar & Import Button ---
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 300,
+                        child: SearchBar(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          hintText: AppLocalizations.of(
+                            context,
+                          )!.searchUserHint,
+                          padding: const WidgetStatePropertyAll<EdgeInsets>(
+                            EdgeInsets.symmetric(horizontal: 16.0),
                           ),
-                      ],
-                    ),
+                          onChanged: (val) =>
+                              setState(() => _searchQuery = val),
+                          leading: const Icon(Icons.search),
+                          trailing: [
+                            if (_searchQuery.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      // Removed Import Button from here as it's now in the main FAB menu
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -149,7 +256,7 @@ class _UserPageState extends State<UserPage> {
                           children: [
                             ..._roles.map((role) {
                               return FilterChip(
-                                label: Text(role),
+                                label: Text(_getLocalizedRole(role)),
                                 selected: _selectedRole == role,
                                 onSelected: (selected) {
                                   if (selected) {
@@ -170,7 +277,7 @@ class _UserPageState extends State<UserPage> {
                             ),
                             ..._statuses.map((status) {
                               return FilterChip(
-                                label: Text(status),
+                                label: Text(_getLocalizedStatus(status)),
                                 selected: _selectedStatus == status,
                                 onSelected: (selected) {
                                   if (selected) {
@@ -187,7 +294,7 @@ class _UserPageState extends State<UserPage> {
                       // Sort Menu
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.filter_list),
-                        tooltip: 'Sort Options',
+                        tooltip: AppLocalizations.of(context)!.sortOptions,
                         onSelected: (value) {
                           setState(() {
                             if (value == 'Name') {
@@ -203,40 +310,48 @@ class _UserPageState extends State<UserPage> {
                         },
                         itemBuilder: (BuildContext context) =>
                             <PopupMenuEntry<String>>[
-                              const PopupMenuItem<String>(
+                              PopupMenuItem<String>(
                                 enabled: false,
                                 child: Text(
-                                  'Sort By',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  AppLocalizations.of(context)!.sortBy,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Name',
                                 checked: _sortType == SortType.alphabetical,
-                                child: const Text('Name'),
+                                child: Text(AppLocalizations.of(context)!.name),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Date',
                                 checked: _sortType == SortType.updated,
-                                child: const Text('Date'),
+                                child: Text(AppLocalizations.of(context)!.date),
                               ),
                               const PopupMenuDivider(),
-                              const PopupMenuItem<String>(
+                              PopupMenuItem<String>(
                                 enabled: false,
                                 child: Text(
-                                  'Order',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  AppLocalizations.of(context)!.order,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Ascending',
                                 checked: _sortOrder == SortOrder.ascending,
-                                child: const Text('Ascending'),
+                                child: Text(
+                                  AppLocalizations.of(context)!.ascending,
+                                ),
                               ),
                               CheckedPopupMenuItem<String>(
                                 value: 'Descending',
                                 checked: _sortOrder == SortOrder.descending,
-                                child: const Text('Descending'),
+                                child: Text(
+                                  AppLocalizations.of(context)!.descending,
+                                ),
                               ),
                             ],
                       ),
@@ -245,7 +360,7 @@ class _UserPageState extends State<UserPage> {
                       IconButton(
                         icon: const Icon(Icons.refresh),
                         onPressed: _handleRefresh,
-                        tooltip: "Refresh List",
+                        tooltip: AppLocalizations.of(context)!.refreshList,
                       ),
                     ],
                   ),
@@ -266,6 +381,7 @@ class _UserPageState extends State<UserPage> {
                       viewLayout: _viewLayout,
                       sortType: _sortType,
                       sortOrder: _sortOrder,
+                      currentUser: widget.currentUser,
                     ),
                   ),
                 ],

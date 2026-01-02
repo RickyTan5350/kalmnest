@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_codelab/api/user_api.dart';
-import 'package:flutter_codelab/utils/formatters.dart';
-import 'package:flutter_codelab/models/user_data.dart';
+import 'package:code_play/api/user_api.dart';
+import 'package:code_play/utils/formatters.dart';
+import 'package:code_play/models/user_data.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/password_strength_indicator.dart';
 
 // Utility function to show the dialog
 void showCreateUserAccountDialog({
@@ -48,6 +50,8 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
   bool _accountStatus = true; // Default to active
   Map<String, String> _serverErrors = {}; // Store server-side errors
 
+  bool _isPasswordVisible = false;
+
   bool _isLoading = false;
 
   final List<String> _genders = ['male', 'female'];
@@ -64,21 +68,48 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     super.dispose();
   }
 
+  String _getLocalizedGender(String gender) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (gender.toLowerCase()) {
+      case 'male':
+        return l10n.male;
+      case 'female':
+        return l10n.female;
+      default:
+        return gender;
+    }
+  }
+
+  String _getLocalizedRole(String role) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (role.toLowerCase()) {
+      case 'student':
+        return l10n.student;
+      case 'teacher':
+        return l10n.teacher;
+      case 'admin':
+        return l10n.admin;
+      default:
+        return role;
+    }
+  }
+
   // Submission logic, mirroring _submitForm
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Clear previous server errors on new submission attempt
+    // 1. Reset Errors
     setState(() {
       _serverErrors.clear();
     });
+
+    // 2. Client-Side Validation
+    if (!_formKey.currentState!.validate()) return;
 
     // Additionally check if password and confirmation match if they are both filled
     if (_passwordController.text != _passwordConfirmationController.text) {
       widget.showSnackBar(
         context,
-        'Error: Password and confirmation must match.',
-        Colors.red,
+        AppLocalizations.of(context)!.passwordsMatchError,
+        Theme.of(context).colorScheme.error,
       );
       return;
     }
@@ -87,7 +118,6 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
       _isLoading = true;
     });
 
-    // --- UPDATED: Pass passwordConfirmation and roleName ---
     final data = UserData(
       email: _emailController.text,
       name: _nameController.text,
@@ -99,9 +129,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
           : null,
       gender: _selectedGender,
       password: _passwordController.text,
-      passwordConfirmation: _passwordConfirmationController.text, // <--- ADDED
+      passwordConfirmation: _passwordConfirmationController.text,
       accountStatus: _accountStatus,
-      roleName: _selectedRole!, // <--- RENAMED
+      roleName: _selectedRole!,
     );
 
     try {
@@ -110,51 +140,14 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
       if (mounted) {
         widget.showSnackBar(
           context,
-          'User account successfully created!',
+          AppLocalizations.of(context)!.userAccountCreatedSuccess,
           Colors.green,
         );
-      }
-    } on ValidationException catch (e) {
-      if (mounted) {
-        setState(() {
-          // Map the errors: key -> first error message in list
-          e.errors.forEach((key, value) {
-            if (value is List && value.isNotEmpty) {
-              _serverErrors[key] = value.first.toString();
-            }
-          });
-        });
-        // Re-trigger validation to show the errors in the fields
-        _formKey.currentState!.validate();
-
-        // Optional: Show a snackbar summary if you want, or trust the fields.
-        // For now, removing the generic validation snackbar to rely on inline errors.
+        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        final errorColor = Theme.of(
-          context,
-        ).colorScheme.error; // Standardize color
-        String errorString = e.toString();
-
-        if (errorString.startsWith('Exception: Network Error:')) {
-          // Handles connection refused, incorrect URL, etc.
-          final message = errorString.substring(
-            'Exception: Network Error:'.length,
-          );
-          widget.showSnackBar(
-            context,
-            'Network Error: Check API URL and server status.',
-            errorColor,
-          );
-        } else {
-          // Generic or unexpected server error
-          widget.showSnackBar(
-            context,
-            'An unknown error occurred: ${errorString.replaceAll('Exception: ', '')}',
-            errorColor,
-          );
-        }
+        _handleSubmissionError(e);
       }
     } finally {
       if (mounted) {
@@ -162,6 +155,49 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  void _handleSubmissionError(Object e) {
+    String errorString = e.toString();
+
+    // --- CASE 1: Validation Error ---
+    if (e is ValidationException) {
+      setState(() {
+        // Map the errors: key -> first error message in list
+        e.errors.forEach((key, value) {
+          if (value is List && value.isNotEmpty) {
+            _serverErrors[key] = value.first.toString();
+          }
+        });
+      });
+      // Re-trigger validation to show the errors in the fields
+      _formKey.currentState!.validate();
+
+      widget.showSnackBar(
+        context,
+        'Please fill in all required fields correctly.',
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 2: Network Error ---
+    else if (errorString.startsWith('Exception: Network Error:')) {
+      final message = errorString.substring('Exception: Network Error:'.length);
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(context)!.networkErrorCheckApi,
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 3: General Error ---
+    else {
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(
+          context,
+        )!.unknownErrorOccurred(errorString.replaceAll('Exception: ', '')),
+        Theme.of(context).colorScheme.error,
+      );
     }
   }
 
@@ -216,7 +252,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Create New User',
+                  AppLocalizations.of(context)!.createNewUser,
                   style: TextStyle(
                     color: colorScheme.onSurface,
                     fontSize: 20,
@@ -230,7 +266,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _nameController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Name',
+                    labelText: AppLocalizations.of(context)!.name,
                     icon: Icons.person,
                     colorScheme: colorScheme,
                   ),
@@ -239,7 +275,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       return _serverErrors['name'];
                     }
                     if (value == null || value.isEmpty)
-                      return 'Please enter a name';
+                      return AppLocalizations.of(context)!.pleaseEnterName;
                     return null;
                   },
                   onChanged: (value) {
@@ -255,7 +291,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _emailController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Email',
+                    labelText: AppLocalizations.of(context)!.email,
                     icon: Icons.email,
                     colorScheme: colorScheme,
                   ),
@@ -270,13 +306,13 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       return _serverErrors['email'];
                     }
                     if (value == null || value.isEmpty) {
-                      return 'Please enter an email';
+                      return AppLocalizations.of(context)!.pleaseEnterEmail;
                     }
                     final emailRegex = RegExp(
                       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
                     );
                     if (!emailRegex.hasMatch(value)) {
-                      return 'Enter a valid email address';
+                      return AppLocalizations.of(context)!.enterValidEmail;
                     }
                     return null;
                   },
@@ -287,43 +323,73 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                 TextFormField(
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: 'Password',
-                    icon: Icons.lock,
-                    colorScheme: colorScheme,
-                  ),
-                  obscureText: true,
+                  decoration:
+                      _inputDecoration(
+                        labelText: AppLocalizations.of(context)!.password,
+                        icon: Icons.lock,
+                        colorScheme: colorScheme,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
+                        ),
+                      ),
+                  obscureText: !_isPasswordVisible,
                   validator: (value) {
                     if (_serverErrors.containsKey('password')) {
                       return _serverErrors['password'];
                     }
                     if (value == null || value.isEmpty || value.length < 8)
-                      return 'Password must be at least 8 characters';
+                      return AppLocalizations.of(context)!.passwordLengthError;
                     return null;
                   },
                   onChanged: (value) {
                     if (_serverErrors.containsKey('password')) {
                       setState(() => _serverErrors.remove('password'));
                     }
+                    setState(() {}); // Trigger rebuild for strength indicator
                   },
                 ),
+                PasswordStrengthIndicator(password: _passwordController.text),
                 const SizedBox(height: 16),
 
                 // --- ADDED: Password Confirmation Field ---
                 TextFormField(
                   controller: _passwordConfirmationController,
                   style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: 'Confirm Password',
-                    icon: Icons.lock_open,
-                    colorScheme: colorScheme,
-                  ),
-                  obscureText: true,
+                  decoration:
+                      _inputDecoration(
+                        labelText: AppLocalizations.of(
+                          context,
+                        )!.confirmPassword,
+                        icon: Icons.lock_open,
+                        colorScheme: colorScheme,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
+                        ),
+                      ),
+                  obscureText: !_isPasswordVisible,
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please confirm your password';
+                      return AppLocalizations.of(
+                        context,
+                      )!.pleaseConfirmPassword;
                     if (value != _passwordController.text)
-                      return 'Passwords do not match';
+                      return AppLocalizations.of(context)!.passwordsDoNotMatch;
                     return null;
                   },
                 ),
@@ -335,7 +401,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _phoneNoController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Phone No',
+                    labelText: AppLocalizations.of(context)!.phone,
                     icon: Icons.phone,
                     colorScheme: colorScheme,
                     hintText: 'e.g. 012-3456789',
@@ -352,7 +418,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       return _serverErrors['phone_no'];
                     }
                     if (value == null || value.isEmpty)
-                      return 'Please enter a phone number';
+                      return AppLocalizations.of(context)!.pleaseEnterPhone;
                     // Regex for Malaysian Phone Numbers:
                     // Matches: +601..., 601..., 01...
                     // Supports dashes or no dashes
@@ -360,7 +426,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                       r'^(\+?6?0)[0-9]{1,2}-?[0-9]{7,8}$',
                     );
                     if (!phoneRegex.hasMatch(value)) {
-                      return 'Enter a valid Malaysian phone number';
+                      return AppLocalizations.of(context)!.enterValidPhone;
                     }
                     return null;
                   },
@@ -372,14 +438,14 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   controller: _addressController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Address',
+                    labelText: AppLocalizations.of(context)!.address,
                     icon: Icons.location_on,
                     colorScheme: colorScheme,
                   ),
                   maxLines: 2,
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please enter an address';
+                      return AppLocalizations.of(context)!.pleaseEnterAddress;
                     return null;
                   },
                 ),
@@ -392,20 +458,38 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Gender',
+                    labelText: AppLocalizations.of(context)!.genderLabel,
                     icon: Icons.people,
                     colorScheme: colorScheme,
                   ),
-                  items: _genders
-                      .map(
-                        (value) =>
-                            DropdownMenuItem(value: value, child: Text(value)),
-                      )
-                      .toList(),
+                  items: _genders.map((value) {
+                    IconData icon;
+                    if (value.toLowerCase() == 'male') {
+                      icon = Icons.male;
+                    } else if (value.toLowerCase() == 'female') {
+                      icon = Icons.female;
+                    } else {
+                      icon = Icons.person_outline;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(value),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (value) => setState(() => _selectedGender = value),
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please select a gender';
+                      return AppLocalizations.of(context)!.pleaseSelectGender;
                     return null;
                   },
                 ),
@@ -413,25 +497,49 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
 
                 // Role Dropdown
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedRole,
+                  value: _selectedRole,
                   // FIX: Use colorScheme.surfaceContainer instead of hardcoded dark color
                   dropdownColor: colorScheme.surfaceContainer,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Role',
+                    labelText: AppLocalizations.of(context)!.roleLabel,
                     icon: Icons.badge,
                     colorScheme: colorScheme,
                   ),
-                  items: _roles
-                      .map(
-                        (value) =>
-                            DropdownMenuItem(value: value, child: Text(value)),
-                      )
-                      .toList(),
+                  items: _roles.map((value) {
+                    IconData icon;
+                    switch (value.toLowerCase()) {
+                      case 'admin':
+                        icon = Icons.admin_panel_settings;
+                        break;
+                      case 'teacher':
+                        icon = Icons.school;
+                        break;
+                      case 'student':
+                        icon = Icons.person;
+                        break;
+                      default:
+                        icon = Icons.person_outline;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(value),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (value) => setState(() => _selectedRole = value),
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please select a role';
+                      return AppLocalizations.of(context)!.pleaseSelectRole;
                     return null;
                   },
                 ),
@@ -444,7 +552,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Account Status:',
+                        '${AppLocalizations.of(context)!.accountStatusLabel}:',
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 16,
@@ -459,7 +567,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                         },
                       ),
                       Text(
-                        _accountStatus ? 'Active' : 'Inactive',
+                        _accountStatus
+                            ? AppLocalizations.of(context)!.active
+                            : AppLocalizations.of(context)!.inactive,
                         style: TextStyle(color: colorScheme.onSurface),
                       ),
                     ],
@@ -474,7 +584,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(
-                        'Cancel',
+                        AppLocalizations.of(context)!.cancel,
                         style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),
                     ),
@@ -504,7 +614,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                                 ),
                               ),
                             )
-                          : const Text('Create User'),
+                          : Text(AppLocalizations.of(context)!.createUser),
                     ),
                   ],
                 ),
