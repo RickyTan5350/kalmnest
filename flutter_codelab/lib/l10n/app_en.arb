@@ -79,6 +79,11 @@
   "users": "Users",
   "games": "Games",
   "classes": "Classes",
+  "allClasses": "All classes",
+  "myClasses": "My Classes",
+  "enrolledClasses": "Enrolled Classes",
+  "searchByClassName": "Search by class name",
+  "edit": "Edit",
   "aiChat": "AI Chat",
   "feedback": "Feedback",
   "searchUserHint": "Search users...",
@@ -151,7 +156,7 @@
   },
   "createUser": "Create User",
   "deleteUsers": "Delete Users",
-  "deleteUsersConfirmation": "{count, plural, =1{Are you sure you want to delete 1 user? This action cannot be undone.} other{Are you sure you want to delete {count} users? This action cannot be undone.}}",
+  "deleteUsersConfirmation": "Are you sure you want to delete {count} users? This action cannot be undone.",
   "@deleteUsersConfirmation": {
     "placeholders": {
       "count": {
@@ -160,7 +165,7 @@
     }
   },
   "deletingUsers": "Deleting selected users...",
-  "deletedUsersSuccess": "{count, plural, =1{Successfully deleted 1 user} other{Successfully deleted {count} users}}",
+  "deletedUsersSuccess": "Successfully deleted {count} users",
   "@deletedUsersSuccess": {
     "placeholders": {
       "count": {
@@ -276,112 +281,214 @@
   "male": "Male",
   "female": "Female",
   "other": "Other",
-  "feedbacks": "Feedbacks",
-  "results": "Results",
-  "errorLoadingFeedback": "Error loading feedback",
-  "noFeedbackYet": "No feedback yet",
-  "noFeedbackFound": "No feedback found.",
+  "details": "Details",
+  "refresh": "Refresh",
+  "editClass": "Edit Class",
+  "deleteClass": "Delete Class",
+  "classDeletedSuccessfully": "Class deleted successfully.",
+  "errorDeletingClass": "Error deleting class: {error}",
+  "@errorDeletingClass": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noName": "No Name",
+  "noTeacherAssigned": "No teacher assigned",
+  "generalInfo": "General Info",
+  "creator": "Creator",
+  "focus": "Focus",
+  "notSet": "Not Set",
+  "totalStudents": "Total Students:",
+  "totalQuizzes": "Total Quizzes:",
+  "assignedTeacher": "Assigned Teacher",
+  "cannotOpenTeacherProfile": "Cannot open teacher profile: missing teacher id.",
+  "noTeacherAssignedToClass": "No teacher has been assigned to this class yet.",
+  "description": "Description",
+  "noDescriptionAvailable": "No description available",
+  "timestamps": "Timestamps",
+  "createdAt": "Created At",
+  "lastUpdated": "Last Updated",
+  "students": "Students",
+  "noStudentsEnrolled": "No students have been enrolled in this class yet.",
+  "listOfEnrolledStudents": "List of enrolled students",
+  "viewAll": "View All",
+  "moreStudents": "{count} more",
+  "@moreStudents": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quizzes": "Quizzes",
+  "allQuizzes": "All Quizzes",
+  "statistics": "Statistics",
+  "searchQuizzes": "Search quizzes...",
+  "quizzesAvailable": "{count} quiz{count, plural, =1{} other{s}} available",
+  "@quizzesAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noQuizzesYet": "No quizzes yet",
+  "noQuizzesAssigned": "Your teacher hasn't assigned any quizzes yet",
+  "play": "Play",
+  "uploaded": "Uploaded: {date}",
+  "@uploaded": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "never": "Never",
+  "deleteClassConfirmation": "Are you sure you want to delete \"{className}\"? This action cannot be undone.",
+  "@deleteClassConfirmation": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "thisClass": "this class",
+  "unknown": "Unknown",
+  "nA": "N/A",
+  "classFocusUpdatedSuccessfully": "Class focus updated successfully.",
+  "failedToUpdateClassFocus": "Failed to update class focus.",
+  "editClassFocus": "Edit Class Focus",
+  "editFocusFor": "Edit Focus for {className}",
+  "@editFocusFor": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "youCanOnlyEditFocus": "You can only edit the focus of this class.",
+  "focusOptional": "Focus (Optional)",
+  "noneOptional": "None (Optional)",
+  "classCreatedSuccessfully": "Class created successfully!",
+  "failedToCreateClass": "Failed to create class",
+  "ok": "OK",
+  "createNewClass": "Create New Class",
+  "className": "Class Name",
+  "enterClassName": "Enter class name",
+  "pleaseEnterClassName": "Please enter class name",
+  "enterDescription": "Enter description",
+  "pleaseEnterDescription": "Please enter description",
+  "assignTeacherOptional": "Assign Teacher (Optional)",
+  "loading": "Loading...",
+  "selectTeacher": "Select teacher",
+  "assignStudentsOptional": "Assign Students (Optional)",
+  "selectStudents": "Select students",
+  "addStudent": "Add Student",
+  "reset": "Reset",
+  "create": "Create",
+  "studentNumber": "Student {number} (Optional)",
+  "@studentNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "classUpdatedSuccessfully": "Class updated successfully!",
+  "failedToUpdateClass": "Failed to update class",
+  "editClass": "Edit Class",
+  "editClassDetails": "Edit Class Details",
+  "classNameRequired": "Class name required",
+  "unknownTeacher": "Unknown Teacher",
+  "noTeacher": "No teacher",
+  "noStudents": "No students",
+  "studentCount": "{count} {count, plural, =1{student} other{students}}",
+  "@studentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studentSingular": "student",
+  "studentsPlural": "students",
+  "noClassesFound": "No classes found",
+  "tryAdjustingSearchQuery": "Try adjusting your search query",
+  "notEnrolledInAnyClasses": "You are not enrolled in any classes yet",
+  "results": "{count} Results",
+  "@results": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quizVisibility": "Quiz Visibility",
+  "howShouldQuizBeVisible": "How should this quiz be visible after creation?",
+  "private": "Private",
+  "onlyVisibleToThisClass": "Only visible to this class",
+  "public": "Public",
+  "visibleToEveryone": "Visible to everyone, can be assigned to other classes",
+  "quizCreatedAndAssignedSuccessfully": "Quiz created and assigned successfully as {visibility}",
+  "@quizCreatedAndAssignedSuccessfully": {
+    "placeholders": {
+      "visibility": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToAssignQuiz": "Failed to assign quiz",
+  "quizAssignedSuccessfully": "Quiz assigned successfully",
+  "removeQuiz": "Remove Quiz",
+  "areYouSureRemoveQuiz": "Are you sure you want to remove this quiz from the class?",
+  "remove": "Remove",
+  "quizRemovedSuccessfully": "Quiz removed successfully",
+  "failedToRemoveQuiz": "Failed to remove quiz",
+  "failedToLoadStudentQuizData": "Failed to load student quiz data",
+  "failedToLoadQuizStudentData": "Failed to load quiz student data",
+  "phone": "Phone",
+  "address": "Address",
+  "gender": "Gender",
+  "joinedDate": "Joined Date",
+  "accountStatus": "Account Status",
   "all": "All",
-  "sortByTime": "Sort by Time",
-  "newestFirst": "Newest First",
-  "oldestFirst": "Oldest First",
-  "refreshFeedbacks": "Refresh Feedbacks",
-  "filterByStudent": "Filter by Student",
+  "completed": "Completed",
+  "pending": "Pending",
+  "noQuizzesFound": "No quizzes found",
+  "completionRate": "Completion Rate",
+  "assignQuiz": "Assign Quiz",
+  "createQuiz": "Create Quiz",
+  "status": "Status",
+  "assigned": "Assigned",
   "allStudents": "All Students",
-  "filterByTeacher": "Filter by Teacher",
-  "allTeachers": "All Teachers",
-  "deleteFeedbackTitle": "Delete Feedback?",
-  "deleteFeedbackConfirmation": "Are you sure you want to delete this feedback? This action cannot be undone.",
-  "feedbackDeleted": "Feedback deleted",
-  "editFeedback": "Edit Feedback",
-  "currentTopic": "Current Topic",
-  "discardChangesTitle": "Discard Changes?",
-  "discardChangesConfirmation": "You have unsaved changes. Are you sure you want to discard them?",
-  "discard": "Discard",
-  "changesSavedSuccess": "Changes saved successfully!",
-  "updateFailed": "Update failed: {error}",
-  "@updateFailed": {
+  "error": "Error",
+  "viewAllQuizzes": "View All Quizzes",
+  "createOrAssignQuizzes": "Create or assign quizzes to get started",
+  "assignQuizToClass": "Assign Quiz to Class",
+  "reloadQuizzes": "Reload quizzes",
+  "quizzesAssigned": "Quizzes Assigned",
+  "moreOptions": "More options",
+  "courseProgress": "Course Progress",
+  "tryAdjustingSearchCriteria": "Try adjusting your search criteria",
+  "viewAllXQuizzes": "View all {count} quizzes",
+  "@viewAllXQuizzes": {
     "placeholders": {
-      "error": {
-        "type": "String"
+      "count": {
+        "type": "int"
       }
     }
   },
-  "from": "From: {name}",
-  "@from": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "failedToLoadStudents": "Failed to load students: {error}",
-  "@failedToLoadStudents": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "pleaseSelectStudent": "Please select a student",
-  "feedbackSentTo": "Feedback sent to {name}",
-  "@feedbackSentTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "accessDeniedCreateFeedback": "Access Denied: Only teachers can create feedback.",
-  "newFeedback": "New Feedback",
-  "selectStudent": "Select Student",
-  "selectAStudent": "Select a student",
-  "noStudentsAvailable": "No students available",
-  "selectTopic": "Select Topic",
-  "selectATopic": "Select a topic",
-  "pleaseSelectTopic": "Please select a topic",
-  "title": "Title",
-  "titleHint": "e.g., Great Job!",
-  "pleaseEnterTitle": "Please enter a title",
-  "feedbackHint": "Write your feedback here...",
-  "pleaseWriteFeedback": "Please write feedback",
-  "send": "Send",
-  "errorLoadingHistory": "Error loading history: {error}",
-  "@errorLoadingHistory": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "errorLoadingMessages": "Error loading messages: {error}",
-  "@errorLoadingMessages": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "clearHistory": "Clear History",
-  "clearHistoryConfirmation": "Are you sure you want to delete this chat session?",
-  "deleteFailed": "Delete failed: {error}",
-  "@deleteFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "aiChatTitle": "KalmNest AI (Gemini-2.0-flash)",
-  "howCanIHelp": "How can I help you today?",
-  "askQuestion": "Ask Question",
-  "recentQuestions": "Recent Questions",
-  "noQuestionsFound": "No previous questions found.",
-  "untitledQuestion": "Untitled Question",
-  "quickSuggestions": "Quick Learning Suggestions",
-  "suggestionPrefix": "Give me Learning Suggestion for ",
-  "typeQuestionHint": "Type your question...",
-  "backToHistory": "Back to History",
-  "refreshQuestion": "Refresh Question",
-  "deleteChat": "Delete Chat"
+  "searchStudents": "Search students...",
+  "viewDetails": "View Details",
+  "noStudentsFound": "No students found",
+  "tapToViewStudentCompletion": "Tap to view student completion",
+  "indicatesRequiredFields": "* indicates required fields",
+  "classNameMinCharacters": "Class name must be at least 3 characters",
+  "classNameMaxCharacters": "Class name cannot exceed 100 characters",
+  "descriptionRequired": "Description is required",
+  "descriptionMinWords": "Description must contain at least 10 words",
+  "descriptionMaxCharacters": "Description cannot exceed 500 characters",
+  "atLeast10Words": "at least 10 words"
 }

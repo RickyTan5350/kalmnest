@@ -85,7 +85,6 @@ class _NotePageState extends State<NotePage> {
   }
 
     }
-  }
 
   String _getLocalizedTopic(String topic) {
     final l10n = AppLocalizations.of(context)!;

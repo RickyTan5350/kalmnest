@@ -476,6 +476,36 @@ abstract class AppLocalizations {
   /// **'Classes'**
   String get classes;
 
+  /// No description provided for @allClasses.
+  ///
+  /// In en, this message translates to:
+  /// **'All classes'**
+  String get allClasses;
+
+  /// No description provided for @myClasses.
+  ///
+  /// In en, this message translates to:
+  /// **'My Classes'**
+  String get myClasses;
+
+  /// No description provided for @enrolledClasses.
+  ///
+  /// In en, this message translates to:
+  /// **'Enrolled Classes'**
+  String get enrolledClasses;
+
+  /// No description provided for @searchByClassName.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by class name'**
+  String get searchByClassName;
+
+  /// No description provided for @edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
   /// No description provided for @aiChat.
   ///
   /// In en, this message translates to:
@@ -695,7 +725,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteUsersConfirmation.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{Are you sure you want to delete 1 user? This action cannot be undone.} other{Are you sure you want to delete {count} users? This action cannot be undone.}}'**
+  /// **'Are you sure you want to delete {count} users? This action cannot be undone.'**
   String deleteUsersConfirmation(int count);
 
   /// No description provided for @deletingUsers.
@@ -707,7 +737,7 @@ abstract class AppLocalizations {
   /// No description provided for @deletedUsersSuccess.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{Successfully deleted 1 user} other{Successfully deleted {count} users}}'**
+  /// **'Successfully deleted {count} users'**
   String deletedUsersSuccess(int count);
 
   /// No description provided for @errorDeletingUsers.
@@ -980,53 +1010,629 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get other;
 
-  /// No description provided for @feedbacks.
+  /// No description provided for @details.
   ///
   /// In en, this message translates to:
-  /// **'Feedbacks'**
-  String get feedbacks;
+  /// **'Details'**
+  String get details;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// No description provided for @editClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Class'**
+  String get editClass;
+
+  /// No description provided for @deleteClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Class'**
+  String get deleteClass;
+
+  /// No description provided for @classDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Class deleted successfully.'**
+  String get classDeletedSuccessfully;
+
+  /// No description provided for @errorDeletingClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Error deleting class: {error}'**
+  String errorDeletingClass(String error);
+
+  /// No description provided for @noName.
+  ///
+  /// In en, this message translates to:
+  /// **'No Name'**
+  String get noName;
+
+  /// No description provided for @noTeacherAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'No teacher assigned'**
+  String get noTeacherAssigned;
+
+  /// No description provided for @generalInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'General Info'**
+  String get generalInfo;
+
+  /// No description provided for @creator.
+  ///
+  /// In en, this message translates to:
+  /// **'Creator'**
+  String get creator;
+
+  /// No description provided for @focus.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get focus;
+
+  /// No description provided for @notSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Set'**
+  String get notSet;
+
+  /// No description provided for @totalStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Students:'**
+  String get totalStudents;
+
+  /// No description provided for @totalQuizzes.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Quizzes:'**
+  String get totalQuizzes;
+
+  /// No description provided for @assignedTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned Teacher'**
+  String get assignedTeacher;
+
+  /// No description provided for @cannotOpenTeacherProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot open teacher profile: missing teacher id.'**
+  String get cannotOpenTeacherProfile;
+
+  /// No description provided for @noTeacherAssignedToClass.
+  ///
+  /// In en, this message translates to:
+  /// **'No teacher has been assigned to this class yet.'**
+  String get noTeacherAssignedToClass;
+
+  /// No description provided for @description.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get description;
+
+  /// No description provided for @noDescriptionAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No description available'**
+  String get noDescriptionAvailable;
+
+  /// No description provided for @timestamps.
+  ///
+  /// In en, this message translates to:
+  /// **'Timestamps'**
+  String get timestamps;
+
+  /// No description provided for @createdAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Created At'**
+  String get createdAt;
+
+  /// No description provided for @lastUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Updated'**
+  String get lastUpdated;
+
+  /// No description provided for @students.
+  ///
+  /// In en, this message translates to:
+  /// **'Students'**
+  String get students;
+
+  /// No description provided for @noStudentsEnrolled.
+  ///
+  /// In en, this message translates to:
+  /// **'No students have been enrolled in this class yet.'**
+  String get noStudentsEnrolled;
+
+  /// No description provided for @listOfEnrolledStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'List of enrolled students'**
+  String get listOfEnrolledStudents;
+
+  /// No description provided for @moreStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more'**
+  String moreStudents(int count);
+
+  /// No description provided for @quizzes.
+  ///
+  /// In en, this message translates to:
+  /// **'Quizzes'**
+  String get quizzes;
+
+  /// No description provided for @allQuizzes.
+  ///
+  /// In en, this message translates to:
+  /// **'All Quizzes'**
+  String get allQuizzes;
+
+  /// No description provided for @statistics.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get statistics;
+
+  /// No description provided for @searchQuizzes.
+  ///
+  /// In en, this message translates to:
+  /// **'Search quizzes...'**
+  String get searchQuizzes;
+
+  /// No description provided for @quizzesAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} quiz{count, plural, =1{} other{s}} available'**
+  String quizzesAvailable(int count);
+
+  /// No description provided for @noQuizzesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No quizzes yet'**
+  String get noQuizzesYet;
+
+  /// No description provided for @noQuizzesAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Your teacher hasn\'t assigned any quizzes yet'**
+  String get noQuizzesAssigned;
+
+  /// No description provided for @play.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get play;
+
+  /// No description provided for @uploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded: {date}'**
+  String uploaded(String date);
+
+  /// No description provided for @never.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get never;
+
+  /// No description provided for @deleteClassConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{className}\"? This action cannot be undone.'**
+  String deleteClassConfirmation(String className);
+
+  /// No description provided for @thisClass.
+  ///
+  /// In en, this message translates to:
+  /// **'this class'**
+  String get thisClass;
+
+  /// No description provided for @unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknown;
+
+  /// No description provided for @nA.
+  ///
+  /// In en, this message translates to:
+  /// **'N/A'**
+  String get nA;
+
+  /// No description provided for @classFocusUpdatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Class focus updated successfully.'**
+  String get classFocusUpdatedSuccessfully;
+
+  /// No description provided for @failedToUpdateClassFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update class focus.'**
+  String get failedToUpdateClassFocus;
+
+  /// No description provided for @editClassFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Class Focus'**
+  String get editClassFocus;
+
+  /// No description provided for @editFocusFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Focus for {className}'**
+  String editFocusFor(String className);
+
+  /// No description provided for @youCanOnlyEditFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'You can only edit the focus of this class.'**
+  String get youCanOnlyEditFocus;
+
+  /// No description provided for @focusOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus (Optional)'**
+  String get focusOptional;
+
+  /// No description provided for @noneOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'None (Optional)'**
+  String get noneOptional;
+
+  /// No description provided for @classCreatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Class created successfully!'**
+  String get classCreatedSuccessfully;
+
+  /// No description provided for @failedToCreateClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create class'**
+  String get failedToCreateClass;
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @createNewClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Create New Class'**
+  String get createNewClass;
+
+  /// No description provided for @className.
+  ///
+  /// In en, this message translates to:
+  /// **'Class Name'**
+  String get className;
+
+  /// No description provided for @enterClassName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter class name'**
+  String get enterClassName;
+
+  /// No description provided for @pleaseEnterClassName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter class name'**
+  String get pleaseEnterClassName;
+
+  /// No description provided for @enterDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter description'**
+  String get enterDescription;
+
+  /// No description provided for @pleaseEnterDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter description'**
+  String get pleaseEnterDescription;
+
+  /// No description provided for @assignTeacherOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign Teacher (Optional)'**
+  String get assignTeacherOptional;
+
+  /// No description provided for @loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get loading;
+
+  /// No description provided for @selectTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Select teacher'**
+  String get selectTeacher;
+
+  /// No description provided for @assignStudentsOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign Students (Optional)'**
+  String get assignStudentsOptional;
+
+  /// No description provided for @selectStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'Select students'**
+  String get selectStudents;
+
+  /// No description provided for @addStudent.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Student'**
+  String get addStudent;
+
+  /// No description provided for @reset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get reset;
+
+  /// No description provided for @create.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// No description provided for @studentNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Student {number} (Optional)'**
+  String studentNumber(int number);
+
+  /// No description provided for @classUpdatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Class updated successfully!'**
+  String get classUpdatedSuccessfully;
+
+  /// No description provided for @failedToUpdateClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update class'**
+  String get failedToUpdateClass;
+
+  /// No description provided for @editClassDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Class Details'**
+  String get editClassDetails;
+
+  /// No description provided for @classNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Class name required'**
+  String get classNameRequired;
+
+  /// No description provided for @unknownTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Teacher'**
+  String get unknownTeacher;
+
+  /// No description provided for @noTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'No teacher'**
+  String get noTeacher;
+
+  /// No description provided for @noStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'No students'**
+  String get noStudents;
+
+  /// No description provided for @studentCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, =1{student} other{students}}'**
+  String studentCount(int count);
+
+  /// No description provided for @studentSingular.
+  ///
+  /// In en, this message translates to:
+  /// **'student'**
+  String get studentSingular;
+
+  /// No description provided for @studentsPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'students'**
+  String get studentsPlural;
+
+  /// No description provided for @noClassesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No classes found'**
+  String get noClassesFound;
+
+  /// No description provided for @tryAdjustingSearchQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Try adjusting your search query'**
+  String get tryAdjustingSearchQuery;
+
+  /// No description provided for @notEnrolledInAnyClasses.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not enrolled in any classes yet'**
+  String get notEnrolledInAnyClasses;
 
   /// No description provided for @results.
   ///
   /// In en, this message translates to:
-  /// **'Results'**
-  String get results;
+  /// **'{count} Results'**
+  String results(int count);
 
-  /// No description provided for @noFeedbackFound.
+  /// No description provided for @quizVisibility.
   ///
   /// In en, this message translates to:
-  /// **'No feedback found.'**
-  String get noFeedbackFound;
+  /// **'Quiz Visibility'**
+  String get quizVisibility;
 
-  /// No description provided for @sortByTime.
+  /// No description provided for @howShouldQuizBeVisible.
   ///
   /// In en, this message translates to:
-  /// **'Sort by Time'**
-  String get sortByTime;
+  /// **'How should this quiz be visible after creation?'**
+  String get howShouldQuizBeVisible;
 
-  /// No description provided for @newestFirst.
+  /// No description provided for @onlyVisibleToThisClass.
   ///
   /// In en, this message translates to:
-  /// **'Newest First'**
-  String get newestFirst;
+  /// **'Only visible to this class'**
+  String get onlyVisibleToThisClass;
 
-  /// No description provided for @oldestFirst.
+  /// No description provided for @visibleToEveryone.
   ///
   /// In en, this message translates to:
-  /// **'Oldest First'**
-  String get oldestFirst;
+  /// **'Visible to everyone, can be assigned to other classes'**
+  String get visibleToEveryone;
 
-  /// No description provided for @refreshFeedbacks.
+  /// No description provided for @quizCreatedAndAssignedSuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'Refresh Feedbacks'**
-  String get refreshFeedbacks;
+  /// **'Quiz created and assigned successfully as {visibility}'**
+  String quizCreatedAndAssignedSuccessfully(String visibility);
 
-  /// No description provided for @filterByStudent.
+  /// No description provided for @failedToAssignQuiz.
   ///
   /// In en, this message translates to:
-  /// **'Filter by Student'**
-  String get filterByStudent;
+  /// **'Failed to assign quiz'**
+  String get failedToAssignQuiz;
+
+  /// No description provided for @quizAssignedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiz assigned successfully'**
+  String get quizAssignedSuccessfully;
+
+  /// No description provided for @removeQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Quiz'**
+  String get removeQuiz;
+
+  /// No description provided for @areYouSureRemoveQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to remove this quiz from the class?'**
+  String get areYouSureRemoveQuiz;
+
+  /// No description provided for @remove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get remove;
+
+  /// No description provided for @quizRemovedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiz removed successfully'**
+  String get quizRemovedSuccessfully;
+
+  /// No description provided for @failedToRemoveQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to remove quiz'**
+  String get failedToRemoveQuiz;
+
+  /// No description provided for @failedToLoadStudentQuizData.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load student quiz data'**
+  String get failedToLoadStudentQuizData;
+
+  /// No description provided for @failedToLoadQuizStudentData.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load quiz student data'**
+  String get failedToLoadQuizStudentData;
+
+  /// No description provided for @gender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get gender;
+
+  /// No description provided for @joinedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined Date'**
+  String get joinedDate;
+
+  /// No description provided for @accountStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Status'**
+  String get accountStatus;
+
+  /// No description provided for @completed.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get completed;
+
+  /// No description provided for @pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get pending;
+
+  /// No description provided for @noQuizzesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No quizzes found'**
+  String get noQuizzesFound;
+
+  /// No description provided for @completionRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion Rate'**
+  String get completionRate;
+
+  /// No description provided for @assignQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign Quiz'**
+  String get assignQuiz;
+
+  /// No description provided for @createQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Quiz'**
+  String get createQuiz;
+
+  /// No description provided for @status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get status;
+
+  /// No description provided for @assigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned'**
+  String get assigned;
 
   /// No description provided for @allStudents.
   ///
@@ -1034,287 +1640,131 @@ abstract class AppLocalizations {
   /// **'All Students'**
   String get allStudents;
 
-  /// No description provided for @filterByTeacher.
+  /// No description provided for @error.
   ///
   /// In en, this message translates to:
-  /// **'Filter by Teacher'**
-  String get filterByTeacher;
+  /// **'Error'**
+  String get error;
 
-  /// No description provided for @allTeachers.
+  /// No description provided for @viewAllQuizzes.
   ///
   /// In en, this message translates to:
-  /// **'All Teachers'**
-  String get allTeachers;
+  /// **'View All Quizzes'**
+  String get viewAllQuizzes;
 
-  /// No description provided for @deleteFeedbackTitle.
+  /// No description provided for @createOrAssignQuizzes.
   ///
   /// In en, this message translates to:
-  /// **'Delete Feedback?'**
-  String get deleteFeedbackTitle;
+  /// **'Create or assign quizzes to get started'**
+  String get createOrAssignQuizzes;
 
-  /// No description provided for @deleteFeedbackConfirmation.
+  /// No description provided for @assignQuizToClass.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete this feedback? This action cannot be undone.'**
-  String get deleteFeedbackConfirmation;
+  /// **'Assign Quiz to Class'**
+  String get assignQuizToClass;
 
-  /// No description provided for @feedbackDeleted.
+  /// No description provided for @reloadQuizzes.
   ///
   /// In en, this message translates to:
-  /// **'Feedback deleted'**
-  String get feedbackDeleted;
+  /// **'Reload quizzes'**
+  String get reloadQuizzes;
 
-  /// No description provided for @editFeedback.
+  /// No description provided for @quizzesAssigned.
   ///
   /// In en, this message translates to:
-  /// **'Edit Feedback'**
-  String get editFeedback;
+  /// **'Quizzes Assigned'**
+  String get quizzesAssigned;
 
-  /// No description provided for @currentTopic.
+  /// No description provided for @moreOptions.
   ///
   /// In en, this message translates to:
-  /// **'Current Topic'**
-  String get currentTopic;
+  /// **'More options'**
+  String get moreOptions;
 
-  /// No description provided for @discardChangesTitle.
+  /// No description provided for @courseProgress.
   ///
   /// In en, this message translates to:
-  /// **'Discard Changes?'**
-  String get discardChangesTitle;
+  /// **'Course Progress'**
+  String get courseProgress;
 
-  /// No description provided for @discardChangesConfirmation.
+  /// No description provided for @tryAdjustingSearchCriteria.
   ///
   /// In en, this message translates to:
-  /// **'You have unsaved changes. Are you sure you want to discard them?'**
-  String get discardChangesConfirmation;
+  /// **'Try adjusting your search criteria'**
+  String get tryAdjustingSearchCriteria;
 
-  /// No description provided for @discard.
+  /// No description provided for @viewAllXQuizzes.
   ///
   /// In en, this message translates to:
-  /// **'Discard'**
-  String get discard;
+  /// **'View all {count} quizzes'**
+  String viewAllXQuizzes(int count);
 
-  /// No description provided for @changesSavedSuccess.
+  /// No description provided for @searchStudents.
   ///
   /// In en, this message translates to:
-  /// **'Changes saved successfully!'**
-  String get changesSavedSuccess;
+  /// **'Search students...'**
+  String get searchStudents;
 
-  /// No description provided for @updateFailed.
+  /// No description provided for @viewDetails.
   ///
   /// In en, this message translates to:
-  /// **'Update failed: {error}'**
-  String updateFailed(String error);
+  /// **'View Details'**
+  String get viewDetails;
 
-  /// No description provided for @from.
+  /// No description provided for @noStudentsFound.
   ///
   /// In en, this message translates to:
-  /// **'From: {name}'**
-  String from(String name);
+  /// **'No students found'**
+  String get noStudentsFound;
 
-  /// No description provided for @failedToLoadStudents.
+  /// No description provided for @tapToViewStudentCompletion.
   ///
   /// In en, this message translates to:
-  /// **'Failed to load students: {error}'**
-  String failedToLoadStudents(String error);
+  /// **'Tap to view student completion'**
+  String get tapToViewStudentCompletion;
 
-  /// No description provided for @pleaseSelectStudent.
+  /// No description provided for @indicatesRequiredFields.
   ///
   /// In en, this message translates to:
-  /// **'Please select a student'**
-  String get pleaseSelectStudent;
+  /// **'* indicates required fields'**
+  String get indicatesRequiredFields;
 
-  /// No description provided for @feedbackSentTo.
+  /// No description provided for @classNameMinCharacters.
   ///
   /// In en, this message translates to:
-  /// **'Feedback sent to {name}'**
-  String feedbackSentTo(String name);
+  /// **'Class name must be at least 3 characters'**
+  String get classNameMinCharacters;
 
-  /// No description provided for @accessDeniedCreateFeedback.
+  /// No description provided for @classNameMaxCharacters.
   ///
   /// In en, this message translates to:
-  /// **'Access Denied: Only teachers can create feedback.'**
-  String get accessDeniedCreateFeedback;
+  /// **'Class name cannot exceed 100 characters'**
+  String get classNameMaxCharacters;
 
-  /// No description provided for @newFeedback.
+  /// No description provided for @descriptionRequired.
   ///
   /// In en, this message translates to:
-  /// **'New Feedback'**
-  String get newFeedback;
+  /// **'Description is required'**
+  String get descriptionRequired;
 
-  /// No description provided for @selectStudent.
+  /// No description provided for @descriptionMinWords.
   ///
   /// In en, this message translates to:
-  /// **'Select Student'**
-  String get selectStudent;
+  /// **'Description must contain at least 10 words'**
+  String get descriptionMinWords;
 
-  /// No description provided for @selectAStudent.
+  /// No description provided for @descriptionMaxCharacters.
   ///
   /// In en, this message translates to:
-  /// **'Select a student'**
-  String get selectAStudent;
+  /// **'Description cannot exceed 500 characters'**
+  String get descriptionMaxCharacters;
 
-  /// No description provided for @noStudentsAvailable.
+  /// No description provided for @atLeast10Words.
   ///
   /// In en, this message translates to:
-  /// **'No students available'**
-  String get noStudentsAvailable;
-
-  /// No description provided for @selectTopic.
-  ///
-  /// In en, this message translates to:
-  /// **'Select Topic'**
-  String get selectTopic;
-
-  /// No description provided for @selectATopic.
-  ///
-  /// In en, this message translates to:
-  /// **'Select a topic'**
-  String get selectATopic;
-
-  /// No description provided for @pleaseSelectTopic.
-  ///
-  /// In en, this message translates to:
-  /// **'Please select a topic'**
-  String get pleaseSelectTopic;
-
-  /// No description provided for @title.
-  ///
-  /// In en, this message translates to:
-  /// **'Title'**
-  String get title;
-
-  /// No description provided for @titleHint.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g., Great Job!'**
-  String get titleHint;
-
-  /// No description provided for @pleaseEnterTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Please enter a title'**
-  String get pleaseEnterTitle;
-
-  /// No description provided for @feedbackHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Write your feedback here...'**
-  String get feedbackHint;
-
-  /// No description provided for @pleaseWriteFeedback.
-  ///
-  /// In en, this message translates to:
-  /// **'Please write feedback'**
-  String get pleaseWriteFeedback;
-
-  /// No description provided for @send.
-  ///
-  /// In en, this message translates to:
-  /// **'Send'**
-  String get send;
-
-  /// No description provided for @errorLoadingHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'Error loading history: {error}'**
-  String errorLoadingHistory(String error);
-
-  /// No description provided for @errorLoadingMessages.
-  ///
-  /// In en, this message translates to:
-  /// **'Error loading messages: {error}'**
-  String errorLoadingMessages(String error);
-
-  /// No description provided for @clearHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear History'**
-  String get clearHistory;
-
-  /// No description provided for @clearHistoryConfirmation.
-  ///
-  /// In en, this message translates to:
-  /// **'Are you sure you want to delete this chat session?'**
-  String get clearHistoryConfirmation;
-
-  /// No description provided for @deleteFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete failed: {error}'**
-  String deleteFailed(String error);
-
-  /// No description provided for @aiChatTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'KalmNest AI (Gemini-2.0-flash)'**
-  String get aiChatTitle;
-
-  /// No description provided for @howCanIHelp.
-  ///
-  /// In en, this message translates to:
-  /// **'How can I help you today?'**
-  String get howCanIHelp;
-
-  /// No description provided for @askQuestion.
-  ///
-  /// In en, this message translates to:
-  /// **'Ask Question'**
-  String get askQuestion;
-
-  /// No description provided for @recentQuestions.
-  ///
-  /// In en, this message translates to:
-  /// **'Recent Questions'**
-  String get recentQuestions;
-
-  /// No description provided for @noQuestionsFound.
-  ///
-  /// In en, this message translates to:
-  /// **'No previous questions found.'**
-  String get noQuestionsFound;
-
-  /// No description provided for @untitledQuestion.
-  ///
-  /// In en, this message translates to:
-  /// **'Untitled Question'**
-  String get untitledQuestion;
-
-  /// No description provided for @quickSuggestions.
-  ///
-  /// In en, this message translates to:
-  /// **'Quick Learning Suggestions'**
-  String get quickSuggestions;
-
-  /// No description provided for @suggestionPrefix.
-  ///
-  /// In en, this message translates to:
-  /// **'Give me Learning Suggestion for '**
-  String get suggestionPrefix;
-
-  /// No description provided for @typeQuestionHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Type your question...'**
-  String get typeQuestionHint;
-
-  /// No description provided for @backToHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'Back to History'**
-  String get backToHistory;
-
-  /// No description provided for @refreshQuestion.
-  ///
-  /// In en, this message translates to:
-  /// **'Refresh Question'**
-  String get refreshQuestion;
-
-  /// No description provided for @deleteChat.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete Chat'**
-  String get deleteChat;
+  /// **'at least 10 words'**
+  String get atLeast10Words;
 }
 
 class _AppLocalizationsDelegate
