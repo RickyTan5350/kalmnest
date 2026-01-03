@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 class ApiConstants {
@@ -43,7 +42,7 @@ class ApiConstants {
       return 'https://$localHostIp/api';
     }
 
-    if (Platform.isAndroid) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
       // 10.0.2.2 is the special alias to host loopback interface on Android Emulator
       return 'https://10.0.2.2/api';
     } else {
@@ -73,7 +72,7 @@ class ApiConstants {
       return 'https://$localHostIp';
     }
 
-    if (Platform.isAndroid) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
       return 'https://10.0.2.2';
     } else {
       return 'https://kalmnest.test';

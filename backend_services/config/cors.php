@@ -30,6 +30,7 @@ return [
         '/^https:\/\/.*\.vercel\.app$/',
         '/^https:\/\/.*\.netlify\.app$/',
         '/^https:\/\/.*\.railway\.app$/',
+        '/^http:\/\/localhost:[0-9]+$/', // Allow any localhost port
     ],
 
     'allowed_headers' => ['*'],

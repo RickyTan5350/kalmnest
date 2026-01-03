@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
-import 'dart:io'; // For HttpOverrides
 
 import 'package:code_play/l10n/generated/app_localizations.dart';
 import 'package:code_play/controllers/locale_controller.dart';
@@ -29,8 +28,13 @@ import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:code_play/config/http_setup.dart'; // New import
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Hive.initFlutter();
 
   print('--- CONFIGURATION DEBUG ---');
   print('ApiConstants.customBaseUrl: ${ApiConstants.customBaseUrl}');
@@ -40,7 +44,7 @@ void main() async {
   print('---------------------------');
 
   if (kDebugMode) {
-    HttpOverrides.global = MyHttpOverrides();
+    setupHttpOverrides();
   }
 
   // Check for stored token and user data
@@ -546,14 +550,5 @@ class _FeedState extends State<Feed> {
               }).toList(),
             ),
     );
-  }
-}
-
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
   }
 }

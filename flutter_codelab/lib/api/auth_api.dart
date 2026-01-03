@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:code_play/student/services/local_achievement_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:code_play/constants/api_constants.dart';
 
@@ -28,21 +29,24 @@ class AuthApi {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
-          if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
+          if (!kIsWeb && ApiConstants.customBaseUrl.isEmpty)
+            'Host': 'kalmnest.test',
         },
         body: body,
       );
 
       if (response.statusCode == 200) {
-      try {
+        try {
           final data = jsonDecode(response.body);
           final token = data['token'];
 
           // 1. Extract the user map
-          final Map<String, dynamic> userMap = Map<String, dynamic>.from(data['user']);
-          
+          final Map<String, dynamic> userMap = Map<String, dynamic>.from(
+            data['user'],
+          );
+
           // 2. IMPORTANT: Inject the token into the user map so UserDetails model can see it
-          userMap['token'] = token; 
+          userMap['token'] = token;
 
           // 3. Store the updated map and the token
           final userDataJson = jsonEncode(userMap);
@@ -105,7 +109,8 @@ class AuthApi {
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token', // Crucial: Send the token
-            if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
+            if (!kIsWeb && ApiConstants.customBaseUrl.isEmpty)
+              'Host': 'kalmnest.test',
           },
         );
       } catch (e) {
@@ -179,4 +184,3 @@ class AuthApi {
     }
   }
 }
-
