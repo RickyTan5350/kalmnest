@@ -104,6 +104,10 @@ class _AiChatPageState extends State<AiChatPage>
   List<Map<String, dynamic>> _sessions = [];
   bool _hasSentFirstMessage = false;
 
+  // Selection State (for bulk delete)
+  final Set<String> _selectedIds = {};
+  bool _isDeleting = false;
+
   // Getter for sessionId - assuming it should be generated or retrieved
   String get sessionId =>
       _currentSessionId ?? DateTime.now().millisecondsSinceEpoch.toString();
@@ -316,6 +320,163 @@ class _AiChatPageState extends State<AiChatPage>
     _handleSendMessage();
   }
 
+  // Selection methods
+  void _toggleSelection(String sessionId) {
+    setState(() {
+      if (_selectedIds.contains(sessionId)) {
+        _selectedIds.remove(sessionId);
+      } else {
+        _selectedIds.add(sessionId);
+      }
+    });
+  }
+
+  // Bulk delete function
+  Future<void> _deleteSelectedSessions() async {
+    if (_selectedIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(l10n.deleteChatSessionsTitle),
+          content: Text(
+            l10n.deleteChatSessionsConfirmation(_selectedIds.length),
+          ),
+          actions: [
+            TextButton(
+              child: Text(l10n.cancel),
+              onPressed: () => Navigator.pop(dialogContext, false),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.delete),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    int successCount = 0;
+    int failCount = 0;
+    List<String> successfullyDeletedIds = [];
+
+    for (final id in _selectedIds) {
+      try {
+        await _apiService.deleteSession(id);
+        successCount++;
+        successfullyDeletedIds.add(id);
+      } catch (e) {
+        print("Failed to delete session $id: $e");
+        failCount++;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isDeleting = false;
+        _selectedIds.removeWhere((id) => successfullyDeletedIds.contains(id));
+        // Remove deleted sessions from list
+        _sessions.removeWhere((s) {
+          final sessionId = s['session_id'] ?? s['chatbot_session_id'];
+          return successfullyDeletedIds.contains(sessionId?.toString());
+        });
+      });
+
+      String message;
+      Color snackColor;
+      final l10n = AppLocalizations.of(context)!;
+      if (failCount == 0) {
+        message = l10n.chatSessionsDeletedSuccessfully(successCount);
+        snackColor = Colors.green;
+      } else {
+        message = 'Deleted: $successCount, Failed: $failCount';
+        snackColor = failCount > 0 ? Colors.red : Colors.orange;
+      }
+
+      _showSnackBar(message, snackColor);
+    }
+  }
+
+  Widget _buildSelectionHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      key: const ValueKey("SelectionHeader"),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => _selectedIds.clear()),
+              ),
+              Text(
+                "${_selectedIds.length} ${AppLocalizations.of(context)!.selected}",
+                style: theme.textTheme.titleMedium,
+              ),
+            ],
+          ),
+          if (_isDeleting)
+            const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: colorScheme.error),
+              onPressed: _deleteSelectedSessions,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSortHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      key: const ValueKey("SortHeader"),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            height: 40,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "${_sessions.length} Results",
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _clearChat() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -467,45 +628,85 @@ class _AiChatPageState extends State<AiChatPage>
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
+        if (!_isLoadingHistory && _sessions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              16.0,
+              8.0,
+              16.0,
+              16.0,
+            ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _selectedIds.isNotEmpty
+                  ? _buildSelectionHeader(context)
+                  : _buildSortHeader(context),
+            ),
+          ),
         Expanded(
           child: _isLoadingHistory
               ? const Center(child: CircularProgressIndicator())
               : _sessions.isEmpty
               ? Center(child: Text(l10n.noQuestionsFound))
               : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   itemCount: _sessions.length,
                   itemBuilder: (context, index) {
                     final session = _sessions[index];
-                    return ListTile(
-                      leading: const Icon(Icons.chat_bubble_outline),
-                      title: Text(
-                        (session['title'] == null ||
-                                session['title'].toString().isEmpty ||
-                                session['title'] == 'Untitled Question')
-                            ? (session['last_message']?.toString() ??
-                                  l10n.untitledQuestion)
-                            : session['title'].toString(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    final sessionId = session['session_id'] ??
+                        session['chatbot_session_id'];
+                    final sessionIdStr = sessionId?.toString() ?? '';
+                    final isSelected = _selectedIds.contains(sessionIdStr);
+                    
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4.0),
+                      elevation: 1.0,
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(
+                          color: isSelected
+                              ? colorScheme.primary
+                              : colorScheme.outline.withOpacity(0.3),
+                          width: isSelected ? 2.0 : 1.0,
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
                       ),
-                      subtitle: Text(
-                        session['updated_at']?.toString().split('T')[0] ??
-                            session['created_at']?.toString().split('T')[0] ??
-                            '',
-                        style: const TextStyle(fontSize: 10),
+                      child: ListTile(
+                        leading: const Icon(Icons.chat_bubble_outline),
+                        title: Text(
+                          (session['title'] == null ||
+                                  session['title'].toString().isEmpty ||
+                                  session['title'] == 'Untitled Question')
+                              ? (session['last_message']?.toString() ??
+                                    l10n.untitledQuestion)
+                              : session['title'].toString(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          session['updated_at']?.toString().split('T')[0] ??
+                              session['created_at']?.toString().split('T')[0] ??
+                              '',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                        trailing: isSelected
+                            ? Icon(Icons.check_circle, color: colorScheme.primary)
+                            : const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () {
+                          // If any items are selected, toggle selection; otherwise load session
+                          if (_selectedIds.isNotEmpty) {
+                            _toggleSelection(sessionIdStr);
+                          } else {
+                            if (sessionIdStr.isNotEmpty) {
+                              _loadSessionMessages(sessionIdStr);
+                            } else {
+                              _showSnackBar('Invalid session ID', Colors.red);
+                            }
+                          }
+                        },
+                        onLongPress: () {
+                          _toggleSelection(sessionIdStr);
+                        },
                       ),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                      onTap: () {
-                        final sessionId =
-                            session['session_id'] ??
-                            session['chatbot_session_id'];
-                        if (sessionId != null &&
-                            sessionId.toString().isNotEmpty) {
-                          _loadSessionMessages(sessionId.toString());
-                        } else {
-                          _showSnackBar('Invalid session ID', Colors.red);
-                        }
-                      },
                     );
                   },
                 ),

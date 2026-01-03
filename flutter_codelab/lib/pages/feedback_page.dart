@@ -6,10 +6,8 @@ import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart'
     as create_fb;
 import 'package:code_play/admin_teacher/widgets/feedback/edit_feedback.dart'
     as edit_fb;
-import 'package:code_play/student/widgets/feedback/student_view_feedback_page.dart';
 import 'package:code_play/enums/sort_enums.dart';
 import 'package:code_play/constants/achievement_constants.dart';
-import 'package:code_play/theme.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class FeedbackPage extends StatefulWidget {
@@ -48,6 +46,10 @@ class _FeedbackPageState extends State<FeedbackPage> {
   String _selectedTeacherId = 'All';
 
   SortOrder _sortOrder = SortOrder.descending;
+
+  // Selection State (for bulk delete)
+  final Set<String> _selectedIds = {};
+  bool _isDeleting = false;
 
   @override
   void initState() {
@@ -190,6 +192,91 @@ class _FeedbackPageState extends State<FeedbackPage> {
     setState(() {
       _feedbackList.remove(feedback);
     });
+  }
+
+  // Selection methods
+  void _toggleSelection(String feedbackId) {
+    setState(() {
+      if (_selectedIds.contains(feedbackId)) {
+        _selectedIds.remove(feedbackId);
+      } else {
+        _selectedIds.add(feedbackId);
+      }
+    });
+  }
+
+  // Bulk delete function
+  Future<void> _deleteSelectedFeedbacks() async {
+    if (_selectedIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(l10n.deleteFeedbackTitle),
+          content: Text(l10n.deleteFeedbacksConfirmation(_selectedIds.length)),
+          actions: [
+            TextButton(
+              child: Text(l10n.cancel),
+              onPressed: () => Navigator.pop(dialogContext, false),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.delete),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    int successCount = 0;
+    int failCount = 0;
+    List<String> successfullyDeletedIds = [];
+
+    for (final id in _selectedIds) {
+      try {
+        await _apiService.deleteFeedback(id);
+        successCount++;
+        successfullyDeletedIds.add(id);
+      } catch (e) {
+        print("Failed to delete feedback $id: $e");
+        failCount++;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isDeleting = false;
+        _selectedIds.removeWhere((id) => successfullyDeletedIds.contains(id));
+        // Remove deleted feedbacks from list
+        _feedbackList.removeWhere(
+          (f) => successfullyDeletedIds.contains(f.feedbackId),
+        );
+      });
+
+      String message;
+      Color snackColor;
+      final l10n = AppLocalizations.of(context)!;
+      if (failCount == 0) {
+        message = l10n.feedbacksDeletedSuccessfully(successCount);
+        snackColor = Colors.green;
+      } else {
+        message = 'Deleted: $successCount, Failed: $failCount';
+        snackColor = failCount > 0 ? Colors.red : Colors.orange;
+      }
+
+      _showSnackBar(context, message, snackColor);
+    }
   }
 
   void _openCreateFeedbackDialog() {
@@ -340,35 +427,17 @@ class _FeedbackPageState extends State<FeedbackPage> {
                           _errorMessage == null &&
                           _feedbackList.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                SizedBox(
-                                  height: 40,
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      "${_filteredFeedback.length} ${l10n.results}",
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleMedium,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          padding: const EdgeInsets.fromLTRB(
+                            16.0,
+                            8.0,
+                            16.0,
+                            16.0,
+                          ),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: (_isTeacher && _selectedIds.isNotEmpty)
+                                ? _buildSelectionHeader(context)
+                                : _buildSortHeader(context),
                           ),
                         ),
                       Expanded(child: _buildBody()),
@@ -379,6 +448,76 @@ class _FeedbackPageState extends State<FeedbackPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSortHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      key: const ValueKey("SortHeader"),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            height: 40,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "${_filteredFeedback.length} ${l10n.results}",
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      key: const ValueKey("SelectionHeader"),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => _selectedIds.clear()),
+              ),
+              Text(
+                "${_selectedIds.length} ${AppLocalizations.of(context)!.selected}",
+                style: theme.textTheme.titleMedium,
+              ),
+            ],
+          ),
+          if (_isDeleting)
+            const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: colorScheme.error),
+              onPressed: _deleteSelectedFeedbacks,
+            ),
+        ],
       ),
     );
   }
@@ -414,6 +553,10 @@ class _FeedbackPageState extends State<FeedbackPage> {
       feedbackList: filtered, // Use filtered list instead of full list
       isTeacher: _isTeacher,
       isStudent: _isStudent,
+      isAdmin: widget.currentUser?.isAdmin ?? false,
+      selectedIds: _selectedIds,
+      onToggleSelection: _toggleSelection,
+      hasAnySelection: _selectedIds.isNotEmpty,
       onEdit: _openEditDialog,
       onDelete: _confirmDelete,
     );
@@ -481,7 +624,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const SizedBox(width: 8),
             // Sort Button
             PopupMenuButton<SortOrder>(
-              icon: const Icon(Icons.sort),
+              icon: const Icon(Icons.filter_list),
               tooltip: l10n.sortByTime,
               onSelected: (order) {
                 setState(() {
@@ -535,9 +678,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
                       ),
                     ),
                     items: [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: 'All',
-                        child: Text('All Students'),
+                        child: Text(l10n.allStudents),
                       ),
                       ..._students.map(
                         (s) => DropdownMenuItem(
@@ -573,9 +716,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
                       ),
                     ),
                     items: [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: 'All',
-                        child: Text('All Teachers'),
+                        child: Text(l10n.allTeachers),
                       ),
                       ..._teachers.map(
                         (t) => DropdownMenuItem(
@@ -680,6 +823,10 @@ class _FeedbackListView extends StatelessWidget {
   final List<FeedbackData> feedbackList;
   final bool isTeacher;
   final bool isStudent;
+  final bool isAdmin;
+  final Set<String> selectedIds;
+  final void Function(String) onToggleSelection;
+  final bool hasAnySelection;
   final Function(FeedbackData) onEdit;
   final Function(FeedbackData) onDelete;
 
@@ -687,6 +834,10 @@ class _FeedbackListView extends StatelessWidget {
     required this.feedbackList,
     required this.isTeacher,
     required this.isStudent,
+    required this.isAdmin,
+    required this.selectedIds,
+    required this.onToggleSelection,
+    required this.hasAnySelection,
     required this.onEdit,
     required this.onDelete,
   });
@@ -694,14 +845,19 @@ class _FeedbackListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       itemCount: feedbackList.length,
       itemBuilder: (context, index) {
         final feedback = feedbackList[index];
-        return _FeedbackCard(
+        final isSelected = selectedIds.contains(feedback.feedbackId);
+        return _FeedbackListTile(
           feedback: feedback,
           isTeacher: isTeacher,
           isStudent: isStudent,
+          isAdmin: isAdmin,
+          isSelected: isSelected,
+          hasAnySelection: hasAnySelection,
+          onToggleSelection: () => onToggleSelection(feedback.feedbackId),
           onEdit: () => onEdit(feedback),
           onDelete: () => onDelete(feedback),
         );
@@ -710,18 +866,26 @@ class _FeedbackListView extends StatelessWidget {
   }
 }
 
-// Feedback Card Widget
-class _FeedbackCard extends StatelessWidget {
+// Feedback List Tile Widget (similar to achievement list)
+class _FeedbackListTile extends StatelessWidget {
   final FeedbackData feedback;
   final bool isTeacher;
   final bool isStudent;
+  final bool isAdmin;
+  final bool isSelected;
+  final bool hasAnySelection;
+  final VoidCallback onToggleSelection;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _FeedbackCard({
+  const _FeedbackListTile({
     required this.feedback,
     required this.isTeacher,
     required this.isStudent,
+    required this.isAdmin,
+    required this.isSelected,
+    required this.hasAnySelection,
+    required this.onToggleSelection,
     required this.onEdit,
     required this.onDelete,
   });
@@ -729,139 +893,242 @@ class _FeedbackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Student name (only for teachers/admins)
-            if (!isStudent) _buildStudentHeader(colorScheme),
-            if (!isStudent) const SizedBox(height: 8),
-
-            // Topic
-            _buildTopic(context, colorScheme),
-            const SizedBox(height: 8),
-
-            // Feedback content
-            _buildFeedbackContent(colorScheme),
-            const SizedBox(height: 12),
-
-            // Teacher info and timestamp
-            _buildTeacherInfo(context, colorScheme),
-
-            // Action buttons (only for teachers)
-            if (isTeacher) _buildActionButtons(colorScheme),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStudentHeader(ColorScheme colorScheme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          feedback.studentName,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: colorScheme.onSurface,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTopic(BuildContext context, ColorScheme colorScheme) {
-    final topicColor = getAchievementColor(
-      context,
-      feedback.topic.toLowerCase(),
-    );
-    final topicIcon = getAchievementIcon(feedback.topic.toLowerCase());
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Topic category (e.g., "HTML", "CSS") with Logo
-        Row(
-          children: [
-            Icon(topicIcon, size: 16, color: topicColor),
-            const SizedBox(width: 8),
-            Text(
-              feedback.topic,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: topicColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        // Feedback title
-        if (feedback.title.isNotEmpty)
-          Text(
-            feedback.title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildFeedbackContent(ColorScheme colorScheme) {
-    return Text(
-      feedback.feedback,
-      style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-  Widget _buildTeacherInfo(BuildContext context, ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            AppLocalizations.of(context)!.from(feedback.teacherName),
-            style: TextStyle(
-              fontSize: 13,
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          _buildTimestamp(colorScheme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimestamp(ColorScheme colorScheme) {
-    final created = feedback.createdAt;
-    if (created == null || created.isEmpty) {
-      return const SizedBox.shrink();
+    // Get icon based on topic name, with fallback logic
+    final topicNameLower = feedback.topic.toLowerCase();
+    // Try to match common topic name patterns
+    String iconKey = topicNameLower;
+    if (topicNameLower.contains('html')) {
+      iconKey = 'html';
+    } else if (topicNameLower.contains('css')) {
+      iconKey = 'css';
+    } else if (topicNameLower.contains('javascript') ||
+        topicNameLower.contains('js')) {
+      iconKey = 'javascript';
+    } else if (topicNameLower.contains('php')) {
+      iconKey = 'php';
+    } else if (topicNameLower.contains('quiz') ||
+        topicNameLower.contains('test')) {
+      iconKey = 'quiz';
     }
 
-    final formattedDate = _formatDateTime(created);
-    return Text(
-      formattedDate,
-      style: TextStyle(
-        fontSize: 11,
-        color: colorScheme.onSurfaceVariant.withOpacity(0.9),
+    final topicColor = getAchievementColor(context, iconKey);
+    final topicIcon = getAchievementIcon(iconKey);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      elevation: 1.0,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: isSelected
+              ? colorScheme.primary
+              : colorScheme.outline.withOpacity(0.3),
+          width: isSelected ? 2.0 : 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: topicColor.withOpacity(0.1),
+          child: Icon(topicIcon, color: topicColor, size: 20),
+        ),
+        title: Text(
+          feedback.title.isNotEmpty ? feedback.title : feedback.topic,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        subtitle: Text(
+          AppLocalizations.of(context)!.from(feedback.teacherName),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        onTap: () {
+          // If any items are selected, toggle selection; otherwise show dialog
+          if (isTeacher && hasAnySelection) {
+            onToggleSelection();
+          } else {
+            _showFeedbackDetailDialog(
+              context,
+              feedback,
+              isTeacher,
+              isAdmin,
+              onEdit,
+              onDelete,
+            );
+          }
+        },
+        onLongPress: () {
+          if (isTeacher) {
+            onToggleSelection();
+          }
+        },
+      ),
+    );
+  }
+
+  void _showFeedbackDetailDialog(
+    BuildContext context,
+    FeedbackData feedback,
+    bool isTeacher,
+    bool isAdmin,
+    VoidCallback onEdit,
+    VoidCallback onDelete,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // Get icon based on topic name, with fallback logic
+    final topicNameLower = feedback.topic.toLowerCase();
+    // Try to match common topic name patterns
+    String iconKey = topicNameLower;
+    if (topicNameLower.contains('html')) {
+      iconKey = 'html';
+    } else if (topicNameLower.contains('css')) {
+      iconKey = 'css';
+    } else if (topicNameLower.contains('javascript') ||
+        topicNameLower.contains('js')) {
+      iconKey = 'javascript';
+    } else if (topicNameLower.contains('php')) {
+      iconKey = 'php';
+    } else if (topicNameLower.contains('quiz') ||
+        topicNameLower.contains('test')) {
+      iconKey = 'quiz';
+    }
+
+    final topicColor = getAchievementColor(context, iconKey);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with title and teacher name
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: topicColor.withOpacity(0.1),
+                    child: Icon(
+                      getAchievementIcon(feedback.topic.toLowerCase()),
+                      color: topicColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          feedback.title.isNotEmpty
+                              ? feedback.title
+                              : feedback.topic,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.from(feedback.teacherName),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+              // Student name (for teacher and admin view)
+              if (isTeacher || isAdmin) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Icons.person,
+                      size: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${AppLocalizations.of(context)!.student}: ${feedback.studentName}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+              // Feedback content
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Text(
+                    feedback.feedback,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+              ),
+              // Time sent (below feedback content)
+              if (feedback.createdAt != null) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatDateTime(feedback.createdAt!),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              // Edit and Delete buttons for teachers (at the bottom)
+              if (isTeacher) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        onEdit();
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: Text(AppLocalizations.of(context)!.edit),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        onDelete();
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.error,
+                      ),
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(AppLocalizations.of(context)!.delete),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -874,23 +1141,5 @@ class _FeedbackCard extends StatelessWidget {
     } catch (_) {
       return dateTimeString;
     }
-  }
-
-  Widget _buildActionButtons(ColorScheme colorScheme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.edit),
-          onPressed: onEdit,
-          tooltip: 'Edit feedback',
-        ),
-        IconButton(
-          icon: Icon(Icons.delete_outline, color: colorScheme.error),
-          onPressed: onDelete,
-          tooltip: 'Delete feedback',
-        ),
-      ],
-    );
   }
 }
