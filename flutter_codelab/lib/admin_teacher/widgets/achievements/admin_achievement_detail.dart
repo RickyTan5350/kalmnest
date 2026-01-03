@@ -16,6 +16,7 @@ class AdminAchievementDetailPage extends StatefulWidget {
   final String?
   studentName; // NEW: For viewing a specific student's unlock details
   final String? studentId; // NEW: To identify the student context
+  final List<BreadcrumbItem>? breadcrumbs;
 
   const AdminAchievementDetailPage({
     super.key,
@@ -25,6 +26,7 @@ class AdminAchievementDetailPage extends StatefulWidget {
     this.isAdmin = false,
     this.studentName,
     this.studentId,
+    this.breadcrumbs,
   });
 
   @override
@@ -164,13 +166,15 @@ class _AdminAchievementDetailPageState
     return Scaffold(
       appBar: AppBar(
         title: BreadcrumbNavigation(
-          items: [
-            BreadcrumbItem(
-              label: 'Achievements',
-              onTap: () => Navigator.of(context).pop(),
-            ),
-            const BreadcrumbItem(label: 'Details'),
-          ],
+          items:
+              widget.breadcrumbs ??
+              [
+                BreadcrumbItem(
+                  label: 'Achievements',
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+                const BreadcrumbItem(label: 'Details'),
+              ],
         ),
         backgroundColor: color.withOpacity(0.2),
         actions: [
@@ -288,6 +292,15 @@ class _AdminAchievementDetailPageState
                                   _displayData.achievementTitle ??
                                   'Achievement',
                               excludedStudentId: widget.studentId,
+                              breadcrumbs: widget.breadcrumbs != null
+                                  ? [
+                                      ...BreadcrumbItem.wrap(
+                                        widget.breadcrumbs!,
+                                        context,
+                                      ),
+                                      const BreadcrumbItem(label: 'Students'),
+                                    ]
+                                  : null,
                             ),
                           ),
                         );

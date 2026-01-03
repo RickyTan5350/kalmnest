@@ -8,12 +8,14 @@ class AdminAchievementStudentsPage extends StatefulWidget {
   final String achievementId;
   final String achievementName;
   final String? excludedStudentId;
+  final List<BreadcrumbItem>? breadcrumbs;
 
   const AdminAchievementStudentsPage({
     super.key,
     required this.achievementId,
     required this.achievementName,
     this.excludedStudentId,
+    this.breadcrumbs,
   });
 
   @override
@@ -76,19 +78,21 @@ class _AdminAchievementStudentsPageState
     return Scaffold(
       appBar: AppBar(
         title: BreadcrumbNavigation(
-          items: [
-            BreadcrumbItem(
-              label: 'Achievements',
-              onTap: () {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-            ),
-            BreadcrumbItem(
-              label: widget.achievementName,
-              onTap: () => Navigator.of(context).pop(),
-            ),
-            const BreadcrumbItem(label: 'Students'),
-          ],
+          items:
+              widget.breadcrumbs ??
+              [
+                BreadcrumbItem(
+                  label: 'Achievements',
+                  onTap: () {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                ),
+                BreadcrumbItem(
+                  label: widget.achievementName,
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+                const BreadcrumbItem(label: 'Students'),
+              ],
         ),
         actions: [
           IconButton(
@@ -343,26 +347,40 @@ class _AdminAchievementStudentsPageState
                   userId: userId,
                   userName: name,
                   userRole: 'Student',
-                  breadcrumbs: [
-                    BreadcrumbItem(
-                      label: 'Achievements',
-                      onTap: () => Navigator.of(
-                        context,
-                      ).popUntil((route) => route.isFirst),
-                    ),
-                    BreadcrumbItem(
-                      label: widget.achievementName,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                    BreadcrumbItem(
-                      label: 'Students',
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                    BreadcrumbItem(label: name),
-                  ],
+                  breadcrumbs: widget.breadcrumbs != null
+                      ? [
+                          ...BreadcrumbItem.wrap(widget.breadcrumbs!, context),
+                          BreadcrumbItem(
+                            label: 'Students',
+                            // Current page is Students, so popping goes back to 'Achievement' (parent).
+                            // Wait, if we use default logic, 'Students' has no onTap.
+                            // If we click it from next page, we want to come back here.
+                            // If we click it HERE, nothing happens.
+                            // So 'null' onTap is fine for 'Students' item itself.
+                            // But usually last item has NO onTap.
+                          ),
+                          BreadcrumbItem(label: name),
+                        ]
+                      : [
+                          BreadcrumbItem(
+                            label: 'Achievements',
+                            onTap: () => Navigator.of(
+                              context,
+                            ).popUntil((route) => route.isFirst),
+                          ),
+                          BreadcrumbItem(
+                            label: widget.achievementName,
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                          BreadcrumbItem(
+                            label: 'Students',
+                            onTap: () => Navigator.of(context).pop(),
+                          ),
+                          BreadcrumbItem(label: name),
+                        ],
                 ),
               ),
             );

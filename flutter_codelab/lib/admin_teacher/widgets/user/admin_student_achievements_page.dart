@@ -4,15 +4,18 @@ import 'package:code_play/models/achievement_data.dart';
 import 'package:code_play/constants/achievement_constants.dart';
 import 'package:code_play/admin_teacher/widgets/achievements/admin_achievement_detail.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 
 class AdminStudentAchievementsPage extends StatefulWidget {
   final String userId;
   final String userName;
+  final List<BreadcrumbItem>? breadcrumbs; // Accepted breadcrumbs
 
   const AdminStudentAchievementsPage({
     super.key,
     required this.userId,
     required this.userName,
+    this.breadcrumbs,
   });
 
   @override
@@ -43,8 +46,22 @@ class _AdminStudentAchievementsPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          AppLocalizations.of(context)!.userAchievements(widget.userName),
+        title: BreadcrumbNavigation(
+          items:
+              widget.breadcrumbs ??
+              [
+                BreadcrumbItem(
+                  label: 'Users',
+                  onTap: () {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                ),
+                BreadcrumbItem(
+                  label: widget.userName,
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+                const BreadcrumbItem(label: 'Achievements'),
+              ],
         ),
       ),
       body: FutureBuilder<List<AchievementData>>(
@@ -101,6 +118,44 @@ class _AdminStudentAchievementsPageState
                           initialData: achievement,
                           studentName: widget.userName,
                           studentId: widget.userId,
+                          breadcrumbs: (widget.breadcrumbs != null)
+                              ? [
+                                  ...BreadcrumbItem.wrap(
+                                    widget.breadcrumbs!,
+                                    context,
+                                  ),
+                                  BreadcrumbItem(
+                                    label:
+                                        achievement.achievementTitle ??
+                                        'Achievement',
+                                  ),
+                                ]
+                              : [
+                                  BreadcrumbItem(
+                                    label: 'Users',
+                                    onTap: () {
+                                      Navigator.of(
+                                        context,
+                                      ).popUntil((route) => route.isFirst);
+                                    },
+                                  ),
+                                  BreadcrumbItem(
+                                    label: widget.userName,
+                                    onTap: () {
+                                      Navigator.of(context).pop();
+                                      Navigator.of(context).pop();
+                                    },
+                                  ),
+                                  BreadcrumbItem(
+                                    label: 'Achievements',
+                                    onTap: () => Navigator.of(context).pop(),
+                                  ),
+                                  BreadcrumbItem(
+                                    label:
+                                        achievement.achievementTitle ??
+                                        'Achievement',
+                                  ),
+                                ],
                         ),
                       ),
                     );
@@ -164,4 +219,3 @@ class _AdminStudentAchievementsPageState
     );
   }
 }
-

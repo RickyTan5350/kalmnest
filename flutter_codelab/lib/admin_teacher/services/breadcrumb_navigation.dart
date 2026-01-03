@@ -5,6 +5,24 @@ class BreadcrumbItem {
   final VoidCallback? onTap;
 
   const BreadcrumbItem({required this.label, this.onTap});
+
+  /// Wraps a list of breadcrumbs such that each item's onTap action
+  /// triggers a [Navigator.pop] before executing its original action.
+  /// This is used when passing breadcrumbs deeper into the navigation stack.
+  static List<BreadcrumbItem> wrap(
+    List<BreadcrumbItem> items,
+    BuildContext context,
+  ) {
+    return items.map((item) {
+      return BreadcrumbItem(
+        label: item.label,
+        onTap: () {
+          Navigator.of(context).pop();
+          item.onTap?.call();
+        },
+      );
+    }).toList();
+  }
 }
 
 class BreadcrumbNavigation extends StatelessWidget {
