@@ -86,7 +86,14 @@ class SyncAssetsCommand extends Command
                 if ($file->getExtension() === 'md') {
                     // Note Title is filename without extension
                     $noteTitle = $file->getFilenameWithoutExtension();
-                    $map[$noteTitle] = $topicName;
+                    
+                    // We map the NORMALIZED title to the original details
+                    $normalized = $this->normalizeTitle($noteTitle);
+                    
+                    $map[$normalized] = [
+                        'topic' => $topicName,
+                        'original_title' => $noteTitle
+                    ];
                 }
             }
         }
@@ -106,10 +113,16 @@ class SyncAssetsCommand extends Command
             // Skip "pictures" folder in root of assets/www if it exists (treated separately)
             if ($folderName === 'pictures') continue;
 
-            // Check if this folder corresponds to a known backend note
-            if (isset($noteToTopicMap[$folderName])) {
-                $topic = $noteToTopicMap[$folderName];
-                $targetDir = "$backendNotesDir/$topic/assets/$folderName";
+            // Check if this folder corresponds to a known backend note (using fuzzy matching)
+            $normalizedFolder = $this->normalizeTitle($folderName);
+            
+            if (isset($noteToTopicMap[$normalizedFolder])) {
+                $match = $noteToTopicMap[$normalizedFolder];
+                $topic = $match['topic'];
+                $backendNoteTitle = $match['original_title'];
+                
+                // We use the BACKEND note title for the target directory to maintain consistency in seed_data
+                $targetDir = "$backendNotesDir/$topic/assets/$backendNoteTitle";
 
                 // Ensure target directory exists
                 if (!File::exists($targetDir)) {
@@ -189,9 +202,9 @@ class SyncAssetsCommand extends Command
             
             $backendPicDir = "$topicPath/pictures";
             if (File::exists($backendPicDir)) {
-                // Target: flutter_codelab/assets/www/pictures/<Topic>
+                // Target: flutter_codelab/assets/www/pictures
                 // We'll create a `pictures` folder in `www`.
-                $targetPicDir = "$frontendAssetsDir/pictures/$topicName";
+                $targetPicDir = "$frontendAssetsDir/pictures";
                 
                 if (!File::exists($targetPicDir)) {
                     File::makeDirectory($targetPicDir, 0755, true);
@@ -217,7 +230,15 @@ class SyncAssetsCommand extends Command
         $files = File::allFiles($backendNotesDir);
         foreach ($files as $file) {
             $relativePath = $file->getRelativePathname();
-            $destPath = "$publicNotesDir/$relativePath";
+            
+            // Check if file is inside a 'pictures' folder
+            // e.g., CSS/pictures/zoomin.png -> pictures/zoomin.png
+            if (str_contains($relativePath, 'pictures/')) {
+                $imageName = $file->getFilename();
+                $destPath = "$publicNotesDir/pictures/$imageName";
+            } else {
+                $destPath = "$publicNotesDir/$relativePath";
+            }
 
             // Ensure subdirectories exist
             $destDir = dirname($destPath);
@@ -251,5 +272,20 @@ class SyncAssetsCommand extends Command
         $this->line('');
         $this->info("=== $title ===");
         $this->line('');
+    }
+
+    /**
+     * Normalizes a title to allow for fuzzy matching between 
+     * folder names and file names.
+     */
+    private function normalizeTitle($title)
+    {
+        // 1. Lowercase
+        $title = strtolower($title);
+        // 2. Replace non-alphanumeric with space
+        $title = preg_replace('/[^a-z0-9]/', ' ', $title);
+        // 3. Flatten extra spaces
+        $title = preg_replace('/\s+/', ' ', $title);
+        return trim($title);
     }
 }

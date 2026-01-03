@@ -51,6 +51,8 @@ class _RunCodePageState extends State<RunCodePage> {
   StreamSubscription? _messageSubscription;
 
   String? _resolvedContextPath;
+  final Map<String, String> _bundledLibraries = {};
+  final Map<String, String> _virtualAssets = {};
 
   @override
   void initState() {
@@ -140,6 +142,29 @@ class _RunCodePageState extends State<RunCodePage> {
         }
       }
     });
+
+    _loadBundledLibraries();
+  }
+
+  // --- 1. Load Libraries from Assets ---
+  Future<void> _loadBundledLibraries() async {
+    try {
+      _bundledLibraries['math.js'] = await rootBundle.loadString(
+        'assets/js/math.js',
+      );
+      _bundledLibraries['date.js'] = await rootBundle.loadString(
+        'assets/js/date.js',
+      );
+
+      // Alias common minified/CDN names to our bundled content
+      _bundledLibraries['math.min.js'] = _bundledLibraries['math.js']!;
+      _bundledLibraries['date-min.js'] = _bundledLibraries['date.js']!;
+      _bundledLibraries['date.min.js'] = _bundledLibraries['date.js']!;
+
+      print("Libraries loaded successfully (Web)");
+    } catch (e) {
+      print("Error loading libraries (Web): $e");
+    }
   }
 
   @override
@@ -250,22 +275,8 @@ class _RunCodePageState extends State<RunCodePage> {
     }
 
     if (_resolvedContextPath == null && mounted) {
-      // Show debug warning to user
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Warning: Could not find assets for '${widget.contextId}'. check console.",
-            ),
-            duration: const Duration(seconds: 10),
-            action: SnackBarAction(
-              label: "Retry",
-              onPressed: () => _resolveContextPath(),
-            ),
-          ),
-        );
-      });
+      // Quiet fail if no context found - not every note has extra assets
+      print("INFO: No additional assets found for '${widget.contextId}'");
     }
   }
 
@@ -295,10 +306,11 @@ class _RunCodePageState extends State<RunCodePage> {
           continue;
         }
 
-        final content = await rootBundle.loadString(assetPath);
-
         // Calculate relative name (decode for rules matching)
-        String relativeName = Uri.decodeFull(assetPath);
+        final decodedAssetPath = Uri.decodeFull(assetPath);
+        final content = await rootBundle.loadString(decodedAssetPath);
+
+        String relativeName = decodedAssetPath;
         final decodedDirPath = Uri.decodeFull(dirPath);
         if (relativeName.startsWith('$decodedDirPath/')) {
           relativeName = relativeName.substring(decodedDirPath.length + 1);
@@ -334,7 +346,8 @@ class _RunCodePageState extends State<RunCodePage> {
       print("DEBUG WEB: visibleFileAsset found: '$visibleFileAsset'");
       if (visibleFileAsset.isNotEmpty) {
         try {
-          final content = await rootBundle.loadString(visibleFileAsset);
+          final decodedAssetPath = Uri.decodeFull(visibleFileAsset);
+          final content = await rootBundle.loadString(decodedAssetPath);
           final Map<String, dynamic> json = jsonDecode(content);
 
           final effectiveEntryName = (detectedRealName ?? _files[0].name)
@@ -480,7 +493,10 @@ class _RunCodePageState extends State<RunCodePage> {
               : null,
           'files': filesPayload,
           'entry_point': targetFileName,
-          'context_id': widget.contextId,
+          // Use the resolved path if available (handles clean folder names)
+          'context_id': _resolvedContextPath != null
+              ? _resolvedContextPath!.replaceFirst('assets/www/', '')
+              : widget.contextId,
           'php_session_id': _webSessionId,
           'form_data': formData,
           'get_data': getData,
@@ -492,6 +508,31 @@ class _RunCodePageState extends State<RunCodePage> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final output = data['output'] ?? '';
+
+        // Handle returned files, especially binary assets
+        final files = data['files'] as List<dynamic>?;
+        if (files != null) {
+          _virtualAssets.clear(); // Clear old assets
+          for (var f in files) {
+            final name = f['name'] as String;
+            final content = f['content'] as String;
+            final isBinary = f['is_binary'] == true;
+
+            if (isBinary) {
+              // Store as Base64 for substitution
+              // Determine mime type based on extension
+              String mime = 'application/octet-stream';
+              if (name.endsWith('.png'))
+                mime = 'image/png';
+              else if (name.endsWith('.jpg') || name.endsWith('.jpeg'))
+                mime = 'image/jpeg';
+              else if (name.endsWith('.gif'))
+                mime = 'image/gif';
+
+              _virtualAssets[name] = 'data:$mime;base64,$content';
+            }
+          }
+        }
 
         // Wrap output with JS Bridge
         final wrappedOutput = _wrapHtmlWeb(output);
@@ -584,10 +625,76 @@ class _RunCodePageState extends State<RunCodePage> {
 ''';
 
     if (content.contains('</body>')) {
-      return content.replaceFirst('</body>', '$bridgeScript</body>');
+      content = content.replaceFirst('</body>', '$bridgeScript</body>');
     } else {
-      return content + bridgeScript;
+      content = content + bridgeScript;
     }
+
+    // --- LIBRARY INJECTION ---
+    // Regex for standard <script src="..."></script>
+    // Now captures optional path prefix before the filename
+    final scriptRegex = RegExp(
+      r'''<script\b[^>]*\bsrc=["'](?:.*?/)?([\w\d_.-]+\.js)["'][^>]*>.*?</\s*script>''',
+      caseSensitive: false,
+      dotAll: true,
+    );
+
+    // Regex for self-closing <script src="..." />
+    final selfClosingRegex = RegExp(
+      r'''<script\b[^>]*\bsrc=["'](?:.*?/)?([\w\d_.-]+\.js)["'][^>]*/>''',
+      caseSensitive: false,
+    );
+
+    // Replace standard tags
+    content = content.replaceAllMapped(scriptRegex, (match) {
+      String filename = match.group(1) ?? "";
+      if (_bundledLibraries.containsKey(filename)) {
+        return '<script>\n/* Injected $filename */\n${_bundledLibraries[filename]}\n</script>';
+      }
+      return match.group(0)!; // Keep original if not a standard library
+    });
+
+    // Replace self-closing tags
+    content = content.replaceAllMapped(selfClosingRegex, (match) {
+      String filename = match.group(1) ?? "";
+      if (_bundledLibraries.containsKey(filename)) {
+        return '<script>\n/* Injected $filename */\n${_bundledLibraries[filename]}\n</script>';
+      }
+      return match.group(0)!;
+    });
+
+    // --- IMAGE INJECTION ---
+    print(
+      "DEBUG WEB INJECT: Virtual Assets keys: ${_virtualAssets.keys.toList()}",
+    );
+
+    // Scan for <img src="LogoKelab.png"> and replace with data URI
+    // We match any img tag with a src attribute
+    content = content.replaceAllMapped(
+      RegExp(
+        r'<img\s+[^>]*src=["\u0027]([^"\u0027]+)["\u0027][^>]*>',
+        caseSensitive: false,
+      ),
+      (match) {
+        final fullTag = match.group(0)!;
+        final src = match.group(1)!;
+
+        print("DEBUG WEB INJECT: Found img tag src: $src");
+
+        // Check if we have a virtual asset for this src
+        // We only check exact filename or relative matches
+        final filename = src.split('/').last; // simple filename check
+
+        if (_virtualAssets.containsKey(filename)) {
+          print("DEBUG WEB INJECT: Replacing $src with Base64 data");
+          // Replace the src in the tag
+          return fullTag.replaceFirst(src, _virtualAssets[filename]!);
+        }
+        return fullTag;
+      },
+    );
+
+    return content;
   }
 
   void _runCode() {
@@ -600,8 +707,12 @@ class _RunCodePageState extends State<RunCodePage> {
     }
 
     String contentToLoad = currentFile.content;
+
+    // Apply wrapper (Bridge + Library Injection)
+    final wrappedOutput = _wrapHtmlWeb(contentToLoad);
+
     _webViewController?.loadData(
-      data: contentToLoad,
+      data: wrappedOutput,
       mimeType: 'text/html',
       encoding: 'utf-8',
     );

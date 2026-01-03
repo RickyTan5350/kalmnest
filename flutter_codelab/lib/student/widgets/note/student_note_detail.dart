@@ -309,20 +309,29 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
         // 3. Fallback to network if not found in assets
         final networkUrl = src.startsWith('/')
             ? "${ApiConstants.domain}$src"
-            : "${ApiConstants.domain}/storage/$src";
+            : (src.startsWith('pictures/')
+                  ? "${ApiConstants.domain}/storage/notes/$src"
+                  : (src.startsWith('http')
+                        ? src
+                        : "${ApiConstants.domain}/storage/notes/pictures/$src"));
+
+        // Fallback network URL with topic if primary fails
+        final topicNetworkUrl = src.startsWith('pictures/')
+            ? "${ApiConstants.domain}/storage/notes/$_currentTopic/$src"
+            : null;
 
         return Image.network(
           networkUrl,
-          errorBuilder: (context, error, stackTrace) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.broken_image, color: Colors.red),
-              Text(
-                "Failed to load: $fileName",
-                style: const TextStyle(fontSize: 10),
-              ),
-            ],
-          ),
+          errorBuilder: (context, error, stackTrace) {
+            if (topicNetworkUrl != null) {
+              return Image.network(
+                topicNetworkUrl,
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildErrorWidget(fileName),
+              );
+            }
+            return _buildErrorWidget(fileName);
+          },
         );
       },
     );
@@ -333,13 +342,30 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     String fileName,
     List<String> folders,
   ) async {
-    // Exact match first
+    // A. Only try the original path if it looks like a full asset path
+    // This avoids 404 noise on Web when using relative paths in Markdown
+    if (originalPath.startsWith('assets/')) {
+      try {
+        await rootBundle.load(originalPath);
+        return originalPath;
+      } catch (_) {}
+    }
+
+    // 1. Try flattened global path
+    final flattened = 'assets/www/pictures/$fileName';
     try {
-      await rootBundle.load(originalPath);
-      return originalPath;
+      await rootBundle.load(flattened);
+      return flattened;
     } catch (_) {}
 
-    // Search in known picture folders
+    // 2. Try topic-specific subfolder in flattened pictures
+    final topicFlattened = 'assets/www/pictures/$_currentTopic/$fileName';
+    try {
+      await rootBundle.load(topicFlattened);
+      return topicFlattened;
+    } catch (_) {}
+
+    // 3. Search in known picture subfolders (backward compatibility)
     for (final folder in folders) {
       final candidate = 'assets/www/pictures/$folder/$fileName';
       try {
@@ -349,6 +375,16 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     }
 
     return null;
+  }
+
+  Widget _buildErrorWidget(String fileName) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.broken_image, color: Colors.red),
+        Text("Failed to load: $fileName", style: const TextStyle(fontSize: 10)),
+      ],
+    );
   }
 
   // --- UI WIDGETS ---

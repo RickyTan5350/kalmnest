@@ -17,6 +17,16 @@ class NotesSeeder extends Seeder
      */
     public function run(): void
     {
+        // 0. Clear Existing Data (Optional/Safe for re-seeding)
+        // This ensures we don't have duplicates and everything is fresh
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('note_files')->truncate(); // Pivot table
+        DB::table('notes')->truncate();
+        // We only truncate files that are notes (type 'md') to be safe, 
+        // or just truncate all if 'files' is strictly for notes/attachments.
+        // For simplicity and matching migration structure:
+        DB::table('files')->truncate(); 
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         // 1. Get Admin ID (Query by Email)
         // We fetch the user_id for 'admin@example.com' to assign as the creator
         $adminUserId = DB::table('users')
@@ -78,25 +88,22 @@ class NotesSeeder extends Seeder
             $altText = $matches[1];
             $linkPath = $matches[2];
 
-            $linkPath = trim($linkPath, '"\'');
+            $linkPath = rawurldecode(trim($linkPath, '"\''));
             $linkPath = str_replace('\\', '/', $linkPath);
             $imageName = basename($linkPath);
             
             $sourceImagePath = $sourceDir . '/pictures/' . $imageName;
 
             if (File::exists($sourceImagePath)) {
-                // Use deterministic filename: topic_slug_filename.ext
-                $cleanTopic = Str::slug($topicName);
-                $cleanName = pathinfo($imageName, PATHINFO_FILENAME);
-                $ext = pathinfo($imageName, PATHINFO_EXTENSION);
+                // Determine destination path inside 'notes/pictures'
+                $destDir = $storageFolder . '/pictures';
+                Storage::disk('public')->makeDirectory($destDir);
                 
-                $newFilename = "{$cleanTopic}_{$cleanName}.{$ext}";
-                
-                Storage::disk('public')->putFileAs($storageFolder, new \Illuminate\Http\File($sourceImagePath), $newFilename);
+                // Copy the image without prefix
+                Storage::disk('public')->putFileAs($destDir, new \Illuminate\Http\File($sourceImagePath), $imageName);
 
-                $encodedFilename = rawurlencode($newFilename);
-                $publicUrl = "https://kalmnest.test/storage/$storageFolder/$encodedFilename";
-                return "![$altText]($publicUrl)";
+                // Return the relative path specifically as 'pictures/...'
+                return "![$altText](pictures/$imageName)";
             } else {
                 return $matches[0];
             }
@@ -115,15 +122,6 @@ class NotesSeeder extends Seeder
         // 4. CREATE NOTE RECORD IN DB
         $title = pathinfo($filename, PATHINFO_FILENAME);
 
-        // Check if note already exists to prevent duplicates
-        $existingNote = Notes::where('title', $title)
-            ->where('topic_id', $topicId)
-            ->first();
-
-        if ($existingNote) {
-            $this->command->warn("   -> Skipped: $title (Already exists)");
-            return;
-        }
         
         Notes::create([
             'title' => $title,

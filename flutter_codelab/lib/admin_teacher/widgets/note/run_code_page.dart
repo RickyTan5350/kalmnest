@@ -945,18 +945,41 @@ class _RunCodePageState extends State<RunCodePage> {
         try {
           // Remove leading slash for asset key
           final assetKey = 'assets/www${path}';
-          final data = await rootBundle.load(assetKey);
 
-          final contentType = _getContentType(path);
-          request.response.headers.contentType = contentType;
-          request.response.add(data.buffer.asUint8List());
-          request.response.close();
+          Uint8List? bodyBytes;
+          try {
+            final data = await rootBundle.load(assetKey);
+            bodyBytes = data.buffer.asUint8List();
+          } catch (e) {
+            // 2a. Fallback to Global JS folder (assets/js) for Standard Libraries
+            if (path.endsWith('.js')) {
+              final fileName = path.split('/').last;
+              final jsFallbackKey = 'assets/js/$fileName';
+              print("DEBUG: Checking global JS fallback: $jsFallbackKey");
+              try {
+                final data = await rootBundle.load(jsFallbackKey);
+                bodyBytes = data.buffer.asUint8List();
+                print("DEBUG: Found in global JS fallback!");
+              } catch (fallbackError) {
+                // Not found there either
+              }
+            }
+          }
+
+          if (bodyBytes != null) {
+            final contentType = _getContentType(path);
+            request.response.headers.contentType = contentType;
+            request.response.add(bodyBytes);
+            request.response.close();
+            return;
+          }
         } catch (e) {
-          print("Asset not found: $path ($e)");
-          request.response
-            ..statusCode = HttpStatus.notFound
-            ..close();
+          print("Asset not found processing: $path ($e)");
         }
+
+        request.response
+          ..statusCode = HttpStatus.notFound
+          ..close();
       });
 
       print("Local server started on port $_serverPort");

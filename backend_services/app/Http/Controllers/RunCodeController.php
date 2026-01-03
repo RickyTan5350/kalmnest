@@ -257,6 +257,15 @@ class RunCodeController extends Controller
             $output = $process->getOutput();
             $errorOutput = $process->getErrorOutput();
 
+            // Ensure output is UTF-8 compatible to prevent 500 JSON errors
+            if ($output) {
+                // If contains invalid UTF-8, ignore errors and substitute
+                $output = mb_convert_encoding($output, 'UTF-8', 'UTF-8');
+            }
+            if ($errorOutput) {
+                 $errorOutput = mb_convert_encoding($errorOutput, 'UTF-8', 'UTF-8');
+            }
+
             // --- 6.5 RESTORE MAIN FILE CONTENT (Undo Injection) ---
             // We must undo the mock injection so that the 'clean' file is returned to frontend,
             // unless the script itself modified it.
@@ -280,9 +289,21 @@ class RunCodeController extends Controller
 
                     $fullPath = $tempDir . '/' . $f;
                     if (is_file($fullPath)) {
+                        $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+                        $content = file_get_contents($fullPath);
+                        $isBinary = in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'ico', 'pdf', 'zip']);
+
+                        if ($isBinary) {
+                            $content = base64_encode($content);
+                        } else {
+                            // Ensure UTF-8 for text files
+                            $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+                        }
+                        
                         $simulatedFiles[] = [
                             'name' => $f,
-                            'content' => file_get_contents($fullPath)
+                            'content' => $content,
+                            'is_binary' => $isBinary
                         ];
                     }
                 }
