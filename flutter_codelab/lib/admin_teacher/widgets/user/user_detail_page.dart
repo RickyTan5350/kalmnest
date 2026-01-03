@@ -432,8 +432,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
                                                 widget.breadcrumbs!,
                                                 context,
                                               ),
-                                              const BreadcrumbItem(
-                                                label: 'Achievements',
+                                              BreadcrumbItem(
+                                                label:
+                                                    '${user.name} Achievements',
                                               ),
                                             ]
                                           : null,

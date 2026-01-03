@@ -57,10 +57,10 @@ class _AdminStudentAchievementsPageState
                   },
                 ),
                 BreadcrumbItem(
-                  label: widget.userName,
+                  label: '${widget.userName} Profile',
                   onTap: () => Navigator.of(context).pop(),
                 ),
-                const BreadcrumbItem(label: 'Achievements'),
+                BreadcrumbItem(label: '${widget.userName} Achievements'),
               ],
         ),
       ),
@@ -140,14 +140,14 @@ class _AdminStudentAchievementsPageState
                                     },
                                   ),
                                   BreadcrumbItem(
-                                    label: widget.userName,
+                                    label: '${widget.userName} Profile',
                                     onTap: () {
                                       Navigator.of(context).pop();
                                       Navigator.of(context).pop();
                                     },
                                   ),
                                   BreadcrumbItem(
-                                    label: 'Achievements',
+                                    label: '${widget.userName} Achievements',
                                     onTap: () => Navigator.of(context).pop(),
                                   ),
                                   BreadcrumbItem(

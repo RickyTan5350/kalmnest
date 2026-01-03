@@ -359,7 +359,7 @@ class _AdminAchievementStudentsPageState
                             // So 'null' onTap is fine for 'Students' item itself.
                             // But usually last item has NO onTap.
                           ),
-                          BreadcrumbItem(label: name),
+                          BreadcrumbItem(label: '$name Profile'),
                         ]
                       : [
                           BreadcrumbItem(
@@ -379,7 +379,7 @@ class _AdminAchievementStudentsPageState
                             label: 'Students',
                             onTap: () => Navigator.of(context).pop(),
                           ),
-                          BreadcrumbItem(label: name),
+                          BreadcrumbItem(label: '$name Profile'),
                         ],
                 ),
               ),
