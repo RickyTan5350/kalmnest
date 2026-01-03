@@ -9,13 +9,13 @@ class QuizWidget extends StatefulWidget {
   final Function(int)? onAnswerSelected;
 
   const QuizWidget({
-    super.key,
+    Key? key,
     required this.question,
     required this.options,
     required this.correctIndex,
     this.initialSelectedIndex,
     this.onAnswerSelected,
-  });
+  }) : super(key: key);
 
   @override
   State<QuizWidget> createState() => _QuizWidgetState();

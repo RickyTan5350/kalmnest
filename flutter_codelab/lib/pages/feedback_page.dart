@@ -2,8 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:code_play/api/feedback_api.dart';
 import 'package:code_play/models/models.dart';
 import 'package:code_play/models/user_data.dart';
-import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart' as create_fb;
-import 'package:code_play/admin_teacher/widgets/feedback/edit_feedback.dart' as edit_fb;
+import 'package:code_play/admin_teacher/widgets/feedback/create_feedback.dart'
+    as create_fb;
+import 'package:code_play/admin_teacher/widgets/feedback/edit_feedback.dart'
+    as edit_fb;
+import 'package:code_play/student/widgets/feedback/student_view_feedback_page.dart';
+import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/constants/achievement_constants.dart';
+import 'package:code_play/theme.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+
 class FeedbackPage extends StatefulWidget {
   final String? authToken;
   final UserDetails? currentUser;
@@ -26,11 +34,33 @@ class _FeedbackPageState extends State<FeedbackPage> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // Filter State
+  List<Map<String, dynamic>> _topics = [];
+  List<Map<String, dynamic>> _students = [];
+  List<Map<String, dynamic>> _teachers = [];
+
+  bool _isLoadingTopics = false;
+  bool _isLoadingStudents = false;
+  bool _isLoadingTeachers = false;
+
+  String _selectedTopicId = 'All';
+  String _selectedStudentId = 'All';
+  String _selectedTeacherId = 'All';
+
+  SortOrder _sortOrder = SortOrder.descending;
+
   @override
   void initState() {
     super.initState();
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadFeedback();
+    _loadTopics();
+    if (_isTeacher || widget.currentUser?.isAdmin == true) {
+      _loadStudents();
+    }
+    if (_isStudent) {
+      _loadTeachers();
+    }
   }
 
   Future<void> _loadFeedback() async {
@@ -52,9 +82,54 @@ class _FeedbackPageState extends State<FeedbackPage> {
         _errorMessage = e.toString();
       });
       if (mounted) {
-        _showSnackBar(context, 'Failed to load feedback: $e', Colors.red);
+        _showSnackBar(
+          context,
+          AppLocalizations.of(context)!.failedToLoadFeedback(e.toString()),
+          Colors.red,
+        );
       }
     }
+  }
+
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+    try {
+      final topics = await _apiService.getTopics();
+      setState(() => _topics = topics);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingTopics = false);
+    }
+  }
+
+  Future<void> _loadStudents() async {
+    setState(() => _isLoadingStudents = true);
+    try {
+      final students = await _apiService.getStudents();
+      setState(() => _students = students);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingStudents = false);
+    }
+  }
+
+  Future<void> _loadTeachers() async {
+    setState(() => _isLoadingTeachers = true);
+    try {
+      final teachers = await _apiService.getTeachers();
+      setState(() => _teachers = teachers);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingTeachers = false);
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+    await _loadFeedback();
+    await _loadTopics();
+    if (_isTeacher || widget.currentUser?.isAdmin == true)
+      await _loadStudents();
+    if (_isStudent) await _loadTeachers();
   }
 
   List<FeedbackData> _parseFeedbackList(List<dynamic> feedbacks) {
@@ -63,13 +138,16 @@ class _FeedbackPageState extends State<FeedbackPage> {
         feedbackId: fb['feedback_id']?.toString() ?? '',
         studentName: fb['student_name'] ?? 'Unknown',
         studentId: fb['student_id'] ?? '',
-        teacherName: fb['teacher_name'] ??
+        teacherName:
+            fb['teacher_name'] ??
             (fb['teacher'] is Map
                 ? (fb['teacher']['name'] ?? fb['teacher']['full_name'])
                 : null) ??
             'Unknown',
         teacherId: fb['teacher_id'] ?? '',
-        topic: fb['topic'] ?? '',
+        topicId: fb['topic_id']?.toString() ?? '',
+        title: fb['title'] ?? fb['topic_name'] ?? '',
+        topic: fb['topic_name'] ?? fb['topic'] ?? '',
         feedback: fb['feedback'] ?? '',
         createdAt: fb['created_at'] ?? fb['createdAt'],
       );
@@ -78,7 +156,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   void _showSnackBar(BuildContext context, String message, Color color) {
     if (!mounted) return;
-    
+
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     scaffoldMessenger.hideCurrentSnackBar();
     scaffoldMessenger.showSnackBar(
@@ -99,7 +177,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   void _updateFeedback(FeedbackData updated) {
     setState(() {
-      final index = _feedbackList.indexWhere((f) => f.feedbackId == updated.feedbackId);
+      final index = _feedbackList.indexWhere(
+        (f) => f.feedbackId == updated.feedbackId,
+      );
       if (index != -1) {
         _feedbackList[index] = updated;
       }
@@ -134,32 +214,85 @@ class _FeedbackPageState extends State<FeedbackPage> {
   Future<void> _confirmDelete(FeedbackData feedback) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Delete Feedback"),
-        content: const Text("Are you sure you want to delete this feedback?"),
-        actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Navigator.pop(context, false),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Delete"),
-            onPressed: () => Navigator.pop(context, true),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(l10n.deleteFeedbackTitle),
+          content: Text(l10n.deleteFeedbackConfirmation),
+          actions: [
+            TextButton(
+              child: Text(l10n.cancel),
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.delete),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed == true) {
       try {
         await _apiService.deleteFeedback(feedback.feedbackId);
         _deleteFeedback(feedback);
-        _showSnackBar(context, 'Feedback deleted', Colors.green);
+        _showSnackBar(
+          context,
+          AppLocalizations.of(context)!.feedbackDeleted,
+          Colors.green,
+        );
       } catch (e) {
-        _showSnackBar(context, 'Delete failed: $e', Colors.red);
+        _showSnackBar(
+          context,
+          AppLocalizations.of(context)!.deleteFailed(e.toString()),
+          Colors.red,
+        );
       }
     }
+  }
+
+  List<FeedbackData> get _filteredFeedback {
+    List<FeedbackData> filtered = List.from(_feedbackList);
+
+    // Filter by Topic
+    if (_selectedTopicId != 'All') {
+      filtered = filtered.where((f) => f.topicId == _selectedTopicId).toList();
+    }
+
+    // Filter by Student (for Teacher/Admin)
+    if ((_isTeacher || widget.currentUser?.isAdmin == true) &&
+        _selectedStudentId != 'All') {
+      filtered = filtered
+          .where((f) => f.studentId == _selectedStudentId)
+          .toList();
+    }
+
+    // Filter by Teacher (for Student)
+    if (_isStudent && _selectedTeacherId != 'All') {
+      filtered = filtered
+          .where((f) => f.teacherId == _selectedTeacherId)
+          .toList();
+    }
+
+    // Sort by Timestamp
+    filtered.sort((a, b) {
+      final dateA = a.createdAt != null
+          ? DateTime.tryParse(a.createdAt!) ?? DateTime(0)
+          : DateTime(0);
+      final dateB = b.createdAt != null
+          ? DateTime.tryParse(b.createdAt!) ?? DateTime(0)
+          : DateTime(0);
+
+      if (_sortOrder == SortOrder.ascending) {
+        return dateA.compareTo(dateB);
+      } else {
+        return dateB.compareTo(dateA);
+      }
+    });
+
+    return filtered;
   }
 
   bool get _isTeacher => widget.currentUser?.isTeacher ?? false;
@@ -167,10 +300,11 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -182,17 +316,64 @@ class _FeedbackPageState extends State<FeedbackPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // --- HEADER ---
-                Text(
-                  "Feedback",
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: colors.onSurface,
-                      ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      l10n.feedbacks,
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(color: colors.onSurface),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 16),
+
+                // --- FILTERS & SORT ---
+                _buildFilters(colors),
                 const SizedBox(height: 16),
 
                 // --- CONTENT ---
                 Expanded(
-                  child: _buildBody(),
+                  child: Column(
+                    children: [
+                      if (!_isLoading &&
+                          _errorMessage == null &&
+                          _feedbackList.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                SizedBox(
+                                  height: 40,
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      "${_filteredFeedback.length} ${l10n.results}",
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      Expanded(child: _buildBody()),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -208,24 +389,210 @@ class _FeedbackPageState extends State<FeedbackPage> {
     }
 
     if (_errorMessage != null) {
-      return _ErrorView(
-        errorMessage: _errorMessage!,
-        onRetry: _loadFeedback,
-      );
+      return _ErrorView(errorMessage: _errorMessage!, onRetry: _loadFeedback);
     }
 
     if (_feedbackList.isEmpty) {
-      return _EmptyView(
-        onAddFeedback: _openCreateFeedbackDialog,
+      return _EmptyView(onAddFeedback: _openCreateFeedbackDialog);
+    }
+
+    final filtered = _filteredFeedback;
+    if (filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(AppLocalizations.of(context)!.noFeedbackFound),
+          ],
+        ),
       );
     }
 
     return _FeedbackListView(
-      feedbackList: _feedbackList,
+      feedbackList: filtered, // Use filtered list instead of full list
       isTeacher: _isTeacher,
       isStudent: _isStudent,
       onEdit: _openEditDialog,
       onDelete: _confirmDelete,
+    );
+  }
+
+  Widget _buildFilters(ColorScheme colors) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: FilterChip(
+                        label: Text(
+                          'All',
+                          style: TextStyle(
+                            color: _selectedTopicId == 'All'
+                                ? colors.primary
+                                : colors.onSurface,
+                          ),
+                        ),
+                        selected: _selectedTopicId == 'All',
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedTopicId = 'All';
+                          });
+                        },
+                      ),
+                    ),
+                    ..._topics.map((topic) {
+                      final topicId = topic['topic_id']?.toString() ?? '';
+                      final topicName = topic['topic_name'] ?? 'Unknown';
+                      final isSelected = _selectedTopicId == topicId;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: FilterChip(
+                          label: Text(
+                            topicName,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? colors.primary
+                                  : colors.onSurface,
+                            ),
+                          ),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedTopicId = selected ? topicId : 'All';
+                            });
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Sort Button
+            PopupMenuButton<SortOrder>(
+              icon: const Icon(Icons.sort),
+              tooltip: l10n.sortByTime,
+              onSelected: (order) {
+                setState(() {
+                  _sortOrder = order;
+                });
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  enabled: false,
+                  child: Text(
+                    l10n.sortByTime,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                CheckedPopupMenuItem(
+                  value: SortOrder.descending,
+                  checked: _sortOrder == SortOrder.descending,
+                  child: Text(l10n.newestFirst),
+                ),
+                CheckedPopupMenuItem(
+                  value: SortOrder.ascending,
+                  checked: _sortOrder == SortOrder.ascending,
+                  child: Text(l10n.oldestFirst),
+                ),
+              ],
+            ),
+            const SizedBox(width: 2),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _handleRefresh,
+              tooltip: l10n.refreshFeedbacks,
+            ),
+          ],
+        ),
+        if (_isTeacher || widget.currentUser?.isAdmin == true) ...[
+          const SizedBox(height: 8),
+          _isLoadingStudents
+              ? const LinearProgressIndicator()
+              : SizedBox(
+                  width: 300,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedStudentId,
+                    decoration: InputDecoration(
+                      labelText: l10n.filterByStudent,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: 'All',
+                        child: Text('All Students'),
+                      ),
+                      ..._students.map(
+                        (s) => DropdownMenuItem(
+                          value: s['id'] as String,
+                          child: Text(s['name'] as String),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedStudentId = val ?? 'All';
+                      });
+                    },
+                  ),
+                ),
+        ],
+        if (_isStudent) ...[
+          const SizedBox(height: 8),
+          _isLoadingTeachers
+              ? const LinearProgressIndicator()
+              : SizedBox(
+                  width: 300,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedTeacherId,
+                    decoration: InputDecoration(
+                      labelText: l10n.filterByTeacher,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: 'All',
+                        child: Text('All Teachers'),
+                      ),
+                      ..._teachers.map(
+                        (t) => DropdownMenuItem(
+                          value: t['id'] as String,
+                          child: Text(t['name'] as String),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedTeacherId = val ?? 'All';
+                      });
+                    },
+                  ),
+                ),
+        ],
+      ],
     );
   }
 }
@@ -235,9 +602,7 @@ class _LoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: CircularProgressIndicator(color: colorScheme.primary),
-    );
+    return Center(child: CircularProgressIndicator(color: colorScheme.primary));
   }
 }
 
@@ -246,10 +611,7 @@ class _ErrorView extends StatelessWidget {
   final String errorMessage;
   final VoidCallback onRetry;
 
-  const _ErrorView({
-    required this.errorMessage,
-    required this.onRetry,
-  });
+  const _ErrorView({required this.errorMessage, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +623,7 @@ class _ErrorView extends StatelessWidget {
           Icon(Icons.error_outline, size: 64, color: colorScheme.error),
           const SizedBox(height: 16),
           Text(
-            'Error loading feedback',
+            AppLocalizations.of(context)!.errorLoadingFeedback,
             style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
           ),
           const SizedBox(height: 8),
@@ -274,7 +636,7 @@ class _ErrorView extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(AppLocalizations.of(context)!.retry),
           ),
         ],
       ),
@@ -298,7 +660,7 @@ class _EmptyView extends StatelessWidget {
           Icon(Icons.feedback_outlined, size: 64, color: colorScheme.outline),
           const SizedBox(height: 16),
           Text(
-            'No feedback yet',
+            AppLocalizations.of(context)!.noFeedbackYet,
             style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
           ),
           const SizedBox(height: 24),
@@ -380,7 +742,7 @@ class _FeedbackCard extends StatelessWidget {
             if (!isStudent) const SizedBox(height: 8),
 
             // Topic
-            _buildTopic(colorScheme),
+            _buildTopic(context, colorScheme),
             const SizedBox(height: 8),
 
             // Feedback content
@@ -388,10 +750,10 @@ class _FeedbackCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Teacher info and timestamp
-            _buildTeacherInfo(colorScheme),
+            _buildTeacherInfo(context, colorScheme),
 
             // Action buttons (only for teachers)
-            if (isTeacher) _buildActionButtons(),
+            if (isTeacher) _buildActionButtons(colorScheme),
           ],
         ),
       ),
@@ -410,35 +772,60 @@ class _FeedbackCard extends StatelessWidget {
             color: colorScheme.onSurface,
           ),
         ),
-        Icon(Icons.person_outline, color: colorScheme.primary),
       ],
     );
   }
 
-  Widget _buildTopic(ColorScheme colorScheme) {
-    return Text(
-      feedback.topic,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.primary,
-      ),
+  Widget _buildTopic(BuildContext context, ColorScheme colorScheme) {
+    final topicColor = getAchievementColor(
+      context,
+      feedback.topic.toLowerCase(),
+    );
+    final topicIcon = getAchievementIcon(feedback.topic.toLowerCase());
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Topic category (e.g., "HTML", "CSS") with Logo
+        Row(
+          children: [
+            Icon(topicIcon, size: 16, color: topicColor),
+            const SizedBox(width: 8),
+            Text(
+              feedback.topic,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: topicColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        // Feedback title
+        if (feedback.title.isNotEmpty)
+          Text(
+            feedback.title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildFeedbackContent(ColorScheme colorScheme) {
     return Text(
       feedback.feedback,
-      style: TextStyle(
-        fontSize: 13,
-        color: colorScheme.onSurfaceVariant,
-      ),
+      style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
       maxLines: 3,
       overflow: TextOverflow.ellipsis,
     );
   }
 
-  Widget _buildTeacherInfo(ColorScheme colorScheme) {
+  Widget _buildTeacherInfo(BuildContext context, ColorScheme colorScheme) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
@@ -449,7 +836,7 @@ class _FeedbackCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'From: ${feedback.teacherName}',
+            AppLocalizations.of(context)!.from(feedback.teacherName),
             style: TextStyle(
               fontSize: 13,
               color: colorScheme.onSurfaceVariant,
@@ -489,17 +876,17 @@ class _FeedbackCard extends StatelessWidget {
     }
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(ColorScheme colorScheme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         IconButton(
-          icon: const Icon(Icons.edit, color: Colors.blue),
+          icon: const Icon(Icons.edit),
           onPressed: onEdit,
           tooltip: 'Edit feedback',
         ),
         IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
+          icon: Icon(Icons.delete_outline, color: colorScheme.error),
           onPressed: onDelete,
           tooltip: 'Delete feedback',
         ),
@@ -507,4 +894,3 @@ class _FeedbackCard extends StatelessWidget {
     );
   }
 }
-

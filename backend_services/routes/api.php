@@ -10,6 +10,7 @@ use App\Http\Controllers\FeedbackController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\RunCodeController;
 use App\Http\Requests\DeleteUserRequest;
 use App\Http\Controllers\GeminiController;
 /*
@@ -98,8 +99,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('classes')->group(function () {
         Route::get('/', [ClassController::class, 'index']); // List classes (role-based)
         Route::post('/', [ClassController::class, 'store']); // Create class (admin only)
+        Route::get('/check-name', [ClassController::class, 'checkClassNameExists']); // Check if class name exists (case-insensitive)
         Route::get('/{id}', [ClassController::class, 'show']); // Get class details
         Route::put('/{id}', [ClassController::class, 'update']); // Update class (admin only)
+        Route::patch('/{id}/focus', [ClassController::class, 'updateClassFocus']); // Update class focus (teacher only)
         Route::delete('/{id}', [ClassController::class, 'destroy']); // Delete class (admin only)
 
         // Quiz (Level) management for classes
@@ -202,4 +205,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Get feedback received by a specific student (requires auth)
     Route::get('/feedback/student/{studentId}', [FeedbackController::class, 'getStudentFeedback']);
     Route::post('/chat', [GeminiController::class, 'getResponse']);
+    Route::get('/chat/sessions', [GeminiController::class, 'getSessions']);
+    Route::get('/chat/sessions/{sessionId}/messages', [GeminiController::class, 'getMessages']);
+    Route::delete('/chat/sessions/{sessionId}', [GeminiController::class, 'deleteSession']);
+    Route::get('/topics', [\App\Http\Controllers\TopicController::class, 'index']);
 });

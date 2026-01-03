@@ -10,3 +10,17 @@ flutter_codelab/ios/Runner/GeneratedPluginRegistrant.h
 flutter_codelab/.dart_tool/package_config.json
 flutter_codelab/.flutter-plugins-dependencies
 flutter_codelab/android/local.properties
+
+# General Flutter Ignores
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/android/local.properties
+**/.idea/
+**/.vscode/
+**/*.iml
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/android/.gradle
+**/pubspec.lock

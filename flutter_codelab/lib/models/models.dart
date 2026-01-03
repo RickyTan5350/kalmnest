@@ -5,7 +5,8 @@ class Attachment {
   final String url; // holds the web address (URL)
 }
 
-class Email {  //single email
+class Email {
+  //single email
   const Email({
     required this.sender,
     required this.recipients,
@@ -32,7 +33,8 @@ class Name {
   String get fullName => '$first $last'; // getter combine first and lastname
 }
 
-class User {      //single user
+class User {
+  //single user
   const User({
     required this.name,
     required this.avatarUrl,
@@ -50,8 +52,11 @@ class FeedbackData {
   final String studentId;
   final String teacherName;
   final String teacherId;
-  final String topic;
+  final String topicId; // Added
+  final String title;   // Added
+  final String topic;   // Assuming this is used for category name or display
   final String feedback;
+
   final String? createdAt;
 
   FeedbackData({
@@ -60,6 +65,8 @@ class FeedbackData {
     required this.studentId,
     required this.teacherName,
     required this.teacherId,
+    required this.topicId,
+    required this.title,
     required this.topic,
     required this.feedback,
     this.createdAt,

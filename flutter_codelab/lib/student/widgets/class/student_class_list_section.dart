@@ -3,7 +3,9 @@ import 'package:code_play/api/class_api.dart';
 import 'package:code_play/student/widgets/class/student_view_class_page.dart';
 import 'package:code_play/constants/view_layout.dart';
 import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/constants/achievement_constants.dart';
 import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 // Class List Item Widget for Student (no edit/delete buttons)
 class _ClassListItem extends StatefulWidget {
@@ -29,11 +31,12 @@ class _ClassListItem extends StatefulWidget {
 
 class _ClassListItemState extends State<_ClassListItem> {
   // Get teacher name from item
-  String get _teacherName {
+  String _teacherName(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (widget.item['teacher'] != null) {
-      return widget.item['teacher']['name'] ?? 'Unknown Teacher';
+      return widget.item['teacher']['name'] ?? l10n.unknownTeacher;
     }
-    return 'No teacher assigned';
+    return l10n.noTeacherAssigned;
   }
 
   // Get student count
@@ -52,6 +55,7 @@ class _ClassListItemState extends State<_ClassListItem> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       elevation: 1.0,
@@ -69,7 +73,7 @@ class _ClassListItemState extends State<_ClassListItem> {
           child: Icon(Icons.school_rounded, size: 20),
         ),
         title: Text(
-          widget.item['class_name'] ?? 'No Name',
+          widget.item['class_name'] ?? l10n.noName,
           style: widget.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: widget.colorScheme.onSurface,
@@ -106,7 +110,7 @@ class _ClassListItemState extends State<_ClassListItem> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      _hasTeacher ? _teacherName : 'No teacher',
+                      _hasTeacher ? _teacherName(context) : l10n.noTeacher,
                       style: widget.textTheme.labelSmall?.copyWith(
                         color: _hasTeacher
                             ? widget.colorScheme.onSurfaceVariant
@@ -129,8 +133,8 @@ class _ClassListItemState extends State<_ClassListItem> {
                     const SizedBox(width: 4),
                     Text(
                       _studentCount > 0
-                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                          : 'No students',
+                          ? '$_studentCount ${_studentCount == 1 ? l10n.studentSingular : l10n.studentsPlural}'
+                          : l10n.noStudents,
                       style: widget.textTheme.labelSmall?.copyWith(
                         color: _studentCount > 0
                             ? widget.colorScheme.onSurfaceVariant
@@ -142,6 +146,35 @@ class _ClassListItemState extends State<_ClassListItem> {
                     ),
                   ],
                 ),
+                // Focus display
+                if (widget.item['focus'] != null &&
+                    widget.item['focus'].toString().isNotEmpty)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        getAchievementIcon(
+                          widget.item['focus'].toString().toLowerCase(),
+                        ),
+                        size: 14,
+                        color: getAchievementColor(
+                          context,
+                          widget.item['focus'].toString().toLowerCase(),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.item['focus'].toString(),
+                        style: widget.textTheme.labelSmall?.copyWith(
+                          color: getAchievementColor(
+                            context,
+                            widget.item['focus'].toString().toLowerCase(),
+                          ),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ],
@@ -168,11 +201,12 @@ class _ClassGridCard extends StatelessWidget {
     required this.onTap,
   });
 
-  String get _teacherName {
+  String _teacherName(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (item['teacher'] != null) {
-      return item['teacher']['name'] ?? 'Unknown Teacher';
+      return item['teacher']['name'] ?? l10n.unknownTeacher;
     }
-    return 'No teacher assigned';
+    return l10n.noTeacherAssigned;
   }
 
   int get _studentCount {
@@ -188,6 +222,7 @@ class _ClassGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       elevation: 1.0,
       clipBehavior: Clip.antiAlias,
@@ -228,7 +263,7 @@ class _ClassGridCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      item['class_name'] ?? 'No Name',
+                      item['class_name'] ?? l10n.noName,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: colorScheme.onSurface,
@@ -264,7 +299,7 @@ class _ClassGridCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      _hasTeacher ? _teacherName : 'No teacher',
+                      _hasTeacher ? _teacherName(context) : l10n.noTeacher,
                       style: textTheme.labelSmall?.copyWith(
                         color: _hasTeacher
                             ? colorScheme.onSurfaceVariant
@@ -291,8 +326,8 @@ class _ClassGridCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       _studentCount > 0
-                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                          : 'No students',
+                          ? '$_studentCount ${_studentCount == 1 ? l10n.studentSingular : l10n.studentsPlural}'
+                          : l10n.noStudents,
                       style: textTheme.labelSmall?.copyWith(
                         color: _studentCount > 0
                             ? colorScheme.onSurfaceVariant
@@ -307,6 +342,40 @@ class _ClassGridCard extends StatelessWidget {
                   ),
                 ],
               ),
+              // Focus display
+              if (item['focus'] != null &&
+                  item['focus'].toString().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      getAchievementIcon(
+                        item['focus'].toString().toLowerCase(),
+                      ),
+                      size: 14,
+                      color: getAchievementColor(
+                        context,
+                        item['focus'].toString().toLowerCase(),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        item['focus'].toString(),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: getAchievementColor(
+                            context,
+                            item['focus'].toString().toLowerCase(),
+                          ),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -321,6 +390,7 @@ class ClassListSection extends StatefulWidget {
   final ViewLayout layout;
   final SortType sortType;
   final SortOrder sortOrder;
+  final String? focusFilter; // null, 'HTML', 'CSS', 'JavaScript', 'PHP'
   const ClassListSection({
     super.key,
     required this.roleName,
@@ -328,6 +398,7 @@ class ClassListSection extends StatefulWidget {
     required this.layout,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
+    this.focusFilter,
   });
 
   @override
@@ -351,10 +422,12 @@ class _ClassListSectionState extends State<ClassListSection> {
     if (oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
-        oldWidget.sortOrder != widget.sortOrder) {
+        oldWidget.sortOrder != widget.sortOrder ||
+        oldWidget.focusFilter != widget.focusFilter) {
       if (oldWidget.searchQuery != widget.searchQuery ||
           oldWidget.sortType != widget.sortType ||
-          oldWidget.sortOrder != widget.sortOrder) {
+          oldWidget.sortOrder != widget.sortOrder ||
+          oldWidget.focusFilter != widget.focusFilter) {
         // Just re-filter and sort, don't reload from API
         _applyFiltersAndSort();
       } else {
@@ -370,11 +443,21 @@ class _ClassListSectionState extends State<ClassListSection> {
       final allClasses = await ClassApi.fetchAllClasses();
       if (!mounted) return;
 
-      // Apply search filter if search query is provided
+      // Apply filters
       List<dynamic> filtered = allClasses;
+
+      // Apply focus filter
+      if (widget.focusFilter != null && widget.focusFilter!.isNotEmpty) {
+        filtered = filtered.where((classItem) {
+          final focus = classItem['focus']?.toString();
+          return focus == widget.focusFilter;
+        }).toList();
+      }
+
+      // Apply search filter if search query is provided
       if (widget.searchQuery.isNotEmpty) {
         final query = widget.searchQuery.toLowerCase();
-        filtered = allClasses.where((classItem) {
+        filtered = filtered.where((classItem) {
           final className = (classItem['class_name'] ?? '')
               .toString()
               .toLowerCase();
@@ -406,11 +489,21 @@ class _ClassListSectionState extends State<ClassListSection> {
   }
 
   void _applyFiltersAndSort() {
-    // Apply search filter
+    // Apply filters
     List<dynamic> filtered = classList;
+
+    // Apply focus filter
+    if (widget.focusFilter != null && widget.focusFilter!.isNotEmpty) {
+      filtered = filtered.where((classItem) {
+        final focus = classItem['focus']?.toString();
+        return focus == widget.focusFilter;
+      }).toList();
+    }
+
+    // Apply search filter
     if (widget.searchQuery.isNotEmpty) {
       final query = widget.searchQuery.toLowerCase();
-      filtered = classList.where((classItem) {
+      filtered = filtered.where((classItem) {
         final className = (classItem['class_name'] ?? '')
             .toString()
             .toLowerCase();
@@ -464,6 +557,7 @@ class _ClassListSectionState extends State<ClassListSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -485,7 +579,7 @@ class _ClassListSectionState extends State<ClassListSection> {
                     ),
                     SizedBox(height: ClassConstants.defaultPadding),
                     Text(
-                      'No classes found',
+                      l10n.noClassesFound,
                       style: textTheme.titleMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -493,8 +587,8 @@ class _ClassListSectionState extends State<ClassListSection> {
                     SizedBox(height: ClassConstants.defaultPadding * 0.5),
                     Text(
                       widget.searchQuery.isNotEmpty
-                          ? 'Try adjusting your search query'
-                          : 'You are not enrolled in any classes yet',
+                          ? l10n.tryAdjustingSearchQuery
+                          : l10n.notEnrolledInAnyClasses,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant.withOpacity(0.7),
                       ),
@@ -527,7 +621,7 @@ class _ClassListSectionState extends State<ClassListSection> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                "${filteredList.length} Results",
+                                l10n.resultsCount(filteredList.length),
                                 style: textTheme.titleMedium,
                               ),
                             ),
@@ -594,7 +688,7 @@ class _ClassListSectionState extends State<ClassListSection> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                "${filteredList.length} Results",
+                                l10n.resultsCount(filteredList.length),
                                 style: textTheme.titleMedium,
                               ),
                             ),

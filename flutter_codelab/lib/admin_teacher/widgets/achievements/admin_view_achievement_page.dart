@@ -210,9 +210,8 @@ class AdminViewAchievementsPageState extends State<AdminViewAchievementsPage> {
       );
 
       if (achievement.achievementId == null ||
-          achievement.achievementId!.isEmpty) {
+          achievement.achievementId!.isEmpty)
         continue;
-      }
 
       // Access Control Logic: Admin OR Creator
       final isCreator =

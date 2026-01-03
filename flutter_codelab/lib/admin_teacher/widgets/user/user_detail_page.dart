@@ -9,6 +9,7 @@ import 'package:code_play/constants/achievement_constants.dart';
 import 'admin_student_achievements_page.dart';
 import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/student/widgets/achievements/student_profile_achievements_page.dart';
+import 'package:code_play/admin_teacher/widgets/achievements/admin_achievement_detail.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 import 'package:code_play/widgets/user_avatar.dart';
 
@@ -173,7 +174,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
         ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
       },
     );
-
     if (refreshed == true) {
       _fetchUserDetails();
     }
@@ -426,6 +426,18 @@ class _UserDetailPageState extends State<UserDetailPage> {
                                     AdminStudentAchievementsPage(
                                       userId: widget.userId,
                                       userName: user.name,
+                                      breadcrumbs: widget.breadcrumbs != null
+                                          ? [
+                                              ...BreadcrumbItem.wrap(
+                                                widget.breadcrumbs!,
+                                                context,
+                                              ),
+                                              BreadcrumbItem(
+                                                label:
+                                                    '${user.name} Achievements',
+                                              ),
+                                            ]
+                                          : null,
                                     ),
                               ),
                             );
@@ -757,7 +769,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
               return Container(
                 width: 130,
-                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
@@ -774,38 +785,101 @@ class _UserDetailPageState extends State<UserDetailPage> {
                     ),
                   ],
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      if (_isViewerStudent) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AdminAchievementDetailPage(
+                              initialData: achievement,
+                              studentName: widget.userName,
+                              studentId: widget.userId,
+                              breadcrumbs: widget.breadcrumbs != null
+                                  ? [
+                                      ...BreadcrumbItem.wrap(
+                                        widget.breadcrumbs!,
+                                        context,
+                                      ),
+                                      BreadcrumbItem(
+                                        label:
+                                            achievement.achievementTitle ??
+                                            'Achievement',
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                        );
+                      } else {
+                        // Admin/Teacher navigation
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AdminAchievementDetailPage(
+                              initialData: achievement,
+                              studentName: widget.userName,
+                              studentId: widget.userId,
+                              breadcrumbs: widget.breadcrumbs != null
+                                  ? [
+                                      ...BreadcrumbItem.wrap(
+                                        widget.breadcrumbs!,
+                                        context,
+                                      ),
+                                      BreadcrumbItem(
+                                        label:
+                                            achievement.achievementTitle ??
+                                            'Achievement',
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: Padding(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        shape: BoxShape.circle,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(icon, size: 28, color: color),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            achievement.achievementTitle ??
+                                AppLocalizations.of(context)!.achievement,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            dateStr,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                  fontSize: 11,
+                                ),
+                          ),
+                        ],
                       ),
-                      child: Icon(icon, size: 28, color: color),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      achievement.achievementTitle ??
-                          AppLocalizations.of(context)!.achievement,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      dateStr,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               );
             },

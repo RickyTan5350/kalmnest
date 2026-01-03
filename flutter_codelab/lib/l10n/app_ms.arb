@@ -148,5 +148,247 @@
   "roleLabel": "Peranan",
   "male": "Lelaki",
   "female": "Perempuan",
-  "other": "Lain-lain"
+  "other": "Lain-lain",
+  "feedbacks": "Maklum Balas",
+  "results": "Keputusan",
+  "noFeedbackFound": "Tiada maklum balas dijumpai.",
+  "sortByTime": "Susun Mengikut Masa",
+  "newestFirst": "Terkini Dahulu",
+  "oldestFirst": "Terlama Dahulu",
+  "refreshFeedbacks": "Segarkan Maklum Balas",
+  "filterByStudent": "Tapis Mengikut Pelajar",
+  "allStudents": "Semua Pelajar",
+  "filterByTeacher": "Tapis Mengikut Guru",
+  "allTeachers": "Semua Guru",
+  "deleteFeedbackTitle": "Padam Maklum Balas?",
+  "deleteFeedbackConfirmation": "Adakah anda pasti mahu memadamkan maklum balas ini? Tindakan ini tidak boleh dibatalkan.",
+  "feedbackDeleted": "Maklum balas dipadam",
+  "editFeedback": "Edit Maklum Balas",
+  "currentTopic": "Topik Semasa",
+  "discardChangesTitle": "Abaikan Perubahan?",
+  "discardChangesConfirmation": "Anda mempunyai perubahan yang belum disimpan. Adakah anda pasti mahu mengabaikannya?",
+  "discard": "Abaikan",
+  "changesSavedSuccess": "Perubahan berjaya disimpan!",
+  "updateFailed": "Kemas kini gagal: {error}",
+  "from": "Daripada: {name}",
+  "failedToLoadStudents": "Gagal memuatkan pelajar: {error}",
+  "pleaseSelectStudent": "Sila pilih pelajar",
+  "feedbackSentTo": "Maklum balas dihantar kepada {name}",
+  "accessDeniedCreateFeedback": "Akses Ditolak: Hanya guru boleh membuat maklum balas.",
+  "newFeedback": "Maklum Balas Baru",
+  "selectStudent": "Pilih Pelajar",
+  "selectAStudent": "Pilih seorang pelajar",
+  "noStudentsAvailable": "Tiada pelajar tersedia",
+  "selectTopic": "Pilih Topik",
+  "selectATopic": "Pilih satu topik",
+  "pleaseSelectTopic": "Sila pilih topik",
+  "title": "Tajuk",
+  "titleHint": "cth., Kerja Bagus!",
+  "pleaseEnterTitle": "Sila masukkan tajuk",
+  "feedbackHint": "Tulis maklum balas anda di sini...",
+  "pleaseWriteFeedback": "Sila tulis maklum balas",
+  "send": "Hantar",
+  "errorLoadingHistory": "Ralat memuatkan sejarah: {error}",
+  "errorLoadingMessages": "Ralat memuatkan mesej: {error}",
+  "clearHistory": "Kosongkan Sejarah",
+  "clearHistoryConfirmation": "Adakah anda pasti mahu memadamkan sesi sembang ini?",
+  "chatDeletedSuccessfully": "Sembang berjaya dipadam",
+  "chatClearedSuccessfully": "Sembang berjaya dikosongkan",
+  "deleteFailed": "Gagal memadam: {error}",
+  "aiChatTitle": "KalmNest AI (Gemini-2.0-flash)",
+  "howCanIHelp": "Bagaimana saya boleh membantu anda hari ini?",
+  "askQuestion": "Tanya Soalan",
+  "recentQuestions": "Soalan Terkini",
+  "noQuestionsFound": "Tiada soalan terdahulu ditemui.",
+  "untitledQuestion": "Soalan Tanpa Tajuk",
+  "quickSuggestions": "Cadangan Pembelajaran Pantas",
+  "suggestionPrefix": "Berikan Cadangan Pembelajaran untuk ",
+  "typeQuestionHint": "Taip soalan anda...",
+  "backToHistory": "Kembali ke Sejarah",
+  "refreshQuestion": "Segarkan Soalan",
+  "deleteChat": "Padam Sembang",
+  "classCreatedSuccessfully": "Kelas berjaya dicipta!",
+  "failedToCreateClass": "Gagal mencipta kelas",
+  "ok": "OK",
+  "createNewClass": "Cipta Kelas Baru",
+  "indicatesRequiredFields": "* menunjukkan medan wajib",
+  "className": "Nama Kelas",
+  "enterClassName": "Masukkan nama kelas",
+  "description": "Penerangan",
+  "enterDescription": "Masukkan penerangan (sekurang-kurangnya 10 perkataan)",
+  "atLeast10Words": "Sekurang-kurangnya 10 perkataan",
+  "focusOptional": "Fokus (Pilihan)",
+  "noneOptional": "Tiada (Pilihan)",
+  "assignTeacherOptional": "Tugaskan Guru (Pilihan)",
+  "classUpdatedSuccessfully": "Kelas berjaya dikemas kini!",
+  "failedToUpdateClass": "Gagal mengemas kini kelas",
+  "editClass": "Edit Kelas",
+  "editClassDetails": "Edit Butiran Kelas",
+  "loading": "Memuatkan...",
+  "selectTeacher": "Pilih Guru",
+  "classNameRequired": "Nama kelas diperlukan",
+  "classNameMinCharacters": "Nama kelas mestilah sekurang-kurangnya 3 aksara",
+  "classNameMaxCharacters": "Nama kelas tidak boleh melebihi 100 aksara",
+  "descriptionRequired": "Penerangan diperlukan",
+  "descriptionMaxCharacters": "Penerangan tidak boleh melebihi 500 aksara",
+  "descriptionMinWords": "Penerangan mesti mengandungi sekurang-kurangnya 10 perkataan",
+  "thisClass": "kelas ini",
+  "deleteClassConfirmation": "Adakah anda pasti mahu memadamkan {className}? Tindakan ini tidak boleh dibatalkan.",
+  "@deleteClassConfirmation": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "classDeletedSuccessfully": "Kelas berjaya dipadam!",
+  "errorDeletingClass": "Ralat memadamkan kelas: {error}",
+  "@errorDeletingClass": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unknown": "Tidak Diketahui",
+  "nA": "T/A",
+  "details": "Butiran",
+  "refresh": "Segarkan",
+  "deleteClass": "Padam Kelas",
+  "noName": "Tiada Nama",
+  "noTeacherAssigned": "Tiada Guru Ditugaskan",
+  "generalInfo": "Maklumat Am",
+  "searchStudents": "Cari Pelajar",
+  "totalStudents": "Jumlah Pelajar",
+  "completionRate": "Kadar Penyiapan",
+  "quizzesAssigned": "Kuiz Ditugaskan",
+  "moreOptions": "Lebih Banyak Pilihan",
+  "viewDetails": "Lihat Butiran",
+  "completed": "Selesai",
+  "quizzes": "Kuiz",
+  "courseProgress": "Kemajuan Kursus",
+  "noStudentsFound": "Tiada pelajar dijumpai",
+  "tryAdjustingSearchCriteria": "Cuba laraskan kriteria carian anda",
+  "edit": "Edit",
+  "noClassesFound": "Tiada kelas dijumpai",
+  "tryAdjustingSearchQuery": "Cuba laraskan pertanyaan carian anda",
+  "notEnrolledInAnyClasses": "Anda tidak mendaftar dalam mana-mana kelas",
+  "classFocusUpdatedSuccessfully": "Fokus kelas berjaya dikemas kini!",
+  "failedToUpdateClassFocus": "Gagal mengemas kini fokus kelas",
+  "editClassFocus": "Edit Fokus Kelas",
+  "editFocusFor": "Edit Fokus untuk {className}",
+  "@editFocusFor": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "youCanOnlyEditFocus": "Anda hanya boleh mengedit fokus untuk kelas anda sendiri",
+  "failedToLoadQuizStudentData": "Gagal memuatkan data pelajar kuiz",
+  "never": "Tidak Pernah",
+  "allQuizzes": "Semua Kuiz",
+  "statistics": "Statistik",
+  "pending": "Menunggu",
+  "failedToLoadStudentQuizData": "Gagal memuatkan data kuiz pelajar",
+  "gender": "Jantina",
+  "joinedDate": "Tarikh Menyertai",
+  "accountStatus": "Status Akaun",
+  "totalQuizzes": "Jumlah Kuiz",
+  "noQuizzesFound": "Tiada kuiz dijumpai",
+  "quizVisibility": "Kebolehlihatan Kuiz",
+  "howShouldQuizBeVisible": "Bagaimanakah kuiz ini harus kelihatan?",
+  "onlyVisibleToThisClass": "Hanya kelihatan kepada kelas ini",
+  "visibleToEveryone": "Kelihatan kepada semua orang",
+  "quizCreatedAndAssignedSuccessfully": "Kuiz berjaya dicipta dan ditugaskan!",
+  "failedToAssignQuiz": "Gagal menugaskan kuiz",
+  "quizAssignedSuccessfully": "Kuiz berjaya ditugaskan!",
+  "removeQuiz": "Buang Kuiz",
+  "areYouSureRemoveQuiz": "Adakah anda pasti mahu membuang kuiz ini dari kelas?",
+  "remove": "Buang",
+  "quizRemovedSuccessfully": "Kuiz berjaya dibuang!",
+  "quizzesAvailable": "{count} kuiz tersedia",
+  "@quizzesAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewAllQuizzes": "Lihat Semua Kuiz",
+  "noQuizzesYet": "Tiada kuiz lagi",
+  "createOrAssignQuizzes": "Cipta atau tugaskan kuiz untuk bermula",
+  "uploaded": "Dimuat naik {date}",
+  "@uploaded": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "viewAllXQuizzes": "Lihat Semua {count} Kuiz",
+  "@viewAllXQuizzes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unknownTeacher": "Guru Tidak Diketahui",
+  "noTeacher": "Tiada Guru",
+  "studentSingular": "pelajar",
+  "studentsPlural": "pelajar",
+  "noStudents": "Tiada pelajar",
+  "assignedTeacher": "Guru Ditugaskan",
+  "play": "Main",
+  "allClasses": "Semua Kelas",
+  "myClasses": "Kelas Saya",
+  "enrolledClasses": "Kelas yang Didaftarkan",
+  "searchByClassName": "Cari mengikut nama kelas",
+  "noDescriptionAvailable": "Tiada penerangan tersedia",
+  "timestamps": "Cap Masa",
+  "createdAt": "Dicipta Pada",
+  "updatedAt": "Dikemas Kini Pada",
+  "assignStudentsOptional": "Tugaskan Pelajar (Pilihan)",
+  "studentNumber": "Pelajar {number}",
+  "@studentNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "selectStudents": "Pilih Pelajar",
+  "addStudent": "Tambah Pelajar",
+  "reset": "Tetapkan Semula",
+  "create": "Cipta",
+  "creator": "Pencipta",
+  "focus": "Fokus",
+  "notSet": "Tidak Ditentukan",
+  "cannotOpenTeacherProfile": "Tidak boleh membuka profil guru",
+  "noTeacherAssignedToClass": "Tiada guru ditugaskan kepada kelas ini",
+  "lastUpdated": "Kemas Kini Terakhir",
+  "students": "Pelajar",
+  "moreStudents": "dan {count} pelajar lagi",
+  "@moreStudents": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noStudentsEnrolled": "Tiada pelajar mendaftar",
+  "listOfEnrolledStudents": "Senarai Pelajar yang Didaftarkan",
+  "status": "Status",
+  "assigned": "Ditugaskan",
+  "failedToRemoveQuiz": "Gagal membuang kuiz",
+  "searchQuizzes": "Cari Kuiz",
+  "assignQuiz": "Tugaskan Kuiz",
+  "createQuiz": "Cipta Kuiz",
+  "tapToViewStudentCompletion": "Ketuk untuk melihat penyiapan pelajar",
+  "assignQuizToClass": "Tugaskan Kuiz kepada Kelas",
+  "reloadQuizzes": "Muat Semula Kuiz",
+  "noQuizzesAssigned": "Tiada kuiz ditugaskan",
+  "pleaseEnterQuestion": "Sila masukkan soalan",
+  "aiLanguageNotice": "AI akan menjawab dalam bahasa yang sama dengan soalan anda"
 }

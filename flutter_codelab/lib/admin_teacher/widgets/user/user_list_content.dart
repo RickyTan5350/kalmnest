@@ -452,9 +452,8 @@ class UserListContentState extends State<UserListContent> {
         selectedIds: _selectedIds.map((e) => e.toString()).toSet(),
         itemKeys: _gridItemKeys.map((k, v) => MapEntry(k.toString(), v)),
         onLongPressStart: (details) {
-          if ((widget.currentUser?.roleName.toLowerCase() ?? '') != 'admin') {
+          if ((widget.currentUser?.roleName.toLowerCase() ?? '') != 'admin')
             return;
-          }
 
           if (_isDesktop) {
             _initialSelection = Set.from(_selectedIds);
@@ -469,9 +468,8 @@ class UserListContentState extends State<UserListContent> {
           }
         },
         onLongPressMoveUpdate: (details) {
-          if ((widget.currentUser?.roleName.toLowerCase() ?? '') != 'admin') {
+          if ((widget.currentUser?.roleName.toLowerCase() ?? '') != 'admin')
             return;
-          }
 
           if (_isDesktop) {
             _handleBoxSelect(details.localPosition);

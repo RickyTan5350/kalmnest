@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/api/feedback_api.dart';
 import 'package:code_play/models/models.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 void showCreateFeedbackDialog({
   required BuildContext context,
-  required void Function(BuildContext context, String message, Color color) showSnackBar,
+  required void Function(BuildContext context, String message, Color color)
+  showSnackBar,
   required void Function(FeedbackData) onFeedbackAdded,
   required String authToken,
 }) {
@@ -21,7 +23,8 @@ void showCreateFeedbackDialog({
 }
 
 class CreateFeedbackDialog extends StatefulWidget {
-  final void Function(BuildContext context, String message, Color color) showSnackBar;
+  final void Function(BuildContext context, String message, Color color)
+  showSnackBar;
   final void Function(FeedbackData) onFeedbackAdded;
   final String authToken;
 
@@ -46,6 +49,10 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
   String? _selectedStudentId;
   bool _isLoading = false;
   bool _isLoadingStudents = false;
+  bool _isLoadingTopics = false;
+  String? _selectedTopicId;
+  String? _selectedTopicName;
+  List<Map<String, dynamic>> _topics = [];
 
   List<Map<String, dynamic>> _students = [];
 
@@ -55,24 +62,47 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     // Initialize FeedbackApiService WITH the auth token
     _apiService = FeedbackApiService(token: widget.authToken);
     _loadStudents();
+    _loadTopics();
   }
 
   Future<void> _loadStudents() async {
-  setState(() => _isLoadingStudents = true);
+    setState(() => _isLoadingStudents = true);
 
-  try {
-    final students = await _apiService.getStudents(); // Call Laravel API
-    setState(() => _students = students);
-  } catch (e) {
-    if (mounted) {
-      widget.showSnackBar(context, 'Failed to load students: $e', Colors.red);
-    }
-  } finally {
-    if (mounted) {
-      setState(() => _isLoadingStudents = false);
+    try {
+      final students = await _apiService.getStudents(); // Call Laravel API
+      setState(() => _students = students);
+    } catch (e) {
+      if (mounted) {
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.failedToLoadStudents(e.toString()),
+          Colors.red,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingStudents = false);
+      }
     }
   }
-}
+
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+
+    try {
+      final topics = await _apiService.getTopics();
+      setState(() => _topics = topics);
+    } catch (e) {
+      if (mounted) {
+        print('Error loading topics: $e');
+        // Don't show error to user, topics are optional
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingTopics = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -87,7 +117,11 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     }
 
     if (_selectedStudentId == null || _selectedStudent == null) {
-      widget.showSnackBar(context, 'Please select a student', Colors.red);
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(context)!.pleaseSelectStudent,
+        Colors.red,
+      );
       return;
     }
 
@@ -96,10 +130,21 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     });
 
     try {
+      // Validate that topic is selected if required
+      if (_selectedTopicId == null || _selectedTopicId!.isEmpty) {
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.pleaseSelectTopic,
+          Colors.red,
+        );
+        return;
+      }
+
       // Call the backend API to create feedback
       await _apiService.createFeedback(
         studentId: _selectedStudentId!,
-        topic: _topicController.text,
+        topicId: _selectedTopicId,
+        title: _topicController.text,
         comment: _feedbackController.text,
       );
 
@@ -110,6 +155,8 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
         studentId: _selectedStudentId!,
         teacherName: 'Unknown', // Will be updated from API
         teacherId: '', // Will be updated from API
+        topicId: _selectedTopicId ?? '',
+        title: _selectedTopicName ?? _topicController.text,
         topic: _topicController.text,
         feedback: _feedbackController.text,
       );
@@ -118,12 +165,20 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
       widget.onFeedbackAdded(feedbackData);
 
       if (mounted) {
-        widget.showSnackBar(context, 'Feedback sent to $_selectedStudent', Colors.green);
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.feedbackSentTo(_selectedStudent!),
+          Colors.green,
+        );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        widget.showSnackBar(context, 'Error: $e', Colors.red);
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.unknownErrorOccurred(e.toString()),
+          Colors.red,
+        );
       }
     } finally {
       if (mounted) {
@@ -168,6 +223,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return AlertDialog(
       backgroundColor: const Color.fromARGB(255, 244, 246, 255),
@@ -182,7 +238,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'New Feedback',
+                  l10n.newFeedback,
                   style: TextStyle(
                     color: colorScheme.onSurface,
                     fontSize: 20,
@@ -196,7 +252,9 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                     ? SizedBox(
                         height: 50,
                         child: Center(
-                          child: CircularProgressIndicator(color: colorScheme.primary),
+                          child: CircularProgressIndicator(
+                            color: colorScheme.primary,
+                          ),
                         ),
                       )
                     : DropdownButtonFormField<String?>(
@@ -204,61 +262,122 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                         dropdownColor: const Color.fromARGB(255, 239, 243, 255),
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
-                          labelText: 'Select Student',
+                          labelText: l10n.selectStudent,
                           icon: Icons.person,
                           colorScheme: colorScheme,
                         ),
-                        hint: Text('Select a student', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                        hint: Text(
+                          l10n.selectAStudent,
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
                         items: [
                           if (_students.isEmpty)
                             DropdownMenuItem<String?>(
                               value: null,
-                              child: Text('No students available', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                              child: Text(
+                                l10n.noStudentsAvailable,
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
                             )
                           else
-                            ..._students
-                                .map<DropdownMenuItem<String?>>((student) {
-                                  final id = student['id'] as String? ?? '';
-                                  final name = student['name'] as String? ?? 'Unknown';
-                                  if (id.isEmpty) return const DropdownMenuItem(value: null, child: SizedBox.shrink());
-                                  return DropdownMenuItem<String?>(
-                                    value: id,
-                                    child: Text(name),
-                                  );
-                                })
-                                ,
+                            ..._students.map<DropdownMenuItem<String?>>((
+                              student,
+                            ) {
+                              final id = student['id'] as String? ?? '';
+                              final name =
+                                  student['name'] as String? ?? 'Unknown';
+                              if (id.isEmpty)
+                                return const DropdownMenuItem(
+                                  value: null,
+                                  child: SizedBox.shrink(),
+                                );
+                              return DropdownMenuItem<String?>(
+                                value: id,
+                                child: Text(name),
+                              );
+                            }),
                         ],
                         onChanged: (value) {
                           setState(() {
                             _selectedStudentId = value;
                             if (value != null && value.isNotEmpty) {
-                              _selectedStudent = _students
-                                  .firstWhere((s) => s['id'] == value, orElse: () => {'name': 'Unknown'})['name'] as String?;
+                              _selectedStudent =
+                                  _students.firstWhere(
+                                        (s) => s['id'] == value,
+                                        orElse: () => {'name': 'Unknown'},
+                                      )['name']
+                                      as String?;
                             }
                           });
                         },
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please select a student';
+                            return l10n.pleaseSelectStudent;
                           }
                           return null;
                         },
                       ),
                 const SizedBox(height: 16),
 
-                // Topic
+                // Topic Dropdown
+                _isLoadingTopics
+                    ? const LinearProgressIndicator()
+                    : DropdownButtonFormField<String?>(
+                        value: _selectedTopicId,
+                        dropdownColor: const Color.fromARGB(255, 239, 243, 255),
+                        style: TextStyle(color: colorScheme.onSurface),
+                        decoration: _inputDecoration(
+                          labelText: l10n.selectTopic,
+                          icon: Icons.subject,
+                          colorScheme: colorScheme,
+                        ),
+                        hint: Text(
+                          l10n.selectATopic,
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                        items: _topics.map<DropdownMenuItem<String?>>((topic) {
+                          final id = topic['topic_id']?.toString() ?? '';
+                          final name =
+                              topic['topic_name'] as String? ?? 'Unknown';
+                          return DropdownMenuItem<String?>(
+                            value: id,
+                            child: Text(name),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedTopicId = value;
+                            if (value != null) {
+                              _selectedTopicName = _topics.firstWhere(
+                                (t) => t['topic_id'].toString() == value,
+                              )['topic_name'];
+                            }
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return l10n.pleaseSelectTopic;
+                          }
+                          return null;
+                        },
+                      ),
+                const SizedBox(height: 16),
+
+                // Title
                 TextFormField(
                   controller: _topicController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Topic',
-                    hintText: 'e.g., Code Quality',
-                    icon: Icons.subject,
+                    labelText: l10n.title,
+                    hintText: l10n.titleHint,
+                    icon: Icons.title,
                     colorScheme: colorScheme,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a topic';
+                      return l10n.pleaseEnterTitle;
                     }
                     return null;
                   },
@@ -270,15 +389,15 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                   controller: _feedbackController,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: _inputDecoration(
-                    labelText: 'Feedback',
-                    hintText: 'Write your feedback here...',
+                    labelText: l10n.feedback,
+                    hintText: l10n.feedbackHint,
                     icon: Icons.message,
                     colorScheme: colorScheme,
                   ),
                   maxLines: 5,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please write feedback';
+                      return l10n.pleaseWriteFeedback;
                     }
                     return null;
                   },
@@ -292,7 +411,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(
-                        'Cancel',
+                        l10n.cancel,
                         style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),
                     ),
@@ -319,7 +438,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Send'),
+                          : Text(l10n.send),
                     ),
                   ],
                 ),

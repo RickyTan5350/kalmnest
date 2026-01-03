@@ -19,9 +19,18 @@ class Feedback extends Model
         'feedback_id',
         'student_id',
         'teacher_id',
-        'topic',
+        'topic_id',
+        'title',
         'comment',
     ];
+
+    /**
+     * Get the topic this feedback is related to
+     */
+    public function topic()
+    {
+        return $this->belongsTo(Topic::class, 'topic_id', 'topic_id');
+    }
 
     protected $casts = [
         'created_at' => 'datetime',

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/models/user_data.dart';
 import 'package:code_play/services/ai_chat_api_service.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/controllers/locale_controller.dart';
 
 /// Model for chat messages
 class ChatMessage {
@@ -18,14 +21,10 @@ class ChatMessage {
     DateTime? timestamp,
     this.isError = false,
     this.isTyping = false,
-  })  : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        timestamp = timestamp ?? DateTime.now();
+  }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+       timestamp = timestamp ?? DateTime.now();
 
-  ChatMessage copyWith({
-    String? text,
-    bool? isTyping,
-    bool? isError,
-  }) {
+  ChatMessage copyWith({String? text, bool? isTyping, bool? isError}) {
     return ChatMessage(
       id: id,
       text: text ?? this.text,
@@ -35,6 +34,47 @@ class ChatMessage {
       isTyping: isTyping ?? this.isTyping,
     );
   }
+
+  factory ChatMessage.fromMap(Map<String, dynamic> map) {
+    // Safely handle null values - ensure all required fields have defaults
+    final idValue = map['id'] ?? map['message_id'];
+    final id = idValue != null && idValue.toString().isNotEmpty
+        ? idValue.toString()
+        : DateTime.now().millisecondsSinceEpoch.toString();
+
+    // Handle content/message - ensure it's never null
+    final contentValue = map['content'] ?? map['message'];
+    final text = (contentValue != null && contentValue.toString().isNotEmpty)
+        ? contentValue.toString()
+        : '';
+
+    // Handle role/sender - safely check for user role
+    final role = map['role']?.toString() ?? '';
+    final sender = map['sender']?.toString() ?? '';
+    final isUser =
+        role.toLowerCase() == 'user' || sender.toLowerCase() == 'user';
+
+    // Handle timestamp - safely parse
+    DateTime? timestamp;
+    final createdAt = map['created_at'];
+    if (createdAt != null) {
+      try {
+        final createdAtStr = createdAt.toString();
+        if (createdAtStr.isNotEmpty) {
+          timestamp = DateTime.tryParse(createdAtStr);
+        }
+      } catch (e) {
+        // If parsing fails, timestamp remains null (will use default)
+      }
+    }
+
+    return ChatMessage(
+      id: id,
+      text: text,
+      isUser: isUser,
+      timestamp: timestamp,
+    );
+  }
 }
 
 /// AI Chat Page - Main Widget
@@ -42,94 +82,186 @@ class AiChatPage extends StatefulWidget {
   final UserDetails? currentUser;
   final String? authToken;
 
-  const AiChatPage({
-    super.key,
-    this.currentUser,
-    this.authToken,
-  });
+  const AiChatPage({super.key, this.currentUser, this.authToken});
 
   @override
   State<AiChatPage> createState() => _AiChatPageState();
 }
 
-class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateMixin {
+class _AiChatPageState extends State<AiChatPage>
+    with SingleTickerProviderStateMixin {
   final List<ChatMessage> _messages = [];
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
-  
+
   late AiChatApiService _apiService;
   bool _isSending = false;
   bool _isInitialized = false;
   String? _currentSessionId;
+  bool _isNewChat = false;
+  bool _isLoadingHistory = false;
+  List<Map<String, dynamic>> _sessions = [];
+  bool _hasSentFirstMessage = false;
 
-  final List<String> _suggestedQuestions = [
-    "Give me Learning Suggestion for HTML",
-    "Give me Learning Suggestion for CSS",
-    "Give me Learning Suggestion for JavaScript",
-    "Give me Learning suggestion for Web development"
-  ];
+  // Getter for sessionId - assuming it should be generated or retrieved
+  String get sessionId =>
+      _currentSessionId ?? DateTime.now().millisecondsSinceEpoch.toString();
 
   @override
   void initState() {
     super.initState();
     _apiService = AiChatApiService(token: widget.authToken);
-    _initializeChat();
+    _loadHistory();
+    // _initializeChat(); // Removed as _loadHistory handles initial state better or user picks a chat
   }
 
-  @override
-  void dispose() {
-    _textController.dispose();
-    _scrollController.dispose();
-    _focusNode.dispose();
-    super.dispose();
+  Future<void> _loadHistory() async {
+    setState(() => _isLoadingHistory = true);
+    try {
+      final sessions = await _apiService.getSessions();
+      if (mounted) {
+        setState(() {
+          _sessions = sessions;
+          _isLoadingHistory = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingHistory = false);
+        // Silent failure or log
+        print('Error loading history: $e');
+      }
+    }
+  }
+
+  Future<void> _loadSessionMessages(String sessionId) async {
+    if (sessionId.isEmpty) {
+      _showSnackBar('Invalid session ID', Colors.red);
+      return;
+    }
+
+    setState(() {
+      _isSending = true;
+      _currentSessionId = sessionId;
+      _messages.clear();
+      _isNewChat = false;
+      _hasSentFirstMessage = false; // Reset when loading a session
+    });
+
+    try {
+      final messages = await _apiService.getSessionMessages(sessionId);
+      if (mounted) {
+        setState(() {
+          // Safely map messages, filtering out any that fail to parse
+          final validMessages = <ChatMessage>[];
+          for (final m in messages) {
+            try {
+              final message = ChatMessage.fromMap(m);
+              // Only add messages with content or typing indicator
+              if (message.text.isNotEmpty || message.isTyping) {
+                validMessages.add(message);
+              }
+            } catch (e) {
+              print('Error parsing message: $e, data: $m');
+              // Skip invalid messages to prevent crashes
+            }
+          }
+          _messages.addAll(validMessages);
+          // Sort if needed, assuming API sends chronologically
+          // _messages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          _isSending = false;
+          // If session has messages, hide input box (first message already sent)
+          if (_messages.isNotEmpty) {
+            _hasSentFirstMessage = true;
+          }
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+          // Keep session ID so chat view is still shown even if loading fails
+          // This allows user to see the error and potentially retry
+        });
+        _showSnackBar('Failed to load messages: ${e.toString()}', Colors.red);
+        print('Error loading session messages: $e');
+      }
+    }
   }
 
   void _initializeChat() {
+    // Legacy init, keeping for reference if needed but _loadHistory is primary now
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+  }
+
+  void _startNewChat() {
     setState(() {
-      _messages.add(ChatMessage(
-        text: 'Hello${widget.currentUser != null ? ' ${widget.currentUser!.name.split(' ')[0]}' : ''}! 👋 I\'m your AI assistant. How can I help you today?',
-        isUser: false,
-      ));
-      _isInitialized = true;
+      _messages.clear();
+      _currentSessionId = null;
+      _isNewChat = true;
+      _hasSentFirstMessage = false;
     });
   }
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          0, 
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
       });
     }
   }
 
   Future<void> _handleSendMessage() async {
     final text = _textController.text.trim();
-    if (text.isEmpty || _isSending) return;
+    if (_isSending || _hasSentFirstMessage) return;
+
+    if (text.isEmpty) {
+      _showSnackBar('Please enter a question', Colors.red);
+      return;
+    }
+
+    // Set sending state and mark first message sent
+    setState(() {
+      _isSending = true;
+      _hasSentFirstMessage = true;
+    });
 
     final userMessage = ChatMessage(text: text, isUser: true);
     setState(() {
-      _messages.insert(0, userMessage);
+      _messages.add(userMessage); // Add to end (chronological order)
       _textController.clear();
-      _isSending = true;
     });
 
     _scrollToBottom();
     _focusNode.unfocus();
 
     final typingMessage = ChatMessage(text: '', isUser: false, isTyping: true);
-    setState(() => _messages.insert(0, typingMessage));
+    setState(() => _messages.add(typingMessage)); // Add to end
 
     try {
+      // Get current language from LocaleController
+      final currentLocale = LocaleController.instance.value;
+      final languageCode = currentLocale.languageCode; // 'en' or 'ms'
+
       final responseData = await _apiService.sendMessage(
-        text, 
-        sessionId: _currentSessionId
+        text,
+        sessionId: _currentSessionId,
+        language: languageCode, // Pass language code to API
       );
-      
+
       final aiResponse = responseData['ai_response'] as String;
       final newSessionId = responseData['session_id'] as String?;
 
@@ -137,20 +269,42 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
         setState(() {
           _currentSessionId = newSessionId;
           _messages.removeWhere((msg) => msg.id == typingMessage.id);
-          _messages.insert(0, ChatMessage(text: aiResponse, isUser: false));
+          _messages.add(
+            ChatMessage(text: aiResponse, isUser: false),
+          ); // Add to end
           _isSending = false;
+          // Keep _hasSentFirstMessage = true to hide input box after first message
         });
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage =
+            'Connection error. Please ensure the backend is running and reachable.';
+
+        // Provide more specific error messages
+        final errorString = e.toString();
+        if (errorString.contains('500') ||
+            errorString.contains('Server error')) {
+          errorMessage =
+              'Server error. The AI service may not be configured correctly. Please contact the administrator.';
+        } else if (errorString.contains('timeout')) {
+          errorMessage =
+              'Request timeout. Please check your internet connection and try again.';
+        } else if (errorString.contains('401') ||
+            errorString.contains('Authentication')) {
+          errorMessage = 'Authentication required. Please login again.';
+        } else if (errorString.contains('Network error')) {
+          errorMessage =
+              'Network error. Please check your connection and ensure the backend is running.';
+        }
+
         setState(() {
           _messages.removeWhere((msg) => msg.id == typingMessage.id);
-          _messages.insert(0, ChatMessage(
-            text: 'Connection error. Please ensure the backend is running and reachable.', 
-            isUser: false, 
-            isError: true
-          ));
+          _messages.add(
+            ChatMessage(text: errorMessage, isUser: false, isError: true),
+          ); // Add to end
           _isSending = false;
+          // Keep _hasSentFirstMessage = true to hide input box after first message
         });
       }
     }
@@ -162,39 +316,84 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
     _handleSendMessage();
   }
 
-  void _clearChat() {
-    showDialog(
+  Future<void> _clearChat() async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Chat'),
-        content: const Text('Are you sure you want to clear all messages?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _messages.clear();
-                _currentSessionId = null;
-                _initializeChat();
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(l10n.clearHistory),
+          content: Text(l10n.clearHistoryConfirmation),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                l10n.delete,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
     );
+
+    if (confirmed == true) {
+      // Check if there's a session to delete
+      if (_currentSessionId == null || _currentSessionId!.isEmpty) {
+        // If no session, just clear local messages
+        if (mounted) {
+          setState(() {
+            _messages.clear();
+            _currentSessionId = null;
+            _hasSentFirstMessage = false;
+          });
+          _showSnackBar('Chat cleared successfully', Colors.green);
+        }
+        return;
+      }
+
+      try {
+        await _apiService.deleteSession(_currentSessionId!);
+        if (mounted) {
+          setState(() {
+            _messages.clear();
+            _currentSessionId = null;
+            _hasSentFirstMessage = false;
+          });
+          _loadHistory();
+          // Show success message
+          _showSnackBar('Chat deleted successfully', Colors.green);
+        }
+      } catch (e) {
+        if (mounted) {
+          _showSnackBar(
+            AppLocalizations.of(context)!.deleteFailed(e.toString()),
+            Colors.red,
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -202,141 +401,371 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
           height: double.infinity,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- HEADER ---
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "KalmNest Assistant",
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(color: colorScheme.onSurface),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: _messages.length > 1 ? _clearChat : null,
-                      tooltip: 'Clear Chat',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // --- CHAT CONTENT ---
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    reverse: true,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) =>
-                        _MessageBubble(message: _messages[index]),
-                  ),
-                ),
-                if (_messages.length == 1 && _isInitialized)
-                  _buildSuggestedQuestions(colorScheme),
-                _buildInputArea(colorScheme),
-              ],
-            ),
+            child:
+                (_currentSessionId == null && _messages.isEmpty && !_isNewChat)
+                ? _buildLandingView(colorScheme)
+                : _buildChatView(colorScheme),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSuggestedQuestions(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      height: 50,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _suggestedQuestions.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ActionChip(
-              label: Text(_suggestedQuestions[index]),
-              labelStyle: TextStyle(
-                fontSize: 12,
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w600,
+  Widget _buildLandingView(ColorScheme colorScheme) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              l10n.aiChatTitle,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: colorScheme.onSurface,
               ),
-              backgroundColor: colorScheme.primaryContainer.withOpacity(0.4),
-              side: BorderSide(color: colorScheme.primary.withOpacity(0.2)),
-              onPressed: () => _handleSuggestedQuestion(_suggestedQuestions[index]),
             ),
-          );
-        },
-      ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadHistory,
+              tooltip: 'Refresh',
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.auto_awesome, size: 64, color: colorScheme.primary),
+              const SizedBox(height: 16),
+              Text(
+                l10n.howCanIHelp,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _startNewChat,
+                icon: const Icon(Icons.add),
+                label: Text(l10n.askQuestion),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildSuggestedQuestions(colorScheme),
+            ],
+          ),
+        ),
+        const SizedBox(height: 48),
+        Text(
+          l10n.recentQuestions,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: _isLoadingHistory
+              ? const Center(child: CircularProgressIndicator())
+              : _sessions.isEmpty
+              ? Center(child: Text(l10n.noQuestionsFound))
+              : ListView.builder(
+                  itemCount: _sessions.length,
+                  itemBuilder: (context, index) {
+                    final session = _sessions[index];
+                    return ListTile(
+                      leading: const Icon(Icons.chat_bubble_outline),
+                      title: Text(
+                        (session['title'] == null ||
+                                session['title'].toString().isEmpty ||
+                                session['title'] == 'Untitled Question')
+                            ? (session['last_message']?.toString() ??
+                                  l10n.untitledQuestion)
+                            : session['title'].toString(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        session['updated_at']?.toString().split('T')[0] ??
+                            session['created_at']?.toString().split('T')[0] ??
+                            '',
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                      onTap: () {
+                        final sessionId =
+                            session['session_id'] ??
+                            session['chatbot_session_id'];
+                        if (sessionId != null &&
+                            sessionId.toString().isNotEmpty) {
+                          _loadSessionMessages(sessionId.toString());
+                        } else {
+                          _showSnackBar('Invalid session ID', Colors.red);
+                        }
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChatView(ColorScheme colorScheme) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // --- HEADER ---
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => setState(() {
+                    _messages.clear();
+                    _currentSessionId = null;
+                    _isNewChat = false;
+                    _loadHistory();
+                  }),
+                  tooltip: l10n.backToHistory,
+                ),
+                Text(
+                  "KalmNest AI",
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _currentSessionId != null
+                      ? () => _loadSessionMessages(_currentSessionId!)
+                      : null,
+                  tooltip: l10n.refreshQuestion,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: _messages.isNotEmpty ? _clearChat : null,
+                  tooltip: l10n.deleteChat,
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // --- CHAT CONTENT ---
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) =>
+                _MessageBubble(message: _messages[index]),
+          ),
+        ),
+        // Show input area only if first message hasn't been sent yet
+        if (!_isSending && !_hasSentFirstMessage) _buildInputArea(colorScheme),
+      ],
+    );
+  }
+
+  Widget _buildSuggestedQuestions(ColorScheme colorScheme) {
+    final l10n = AppLocalizations.of(context)!;
+    final suggestionPrefix = l10n.suggestionPrefix;
+    final suggestedQuestions = [
+      "${suggestionPrefix}HTML",
+      "${suggestionPrefix}CSS",
+      "${suggestionPrefix}JavaScript",
+      "${suggestionPrefix}PHP",
+      "${suggestionPrefix}Web Development",
+    ];
+
+    return Column(
+      children: [
+        Text(
+          l10n.quickSuggestions,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          alignment: WrapAlignment.center,
+          children: suggestedQuestions.map((question) {
+            IconData icon;
+            Color iconColor;
+
+            if (question.contains('HTML')) {
+              icon = Icons.html;
+              iconColor = Colors.orange;
+            } else if (question.contains('CSS')) {
+              icon = Icons.css;
+              iconColor = Colors.blue;
+            } else if (question.contains('JavaScript')) {
+              icon = Icons.javascript;
+              iconColor = Colors.amber;
+            } else if (question.contains('PHP')) {
+              icon = Icons.php;
+              iconColor = Colors.indigo;
+            } else {
+              icon = Icons.web;
+              iconColor = colorScheme.primary;
+            }
+
+            final label = question.replaceFirst(suggestionPrefix, "");
+
+            return MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: InkWell(
+                onTap: () => _handleSuggestedQuestion(question),
+                borderRadius: BorderRadius.circular(12),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withOpacity(0.5),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 20, color: iconColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
   Widget _buildInputArea(ColorScheme colorScheme) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: TextField(
-                  controller: _textController,
-                  focusNode: _focusNode,
-                  maxLines: 4,
-                  minLines: 1,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    hintText: 'Type your message...',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    border: InputBorder.none,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.language_rounded,
+                    size: 14,
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                   ),
-                  onSubmitted: (_) => _handleSendMessage(),
-                ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'AI responds in the same language as your question',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: _isSending ? null : _handleSendMessage,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _isSending ? colorScheme.outline : colorScheme.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: _isSending ? [] : [
-                    BoxShadow(
-                      color: colorScheme.primary.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(
+                        0.5,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: colorScheme.outlineVariant),
                     ),
-                  ],
+                    child: TextField(
+                      controller: _textController,
+                      focusNode: _focusNode,
+                      maxLines: 4,
+                      minLines: 1,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        hintText: l10n.typeQuestionHint,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (_) => _handleSendMessage(),
+                    ),
+                  ),
                 ),
-                child: Icon(
-                  _isSending ? Icons.hourglass_empty : Icons.send_rounded,
-                  color: Colors.white,
-                  size: 20,
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: _isSending ? null : _handleSendMessage,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _isSending
+                          ? colorScheme.outline
+                          : colorScheme.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: _isSending
+                          ? []
+                          : [
+                              BoxShadow(
+                                color: colorScheme.primary.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                    ),
+                    child: Icon(
+                      _isSending ? Icons.hourglass_empty : Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -348,9 +777,7 @@ class _AiChatPageState extends State<AiChatPage> with SingleTickerProviderStateM
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
 
-  const _MessageBubble({
-    required this.message,
-  });
+  const _MessageBubble({required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -363,7 +790,9 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isUser) ...[
@@ -376,7 +805,10 @@ class _MessageBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: message.isUser
                     ? LinearGradient(
-                        colors: [colorScheme.primary, colorScheme.primary.withBlue(200)],
+                        colors: [
+                          colorScheme.primary,
+                          colorScheme.primary.withBlue(200),
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
@@ -384,8 +816,8 @@ class _MessageBubble extends StatelessWidget {
                 color: message.isUser
                     ? null
                     : message.isError
-                        ? colorScheme.errorContainer
-                        : colorScheme.surfaceContainerHighest.withOpacity(0.7),
+                    ? colorScheme.errorContainer
+                    : colorScheme.surfaceContainerHighest.withOpacity(0.7),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -403,16 +835,19 @@ class _MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message.text,
-                    style: TextStyle(
-                      color: message.isUser 
-                          ? Colors.white 
-                          : message.isError 
-                              ? colorScheme.onErrorContainer 
-                              : colorScheme.onSurface,
-                      fontSize: 15,
-                      height: 1.4,
+                  MarkdownBody(
+                    data: message.text,
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(
+                        color: message.isUser
+                            ? Colors.white
+                            : message.isError
+                            ? colorScheme.onErrorContainer
+                            : colorScheme.onSurface,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                      strong: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -494,17 +929,22 @@ class _TypingDot extends StatefulWidget {
   State<_TypingDot> createState() => _TypingDotState();
 }
 
-class _TypingDotState extends State<_TypingDot> with SingleTickerProviderStateMixin {
+class _TypingDotState extends State<_TypingDot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
     );
+    _animation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     Future.delayed(Duration(milliseconds: widget.delay), () {
       if (mounted) _controller.repeat(reverse: true);
     });
@@ -524,7 +964,9 @@ class _TypingDotState extends State<_TypingDot> with SingleTickerProviderStateMi
         width: 6,
         height: 6,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.3 + (_animation.value * 0.7)),
+          color: Theme.of(
+            context,
+          ).colorScheme.primary.withOpacity(0.3 + (_animation.value * 0.7)),
           shape: BoxShape.circle,
         ),
       ),

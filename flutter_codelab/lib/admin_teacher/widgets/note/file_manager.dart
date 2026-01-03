@@ -67,7 +67,7 @@ class _FileManagerState extends State<FileManager> {
       final dir = Directory(_targetPath);
       final List<FileSystemEntity> files = dir.listSync();
       setState(() {
-        _files = files.whereType<File>().toList();
+        _files = files.where((e) => e is File).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -162,11 +162,10 @@ class _FileManagerState extends State<FileManager> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) {
+    if (_error != null)
       return Center(
         child: Text(_error!, style: const TextStyle(color: Colors.red)),
       );
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

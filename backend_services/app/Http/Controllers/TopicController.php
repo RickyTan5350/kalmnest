@@ -12,7 +12,11 @@ class TopicController extends Controller
      */
     public function index()
     {
-        //
+        $topics = Topic::all();
+        return response()->json([
+            'success' => true,
+            'data' => $topics
+        ]);
     }
 
     /**
