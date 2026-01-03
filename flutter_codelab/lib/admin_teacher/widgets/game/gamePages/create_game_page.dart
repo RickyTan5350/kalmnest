@@ -9,6 +9,7 @@ import 'package:code_play/api/auth_api.dart';
 
 import 'package:code_play/services/local_level_storage.dart';
 import 'dart:convert';
+import 'package:code_play/admin_teacher/widgets/game/index_file_preview.dart';
 
 /// ===============================================================
 /// Platform helper (SAFE for Web)
@@ -69,8 +70,8 @@ class _CreateGamePageState extends State<CreateGamePage> {
     text: '0',
   );
 
-  final GlobalKey<_IndexFilePreviewState> previewKey =
-      GlobalKey<_IndexFilePreviewState>();
+  final GlobalKey<IndexFilePreviewState> previewKey =
+      GlobalKey<IndexFilePreviewState>();
 
   LocalAssetServer? _server;
   LocalAssetServer? _previewServer;
@@ -111,16 +112,26 @@ class _CreateGamePageState extends State<CreateGamePage> {
       // Clear any existing temp data for this user
       await _clearTempData();
 
-      // Start preview server for local storage
-      final storage = LocalLevelStorage();
-      final storageBasePath = await storage.getBasePath(userId: userId);
-      await _previewServer!.start(path: storageBasePath);
+      if (kIsWeb) {
+        setState(() {
+          _serverUrl = 'assets';
+          _previewServerUrl = '';
+          _userId = userId;
+        });
+      } else {
+        // Start preview server for local storage
+        final storage = LocalLevelStorage();
+        final storageBasePath = await storage.getBasePath(userId: userId);
+        await _previewServer!.start(path: storageBasePath);
 
-      setState(() {
-        _serverUrl = 'http://localhost:${_server!.port}';
-        _previewServerUrl = 'http://localhost:${_previewServer!.port}';
-        _userId = userId;
-      });
+        await _server!.start(path: 'assets');
+
+        setState(() {
+          _serverUrl = 'http://localhost:${_server!.port}';
+          _previewServerUrl = 'http://localhost:${_previewServer!.port}';
+          _userId = userId;
+        });
+      }
     } catch (e) {
       print("Error starting local server: $e");
     }
@@ -483,6 +494,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                       userRole: widget.userRole,
                       serverUrl: _previewServerUrl ?? '',
                       levelId: 'temp',
+                      userId: _userId,
                     ),
                   ),
                 ),
@@ -492,53 +504,5 @@ class _CreateGamePageState extends State<CreateGamePage> {
         ),
       ),
     );
-  }
-}
-
-/// ===============================================================
-/// index.html Preview WebView (Windows + Mobile)
-/// ===============================================================
-class IndexFilePreview extends StatefulWidget {
-  final String userRole;
-  final String serverUrl;
-  final String levelId;
-
-  const IndexFilePreview({
-    super.key,
-    required this.userRole,
-    required this.serverUrl,
-    required this.levelId,
-  });
-
-  @override
-  State<IndexFilePreview> createState() => _IndexFilePreviewState();
-}
-
-class _IndexFilePreviewState extends State<IndexFilePreview> {
-  // Key to force rebuild on reload
-  Key _key = UniqueKey();
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.serverUrl.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final url = "${widget.serverUrl}/${widget.levelId}/index/index.html";
-
-    return InAppWebView(
-      key: _key,
-      initialUrlRequest: URLRequest(url: WebUri(url)),
-      initialSettings: InAppWebViewSettings(
-        javaScriptEnabled: true,
-        isInspectable: kDebugMode,
-      ),
-    );
-  }
-
-  void reloadPreview(String userRole) {
-    setState(() {
-      _key = UniqueKey();
-    });
   }
 }

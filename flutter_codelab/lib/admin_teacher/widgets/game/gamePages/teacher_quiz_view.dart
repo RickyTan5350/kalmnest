@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:code_play/admin_teacher/widgets/game/gamePages/play_game_page.dart';
+import 'package:code_play/admin_teacher/widgets/game/index_file_preview.dart';
 import 'package:code_play/utils/local_asset_server.dart';
 import 'package:flutter/material.dart';
 import 'package:code_play/api/game_api.dart'; // Ensure this matches your path
@@ -194,15 +194,22 @@ class _StudentQuizPreviewPageState extends State<StudentQuizPreviewPage> {
 
   Future<void> _initServerAndData() async {
     // 1. Start Server
-    _server = LocalAssetServer();
+    // 1. Start Server
     try {
-      final studentId = widget.student['user_id']?.toString();
-      final storageBasePath = await _storage.getBasePath(userId: studentId);
-      await _server!.start(path: storageBasePath);
+      if (kIsWeb) {
+        setState(() {
+          _serverUrl = 'web_dummy';
+        });
+      } else {
+        _server = LocalAssetServer();
+        final studentId = widget.student['user_id']?.toString();
+        final storageBasePath = await _storage.getBasePath(userId: studentId);
+        await _server!.start(path: storageBasePath);
 
-      setState(() {
-        _serverUrl = "http://localhost:${_server!.port}";
-      });
+        setState(() {
+          _serverUrl = "http://localhost:${_server!.port}";
+        });
+      }
     } catch (e) {
       print("Error starting local server: $e");
     }
@@ -304,6 +311,7 @@ class _StudentQuizPreviewPageState extends State<StudentQuizPreviewPage> {
               userRole: 'teacher',
               serverUrl: _serverUrl!,
               levelId: widget.level.levelId!,
+              userId: widget.student['user_id']?.toString(), // Pass student ID
             ),
     );
   }

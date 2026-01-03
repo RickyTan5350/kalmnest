@@ -8,6 +8,7 @@ import 'package:code_play/utils/local_asset_server.dart';
 import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/services/local_level_storage.dart';
 import 'dart:convert';
+import 'package:code_play/admin_teacher/widgets/game/index_file_preview.dart';
 
 /// Opens the edit dialog
 Future<void> showEditGamePage({
@@ -59,8 +60,8 @@ class _EditGamePageState extends State<EditGamePage> {
   // Timer state
   late TextEditingController _timerController;
 
-  final GlobalKey<_IndexFilePreviewState> previewKey =
-      GlobalKey<_IndexFilePreviewState>();
+  final GlobalKey<IndexFilePreviewState> previewKey =
+      GlobalKey<IndexFilePreviewState>();
 
   List<String> get levelTypes {
     if (widget.userRole.toLowerCase() == 'teacher') {
@@ -116,18 +117,25 @@ class _EditGamePageState extends State<EditGamePage> {
         );
       }
 
-      setState(() {
-        _userId = userId;
-      });
+      if (kIsWeb) {
+        setState(() {
+          _serverUrl = 'assets';
+          _previewServerUrl = '';
+          _userId = userId;
+        });
+      } else {
+        // Start preview server for local storage base path
+        final storageBasePath = await _levelStorage.getBasePath(userId: userId);
+        await _previewServer!.start(path: storageBasePath);
 
-      // Start preview server for local storage base path
-      final storageBasePath = await _levelStorage.getBasePath(userId: userId);
-      await _previewServer!.start(path: storageBasePath);
+        await _server!.start(path: 'assets');
 
-      setState(() {
-        _serverUrl = 'http://localhost:${_server!.port}';
-        _previewServerUrl = 'http://localhost:${_previewServer!.port}';
-      });
+        setState(() {
+          _serverUrl = 'http://localhost:${_server!.port}';
+          _previewServerUrl = 'http://localhost:${_previewServer!.port}';
+          _userId = userId;
+        });
+      }
     } catch (e) {
       print("Error starting local server: $e");
     }
@@ -508,6 +516,7 @@ class _EditGamePageState extends State<EditGamePage> {
                       userRole: widget.userRole,
                       serverUrl: _previewServerUrl ?? '', // Use preview server
                       levelId: widget.level.levelId ?? '',
+                      userId: _userId,
                     ),
                   ),
                 ),
@@ -517,50 +526,5 @@ class _EditGamePageState extends State<EditGamePage> {
         ),
       ),
     );
-  }
-}
-
-/// WebView preview for Unity build
-class IndexFilePreview extends StatefulWidget {
-  final String userRole;
-  final String serverUrl;
-  final String levelId;
-
-  const IndexFilePreview({
-    super.key,
-    required this.userRole,
-    required this.serverUrl,
-    required this.levelId,
-  });
-
-  @override
-  State<IndexFilePreview> createState() => _IndexFilePreviewState();
-}
-
-class _IndexFilePreviewState extends State<IndexFilePreview> {
-  Key _key = UniqueKey();
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.serverUrl.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final url = "${widget.serverUrl}/${widget.levelId}/index/index.html";
-
-    return InAppWebView(
-      key: _key,
-      initialUrlRequest: URLRequest(url: WebUri(url)),
-      initialSettings: InAppWebViewSettings(
-        javaScriptEnabled: true,
-        isInspectable: kDebugMode,
-      ),
-    );
-  }
-
-  void reloadPreview(String userRole) {
-    setState(() {
-      _key = UniqueKey();
-    });
   }
 }

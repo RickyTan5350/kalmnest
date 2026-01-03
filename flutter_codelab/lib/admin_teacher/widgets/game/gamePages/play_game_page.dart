@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:code_play/utils/local_asset_server.dart';
 import 'package:code_play/services/local_level_storage.dart';
 import 'package:code_play/api/auth_api.dart';
+import 'package:code_play/admin_teacher/widgets/game/index_file_preview.dart';
 
 /// Opens the edit dialog
 Future<void> showPlayGamePage({
@@ -26,24 +27,27 @@ Future<void> showPlayGamePage({
         parentContext: context,
         level: level,
         userRole: userRole, // Pass role to the page
+        levelId: level.levelId ?? '',
       );
     },
   );
 }
 
 class PlayGamePage extends StatefulWidget {
+  final LevelModel level;
+  final String userRole; // Current user role
+  final String levelId;
   final void Function(BuildContext context, String message, Color color)
   showSnackBar;
-  final LevelModel level;
   final BuildContext parentContext;
-  final String userRole; // Current user role
 
   const PlayGamePage({
     super.key,
-    required this.showSnackBar,
-    required this.parentContext,
     required this.level,
     required this.userRole,
+    required this.levelId,
+    required this.showSnackBar,
+    required this.parentContext,
   });
 
   @override
@@ -51,6 +55,7 @@ class PlayGamePage extends StatefulWidget {
 }
 
 class _PlayGamePageState extends State<PlayGamePage> {
+  // --- Game state ---
   late String selectedValue;
   late String levelName;
   final bool _saving = false;
@@ -59,8 +64,8 @@ class _PlayGamePageState extends State<PlayGamePage> {
   bool _isTimerActive = false;
   Timer? _timer;
 
-  final GlobalKey<_IndexFilePreviewState> previewKey =
-      GlobalKey<_IndexFilePreviewState>();
+  final GlobalKey<IndexFilePreviewState> previewKey =
+      GlobalKey<IndexFilePreviewState>();
 
   final List<String> levelTypes = ['HTML', 'CSS', 'JS', 'PHP', 'Quiz'];
 
@@ -97,22 +102,34 @@ class _PlayGamePageState extends State<PlayGamePage> {
   }
 
   Future<void> _initServer() async {
+    // Fetch user ID to pass to Unity
+    final user = await AuthApi.getStoredUser();
+    final userId = user?['user_id']?.toString();
+
+    // Clear index files for this level to ensure a fresh preview
+    if (widget.level.levelId != null) {
+      await _levelStorage.clearIndexFiles(
+        levelId: widget.level.levelId!,
+        userId: userId,
+      );
+    }
+
+    if (kIsWeb) {
+      // On Web, we don't start a local server.
+      // Unity is served from assets/unity/index.html relative to the app.
+      // Preview server is not used; we load content directly.
+      setState(() {
+        _serverUrl = 'assets'; // Magic string to indicate web asset path
+        _previewServerUrl = ''; // Not used on web
+        _userId = userId;
+      });
+      return;
+    }
+
     _server = LocalAssetServer();
     _previewServer = LocalAssetServer();
     try {
       await _server!.start(path: 'assets');
-
-      // Fetch user ID to pass to Unity
-      final user = await AuthApi.getStoredUser();
-      final userId = user?['user_id']?.toString();
-
-      // Clear index files for this level to ensure a fresh preview
-      if (widget.level.levelId != null) {
-        await _levelStorage.clearIndexFiles(
-          levelId: widget.level.levelId!,
-          userId: userId,
-        );
-      }
 
       // Start preview server pointing to local storage base path
       final storageBasePath = await _levelStorage.getBasePath(userId: userId);
@@ -352,7 +369,9 @@ class _PlayGamePageState extends State<PlayGamePage> {
                     child: InAppWebView(
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "$_serverUrl/unity/index.html?role=${widget.userRole}&level_Id=${widget.level.levelId}&user_Id=$_userId&level_Type=${widget.level.levelTypeName}",
+                          kIsWeb
+                              ? "$_serverUrl/unity/index.html?role=${widget.userRole}&level_Id=${widget.level.levelId}&user_Id=$_userId&level_Type=${widget.level.levelTypeName}"
+                              : "$_serverUrl/unity/index.html?role=${widget.userRole}&level_Id=${widget.level.levelId}&user_Id=$_userId&level_Type=${widget.level.levelTypeName}",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
@@ -636,6 +655,7 @@ class _PlayGamePageState extends State<PlayGamePage> {
                       userRole: widget.userRole,
                       serverUrl: _previewServerUrl ?? '', // Use preview server
                       levelId: widget.level.levelId ?? '',
+                      userId: _userId,
                     ),
                   ),
                 ),
@@ -645,51 +665,5 @@ class _PlayGamePageState extends State<PlayGamePage> {
         ),
       ),
     );
-  }
-}
-
-/// WebView preview for Unity build
-class IndexFilePreview extends StatefulWidget {
-  final String userRole;
-  final String serverUrl;
-  final String levelId;
-
-  const IndexFilePreview({
-    super.key,
-    required this.userRole,
-    required this.serverUrl,
-    required this.levelId,
-  });
-
-  @override
-  State<IndexFilePreview> createState() => _IndexFilePreviewState();
-}
-
-class _IndexFilePreviewState extends State<IndexFilePreview> {
-  Key _key = UniqueKey();
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.serverUrl.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    // Preview points to the generated index folder within the level
-    final url = "${widget.serverUrl}/${widget.levelId}/Index/index.html";
-
-    return InAppWebView(
-      key: _key,
-      initialUrlRequest: URLRequest(url: WebUri(url)),
-      initialSettings: InAppWebViewSettings(
-        javaScriptEnabled: true,
-        isInspectable: kDebugMode,
-      ),
-    );
-  }
-
-  void reloadPreview(String userRole) {
-    setState(() {
-      _key = UniqueKey();
-    });
   }
 }
