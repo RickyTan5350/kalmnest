@@ -805,6 +805,21 @@ class AppLocalizationsMs extends AppLocalizations {
   String get deleteClass => 'Padam Kelas';
 
   @override
+  String classesSelected(int count) {
+    return '$count Kelas Dipilih';
+  }
+
+  @override
+  String deleteClassesConfirmation(int count) {
+    return 'Adakah anda pasti mahu memadamkan $count kelas? Tindakan ini tidak boleh dibatalkan.';
+  }
+
+  @override
+  String classesDeletedSuccessfully(int count) {
+    return '$count kelas berjaya dipadam!';
+  }
+
+  @override
   String get noName => 'Tiada Nama';
 
   @override
@@ -1019,6 +1034,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get assignStudentsOptional => 'Tugaskan Pelajar (Pilihan)';
 
   @override
+  String get enrollStudentsOptional => 'Daftar Pelajar (Pilihan)';
+
+  @override
+  String get classInformation => 'Maklumat Kelas';
+
+  @override
   String studentNumber(int number) {
     return 'Pelajar $number';
   }
@@ -1105,4 +1126,30 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get aiLanguageNotice =>
       'AI akan menjawab dalam bahasa yang sama dengan soalan anda';
+
+  @override
+  String deleteFeedbacksConfirmation(int count) {
+    return 'Adakah anda pasti mahu memadamkan $count maklum balas? Tindakan ini tidak boleh dibatalkan.';
+  }
+
+  @override
+  String feedbacksDeletedSuccessfully(int count) {
+    return 'Berjaya memadamkan $count maklum balas.';
+  }
+
+  @override
+  String get selected => 'Dipilih';
+
+  @override
+  String get deleteChatSessionsTitle => 'Padam Sesi Sembang?';
+
+  @override
+  String deleteChatSessionsConfirmation(int count) {
+    return 'Adakah anda pasti mahu memadamkan $count sesi sembang? Tindakan ini tidak boleh dibatalkan.';
+  }
+
+  @override
+  String chatSessionsDeletedSuccessfully(int count) {
+    return 'Berjaya memadamkan $count sesi sembang.';
+  }
 }

@@ -1067,6 +1067,73 @@ class ClassController extends Controller
     }
 
     /**
+     * Bulk delete classes
+     * Only Admin can delete classes
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+        
+        /** @var User $user */
+        $user->load('role');
+        
+        // Check if user is admin (case-insensitive check)
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+        if ($roleName !== 'admin') {
+            return response()->json([
+                'message' => 'Unauthorized. Only admins can delete classes.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'class_ids' => 'required|array|min:1',
+            'class_ids.*' => 'required|string|exists:classes,class_id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $classIds = $request->input('class_ids', []);
+        $deletedCount = 0;
+        $failedIds = [];
+
+        try {
+            foreach ($classIds as $classId) {
+                $class = ClassModel::find($classId);
+                if ($class) {
+                    $class->delete();
+                    $deletedCount++;
+                } else {
+                    $failedIds[] = $classId;
+                }
+            }
+
+            return response()->json([
+                'message' => "Successfully deleted $deletedCount class(es)",
+                'deleted_count' => $deletedCount,
+                'failed_ids' => $failedIds,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete classes',
+                'error' => $e->getMessage(),
+                'deleted_count' => $deletedCount,
+                'failed_ids' => $failedIds,
+            ], 500);
+        }
+    }
+
+    /**
      * Update class focus (Teacher only - can only update focus)
      */
     public function updateClassFocus(Request $request, string $id): JsonResponse

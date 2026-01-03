@@ -255,6 +255,30 @@
   "details": "Butiran",
   "refresh": "Segarkan",
   "deleteClass": "Padam Kelas",
+  "classesSelected": "{count} Kelas Dipilih",
+  "@classesSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteClassesConfirmation": "Adakah anda pasti mahu memadamkan {count} kelas? Tindakan ini tidak boleh dibatalkan.",
+  "@deleteClassesConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "classesDeletedSuccessfully": "{count} kelas berjaya dipadam!",
+  "@classesDeletedSuccessfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noName": "Tiada Nama",
   "noTeacherAssigned": "Tiada Guru Ditugaskan",
   "generalInfo": "Maklumat Am",
@@ -350,6 +374,8 @@
   "createdAt": "Dicipta Pada",
   "updatedAt": "Dikemas Kini Pada",
   "assignStudentsOptional": "Tugaskan Pelajar (Pilihan)",
+  "enrollStudentsOptional": "Daftar Pelajar (Pilihan)",
+  "classInformation": "Maklumat Kelas",
   "studentNumber": "Pelajar {number}",
   "@studentNumber": {
     "placeholders": {
@@ -390,5 +416,39 @@
   "reloadQuizzes": "Muat Semula Kuiz",
   "noQuizzesAssigned": "Tiada kuiz ditugaskan",
   "pleaseEnterQuestion": "Sila masukkan soalan",
-  "aiLanguageNotice": "AI akan menjawab dalam bahasa yang sama dengan soalan anda"
+  "aiLanguageNotice": "AI akan menjawab dalam bahasa yang sama dengan soalan anda",
+  "deleteFeedbacksConfirmation": "Adakah anda pasti mahu memadamkan {count} maklum balas? Tindakan ini tidak boleh dibatalkan.",
+  "@deleteFeedbacksConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbacksDeletedSuccessfully": "Berjaya memadamkan {count} maklum balas.",
+  "@feedbacksDeletedSuccessfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selected": "Dipilih",
+  "deleteChatSessionsTitle": "Padam Sesi Sembang?",
+  "deleteChatSessionsConfirmation": "Adakah anda pasti mahu memadamkan {count} sesi sembang? Tindakan ini tidak boleh dibatalkan.",
+  "@deleteChatSessionsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatSessionsDeletedSuccessfully": "Berjaya memadamkan {count} sesi sembang.",
+  "@chatSessionsDeletedSuccessfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -802,6 +802,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteClass => 'Delete Class';
 
   @override
+  String classesSelected(int count) {
+    return '$count Classes Selected';
+  }
+
+  @override
+  String deleteClassesConfirmation(int count) {
+    return 'Are you sure you want to delete $count class(es)? This action cannot be undone.';
+  }
+
+  @override
+  String classesDeletedSuccessfully(int count) {
+    return '$count class(es) deleted successfully!';
+  }
+
+  @override
   String get noName => 'No Name';
 
   @override
@@ -1015,6 +1030,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assignStudentsOptional => 'Assign Students (Optional)';
 
   @override
+  String get enrollStudentsOptional => 'Enroll Students (Optional)';
+
+  @override
+  String get classInformation => 'Class Information';
+
+  @override
   String studentNumber(int number) {
     return 'Student $number';
   }
@@ -1099,4 +1120,30 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aiLanguageNotice =>
       'AI responds in the same language as your question';
+
+  @override
+  String deleteFeedbacksConfirmation(int count) {
+    return 'Are you sure you want to delete $count feedback(s)? This action cannot be undone.';
+  }
+
+  @override
+  String feedbacksDeletedSuccessfully(int count) {
+    return 'Successfully deleted $count feedback(s).';
+  }
+
+  @override
+  String get selected => 'Selected';
+
+  @override
+  String get deleteChatSessionsTitle => 'Delete Chat Sessions?';
+
+  @override
+  String deleteChatSessionsConfirmation(int count) {
+    return 'Are you sure you want to delete $count chat session(s)? This action cannot be undone.';
+  }
+
+  @override
+  String chatSessionsDeletedSuccessfully(int count) {
+    return 'Successfully deleted $count chat session(s).';
+  }
 }

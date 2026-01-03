@@ -99,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('classes')->group(function () {
         Route::get('/', [ClassController::class, 'index']); // List classes (role-based)
         Route::post('/', [ClassController::class, 'store']); // Create class (admin only)
+        Route::post('/bulk-delete', [ClassController::class, 'bulkDelete']); // Bulk delete classes (admin only)
         Route::get('/check-name', [ClassController::class, 'checkClassNameExists']); // Check if class name exists (case-insensitive)
         Route::get('/{id}', [ClassController::class, 'show']); // Get class details
         Route::put('/{id}', [ClassController::class, 'update']); // Update class (admin only)

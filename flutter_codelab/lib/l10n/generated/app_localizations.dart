@@ -1532,6 +1532,24 @@ abstract class AppLocalizations {
   /// **'Delete Class'**
   String get deleteClass;
 
+  /// No description provided for @classesSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Classes Selected'**
+  String classesSelected(int count);
+
+  /// No description provided for @deleteClassesConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete {count} class(es)? This action cannot be undone.'**
+  String deleteClassesConfirmation(int count);
+
+  /// No description provided for @classesDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} class(es) deleted successfully!'**
+  String classesDeletedSuccessfully(int count);
+
   /// No description provided for @noName.
   ///
   /// In en, this message translates to:
@@ -1934,6 +1952,18 @@ abstract class AppLocalizations {
   /// **'Assign Students (Optional)'**
   String get assignStudentsOptional;
 
+  /// No description provided for @enrollStudentsOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Enroll Students (Optional)'**
+  String get enrollStudentsOptional;
+
+  /// No description provided for @classInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Class Information'**
+  String get classInformation;
+
   /// No description provided for @studentNumber.
   ///
   /// In en, this message translates to:
@@ -2095,6 +2125,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI responds in the same language as your question'**
   String get aiLanguageNotice;
+
+  /// No description provided for @deleteFeedbacksConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete {count} feedback(s)? This action cannot be undone.'**
+  String deleteFeedbacksConfirmation(int count);
+
+  /// No description provided for @feedbacksDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully deleted {count} feedback(s).'**
+  String feedbacksDeletedSuccessfully(int count);
+
+  /// No description provided for @selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get selected;
+
+  /// No description provided for @deleteChatSessionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Chat Sessions?'**
+  String get deleteChatSessionsTitle;
+
+  /// No description provided for @deleteChatSessionsConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete {count} chat session(s)? This action cannot be undone.'**
+  String deleteChatSessionsConfirmation(int count);
+
+  /// No description provided for @chatSessionsDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully deleted {count} chat session(s).'**
+  String chatSessionsDeletedSuccessfully(int count);
 }
 
 class _AppLocalizationsDelegate

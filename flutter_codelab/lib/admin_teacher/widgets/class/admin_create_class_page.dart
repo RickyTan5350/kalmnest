@@ -2,8 +2,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:code_play/api/class_api.dart';
-import 'package:code_play/constants/class_constants.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_theme_extensions.dart';
 import 'package:code_play/admin_teacher/widgets/class/class_validators.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 
@@ -160,16 +158,6 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     });
   }
 
-  void _resetForm() {
-    _formKey.currentState?.reset();
-    _classNameController.clear();
-    _descriptionController.clear();
-    setState(() {
-      _selectedTeacher = null;
-      _selectedFocus = null;
-      _selectedStudents = [null];
-    });
-  }
 
   void _createClass() async {
     final l10n = AppLocalizations.of(context)!;
@@ -208,7 +196,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       if (firstError != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(firstError!),
+            content: Text(firstError),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
@@ -264,12 +252,41 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     required BuildContext context,
     bool isRequired = false,
   }) {
-    return ClassTheme.inputDecoration(
-      context: context,
-      labelText: labelText,
-      icon: icon,
+    final colorScheme = Theme.of(context).colorScheme;
+    return InputDecoration(
+      label: RichText(
+        text: TextSpan(
+          text: labelText,
+          style: TextStyle(
+            color: colorScheme.onSurfaceVariant,
+            fontSize: 16,
+          ),
+          children: [
+            if (isRequired)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       hintText: hintText,
-      isRequired: isRequired,
+      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+      ),
+      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      hintStyle: TextStyle(
+        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+      ),
+      fillColor: colorScheme.surfaceContainerHighest,
+      filled: true,
     );
   }
 
@@ -281,46 +298,120 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
+        title: Text(
+          l10n.createNewClass,
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: colorScheme.surface,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
-          onPressed: () => Navigator.pop(context),
-        ),
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.check, color: colorScheme.primary),
+            onPressed: () {
+              _formKey.currentState?.validate();
+              _createClass();
+            },
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(ClassConstants.cardPadding),
-        child: Center(
-          child: Container(
-            constraints: BoxConstraints(maxWidth: ClassConstants.formMaxWidth),
-            decoration: ClassTheme.cardDecoration(context),
-            padding: EdgeInsets.all(ClassConstants.cardPadding),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
             child: Form(
               key: _formKey,
               autovalidateMode: AutovalidateMode.onUserInteraction,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    l10n.createNewClass,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
+                  // Class Information Title
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.classInformation,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  SizedBox(height: ClassConstants.sectionSpacing),
+                  const SizedBox(height: 12),
 
-                  // Required fields hint
+                  // Class Name
+                  TextFormField(
+                    controller: _classNameController,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      context: context,
+                      labelText: l10n.className,
+                      hintText: l10n.enterClassName,
+                      icon: Icons.class_,
+                      isRequired: true,
+                    ).copyWith(
+                      suffixIcon: _isCheckingClassName
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) {
+                      _checkClassNameExists(value);
+                    },
+                    validator: (value) {
+                      // First check basic validation
+                      final basicError = ClassValidators.className(value, l10n);
+                      if (basicError != null) {
+                        return basicError;
+                      }
+                      // Then check if class name exists (real-time validation)
+                      if (_classNameValidationError != null) {
+                        return _classNameValidationError;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Description
+                  TextFormField(
+                    controller: _descriptionController,
+                    maxLines: 3,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      context: context,
+                      labelText: l10n.description,
+                      hintText:
+                          '${l10n.enterDescription} (${l10n.atLeast10Words})',
+                      icon: Icons.description,
+                      isRequired: true,
+                    ),
+                    validator: (value) =>
+                        ClassValidators.description(value, l10n),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Required fields hint (below description)
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(
-                        0.3,
-                      ),
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: colorScheme.outlineVariant.withOpacity(0.5),
-                      ),
                     ),
                     child: Row(
                       children: [
@@ -342,76 +433,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       ],
                     ),
                   ),
-                  SizedBox(height: ClassConstants.formSpacing),
-
-                  // Class Name
-                  TextFormField(
-                    controller: _classNameController,
-                    style: TextStyle(color: colorScheme.onSurface),
-                    decoration:
-                        _inputDecoration(
-                          context: context,
-                          labelText: l10n.className,
-                          hintText: l10n.enterClassName,
-                          icon: Icons.class_,
-                          isRequired: true,
-                        ).copyWith(
-                          suffixIcon: _isCheckingClassName
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        colorScheme.primary,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        ),
-                    onChanged: (value) {
-                      _checkClassNameExists(value);
-                    },
-                    validator: (value) {
-                      // First check basic validation
-                      final basicError = ClassValidators.className(value, l10n);
-                      if (basicError != null) {
-                        return basicError;
-                      }
-                      // Then check if class name exists (real-time validation)
-                      if (_classNameValidationError != null) {
-                        return _classNameValidationError;
-                      }
-                      return null;
-                    },
-                  ),
-                  SizedBox(height: ClassConstants.formSpacing),
-
-                  // Description
-                  TextFormField(
-                    controller: _descriptionController,
-                    maxLines: 3,
-                    style: TextStyle(color: colorScheme.onSurface),
-                    decoration: _inputDecoration(
-                      context: context,
-                      labelText: l10n.description,
-                      hintText:
-                          '${l10n.enterDescription} (${l10n.atLeast10Words})',
-                      icon: Icons.description,
-                      isRequired: true,
-                    ),
-                    validator: (value) =>
-                        ClassValidators.description(value, l10n),
-                  ),
-                  SizedBox(height: ClassConstants.formSpacing),
+                  const SizedBox(height: 16),
 
                   // Focus Dropdown
                   DropdownButtonFormField<String>(
                     value: _selectedFocus,
-                    dropdownColor: const Color(0xFFF5FAFC),
+                    dropdownColor: colorScheme.surfaceContainer,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
                       context: context,
@@ -442,12 +469,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       _formKey.currentState?.validate();
                     },
                   ),
-                  SizedBox(height: ClassConstants.formSpacing),
+                  const SizedBox(height: 16),
 
                   // Teacher Dropdown
                   DropdownButtonFormField<String>(
                     initialValue: _selectedTeacher,
-                    dropdownColor: const Color(0xFFF5FAFC),
+                    dropdownColor: colorScheme.surfaceContainer,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
                       context: context,
@@ -556,12 +583,19 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                           },
                     // Optional: no validator to keep it optional
                   ),
-                  SizedBox(height: ClassConstants.formSpacing),
+                  const SizedBox(height: 16),
 
                   // Students
-                  Text(
-                    l10n.assignStudentsOptional,
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.enrollStudentsOptional,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 8),
 
@@ -572,7 +606,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                         padding: const EdgeInsets.only(bottom: 10),
                         child: DropdownButtonFormField<String>(
                           initialValue: _selectedStudents[index],
-                          dropdownColor: const Color(0xFFF5FAFC),
+                          dropdownColor: colorScheme.surfaceContainer,
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: _inputDecoration(
                             context: context,
@@ -692,52 +726,25 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     }),
                   ),
 
-                  TextButton.icon(
-                    onPressed: () {
-                      setState(() => _selectedStudents.add(null));
-                    },
-                    icon: Icon(Icons.add, color: colorScheme.onSurface),
-                    label: Text(
-                      l10n.addStudent,
-                      style: TextStyle(color: colorScheme.onSurface),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        setState(() => _selectedStudents.add(null));
+                      },
+                      icon: Icon(Icons.add, color: colorScheme.primary),
+                      label: Text(
+                        l10n.addStudent,
+                        style: TextStyle(color: colorScheme.primary),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: colorScheme.surfaceContainer,
+                      ),
                     ),
                   ),
 
-                  SizedBox(height: ClassConstants.sectionSpacing),
-
-                  // Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: _resetForm,
-                        child: Text(
-                          l10n.reset,
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          // Trigger validation on all fields
-                          _formKey.currentState?.validate();
-                          _createClass();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(l10n.create),
-                      ),
-                    ],
-                  ),
+                  // Add extra space at the bottom
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
