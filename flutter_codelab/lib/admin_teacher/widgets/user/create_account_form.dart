@@ -1,8 +1,10 @@
+import 'dart:convert'; // Added for JSON parsing
 import 'package:flutter/material.dart';
 import 'package:code_play/api/user_api.dart';
 import 'package:code_play/utils/formatters.dart';
 import 'package:code_play/models/user_data.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/password_strength_indicator.dart';
 
 // Utility function to show the dialog
 void showCreateUserAccountDialog({
@@ -41,13 +43,15 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _passwordConfirmationController =
-      TextEditingController(); // <--- ADDED: Controller for password confirmation
+      TextEditingController();
 
   // Variables
   String? _selectedGender;
   String? _selectedRole = 'Student'; // Default role to student
   bool _accountStatus = true; // Default to active
   Map<String, String> _serverErrors = {}; // Store server-side errors
+
+  bool _isPasswordVisible = false;
 
   bool _isLoading = false;
 
@@ -61,8 +65,86 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     _phoneNoController.dispose();
     _addressController.dispose();
     _passwordController.dispose();
-    _passwordConfirmationController.dispose(); // <--- ADDED to dispose list
+    _passwordConfirmationController.dispose();
     super.dispose();
+  }
+
+  // --- NEW: JSON Autofill Logic ---
+  void _attemptJsonAutofill(String value) {
+    value = value.trim();
+    if ((value.startsWith('{') && value.endsWith('}')) ||
+        (value.startsWith('[') && value.endsWith(']'))) {
+      try {
+        // Handle potentially wrapped JSON (e.g. [ { ... } ])
+        dynamic decoded = jsonDecode(value);
+        if (decoded is List && decoded.isNotEmpty) {
+          decoded = decoded.first;
+        }
+
+        if (decoded is Map<String, dynamic>) {
+          setState(() {
+            if (decoded.containsKey('name'))
+              _nameController.text = decoded['name'] ?? '';
+            if (decoded.containsKey('email'))
+              _emailController.text = decoded['email'] ?? '';
+            if (decoded.containsKey('phone_no'))
+              _phoneNoController.text = decoded['phone_no'] ?? '';
+            if (decoded.containsKey('address'))
+              _addressController.text = decoded['address'] ?? '';
+
+            // Handle Role
+            if (decoded.containsKey('role')) {
+              String role = decoded['role'].toString();
+              // Capitalize first letter to match dropdown values
+              if (role.isNotEmpty) {
+                role = role[0].toUpperCase() + role.substring(1).toLowerCase();
+                if (_roles.contains(role)) {
+                  _selectedRole = role;
+                }
+              }
+            } else if (decoded.containsKey('roleName')) {
+              // Handle roleName key variation
+              String role = decoded['roleName'].toString();
+              if (role.isNotEmpty) {
+                role = role[0].toUpperCase() + role.substring(1).toLowerCase();
+                if (_roles.contains(role)) {
+                  _selectedRole = role;
+                }
+              }
+            }
+
+            // Handle Gender
+            if (decoded.containsKey('gender')) {
+              String gender = decoded['gender'].toString().toLowerCase();
+              if (_genders.contains(gender)) {
+                _selectedGender = gender;
+              }
+            }
+
+            // Handle Status
+            if (decoded.containsKey('accountStatus')) {
+              var status = decoded['accountStatus'];
+              if (status is bool) {
+                _accountStatus = status;
+              } else if (status is String) {
+                _accountStatus = status.toLowerCase() == 'active';
+              } else if (status is int) {
+                _accountStatus = status == 1; // Assuming 1 is active
+              }
+            }
+          });
+
+          widget.showSnackBar(
+            context,
+            'Form autofilled from pasted JSON',
+            Colors.green,
+          );
+        }
+      } catch (e) {
+        // Not valid JSON, ignore silently or maybe log
+        // print('Paste detected but invalid JSON: $e');
+      }
+    }
   }
 
   String _getLocalizedGender(String gender) {
@@ -93,12 +175,13 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
 
   // Submission logic, mirroring _submitForm
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Clear previous server errors on new submission attempt
+    // 1. Reset Errors
     setState(() {
       _serverErrors.clear();
     });
+
+    // 2. Client-Side Validation
+    if (!_formKey.currentState!.validate()) return;
 
     // Additionally check if password and confirmation match if they are both filled
     if (_passwordController.text != _passwordConfirmationController.text) {
@@ -114,7 +197,6 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
       _isLoading = true;
     });
 
-    // --- UPDATED: Pass passwordConfirmation and roleName ---
     final data = UserData(
       email: _emailController.text,
       name: _nameController.text,
@@ -126,9 +208,9 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
           : null,
       gender: _selectedGender,
       password: _passwordController.text,
-      passwordConfirmation: _passwordConfirmationController.text, // <--- ADDED
+      passwordConfirmation: _passwordConfirmationController.text,
       accountStatus: _accountStatus,
-      roleName: _selectedRole!, // <--- RENAMED
+      roleName: _selectedRole!,
     );
 
     try {
@@ -140,50 +222,11 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
           AppLocalizations.of(context)!.userAccountCreatedSuccess,
           Colors.green,
         );
-      }
-    } on ValidationException catch (e) {
-      if (mounted) {
-        setState(() {
-          // Map the errors: key -> first error message in list
-          e.errors.forEach((key, value) {
-            if (value is List && value.isNotEmpty) {
-              _serverErrors[key] = value.first.toString();
-            }
-          });
-        });
-        // Re-trigger validation to show the errors in the fields
-        _formKey.currentState!.validate();
-
-        // Optional: Show a snackbar summary if you want, or trust the fields.
-        // For now, removing the generic validation snackbar to rely on inline errors.
+        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        final errorColor = Theme.of(
-          context,
-        ).colorScheme.error; // Standardize color
-        String errorString = e.toString();
-
-        if (errorString.startsWith('Exception: Network Error:')) {
-          // Handles connection refused, incorrect URL, etc.
-          final message = errorString.substring(
-            'Exception: Network Error:'.length,
-          );
-          widget.showSnackBar(
-            context,
-            AppLocalizations.of(context)!.networkErrorCheckApi,
-            errorColor,
-          );
-        } else {
-          // Generic or unexpected server error
-          widget.showSnackBar(
-            context,
-            AppLocalizations.of(
-              context,
-            )!.unknownErrorOccurred(errorString.replaceAll('Exception: ', '')),
-            errorColor,
-          );
-        }
+        _handleSubmissionError(e);
       }
     } finally {
       if (mounted) {
@@ -194,15 +237,70 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     }
   }
 
+  void _handleSubmissionError(Object e) {
+    String errorString = e.toString();
+
+    // --- CASE 1: Validation Error ---
+    if (e is ValidationException) {
+      setState(() {
+        // Map the errors: key -> first error message in list
+        e.errors.forEach((key, value) {
+          if (value is List && value.isNotEmpty) {
+            _serverErrors[key] = value.first.toString();
+          }
+        });
+      });
+      // Re-trigger validation to show the errors in the fields
+      _formKey.currentState!.validate();
+
+      widget.showSnackBar(
+        context,
+        'Please fill in all required fields correctly.',
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 2: Network Error ---
+    else if (errorString.startsWith('Exception: Network Error:')) {
+      final message = errorString.substring('Exception: Network Error:'.length);
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(context)!.networkErrorCheckApi,
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 3: General Error ---
+    else {
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(
+          context,
+        )!.unknownErrorOccurred(errorString.replaceAll('Exception: ', '')),
+        Theme.of(context).colorScheme.error,
+      );
+    }
+  }
+
   // Input decoration helper, mirroring the _inputDecoration in admin_create_achievement_page.dart
   InputDecoration _inputDecoration({
     required String labelText,
     required IconData icon,
     String? hintText,
     required ColorScheme colorScheme,
+    bool isMandatory = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: labelText),
+            if (isMandatory)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       hintText: hintText,
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
       border: OutlineInputBorder(
@@ -262,6 +360,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     labelText: AppLocalizations.of(context)!.name,
                     icon: Icons.person,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   validator: (value) {
                     if (_serverErrors.containsKey('name')) {
@@ -272,6 +371,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     return null;
                   },
                   onChanged: (value) {
+                    _attemptJsonAutofill(value); // <--- JSON Check
                     if (_serverErrors.containsKey('name')) {
                       setState(() => _serverErrors.remove('name'));
                     }
@@ -287,9 +387,11 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     labelText: AppLocalizations.of(context)!.email,
                     icon: Icons.email,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   keyboardType: TextInputType.emailAddress,
                   onChanged: (value) {
+                    _attemptJsonAutofill(value); // <--- JSON Check
                     if (_serverErrors.containsKey('email')) {
                       setState(() => _serverErrors.remove('email'));
                     }
@@ -316,12 +418,25 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                 TextFormField(
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: AppLocalizations.of(context)!.password,
-                    icon: Icons.lock,
-                    colorScheme: colorScheme,
-                  ),
-                  obscureText: true,
+                  decoration:
+                      _inputDecoration(
+                        labelText: AppLocalizations.of(context)!.password,
+                        icon: Icons.lock,
+                        colorScheme: colorScheme,
+                        isMandatory: true,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
+                        ),
+                      ),
+                  obscureText: !_isPasswordVisible,
                   validator: (value) {
                     if (_serverErrors.containsKey('password')) {
                       return _serverErrors['password'];
@@ -334,20 +449,37 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     if (_serverErrors.containsKey('password')) {
                       setState(() => _serverErrors.remove('password'));
                     }
+                    setState(() {}); // Trigger rebuild for strength indicator
                   },
                 ),
+                PasswordStrengthIndicator(password: _passwordController.text),
                 const SizedBox(height: 16),
 
                 // --- ADDED: Password Confirmation Field ---
                 TextFormField(
                   controller: _passwordConfirmationController,
                   style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: AppLocalizations.of(context)!.confirmPassword,
-                    icon: Icons.lock_open,
-                    colorScheme: colorScheme,
-                  ),
-                  obscureText: true,
+                  decoration:
+                      _inputDecoration(
+                        labelText: AppLocalizations.of(
+                          context,
+                        )!.confirmPassword,
+                        icon: Icons.lock_open,
+                        colorScheme: colorScheme,
+                        isMandatory: true,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
+                        ),
+                      ),
+                  obscureText: !_isPasswordVisible,
                   validator: (value) {
                     if (value == null || value.isEmpty)
                       return AppLocalizations.of(
@@ -370,6 +502,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     icon: Icons.phone,
                     colorScheme: colorScheme,
                     hintText: 'e.g. 012-3456789',
+                    isMandatory: true,
                   ),
                   keyboardType: TextInputType.phone,
                   inputFormatters: [MalaysianPhoneFormatter()],
@@ -406,6 +539,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     labelText: AppLocalizations.of(context)!.address,
                     icon: Icons.location_on,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   maxLines: 2,
                   validator: (value) {
@@ -426,6 +560,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     labelText: AppLocalizations.of(context)!.genderLabel,
                     icon: Icons.people,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   items: _genders.map((value) {
                     IconData icon;
@@ -434,7 +569,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     } else if (value.toLowerCase() == 'female') {
                       icon = Icons.female;
                     } else {
-                      icon = Icons.transgender;
+                      icon = Icons.person_outline;
                     }
                     return DropdownMenuItem(
                       value: value,
@@ -470,6 +605,7 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
                     labelText: AppLocalizations.of(context)!.roleLabel,
                     icon: Icons.badge,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   items: _roles.map((value) {
                     IconData icon;
@@ -591,4 +727,3 @@ class _CreateUserAccountDialogState extends State<CreateUserAccountDialog> {
     );
   }
 }
-

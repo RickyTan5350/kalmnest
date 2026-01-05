@@ -51,7 +51,13 @@ public function authorize(): bool
 
         return [
             // Basic User fields
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('users', 'name')->ignore($userId, 'user_id'),
+            ],
             'email' => [
                 'sometimes', // Only validate if present
                 'required', 
