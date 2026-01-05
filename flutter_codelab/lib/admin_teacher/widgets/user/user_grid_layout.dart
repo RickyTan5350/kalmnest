@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/admin_teacher/widgets/grid_layout_view.dart';
-import 'package:code_play/theme.dart';
 import 'package:code_play/widgets/user_avatar.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 

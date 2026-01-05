@@ -1,13 +1,18 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:code_play/api/achievement_api.dart';
 import 'package:code_play/models/achievement_data.dart';
 import 'package:code_play/constants/achievement_constants.dart';
 
+import 'package:code_play/models/level.dart';
+import 'package:code_play/api/game_api.dart';
+
 Future<void> showEditAchievementDialog({
   required BuildContext context,
   required Map<String, dynamic> achievement, // Data to pre-fill
+
   required void Function(BuildContext context, String message, Color color)
   showSnackBar,
 }) {
@@ -44,6 +49,15 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
   late TextEditingController _achievementNameController;
   late TextEditingController _achievementTitleController;
   late TextEditingController _achievementDescriptionController;
+  final TextEditingController _levelDisplayController = TextEditingController();
+
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _titleFocus = FocusNode();
+  final FocusNode _descFocus = FocusNode();
+
+  AutovalidateMode _nameMode = AutovalidateMode.disabled;
+  AutovalidateMode _titleMode = AutovalidateMode.disabled;
+  AutovalidateMode _descMode = AutovalidateMode.disabled;
 
   // Validation State
   List<AchievementData> _existingAchievements = [];
@@ -55,18 +69,57 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
   bool _isLoading = false;
 
   final List<Map<String, dynamic>> iconOptions = achievementIconOptions;
-  final List<String> _levels = [
-    '',
-    'Level 1',
-    'Level 2',
-    'Level 3',
-    'Level 4',
-    'Level 5',
-  ];
+  List<LevelModel> _levels = [];
+
+  // Undo/Redo State
+  final List<_FormStateData> _undoStack = [];
+  final List<_FormStateData> _redoStack = [];
+  Timer? _debounceTimer;
+
+  _FormStateData get _currentSnapshot => _FormStateData(
+    name: _achievementNameController.text,
+    title: _achievementTitleController.text,
+    description: _achievementDescriptionController.text,
+    icon: _selectedIcon,
+    levelId: _selectedLevel,
+    levelName: _levelDisplayController.text,
+  );
+
+  List<LevelModel> get _filteredLevels {
+    if (_selectedIcon == null) return _levels;
+    return _levels.where((l) {
+      final type = l.levelTypeName?.toLowerCase() ?? '';
+      final icon = _selectedIcon!.toLowerCase();
+      // Heuristic: Check if the level type name allows the icon tag
+      // e.g. "HTML Basics" contains "html"
+      if (icon == 'javascript' && type.contains('js')) return true;
+      return type.contains(icon);
+    }).toList();
+  }
 
   @override
   void initState() {
     super.initState();
+
+    // Focus Listeners for "Validate on Blur"
+    _nameFocus.addListener(() {
+      if (!_nameFocus.hasFocus) {
+        setState(() => _nameMode = AutovalidateMode.onUserInteraction);
+      }
+    });
+
+    _titleFocus.addListener(() {
+      if (!_titleFocus.hasFocus) {
+        setState(() => _titleMode = AutovalidateMode.onUserInteraction);
+      }
+    });
+
+    _descFocus.addListener(() {
+      if (!_descFocus.hasFocus) {
+        setState(() => _descMode = AutovalidateMode.onUserInteraction);
+      }
+    });
+
     // 1. Pre-load Data
     _achievementNameController = TextEditingController(
       text: widget.achievement['achievement_name'],
@@ -79,14 +132,11 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     );
 
     _selectedIcon = widget.achievement['icon'];
-    _selectedLevel = widget.achievement['associated_level'];
+    _selectedLevel = widget.achievement['associated_level']?.toString();
 
-    if (!_levels.contains(_selectedLevel)) {
-      _selectedLevel = null;
-    }
-
-    // 2. Fetch Existing Data for Uniqueness Check
+    // 2. Fetch Data
     _fetchExistingAchievements();
+    _fetchLevels();
 
     // 3. Clear Server Errors on Typing
     _achievementNameController.addListener(() {
@@ -95,6 +145,177 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     _achievementTitleController.addListener(() {
       if (_titleError != null) setState(() => _titleError = null);
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _saveSnapshot(force: true);
+    });
+  }
+
+  void _saveSnapshot({bool force = false}) {
+    if (force) {
+      _debounceTimer?.cancel();
+      _pushUndo();
+      return;
+    }
+
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), _pushUndo);
+  }
+
+  void _pushUndo() {
+    if (!mounted) return;
+    final current = _currentSnapshot;
+    if (_undoStack.isNotEmpty && _undoStack.last == current) return;
+
+    setState(() {
+      _undoStack.add(current);
+      _redoStack.clear();
+      if (_undoStack.length > 50) _undoStack.removeAt(0);
+    });
+  }
+
+  void _undo() {
+    if (_undoStack.isEmpty) return;
+
+    final currentTip = _currentSnapshot;
+
+    if (_undoStack.isNotEmpty && _undoStack.last == currentTip) {
+      _undoStack.removeLast();
+    }
+
+    if (_undoStack.isEmpty) return;
+
+    _redoStack.add(currentTip);
+
+    final previous = _undoStack.last;
+    _applySnapshot(previous);
+  }
+
+  void _redo() {
+    if (_redoStack.isEmpty) return;
+
+    final next = _redoStack.removeLast();
+    _undoStack.add(next);
+    _applySnapshot(next);
+  }
+
+  void _applySnapshot(_FormStateData data) {
+    setState(() {
+      if (_achievementNameController.text != data.name) {
+        _achievementNameController.text = data.name;
+      }
+      if (_achievementTitleController.text != data.title) {
+        _achievementTitleController.text = data.title;
+      }
+      if (_achievementDescriptionController.text != data.description) {
+        _achievementDescriptionController.text = data.description;
+      }
+      _selectedIcon = data.icon;
+      _selectedLevel = data.levelId;
+      _levelDisplayController.text = data.levelName;
+    });
+  }
+
+  Future<void> _fetchLevels() async {
+    try {
+      final levels = await GameAPI.fetchLevels();
+      if (mounted) {
+        setState(() {
+          _levels = levels;
+          // If we have an initial level ID but no name, try to find it in the fetched options
+          if (_selectedLevel != null && _levelDisplayController.text.isEmpty) {
+            final match = levels.firstWhere(
+              (l) => l.levelId == _selectedLevel,
+              orElse: () => LevelModel(levelId: '', levelName: ''),
+            );
+            if (match.levelId?.isNotEmpty ?? false) {
+              _levelDisplayController.text = match.levelName ?? '';
+            }
+          }
+        });
+      }
+    } catch (e) {
+      print('Could not fetch levels: $e');
+    }
+  }
+
+  Future<void> _showLevelSelectionDialog() async {
+    final options = _filteredLevels;
+
+    final LevelModel? result = await showDialog<LevelModel>(
+      context: context,
+      builder: (context) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final filteredOptions = options.where((level) {
+              final name = level.levelName?.toLowerCase() ?? '';
+              return name.contains(searchQuery.toLowerCase());
+            }).toList();
+
+            return AlertDialog(
+              title: const Text('Select Level'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Search',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          searchQuery = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Flexible(
+                      child: filteredOptions.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Text('No levels found.'),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: filteredOptions.length,
+                              itemBuilder: (context, index) {
+                                final level = filteredOptions[index];
+                                return ListTile(
+                                  title: Text(level.levelName ?? 'Unknown'),
+                                  subtitle: Text(level.levelTypeName ?? ''),
+                                  onTap: () {
+                                    Navigator.pop(context, level);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedLevel = result.levelId;
+        _levelDisplayController.text = result.levelName ?? '';
+      });
+      _saveSnapshot(force: true);
+    }
   }
 
   Future<void> _fetchExistingAchievements() async {
@@ -115,6 +336,11 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     _achievementNameController.dispose();
     _achievementTitleController.dispose();
     _achievementDescriptionController.dispose();
+    _levelDisplayController.dispose();
+    _nameFocus.dispose();
+    _titleFocus.dispose();
+    _descFocus.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -122,11 +348,24 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     required String labelText,
     required IconData icon,
     String? hintText,
-    String? errorText, // Added errorText support
+    String? errorText,
     required ColorScheme colorScheme,
+    bool isRequired = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: isRequired
+          ? Text.rich(
+              TextSpan(
+                text: labelText,
+                children: [
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: colorScheme.error),
+                  ),
+                ],
+              ),
+            )
+          : Text(labelText),
       hintText: hintText,
       errorText: errorText, // Display server error
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
@@ -280,6 +519,16 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
         const SingleActivator(LogicalKeyboardKey.escape): () {
           Navigator.of(context).maybePop();
         },
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () {
+          _undo();
+        },
+        const SingleActivator(
+          LogicalKeyboardKey.keyZ,
+          control: true,
+          shift: true,
+        ): () {
+          _redo();
+        },
       },
       child: Focus(
         autofocus: true,
@@ -296,7 +545,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
               child: SingleChildScrollView(
                 child: Form(
                   key: _formKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  // autovalidateMode: AutovalidateMode.onUserInteraction, // Managed individually
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -311,29 +560,33 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                       // Achievement Name
                       TextFormField(
                         controller: _achievementNameController,
+                        focusNode: _nameFocus,
+                        autovalidateMode: _nameMode,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Achievement Name',
+                          hintText: 'e.g., HTML Master',
                           icon: Icons.emoji_events,
                           colorScheme: colorScheme,
-                          errorText: _nameError, // Server error
+                          errorText: _nameError,
+                          isRequired: true,
                         ),
+                        onChanged: (value) => _saveSnapshot(),
                         validator: (value) {
-                          if (_nameError != null)
-                            return _nameError; // Server error priority
+                          if (_nameError != null) return _nameError;
 
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter a name';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter an achievement name';
                           }
 
-                          // Client-Side Uniqueness (Excluding current item)
                           final isDuplicate = _existingAchievements.any((item) {
                             return item.achievementId != currentId &&
                                 item.achievementName?.trim().toLowerCase() ==
                                     value.trim().toLowerCase();
                           });
 
-                          if (isDuplicate) return 'Name already in use.';
+                          if (isDuplicate)
+                            return 'This Name is already in use.';
                           return null;
                         },
                       ),
@@ -342,28 +595,33 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                       // Title
                       TextFormField(
                         controller: _achievementTitleController,
+                        focusNode: _titleFocus,
+                        autovalidateMode: _titleMode,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
                           labelText: 'Achievement Title',
+                          hintText: 'e.g., Certified Web Developer',
                           icon: Icons.title,
                           colorScheme: colorScheme,
-                          errorText: _titleError, // Server error
+                          errorText: _titleError,
+                          isRequired: true,
                         ),
+                        onChanged: (value) => _saveSnapshot(),
                         validator: (value) {
                           if (_titleError != null) return _titleError;
 
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter a title';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter an achievement title';
                           }
 
-                          // Client-Side Uniqueness (Excluding current item)
                           final isDuplicate = _existingAchievements.any((item) {
                             return item.achievementId != currentId &&
                                 item.achievementTitle?.trim().toLowerCase() ==
                                     value.trim().toLowerCase();
                           });
 
-                          if (isDuplicate) return 'Title already in use.';
+                          if (isDuplicate)
+                            return 'This Title is already in use.';
                           return null;
                         },
                       ),
@@ -372,65 +630,94 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
                       // Description
                       TextFormField(
                         controller: _achievementDescriptionController,
+                        focusNode: _descFocus,
+                        autovalidateMode: _descMode,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
-                          labelText: 'Description',
+                          labelText: 'Achievement Description',
+                          hintText: 'Describe the achievement...',
                           icon: Icons.description,
                           colorScheme: colorScheme,
+                          isRequired: true,
                         ),
                         maxLines: 3,
-                        validator: (value) => value!.isEmpty
-                            ? 'Please enter a description'
-                            : null,
+                        onChanged: (value) => _saveSnapshot(),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a description';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 
-                      // Category Icon Dropdown
+                      // Icon Dropdown
                       DropdownButtonFormField<String>(
                         initialValue: _selectedIcon,
                         dropdownColor: colorScheme.surfaceContainer,
                         style: TextStyle(color: colorScheme.onSurface),
                         decoration: _inputDecoration(
-                          labelText: 'Icon',
+                          labelText: 'Achievement Icon',
                           icon: Icons.photo_library,
                           colorScheme: colorScheme,
+                          isRequired: true,
                         ),
-                        items: iconOptions.map((option) {
-                          return DropdownMenuItem<String>(
-                            value: option['value'] as String,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  option['icon'] as IconData,
-                                  color: colorScheme.onSurfaceVariant,
+                        items: iconOptions
+                            .map(
+                              (option) => DropdownMenuItem<String>(
+                                value: option['value'] as String,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      option['icon'] as IconData,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(option['display'] as String),
+                                  ],
                                 ),
-                                const SizedBox(width: 10),
-                                Text(option['display'] as String),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) => setState(() => _selectedIcon = val),
-                        validator: (val) =>
-                            val == null ? 'Please select an icon' : null,
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (newValue) {
+                          setState(() {
+                            _selectedIcon = newValue;
+                            // When icon changes, maybe reset level if it conflicts?
+                            // For edit, let's keep it simple or follow create logic:
+                            _selectedLevel = null;
+                            _levelDisplayController.clear();
+                            _saveSnapshot(force: true);
+                          });
+                        },
+                        validator: (value) =>
+                            value == null ? 'Please select an icon.' : null,
                       ),
                       const SizedBox(height: 16),
 
-                      // Level Dropdown
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedLevel,
-                        dropdownColor: colorScheme.surfaceContainer,
+                      // Level Dropdown (Searchable)
+                      TextFormField(
+                        controller: _levelDisplayController,
+                        readOnly: true,
                         style: TextStyle(color: colorScheme.onSurface),
-                        decoration: _inputDecoration(
-                          labelText: 'Level',
-                          icon: Icons.signal_cellular_alt,
-                          colorScheme: colorScheme,
-                        ),
-                        items: _levels.map((val) {
-                          return DropdownMenuItem(value: val, child: Text(val));
-                        }).toList(),
-                        onChanged: (val) =>
-                            setState(() => _selectedLevel = val),
+                        decoration:
+                            _inputDecoration(
+                              labelText: 'Associated Level',
+                              hintText: 'Select a level',
+                              icon: Icons.signal_cellular_alt,
+                              colorScheme: colorScheme,
+                            ).copyWith(
+                              suffixIcon: Icon(
+                                Icons.arrow_drop_down,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        onTap: () => _showLevelSelectionDialog(),
+                        validator: (value) {
+                          if (_selectedIcon != null && _selectedLevel == null) {
+                            return null;
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 24),
 
@@ -494,7 +781,7 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
         _achievementDescriptionController.text !=
             widget.achievement['description'] ||
         _selectedIcon != widget.achievement['icon'] ||
-        _selectedLevel != widget.achievement['associated_level'];
+        _selectedLevel != widget.achievement['associated_level']?.toString();
 
     if (!hasChanges) {
       return true;
@@ -525,3 +812,36 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
   }
 }
 
+class _FormStateData {
+  final String name;
+  final String title;
+  final String description;
+  final String? icon;
+  final String? levelId;
+  final String levelName;
+
+  _FormStateData({
+    required this.name,
+    required this.title,
+    required this.description,
+    this.icon,
+    this.levelId,
+    required this.levelName,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _FormStateData &&
+        other.name == name &&
+        other.title == title &&
+        other.description == description &&
+        other.icon == icon &&
+        other.levelId == levelId &&
+        other.levelName == levelName;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(name, title, description, icon, levelId, levelName);
+}

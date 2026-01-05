@@ -27,7 +27,10 @@ class StudentViewPage extends StatefulWidget {
     required this.isGrid,
     required this.sortType,
     required this.sortOrder,
+    this.onTopicChanged,
   });
+
+  final void Function(String)? onTopicChanged;
 
   @override
   State<StudentViewPage> createState() => StudentViewPageState();
@@ -167,10 +170,17 @@ class StudentViewPageState extends State<StudentViewPage> {
                         selectedIds: const {},
                         onToggleSelection: (_) {},
                         itemKeys: _gridItemKeys,
-                        onTap: (id) {
+                        onTap: (id) async {
                           // Handle navigation here
                           if (noteMap.containsKey(id)) {
-                            _openNote(context, noteMap[id]!);
+                            final result = await _openNote(
+                              context,
+                              noteMap[id]!,
+                            );
+                            if (result is String &&
+                                widget.onTopicChanged != null) {
+                              widget.onTopicChanged!(result);
+                            }
                           }
                         },
                       )
@@ -264,7 +274,12 @@ class StudentViewPageState extends State<StudentViewPage> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12.0),
-        onTap: () => _openNote(context, note),
+        onTap: () async {
+          final result = await _openNote(context, note);
+          if (result is String && widget.onTopicChanged != null) {
+            widget.onTopicChanged!(result);
+          }
+        },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -303,9 +318,6 @@ class StudentViewPageState extends State<StudentViewPage> {
                   ],
                 ),
               ),
-
-              // 3. The Chevron Arrow (Same as Admin)
-              Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -313,8 +325,8 @@ class StudentViewPageState extends State<StudentViewPage> {
     );
   }
 
-  void _openNote(BuildContext context, NoteBrief note) {
-    Navigator.push(
+  Future<dynamic> _openNote(BuildContext context, NoteBrief note) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => StudentNoteDetailPage(
@@ -324,6 +336,16 @@ class StudentViewPageState extends State<StudentViewPage> {
         ),
       ),
     );
+
+    if (widget.onTopicChanged != null) {
+      if (result == 'navigate_home') {
+        widget.onTopicChanged!('All');
+      } else if (result is String && result.isNotEmpty) {
+        // Assume it's a topic
+        widget.onTopicChanged!(result);
+      }
+    }
+    return result;
   }
 }
 

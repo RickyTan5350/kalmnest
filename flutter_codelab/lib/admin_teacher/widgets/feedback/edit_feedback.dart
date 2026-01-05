@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:code_play/api/feedback_api.dart';
 import 'package:code_play/models/models.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 void showEditFeedbackDialog({
   required BuildContext context,
@@ -40,19 +41,61 @@ class EditFeedbackDialog extends StatefulWidget {
 
 class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _topicController;
+  late final TextEditingController _titleController;
   late final TextEditingController _feedbackController;
   late FeedbackApiService _api;
 
   bool _isSaving = false;
+
+  // Topic State
+  String? _selectedTopicId;
+  String? _selectedTopicName;
+  bool _isLoadingTopics = false;
+  List<Map<String, dynamic>> _topics = [];
 
   @override
   void initState() {
     super.initState();
     _api = FeedbackApiService(token: widget.authToken);
 
-    _topicController = TextEditingController(text: widget.feedback.topic);
+    _titleController = TextEditingController(text: widget.feedback.title);
     _feedbackController = TextEditingController(text: widget.feedback.feedback);
+    _selectedTopicId = widget.feedback.topicId;
+    _selectedTopicName = widget.feedback.title.isNotEmpty
+        ? widget.feedback.title
+        : widget.feedback.topic;
+
+    _loadTopics();
+  }
+
+  Future<void> _loadTopics() async {
+    setState(() => _isLoadingTopics = true);
+    try {
+      final topics = await _api.getTopics();
+      if (mounted) {
+        setState(() {
+          _topics = topics;
+          // If we have a topicId but no name, try to find it in the loaded topics
+          if (_selectedTopicId != null &&
+              _selectedTopicId!.isNotEmpty &&
+              _selectedTopicName == null) {
+            final topic = topics.firstWhere(
+              (t) => t['topic_id'].toString() == _selectedTopicId,
+              orElse: () => {},
+            );
+            if (topic.isNotEmpty) {
+              _selectedTopicName = topic['topic_name'];
+            }
+          }
+        });
+      }
+    } catch (e) {
+      print('Error loading topics: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingTopics = false);
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -61,9 +104,20 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
     setState(() => _isSaving = true);
 
     try {
+      // Validate that topic is selected if required
+      if (_selectedTopicId == null || _selectedTopicId!.isEmpty) {
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.pleaseSelectTopic,
+          Colors.red,
+        );
+        return;
+      }
+
       await _api.editFeedback(
         feedbackId: widget.feedback.feedbackId,
-        topic: _topicController.text,
+        topicId: _selectedTopicId,
+        title: _titleController.text,
         comment: _feedbackController.text,
       );
 
@@ -74,61 +128,265 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
           studentId: widget.feedback.studentId,
           teacherName: widget.feedback.teacherName, // Will be updated from API
           teacherId: widget.feedback.teacherId, // Will be updated from API
-          topic: _topicController.text,
+          topicId: _selectedTopicId ?? widget.feedback.topicId,
+          title: _titleController.text,
+          topic: _titleController.text,
           feedback: _feedbackController.text,
         ),
       );
 
-      widget.showSnackBar(context, "Updated successfully!", Colors.green);
-      Navigator.pop(context);
+      if (mounted) {
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.changesSavedSuccess,
+          Colors.green,
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
-      widget.showSnackBar(context, "Update failed: $e", Colors.red);
+      if (mounted) {
+        widget.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.updateFailed(e.toString()),
+          Colors.red,
+        );
+      }
     } finally {
       setState(() => _isSaving = false);
     }
   }
 
+  InputDecoration _inputDecoration({
+    required String labelText,
+    required IconData icon,
+    String? hintText,
+    required ColorScheme colorScheme,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.outline),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+      ),
+      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      hintStyle: TextStyle(
+        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+      ),
+      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      filled: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
 
-    return AlertDialog(
-      backgroundColor: const Color.fromARGB(255, 236, 236, 255),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Edit Feedback",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final hasChanges =
+            _selectedTopicId != widget.feedback.topicId ||
+            _titleController.text != widget.feedback.title ||
+            _feedbackController.text != widget.feedback.feedback;
 
-            const SizedBox(height: 16),
+        if (!hasChanges) {
+          Navigator.pop(context);
+          return;
+        }
 
-            TextFormField(
-              controller: _topicController,
-              decoration: InputDecoration(labelText: "Topic"),
+        final shouldDiscard = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            final l10n = AppLocalizations.of(context)!;
+            return AlertDialog(
+              title: Text(l10n.discardChangesTitle),
+              content: Text(l10n.discardChangesConfirmation),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(l10n.cancel),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  child: Text(l10n.discard),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (shouldDiscard == true && mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: AlertDialog(
+        backgroundColor: const Color.fromARGB(255, 242, 244, 251),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.all(24.0),
+        content: SizedBox(
+          width: 360,
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.editFeedback,
+                    style: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _isLoadingTopics
+                      ? const LinearProgressIndicator()
+                      : DropdownButtonFormField<String?>(
+                          value: _selectedTopicId,
+                          dropdownColor: const Color.fromARGB(
+                            255,
+                            239,
+                            243,
+                            255,
+                          ),
+                          style: TextStyle(color: colorScheme.onSurface),
+                          decoration: _inputDecoration(
+                            labelText: l10n.selectTopic,
+                            icon: Icons.subject,
+                            colorScheme: colorScheme,
+                          ),
+                          hint: Text(
+                            l10n.selectATopic,
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          items: [
+                            if (_topics.isEmpty)
+                              DropdownMenuItem<String?>(
+                                value: _selectedTopicId,
+                                child: Text(
+                                  _selectedTopicName ?? l10n.currentTopic,
+                                ),
+                              )
+                            else
+                              ..._topics.map<DropdownMenuItem<String?>>((
+                                topic,
+                              ) {
+                                final id = topic['topic_id']?.toString() ?? '';
+                                final name =
+                                    topic['topic_name'] as String? ?? 'Unknown';
+                                return DropdownMenuItem<String?>(
+                                  value: id,
+                                  child: Text(name),
+                                );
+                              }),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedTopicId = value;
+                              if (value != null) {
+                                _selectedTopicName = _topics.firstWhere(
+                                  (t) => t['topic_id'].toString() == value,
+                                  orElse: () => {
+                                    'topic_name': _selectedTopicName,
+                                  },
+                                )['topic_name'];
+                              }
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return l10n.pleaseSelectTopic;
+                            }
+                            return null;
+                          },
+                        ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _titleController,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: l10n.title,
+                      icon: Icons.title,
+                      colorScheme: colorScheme,
+                    ),
+                    validator: (val) => val == null || val.isEmpty
+                        ? l10n.pleaseEnterTitle
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _feedbackController,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: _inputDecoration(
+                      labelText: l10n.feedback,
+                      icon: Icons.message,
+                      colorScheme: colorScheme,
+                    ),
+                    maxLines: 5,
+                    validator: (val) => val == null || val.isEmpty
+                        ? l10n.pleaseWriteFeedback
+                        : null,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.maybePop(context),
+                        child: Text(
+                          l10n.cancel,
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _isSaving ? null : _save,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(l10n.saveChanges),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _feedbackController,
-              maxLines: 5,
-              decoration: InputDecoration(labelText: "Feedback"),
-            ),
-
-            const SizedBox(height: 24),
-
-            ElevatedButton(
-              onPressed: _isSaving ? null : _save,
-              child: _isSaving
-                  ? const CircularProgressIndicator()
-                  : const Text("Save"),
-            )
-          ],
+          ),
         ),
       ),
     );
   }
 }
-

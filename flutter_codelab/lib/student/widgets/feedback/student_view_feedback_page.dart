@@ -69,6 +69,7 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
                       : null) ??
                   'Unknown',
               teacherId: fb['teacher_id'] ?? '',
+              topicId: fb['topic_id']?.toString() ?? '',
               topic: fb['topic'] ?? '',
               feedback: fb['feedback'] ?? '',
               createdAt:
@@ -77,6 +78,7 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
                   (fb['teacher'] is Map && fb['teacher']['created_at'] != null
                       ? fb['teacher']['created_at']
                       : null),
+              title: fb['title'] ?? fb['topic'] ?? '',
             ),
           );
         }
@@ -284,4 +286,3 @@ class _StudentViewFeedbackPageState extends State<StudentViewFeedbackPage> {
     );
   }
 }
-

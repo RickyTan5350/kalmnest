@@ -13,6 +13,7 @@ class FeedbackApiService {
     final Map<String, String> result = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     String? effectiveToken = token;
@@ -122,6 +123,89 @@ class FeedbackApiService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getTeachers() async {
+    try {
+      // The backend exposes users via `/users` and supports filtering by role_name
+      final endpoint = '/users?role_name=Teacher';
+      print('Fetching teachers from: ${ApiConstants.baseUrl}$endpoint');
+      final hdrs = await getHeaders();
+      print(
+        'FeedbackApiService GET ${ApiConstants.baseUrl}$endpoint headers: ${_maskHeaders(hdrs)}',
+      );
+      final response = await http
+          .get(Uri.parse('${ApiConstants.baseUrl}$endpoint'), headers: hdrs)
+          .timeout(const Duration(seconds: 5));
+
+      print('Teachers response status: ${response.statusCode}');
+      print('Teachers response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+
+        // Controller returns { message: '...', data: [ ...users ] }
+        final List<dynamic>? payloadList =
+            decoded is Map && decoded['data'] is List
+            ? List<dynamic>.from(decoded['data'] as List)
+            : decoded is List
+            ? List<dynamic>.from(decoded)
+            : null;
+
+        if (payloadList == null) {
+          throw Exception('Unexpected teachers payload: ${response.body}');
+        }
+
+        final List<Map<String, dynamic>> teachers = payloadList
+            .map<Map<String, dynamic>>((t) {
+              final userId = (t is Map) ? (t['user_id'] ?? t['id']) : null;
+              final name = (t is Map) ? (t['name'] ?? 'Unknown') : 'Unknown';
+              return {
+                'id': userId?.toString() ?? '',
+                'name': name?.toString() ?? 'Unknown',
+              };
+            })
+            .toList();
+
+        print('Mapped teachers: $teachers');
+        return teachers;
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized. Please login.');
+      } else {
+        throw Exception(
+          'Failed to fetch teachers: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('Error fetching teachers: $e');
+      return []; // Return empty list on error instead of throwing
+    }
+  }
+
+  /// Fetch available feedback topics
+  Future<List<Map<String, dynamic>>> getTopics() async {
+    try {
+      final endpoint = '/topics'; 
+      final hdrs = await getHeaders();
+      final response = await http
+          .get(Uri.parse('${ApiConstants.baseUrl}$endpoint'), headers: hdrs)
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map && decoded['success'] == true) {
+           return List<Map<String, dynamic>>.from(decoded['data']);
+        }
+        return [];
+      } else {
+        // Only log error to avoid crashing UI
+        print('Failed to fetch topics: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching topics: $e');
+      return []; 
+    }
+  }
+
   /// Fetch all feedback created by the teacher
   Future<List<Map<String, dynamic>>> getFeedback() async {
     try {
@@ -141,8 +225,14 @@ class FeedbackApiService {
         print(
           'FeedbackApiService: received 401, refreshing token and retrying once',
         );
+        print(
+          'FeedbackApiService: received 401, refreshing token and retrying once',
+        );
         final freshHdrs = await getHeaders();
         if (freshHdrs['Authorization'] != hdrs['Authorization']) {
+          print(
+            'FeedbackApiService: Authorization changed, retrying with new token',
+          );
           print(
             'FeedbackApiService: Authorization changed, retrying with new token',
           );
@@ -235,7 +325,8 @@ class FeedbackApiService {
   /// Create new feedback
   Future<Map<String, dynamic>> createFeedback({
     required String studentId,
-    required String topic,
+    required String? topicId,
+    required String title,
     required String comment,
   }) async {
     try {
@@ -244,7 +335,8 @@ class FeedbackApiService {
 
       final body = jsonEncode({
         'student_id': studentId,
-        'topic': topic,
+        'topic_id': topicId,
+        'title': title,
         'comment': comment,
       });
 
@@ -303,7 +395,8 @@ class FeedbackApiService {
 
   Future<void> editFeedback({
     required String feedbackId,
-    required String topic,
+    required String? topicId,
+    required String title,
     required String comment,
   }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/feedback/$feedbackId');
@@ -313,7 +406,11 @@ class FeedbackApiService {
     final response = await http.put(
       url,
       headers: hdrs,
-      body: jsonEncode({'topic': topic, 'comment': comment}),
+      body: jsonEncode({
+        'topic_id': topicId,
+        'title': title,
+        'comment': comment,
+      }),
     );
 
     if (response.statusCode != 200) {

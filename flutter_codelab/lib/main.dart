@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
-import 'dart:io'; // For HttpOverrides
 
 import 'package:code_play/l10n/generated/app_localizations.dart';
 import 'package:code_play/controllers/locale_controller.dart';
 
 import 'package:code_play/admin_teacher/widgets/disappearing_navigation_rail.dart';
-import 'package:code_play/admin_teacher/widgets/disappearing_bottom_navigation_bar.dart';
+import 'package:code_play/destinations.dart';
 import 'package:code_play/admin_teacher/widgets/game/gamePages/create_game_page.dart';
 import 'package:code_play/admin_teacher/widgets/note/admin_create_note_page.dart';
 import 'package:code_play/admin_teacher/widgets/class/admin_create_class_page.dart';
@@ -29,8 +28,13 @@ import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/constants/api_constants.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:code_play/config/http_setup.dart'; // New import
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Hive.initFlutter();
 
   print('--- CONFIGURATION DEBUG ---');
   print('ApiConstants.customBaseUrl: ${ApiConstants.customBaseUrl}');
@@ -40,18 +44,22 @@ void main() async {
   print('---------------------------');
 
   if (kDebugMode) {
-    HttpOverrides.global = MyHttpOverrides();
+    setupHttpOverrides();
   }
 
   // Check for stored token and user data
   // Variable name: storedUserJson
   await const FlutterSecureStorage().deleteAll();
   final storedUserJson = await AuthApi.getStoredUser();
+  final token = await AuthApi.getToken();
 
-  // Reference the correct variable name here: storedUserJson
-  final UserDetails? initialUser = storedUserJson != null
-      ? UserDetails.fromJson(storedUserJson)
-      : null;
+  UserDetails? initialUser;
+  if (storedUserJson != null) {
+    if (token != null) {
+      storedUserJson['token'] = token;
+    }
+    initialUser = UserDetails.fromJson(storedUserJson);
+  }
 
   runApp(MainApp(initialUser: initialUser));
 }
@@ -190,11 +198,6 @@ class _FeedState extends State<Feed> {
     if (result == true) {
       // Use GlobalKey to access ClassPage's reload method (similar to feedback callback)
       classPageGlobalKey.currentState?.reloadClassList();
-      _showSnackBar(
-        context,
-        AppLocalizations.of(context)!.classCreatedSuccess,
-        Theme.of(context).colorScheme.primary,
-      );
     }
   }
 
@@ -205,9 +208,33 @@ class _FeedState extends State<Feed> {
     wideScreen = width > 600;
   }
 
+  // Get filtered destinations based on user role
+  List<Destination> _getFilteredDestinations() {
+    final bool isStudent = widget.currentUser.isStudent;
+    return destinations.where((dest) {
+      // Hide AI chat for teachers and admins
+      if (dest.label == 'AI chat' && !isStudent) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  // Get original destination index from filtered index
+  int _getOriginalIndex(int filteredIndex) {
+    final filteredDestinations = _getFilteredDestinations();
+    if (filteredIndex < 0 || filteredIndex >= filteredDestinations.length) {
+      return -1;
+    }
+    final filteredDest = filteredDestinations[filteredIndex];
+    return destinations.indexOf(filteredDest);
+  }
+
   void _onAddButtonPressed() {
+    final originalIndex = _getOriginalIndex(selectedIndex);
+
     // This switch statement checks the currently selected page
-    switch (selectedIndex) {
+    switch (originalIndex) {
       case 0: // This is the index for 'UserPage' (Index 0)
         // CHECK if the current user is a Student OR a Teacher
         if (widget.currentUser.isStudent || widget.currentUser.isTeacher) {
@@ -323,11 +350,11 @@ class _FeedState extends State<Feed> {
           );
         }
         break;
-      case 6: // This is the index for 'Feedback Page'
-        if (widget.currentUser.isStudent) {
+      case 6: // This is the index for 'Feedback'
+        if (widget.currentUser.isStudent || widget.currentUser.isAdmin) {
           _showSnackBar(
             context,
-            AppLocalizations.of(context)!.noAccessCreateFeedback,
+            AppLocalizations.of(context)!.accessDeniedCreateFeedback,
             Theme.of(context).colorScheme.error,
           );
         } else {
@@ -355,31 +382,77 @@ class _FeedState extends State<Feed> {
       colorScheme.surface,
     );
 
-    final List<Widget> pages = [
-      UserPage(
-        key: userPageGlobalKey,
-        currentUser: widget.currentUser,
-      ), // Index 0
-      GamePage(
-        key: gamePageGlobalKey,
-        userRole: widget.currentUser.roleName,
-      ), // Index 1
-      NotePage(currentUser: widget.currentUser), // Index 2
-      ClassPage(
-        key: classPageGlobalKey,
-        currentUser: widget.currentUser,
-      ), // Index 3
-      AchievementPage(
-        showSnackBar: _showSnackBar,
-        currentUser: widget.currentUser,
-      ), // Index 4
-      const AiChatPage(), // Index 5
-      FeedbackPage(
-        authToken: widget.currentUser.token,
-        currentUser: widget.currentUser,
-      ), // Index 6
-    ];
-    // --- END OF FIX ---
+    // Filter destinations and pages based on user role
+    // Only students can access AI chat
+    final bool isStudent = widget.currentUser.isStudent;
+    final List<Destination> filteredDestinations = _getFilteredDestinations();
+
+    // Build pages list matching filtered destinations
+    final List<Widget> pages = [];
+    for (final dest in filteredDestinations) {
+      switch (dest.label) {
+        case 'User':
+          pages.add(
+            UserPage(key: userPageGlobalKey, currentUser: widget.currentUser),
+          );
+          break;
+        case 'Game':
+          pages.add(
+            GamePage(
+              key: gamePageGlobalKey,
+              userRole: widget.currentUser.roleName,
+            ),
+          );
+          break;
+        case 'Note':
+          pages.add(NotePage(currentUser: widget.currentUser));
+          break;
+        case 'Class':
+          pages.add(
+            ClassPage(key: classPageGlobalKey, currentUser: widget.currentUser),
+          );
+          break;
+        case 'Achievement':
+          pages.add(
+            AchievementPage(
+              showSnackBar: _showSnackBar,
+              currentUser: widget.currentUser,
+            ),
+          );
+          break;
+        case 'AI chat':
+          if (isStudent) {
+            pages.add(
+              AiChatPage(
+                currentUser: widget.currentUser,
+                authToken: widget.currentUser.token,
+              ),
+            );
+          }
+          break;
+        case 'Feedback':
+          pages.add(
+            FeedbackPage(
+              authToken: widget.currentUser.token,
+              currentUser: widget.currentUser,
+            ),
+          );
+          break;
+      }
+    }
+
+    // Adjust selectedIndex if it's out of bounds or points to hidden AI chat
+    if (selectedIndex >= filteredDestinations.length) {
+      selectedIndex = 0;
+    } else if (!isStudent && _getOriginalIndex(selectedIndex) == 5) {
+      // If AI chat was selected but user is not student, go to first page
+      selectedIndex = 0;
+    }
+
+    bool isChatPage =
+        isStudent &&
+        selectedIndex < filteredDestinations.length &&
+        filteredDestinations[selectedIndex].label == 'AI chat';
 
     return Scaffold(
       backgroundColor:
@@ -407,18 +480,19 @@ class _FeedState extends State<Feed> {
                   DisappearingNavigationRail(
                     selectedIndex: selectedIndex,
                     backgroundColor: backgroundColor,
+                    destinations: filteredDestinations,
                     onDestinationSelected: (index) {
                       setState(() {
                         selectedIndex = index;
                       });
                       // Refresh GamePage when navigating to it
-                      if (index == 1) {
+                      final dest = filteredDestinations[index];
+                      if (dest.label == 'Game') {
                         gamePageGlobalKey.currentState?.refresh();
                       }
                     },
                     isExtended: _isRailExtended,
-                    // REMOVED: onMenuPressed (moved to header)
-                    onAddButtonPressed: _onAddButtonPressed,
+                    onAddButtonPressed: isChatPage ? null : _onAddButtonPressed,
                   ),
                 Expanded(
                   child: Container(
@@ -431,7 +505,7 @@ class _FeedState extends State<Feed> {
           ),
         ],
       ),
-      floatingActionButton: wideScreen
+      floatingActionButton: (wideScreen || isChatPage)
           ? null
           : FloatingActionButton(
               backgroundColor: colorScheme.tertiaryContainer,
@@ -441,28 +515,40 @@ class _FeedState extends State<Feed> {
             ),
       bottomNavigationBar: wideScreen
           ? null
-          : DisappearingBottomNavigationBar(
-              selectedIndex: selectedIndex,
-              onDestinationSelected: (index) {
+          : BottomNavigationBar(
+              currentIndex: selectedIndex,
+              onTap: (index) {
                 setState(() {
                   selectedIndex = index;
                 });
                 // Refresh GamePage when navigating to it
-                if (index == 1) {
+                final dest = filteredDestinations[index];
+                if (dest.label == 'Game') {
                   gamePageGlobalKey.currentState?.refresh();
                 }
               },
+              type: BottomNavigationBarType.fixed,
+              items: filteredDestinations.asMap().entries.map((entry) {
+                final index = entry.key;
+                final dest = entry.value;
+                final l10n = AppLocalizations.of(context)!;
+                final labelMap = {
+                  'User': l10n.users,
+                  'Game': l10n.games,
+                  'Note': l10n.notes,
+                  'Class': l10n.classes,
+                  'Achievement': l10n.achievements,
+                  'AI chat': l10n.aiChat,
+                  'Feedback': l10n.feedback,
+                };
+                return BottomNavigationBarItem(
+                  icon: Icon(
+                    selectedIndex == index ? dest.selectedIcon : dest.icon,
+                  ),
+                  label: labelMap[dest.label] ?? dest.label,
+                );
+              }).toList(),
             ),
     );
   }
 }
-
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
-  }
-}
-

@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:code_play/models/level.dart';
 import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/constants/api_constants.dart';
+import 'package:code_play/services/local_level_storage.dart';
+import 'package:flutter/foundation.dart';
 
 /// CENTRAL API BASE URL
 String get apiBase => ApiConstants.baseUrl;
@@ -24,6 +26,7 @@ class GameAPI {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
   }
 
@@ -31,7 +34,7 @@ class GameAPI {
   /// FETCH ALL LEVELS (OPTIONALLY FILTER BY TOPIC)
   /// ------------------------------------------------------------
   // Cache per user (using user ID from token)
-  static Map<String, List<LevelModel>?> _cachedLevelsByUser = {};
+  static final Map<String, List<LevelModel>?> _cachedLevelsByUser = {};
 
   /// Clear cache for all users (useful when game is created/updated)
   static void clearCache() {
@@ -55,7 +58,7 @@ class GameAPI {
   }) async {
     try {
       final cacheKey = await _getCacheKey();
-      
+
       // Clear cache if force refresh
       if (forceRefresh) {
         if (cacheKey != null) {
@@ -64,9 +67,12 @@ class GameAPI {
           _cachedLevelsByUser.clear();
         }
       }
-      
+
       // Return cached levels if available and not forced to refresh
-      if (!forceRefresh && cacheKey != null && _cachedLevelsByUser[cacheKey] != null && topic == null) {
+      if (!forceRefresh &&
+          cacheKey != null &&
+          _cachedLevelsByUser[cacheKey] != null &&
+          topic == null) {
         return _cachedLevelsByUser[cacheKey]!;
       }
 
@@ -90,6 +96,7 @@ class GameAPI {
       }
 
       print("Failed to fetch levels: ${response.statusCode}");
+      print(response.body);
       return [];
     } catch (e) {
       print("Error fetching levels: $e");
@@ -100,7 +107,10 @@ class GameAPI {
   /// ------------------------------------------------------------
   /// FETCH A SINGLE LEVEL BY ID → RETURNS LevelModel?
   /// ------------------------------------------------------------
-  static Future<LevelModel?> fetchLevelById(String levelId) async {
+  static Future<LevelModel?> fetchLevelById(
+    String levelId, {
+    String? userRole,
+  }) async {
     try {
       final url = Uri.parse("$apiBase/level/$levelId");
       final headers = await _getHeaders();
@@ -109,7 +119,61 @@ class GameAPI {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = jsonDecode(response.body);
-        return LevelModel.fromJson(jsonData);
+        final level = LevelModel.fromJson(jsonData);
+
+        // Save level data to local storage for Unity to access
+        if (level.levelData != null && level.winCondition != null) {
+          final storage = LocalLevelStorage();
+          final levelDataJson = jsonDecode(level.levelData!);
+          final winConditionJson = jsonDecode(level.winCondition!);
+
+          final user = await AuthApi.getStoredUser();
+          final userId = user?['user_id']?.toString();
+          final role = userRole ?? user?['role']?.toString();
+          final bool isStaff =
+              role != null &&
+              (role.toLowerCase() == 'admin' ||
+                  role.toLowerCase() == 'teacher');
+
+          await storage.saveLevelData(
+            levelId: levelId,
+            levelDataJson: levelDataJson,
+            winConditionJson: winConditionJson,
+            userId: userId,
+            userRole: role,
+          );
+
+          // Also try to load and save student progress if exists (SKIP for admins/teachers)
+          if (!isStaff) {
+            final progressUrl = Uri.parse("$apiBase/level-user/$levelId");
+            try {
+              final progressResponse = await http.get(
+                progressUrl,
+                headers: headers,
+              );
+              if (progressResponse.statusCode == 200) {
+                final progressData = jsonDecode(progressResponse.body);
+                if (progressData['saved_data'] != null) {
+                  await storage.saveStudentProgress(
+                    levelId: levelId,
+                    savedDataJson: progressData['saved_data'] is String
+                        ? progressData['saved_data']
+                        : jsonEncode(progressData['saved_data']),
+                    userId: userId,
+                  );
+                  if (kDebugMode) {
+                    print("Loaded backend progress for level $levelId");
+                  }
+                }
+              }
+            } catch (e) {
+              // Progress may not exist yet, which is fine
+              print("No saved progress found for level: $levelId");
+            }
+          }
+        }
+
+        return level;
       }
 
       print("Failed to fetch level: ${response.statusCode}");
@@ -126,6 +190,9 @@ class GameAPI {
   static Future<ApiResponse> createLevel({
     required String levelName,
     required String levelTypeName,
+    String? levelData,
+    String? winCondition,
+    int? timer,
   }) async {
     try {
       final url = Uri.parse("$apiBase/create-level");
@@ -137,6 +204,9 @@ class GameAPI {
         body: jsonEncode({
           'level_name': levelName,
           'level_type_name': levelTypeName,
+          if (levelData != null) 'level_data': levelData,
+          if (winCondition != null) 'win_condition': winCondition,
+          if (timer != null) 'timer': timer,
         }),
       );
 
@@ -144,7 +214,7 @@ class GameAPI {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         // Clear cache when level is created
         clearCache();
-        
+
         try {
           final Map<String, dynamic> jsonData = jsonDecode(response.body);
 
@@ -186,6 +256,9 @@ class GameAPI {
     required String levelId,
     required String levelName,
     required String levelTypeName,
+    String? levelData,
+    String? winCondition,
+    int? timer,
   }) async {
     try {
       final url = Uri.parse("$apiBase/levels/$levelId");
@@ -197,6 +270,9 @@ class GameAPI {
         body: jsonEncode({
           'level_name': levelName,
           'level_type_name': levelTypeName,
+          if (levelData != null) 'level_data': levelData,
+          if (winCondition != null) 'win_condition': winCondition,
+          if (timer != null) 'timer': timer,
         }),
       );
 
@@ -268,5 +344,92 @@ class GameAPI {
       return ApiResponse(success: false, message: "Error: $e");
     }
   }
-}
 
+  /// ------------------------------------------------------------
+  /// SAVE STUDENT PROGRESS
+  /// ------------------------------------------------------------
+  static Future<Map<String, dynamic>> saveStudentProgress({
+    required String levelId,
+    required String? savedData,
+    String? indexFiles, // Add indexFiles
+    int? timer, // Add timer
+  }) async {
+    try {
+      final url = Uri.parse("$apiBase/level-user/$levelId/save");
+      final headers = await _getHeaders();
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: jsonEncode({
+          'saved_data': savedData,
+          'index_files': indexFiles, // Send indexFiles
+          'timer': timer ?? 0, // Send timer
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+
+      return {
+        'success': false,
+        'message': 'Failed to save progress: ${response.body}',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// ------------------------------------------------------------
+  /// MARK LEVEL AS COMPLETE
+  /// ------------------------------------------------------------
+  static Future<Map<String, dynamic>> completeLevel({
+    required String levelId,
+    required String userId,
+  }) async {
+    try {
+      final url = Uri.parse("$apiBase/level-user/$levelId/$userId/complete");
+      final headers = await _getHeaders();
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        // No body needed for this specific endpoint based on user request
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+
+      return {
+        'success': false,
+        'message': 'Failed to complete level: ${response.body}',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// ------------------------------------------------------------
+  /// FETCH LEVEL USERS (For Teacher View)
+  /// ------------------------------------------------------------
+  static Future<List<Map<String, dynamic>>> fetchLevelUsers(
+    String levelId,
+  ) async {
+    try {
+      final url = Uri.parse("$apiBase/level-users/$levelId");
+      final headers = await _getHeaders();
+      final response = await http.get(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching level users: $e");
+      return [];
+    }
+  }
+}

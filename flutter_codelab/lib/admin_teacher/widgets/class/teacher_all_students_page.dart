@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:code_play/api/class_api.dart';
 import 'package:code_play/admin_teacher/widgets/class/teacher_student_detail_page.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'package:code_play/admin_teacher/widgets/class/class_customization.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 /// Teacher view: All students in a class with search and scrollable list.
 class TeacherAllStudentsPage extends StatefulWidget {
@@ -193,10 +193,9 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_loading) {
-      return Scaffold(
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      return Scaffold(body: const Center(child: CircularProgressIndicator()));
     }
 
     // Get class color for AppBar
@@ -207,7 +206,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         title: BreadcrumbNavigation(
           items: [
             BreadcrumbItem(
-              label: 'Classes',
+              label: l10n.classes,
               onTap: () {
                 // Navigate back twice to go to class list
                 Navigator.of(context).pop();
@@ -215,10 +214,10 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               },
             ),
             BreadcrumbItem(
-              label: 'Details',
+              label: l10n.details,
               onTap: () => Navigator.of(context).pop(),
             ),
-            const BreadcrumbItem(label: 'All Students'),
+            BreadcrumbItem(label: l10n.allStudents),
           ],
         ),
         backgroundColor: color.withOpacity(0.2),
@@ -229,7 +228,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               setState(() => _loading = true);
               _fetchClassData();
             },
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -250,15 +249,11 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     CircleAvatar(
                       radius: 40,
                       backgroundColor: color.withOpacity(0.1),
-                      child: Icon(
-                        Icons.school_rounded,
-                        color: color,
-                        size: 40,
-                      ),
+                      child: Icon(Icons.school_rounded, color: color, size: 40),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'All Students',
+                      l10n.allStudents,
                       style: Theme.of(context).textTheme.headlineMedium,
                       textAlign: TextAlign.center,
                     ),
@@ -281,7 +276,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                 width: 300,
                 child: SearchBar(
                   controller: _searchController,
-                  hintText: "Search students...",
+                  hintText: l10n.searchStudents,
                   padding: const WidgetStatePropertyAll<EdgeInsets>(
                     EdgeInsets.symmetric(horizontal: 16.0),
                   ),
@@ -325,11 +320,12 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
   }
 
   Widget _buildStatisticsSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
-            'Total Students',
+            l10n.totalStudents.replaceAll(':', ''),
             '$_totalStudents',
             Icons.people,
           ),
@@ -337,7 +333,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            'Completion Rate',
+            l10n.completionRate,
             '${_averageCompletionPercentage.toStringAsFixed(1)}%',
             Icons.check_circle,
           ),
@@ -345,7 +341,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            'Quizzes Assigned',
+            l10n.quizzesAssigned,
             '$_totalQuizzesAssigned',
             Icons.quiz,
           ),
@@ -354,21 +350,14 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     );
   }
 
-  Widget _buildStatCard(
-    String label,
-    String value,
-    IconData icon,
-  ) {
+  Widget _buildStatCard(String label, String value, IconData icon) {
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
-        side: BorderSide(
-          color: cs.outline.withOpacity(0.3),
-          width: 1.0,
-        ),
+        side: BorderSide(color: cs.outline.withOpacity(0.3), width: 1.0),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -386,11 +375,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                   color: cs.primaryContainer,
                   borderRadius: BorderRadius.circular(12.0),
                 ),
-                child: Icon(
-                  icon,
-                  color: cs.onPrimaryContainer,
-                  size: 28,
-                ),
+                child: Icon(icon, color: cs.onPrimaryContainer, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -422,13 +407,11 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     );
   }
 
-  Widget _buildStudentCard(
-    Map<String, dynamic> student,
-    int index,
-  ) {
+  Widget _buildStudentCard(Map<String, dynamic> student, int index) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final name = student['name'] ?? 'Unknown';
+    final name = student['name'] ?? l10n.unknown;
     final email = student['email'] ?? '';
     final phone = student['phone_no'] ?? '+1 234 567 8901';
     final initials = _getInitials(name);
@@ -449,10 +432,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     return Card(
       elevation: 1.0,
       shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: cs.outline.withOpacity(0.3),
-          width: 1.0,
-        ),
+        side: BorderSide(color: cs.outline.withOpacity(0.3), width: 1.0),
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: InkWell(
@@ -463,7 +443,9 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
           if (rawId == null) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Cannot open student profile: missing student id.'),
+                content: Text(
+                  'Cannot open student profile: missing student id.',
+                ),
               ),
             );
             return;
@@ -538,7 +520,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                       color: cs.onSurfaceVariant,
                       size: 20,
                     ),
-                    tooltip: 'More options',
+                    tooltip: l10n.moreOptions,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(
                       minWidth: 32,
@@ -547,7 +529,9 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     onSelected: (value) {
                       if (value == 'view') {
                         final dynamic rawId =
-                            student['id'] ?? student['user_id'] ?? student['student_id'];
+                            student['id'] ??
+                            student['user_id'] ??
+                            student['student_id'];
                         if (rawId != null) {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -564,26 +548,26 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     },
                     itemBuilder: (BuildContext context) =>
                         <PopupMenuEntry<String>>[
-                      PopupMenuItem<String>(
-                        value: 'view',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.visibility,
-                              size: 18,
-                              color: cs.primary,
+                          PopupMenuItem<String>(
+                            value: 'view',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.visibility,
+                                  size: 18,
+                                  color: cs.primary,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  l10n.viewDetails,
+                                  style: textTheme.labelLarge?.copyWith(
+                                    color: cs.onSurface,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'View Details',
-                              style: textTheme.labelLarge?.copyWith(
-                                color: cs.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                          ),
+                        ],
                   ),
                 ],
               ),
@@ -597,7 +581,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Completion',
+                        l10n.completed,
                         style: textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
@@ -630,7 +614,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Quizzes',
+                        l10n.quizzes,
                         style: textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
@@ -649,7 +633,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Course Progress',
+                l10n.courseProgress,
                 style: textTheme.bodySmall?.copyWith(
                   color: cs.onSurfaceVariant,
                 ),
@@ -670,6 +654,7 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     return Center(
@@ -684,17 +669,13 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No students found',
-              style: textTheme.titleLarge?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
+              l10n.noStudentsFound,
+              style: textTheme.titleLarge?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Text(
-              'Try adjusting your search criteria',
-              style: textTheme.bodyMedium?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
+              l10n.tryAdjustingSearchCriteria,
+              style: textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           ],
         ),
@@ -702,4 +683,3 @@ class _TeacherAllStudentsPageState extends State<TeacherAllStudentsPage> {
     );
   }
 }
-

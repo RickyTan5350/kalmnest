@@ -45,7 +45,7 @@ class AttachmentList extends StatelessWidget {
 
             return Container(
               decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant.withOpacity(0.3),
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                     color: item.isFailed

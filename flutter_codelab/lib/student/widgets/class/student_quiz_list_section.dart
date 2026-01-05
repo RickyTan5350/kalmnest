@@ -6,6 +6,7 @@ import 'package:code_play/student/widgets/class/student_view_quiz_page.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart';
 import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class QuizListSection extends StatefulWidget {
   final String roleName;
@@ -14,12 +15,12 @@ class QuizListSection extends StatefulWidget {
   final String classDescription;
 
   const QuizListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     required this.classId,
     required this.className,
     required this.classDescription,
-  }) : super(key: key);
+  });
 
   @override
   State<QuizListSection> createState() => _QuizListSectionState();
@@ -54,12 +55,12 @@ class _QuizListSectionState extends State<QuizListSection> {
   }
 
   String _formatDate(dynamic date) {
-    if (date == null) return 'Unknown';
+    if (date == null) return '';
     try {
       final dateTime = DateTime.parse(date.toString());
       return DateFormat('MMM d, yyyy').format(dateTime);
     } catch (e) {
-      return 'Unknown';
+      return '';
     }
   }
 
@@ -134,6 +135,7 @@ class _QuizListSectionState extends State<QuizListSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -160,7 +162,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Quizzes',
+                          l10n.quizzes,
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: cs.onSurface,
@@ -168,7 +170,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                         ),
                         SizedBox(height: ClassConstants.defaultPadding * 0.25),
                         Text(
-                          '${_quizzes.length} quiz${_quizzes.length != 1 ? 'es' : ''} available',
+                          l10n.quizzesAvailable(_quizzes.length),
                           style: textTheme.bodySmall?.copyWith(
                             color: cs.onSurfaceVariant,
                           ),
@@ -191,7 +193,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                               _fetchQuizzes();
                             });
                       },
-                      child: const Text('View All Quizzes'),
+                      child: Text(l10n.viewAllQuizzes),
                     ),
                   ],
                 ),
@@ -286,7 +288,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Uploaded: ${_formatDate(quiz['created_at'])}',
+                                      l10n.uploaded(_formatDate(quiz['created_at'])),
                                       style: textTheme.bodySmall?.copyWith(
                                         color: cs.onSurfaceVariant,
                                       ),
@@ -299,7 +301,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                               FilledButton.icon(
                                 onPressed: () => _playQuiz(context, quiz),
                                 icon: const Icon(Icons.play_arrow, size: 18),
-                                label: const Text('Play'),
+                                label: Text(l10n.play),
                                 style: FilledButton.styleFrom(
                                   backgroundColor: cs.primary,
                                   foregroundColor: cs.onPrimary,
@@ -337,7 +339,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                           );
                         },
                         child: Text(
-                          'View all ${_quizzes.length} quizzes',
+                          l10n.viewAllXQuizzes(_quizzes.length),
                           style: textTheme.bodySmall?.copyWith(color: cs.primary),
                         ),
                       ),

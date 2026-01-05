@@ -4,6 +4,7 @@ import 'package:code_play/api/class_api.dart';
 import 'package:code_play/admin_teacher/widgets/class/teacher_view_quiz_page.dart';
 import 'package:intl/intl.dart';
 import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 class QuizListSection extends StatefulWidget {
   final String roleName;
@@ -12,12 +13,12 @@ class QuizListSection extends StatefulWidget {
   final String classDescription;
 
   const QuizListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     required this.classId,
     required this.className,
     required this.classDescription,
-  }) : super(key: key);
+  });
 
   @override
   State<QuizListSection> createState() => _QuizListSectionState();
@@ -52,17 +53,18 @@ class _QuizListSectionState extends State<QuizListSection> {
   }
 
   String _formatDate(dynamic date) {
-    if (date == null) return 'Unknown';
+    if (date == null) return '';
     try {
       final dateTime = DateTime.parse(date.toString());
       return DateFormat('MMM d, yyyy').format(dateTime);
     } catch (e) {
-      return 'Unknown';
+      return '';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -85,7 +87,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Quizzes',
+                      l10n.quizzes,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
@@ -93,7 +95,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${_quizzes.length} quiz${_quizzes.length != 1 ? 'es' : ''} available',
+                      l10n.quizzesAvailable(_quizzes.length),
                       style: textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
@@ -118,7 +120,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                               _fetchQuizzes();
                             });
                       },
-                      child: const Text('View All Quizzes'),
+                      child: Text(l10n.viewAllQuizzes),
                     ),
                   ],
                 ),
@@ -148,14 +150,14 @@ class _QuizListSectionState extends State<QuizListSection> {
                       ),
                       SizedBox(height: ClassConstants.defaultPadding * 0.75),
                       Text(
-                        'No quizzes yet',
+                        l10n.noQuizzesYet,
                         style: textTheme.bodyMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
                       ),
                       SizedBox(height: ClassConstants.defaultPadding * 0.25),
                       Text(
-                        'Create or assign quizzes to get started',
+                        l10n.createOrAssignQuizzes,
                         style: textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant.withOpacity(0.7),
                         ),
@@ -182,18 +184,20 @@ class _QuizListSectionState extends State<QuizListSection> {
                     ),
                     tileColor: cs.surfaceContainerHighest,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
+                      borderRadius: BorderRadius.circular(
+                        ClassConstants.cardBorderRadius * 0.67,
+                      ),
                     ),
                     leading: Icon(Icons.quiz, color: cs.primary),
                     title: Text(
-                      quiz['level_name'] ?? 'No Name',
+                      quiz['level_name'] ?? l10n.noName,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface,
                       ),
                     ),
                     subtitle: Text(
-                      'Uploaded: ${_formatDate(quiz['created_at'])}',
+                      l10n.uploaded(_formatDate(quiz['created_at'])),
                       style: textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                         fontSize: 12,
@@ -206,7 +210,9 @@ class _QuizListSectionState extends State<QuizListSection> {
                       ),
                       decoration: BoxDecoration(
                         color: cs.primaryContainer.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 1.67),
+                        borderRadius: BorderRadius.circular(
+                          ClassConstants.cardBorderRadius * 1.67,
+                        ),
                       ),
                       child: Text(
                         levelTypeName,
@@ -233,12 +239,14 @@ class _QuizListSectionState extends State<QuizListSection> {
                     },
                   ),
                 );
-              }).toList(),
+              }),
 
             // Show "View All" link if more than 3 quizzes
             if (_quizzes.length > 3)
               Padding(
-                padding: EdgeInsets.only(top: ClassConstants.defaultPadding * 0.5),
+                padding: EdgeInsets.only(
+                  top: ClassConstants.defaultPadding * 0.5,
+                ),
                 child: Center(
                   child: TextButton(
                     onPressed: () {
@@ -257,7 +265,7 @@ class _QuizListSectionState extends State<QuizListSection> {
                           });
                     },
                     child: Text(
-                      'View all ${_quizzes.length} quizzes',
+                      l10n.viewAllXQuizzes(_quizzes.length),
                       style: textTheme.bodySmall?.copyWith(color: cs.primary),
                     ),
                   ),
@@ -269,4 +277,3 @@ class _QuizListSectionState extends State<QuizListSection> {
     );
   }
 }
-

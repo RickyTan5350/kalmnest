@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
-import 'package:code_play/destinations.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/destinations.dart';
 
 class DisappearingNavigationRail extends StatelessWidget {
   const DisappearingNavigationRail({
@@ -11,6 +10,7 @@ class DisappearingNavigationRail extends StatelessWidget {
     this.onDestinationSelected,
     required this.isExtended,
     this.onAddButtonPressed,
+    required this.destinations,
   });
 
   final Color backgroundColor;
@@ -18,6 +18,7 @@ class DisappearingNavigationRail extends StatelessWidget {
   final ValueChanged<int>? onDestinationSelected;
   final bool isExtended;
   final VoidCallback? onAddButtonPressed;
+  final List<Destination> destinations;
 
   @override
   Widget build(BuildContext context) {
@@ -25,24 +26,23 @@ class DisappearingNavigationRail extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     // Map your destinations using the localized labels from your list
-    final List<String> labels = [
-      l10n.users,
-      l10n.games,
-      l10n.notes,
-      l10n.classes,
-      l10n.achievements,
-      l10n.aiChat,
-      l10n.feedback,
-    ];
+    final Map<String, String> labelMap = {
+      'User': l10n.users,
+      'Game': l10n.games,
+      'Note': l10n.notes,
+      'Class': l10n.classes,
+      'Achievement': l10n.achievements,
+      'AI chat': l10n.aiChat,
+      'Feedback': l10n.feedback,
+    };
 
     final List<NavigationRailDestination> allDestinations = [];
-    for (int i = 0; i < destinations.length; i++) {
-      final d = destinations[i];
+    for (var d in destinations) {
       allDestinations.add(
         NavigationRailDestination(
           icon: Icon(d.icon),
           selectedIcon: Icon(d.selectedIcon),
-          label: Text(labels[i]),
+          label: Text(labelMap[d.label] ?? d.label),
         ),
       );
     }
@@ -50,43 +50,44 @@ class DisappearingNavigationRail extends StatelessWidget {
     return Container(
       color: backgroundColor,
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start, // Anchors the FAB area to the left
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // --- GMAIL STYLE FAB AREA ---
           // A SizedBox of 72px matches the standard collapsed width of the Rail
           SizedBox(
-            width: isExtended ? null : 72,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                top: 12.0,
-                bottom: 12.0,
-                left: 12.0,
-                right: 4.0,
-              ),
-              child: isExtended
-                  ? FloatingActionButton.extended(
-                      isExtended: true,
-                      onPressed: onAddButtonPressed,
-                      icon: const Icon(Icons.add),
-                      label: const Text("Create"), // Gmail style text label
-                      backgroundColor: colorScheme.tertiaryContainer,
-                      foregroundColor: colorScheme.onTertiaryContainer,
-                    )
-                  : Center(
-                      // Center ensures the circular FAB stays perfectly
-                      // aligned over the navigation icons below
-                      child: FloatingActionButton(
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(15)),
-                        ),
-                        onPressed: onAddButtonPressed,
-                        backgroundColor: colorScheme.tertiaryContainer,
-                        foregroundColor: colorScheme.onTertiaryContainer,
-                        child: const Icon(Icons.add),
-                      ),
+            child: onAddButtonPressed != null
+                ? Padding(
+                    padding: const EdgeInsets.only(
+                      top: 12.0,
+                      bottom: 12.0,
+                      left: 12.0,
+                      right: 4.0,
                     ),
-            ),
+                    child: isExtended
+                        ? FloatingActionButton.extended(
+                            isExtended: true,
+                            onPressed: onAddButtonPressed,
+                            icon: const Icon(Icons.add),
+                            label: const Text("Create"), // Gmail style text label
+                            backgroundColor: colorScheme.tertiaryContainer,
+                            foregroundColor: colorScheme.onTertiaryContainer,
+                          )
+                        : Center(
+                            // Center ensures the circular FAB stays perfectly
+                            // aligned over the navigation icons below
+                            child: FloatingActionButton(
+                              shape: const RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(15)),
+                              ),
+                              onPressed: onAddButtonPressed,
+                              backgroundColor: colorScheme.tertiaryContainer,
+                              foregroundColor: colorScheme.onTertiaryContainer,
+                              child: const Icon(Icons.add),
+                            ),
+                          ),
+                  )
+                : null,
           ),
           // --- THE NAVIGATION RAIL ---
           Expanded(

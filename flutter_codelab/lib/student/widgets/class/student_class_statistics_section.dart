@@ -7,10 +7,10 @@ class ClassStatisticsSection extends StatelessWidget {
   final int totalQuizzes;
 
   const ClassStatisticsSection({
-    Key? key,
+    super.key,
     required this.totalStudents,
     required this.totalQuizzes,
-  }) : super(key: key);
+  });
 
   Widget _statCard(
     BuildContext context,

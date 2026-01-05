@@ -12,8 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('chatbot_messages', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('message_id')->primary();
+            $table->uuid('chatbot_session_id');
+            $table->enum('role', ['user', 'model']);
+            $table->text('content');
             $table->timestamps();
+
+            $table->foreign('chatbot_session_id')->references('chatbot_session_id')->on('chatbot_sessions')->onDelete('cascade');
         });
     }
 

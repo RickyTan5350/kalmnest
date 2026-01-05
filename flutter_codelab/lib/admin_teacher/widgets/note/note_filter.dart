@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 /// Filters a list of note data based on the selected topic and search query.
 List<Map<String, dynamic>> filterNotes({

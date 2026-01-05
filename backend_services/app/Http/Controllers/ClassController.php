@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreClassRequest;
+use App\Http\Requests\UpdateClassRequest;
 use App\Models\ClassModel;
 use App\Models\User;
 use App\Models\Level;
@@ -10,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -133,57 +136,10 @@ class ClassController extends Controller
      * Store a newly created class
      * Only Admin can create classes
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreClassRequest $request): JsonResponse
     {
         $user = Auth::user();
         
-        if (!$user) {
-            return response()->json([
-                'message' => 'Unauthenticated.'
-            ], 401);
-        }
-        
-        /** @var User $user */
-        $user->load('role');
-        
-        // Debug: Log role information
-        Log::info('User role check', [
-            'user_id' => $user->user_id,
-            'role_loaded' => $user->relationLoaded('role'),
-            'role_name' => $user->role?->role_name ?? 'null',
-        ]);
-        
-        // Check if user is admin (case-insensitive check)
-        $roleName = strtolower(trim($user->role?->role_name ?? ''));
-        if ($roleName !== 'admin') {
-            return response()->json([
-                'message' => 'Unauthorized. Only admins can create classes.',
-                'debug' => [
-                    'user_role' => $user->role?->role_name ?? 'null',
-                    'expected' => 'admin'
-                ]
-            ], 403);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'class_name' => 'required|string|max:100',
-            'teacher_id' => 'nullable|string|exists:users,user_id',
-            'description' => 'nullable|string',
-            'admin_id' => 'nullable|string|exists:users,user_id',
-            'student_ids' => 'nullable|array',
-            'student_ids.*' => 'string|exists:users,user_id',
-        ], [
-            'class_name.required' => 'Class name is required.',
-            'class_name.max' => 'Class name cannot exceed 100 characters.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
             DB::beginTransaction();
 
@@ -191,18 +147,18 @@ class ClassController extends Controller
             $class = ClassModel::create([
                 'class_id' => (string) Str::uuid(),
                 'class_name' => $request->class_name,
-                'teacher_id' => !empty($request->teacher_id) ? $request->teacher_id : null, // optional, can be null
+                'teacher_id' => !empty($request->teacher_id) ? $request->teacher_id : null,
                 'description' => $request->description,
-                'admin_id' => $request->admin_id ?? $user->user_id, // Default to current admin
+                'admin_id' => $request->admin_id ?? $user->user_id,
+                'focus' => $request->focus ?? null,
             ]);
 
             // Enroll students if provided (optional, can be empty)
             if ($request->has('student_ids') && is_array($request->student_ids)) {
-                $studentIds = array_filter($request->student_ids); // Remove null values
+                $studentIds = array_filter($request->student_ids);
                 if (!empty($studentIds)) {
                     $class->students()->attach($studentIds);
                 }
-                // If empty array or null, no students are enrolled (nullable)
             }
 
             DB::commit();
@@ -219,10 +175,20 @@ class ClassController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
-            // Check if it's a unique constraint violation for class_name
-            if (str_contains($e->getMessage(), 'Duplicate entry') || 
-                str_contains($e->getMessage(), 'class_name') ||
-                str_contains($e->getCode(), '23000')) {
+            Log::error('Error creating class', [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+            ]);
+            
+            // Check if it's a unique constraint violation
+            $errorCode = $e->getCode();
+            $errorMessage = strtolower($e->getMessage());
+            
+            if ($errorCode == 23000 || 
+                (str_contains($errorMessage, 'duplicate entry') && str_contains($errorMessage, 'class_name')) ||
+                (str_contains($errorMessage, '1062') && str_contains($errorMessage, 'class_name'))) {
                 return response()->json([
                     'message' => 'Validation failed',
                     'errors' => [
@@ -233,7 +199,12 @@ class ClassController extends Controller
             
             return response()->json([
                 'message' => 'Failed to create class',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'debug' => config('app.debug') ? [
+                    'code' => $e->getCode(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ] : null
             ], 500);
         }
     }
@@ -291,26 +262,8 @@ class ClassController extends Controller
      * Update the specified class
      * Only Admin can update classes
      */
-    public function update(Request $request, string $id): JsonResponse
+    public function update(UpdateClassRequest $request, string $id): JsonResponse
     {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json([
-                'message' => 'Unauthenticated.'
-            ], 401);
-        }
-        
-        /** @var User $user */
-        $user->load('role');
-        
-        // Check if user is admin (case-insensitive check)
-        $roleName = strtolower(trim($user->role?->role_name ?? ''));
-        if ($roleName !== 'admin') {
-            return response()->json([
-                'message' => 'Unauthorized. Only admins can update classes.'
-            ], 403);
-        }
-
         $class = ClassModel::find($id);
         if (!$class) {
             return response()->json([
@@ -318,45 +271,42 @@ class ClassController extends Controller
             ], 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'class_name' => [
-                'sometimes',
-                'required',
-                'string',
-                'max:100',
-            ],
-            'teacher_id' => 'sometimes|nullable|string|exists:users,user_id',
-            'description' => 'nullable|string',
-            'admin_id' => 'nullable|string|exists:users,user_id',
-            'student_ids' => 'nullable|array',
-            'student_ids.*' => 'string|exists:users,user_id',
-        ], [
-            'class_name.required' => 'Class name is required.',
-            'class_name.max' => 'Class name cannot exceed 100 characters.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
             DB::beginTransaction();
 
-            // Update class fields (teacher_id can now be null to remove teacher assignment)
-            $updateData = $request->only(['class_name', 'description', 'admin_id']);
-            // Handle teacher_id separately to convert empty strings to null
-            $updateData['teacher_id'] = !empty($request->teacher_id) ? $request->teacher_id : null;
-            $class->update($updateData);
+            // Update class fields (only update provided fields)
+            $updateData = [];
+            
+            if ($request->has('class_name')) {
+                $updateData['class_name'] = $request->class_name;
+            }
+            
+            if ($request->has('description')) {
+                $updateData['description'] = $request->description;
+            }
+            
+            if ($request->has('admin_id')) {
+                $updateData['admin_id'] = $request->admin_id;
+            }
+            
+            if ($request->has('focus')) {
+                $updateData['focus'] = !empty($request->focus) ? $request->focus : null;
+            }
+            
+            if ($request->has('teacher_id')) {
+                $updateData['teacher_id'] = !empty($request->teacher_id) ? $request->teacher_id : null;
+            }
+            
+            if (!empty($updateData)) {
+                $class->update($updateData);
+            }
 
             // Update enrolled students if provided (can be empty array to clear all)
             if ($request->has('student_ids')) {
                 $studentIds = is_array($request->student_ids) 
-                    ? array_filter($request->student_ids) // Remove null values
+                    ? array_filter($request->student_ids)
                     : [];
-                $class->students()->sync($studentIds); // Empty array clears all enrollments
+                $class->students()->sync($studentIds);
             }
 
             DB::commit();
@@ -373,10 +323,21 @@ class ClassController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
-            // Check if it's a unique constraint violation for class_name
-            if (str_contains($e->getMessage(), 'Duplicate entry') || 
-                str_contains($e->getMessage(), 'class_name') ||
-                str_contains($e->getCode(), '23000')) {
+            Log::error('Error updating class', [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'trace' => $e->getTraceAsString(),
+                'class_id' => $id,
+                'request_data' => $request->all(),
+            ]);
+            
+            // Check if it's a unique constraint violation
+            $errorCode = $e->getCode();
+            $errorMessage = strtolower($e->getMessage());
+            
+            if ($errorCode == 23000 || 
+                (str_contains($errorMessage, 'duplicate entry') && str_contains($errorMessage, 'class_name')) ||
+                (str_contains($errorMessage, '1062') && str_contains($errorMessage, 'class_name'))) {
                 return response()->json([
                     'message' => 'Validation failed',
                     'errors' => [
@@ -387,7 +348,12 @@ class ClassController extends Controller
             
             return response()->json([
                 'message' => 'Failed to update class',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'debug' => config('app.debug') ? [
+                    'code' => $e->getCode(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ] : null
             ], 500);
         }
     }
@@ -686,7 +652,7 @@ class ClassController extends Controller
 
         $validator = Validator::make($request->all(), [
             'level_id' => 'required|string|exists:levels,level_id',
-            'is_private' => 'boolean',
+            'is_private' => 'sometimes|boolean', // Optional: only when creating new quiz
         ]);
 
         if ($validator->fails()) {
@@ -709,11 +675,18 @@ class ClassController extends Controller
         }
 
         try {
+            // Determine is_private value:
+            // - If is_private is provided (creating new quiz), use it
+            // - If not provided (assigning existing quiz), default to false (public)
+            $isPrivate = $request->has('is_private') 
+                ? (bool) $request->input('is_private', false)
+                : false; // Default to public when assigning existing quiz
+            
             DB::table('class_levels')->insert([
                 'class_level_id' => (string) Str::uuid(),
                 'class_id' => $id,
                 'level_id' => $request->level_id,
-                'is_private' => $request->input('is_private', false),
+                'is_private' => $isPrivate,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -1066,6 +1039,169 @@ class ClassController extends Controller
             'total_students' => $studentData->count(),
             'completed_students' => $studentData->where('is_completed', true)->count(),
         ]);
+    }
+
+    /**
+     * Check if class name exists (case-insensitive)
+     * Used for real-time validation in frontend
+     */
+    public function checkClassNameExists(Request $request): JsonResponse
+    {
+        $className = $request->input('class_name');
+        
+        if (empty($className)) {
+            return response()->json([
+                'exists' => false,
+                'message' => 'Class name is required'
+            ], 400);
+        }
+
+        // Check if class name exists (case-insensitive)
+        $exists = ClassModel::whereRaw('LOWER(class_name) = LOWER(?)', [trim($className)])
+            ->exists();
+
+        return response()->json([
+            'exists' => $exists,
+            'class_name' => $className
+        ]);
+    }
+
+    /**
+     * Bulk delete classes
+     * Only Admin can delete classes
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+        
+        /** @var User $user */
+        $user->load('role');
+        
+        // Check if user is admin (case-insensitive check)
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+        if ($roleName !== 'admin') {
+            return response()->json([
+                'message' => 'Unauthorized. Only admins can delete classes.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'class_ids' => 'required|array|min:1',
+            'class_ids.*' => 'required|string|exists:classes,class_id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $classIds = $request->input('class_ids', []);
+        $deletedCount = 0;
+        $failedIds = [];
+
+        try {
+            foreach ($classIds as $classId) {
+                $class = ClassModel::find($classId);
+                if ($class) {
+                    $class->delete();
+                    $deletedCount++;
+                } else {
+                    $failedIds[] = $classId;
+                }
+            }
+
+            return response()->json([
+                'message' => "Successfully deleted $deletedCount class(es)",
+                'deleted_count' => $deletedCount,
+                'failed_ids' => $failedIds,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete classes',
+                'error' => $e->getMessage(),
+                'deleted_count' => $deletedCount,
+                'failed_ids' => $failedIds,
+            ], 500);
+        }
+    }
+
+    /**
+     * Update class focus (Teacher only - can only update focus)
+     */
+    public function updateClassFocus(Request $request, string $id): JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+        
+        /** @var User $user */
+        $user->load('role');
+        $roleName = strtolower(trim($user->role?->role_name ?? ''));
+        
+        // Only teachers can update focus
+        if ($roleName !== 'teacher') {
+            return response()->json([
+                'message' => 'Unauthorized. Only teachers can update class focus.'
+            ], 403);
+        }
+
+        $class = ClassModel::find($id);
+        if (!$class) {
+            return response()->json([
+                'message' => 'Class not found'
+            ], 404);
+        }
+
+        // Check if teacher owns this class
+        if ($class->teacher_id !== $user->user_id) {
+            return response()->json([
+                'message' => 'Unauthorized. You can only update focus for your own classes.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'focus' => 'nullable|string|in:HTML,CSS,JavaScript,PHP',
+        ], [
+            'focus.in' => 'Focus must be one of: HTML, CSS, JavaScript, PHP.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $class->focus = $request->focus ?? null;
+            $class->save();
+
+            // Reload relationships
+            $class->refresh();
+            $class->load(['teacher', 'admin', 'students']);
+
+            return response()->json([
+                'message' => 'Class focus updated successfully',
+                'data' => $class
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update class focus',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 /// Validation helper methods for class form inputs
 class ClassValidators {
@@ -8,24 +9,21 @@ class ClassValidators {
   /// - Required
   /// - Minimum 3 characters
   /// - Maximum 100 characters
-  static String? className(String? value) {
+  static String? className(String? value, AppLocalizations? l10n) {
     if (value == null || value.trim().isEmpty) {
-      return ClassConstants.classNameRequired;
+      return l10n?.classNameRequired ?? ClassConstants.classNameRequired;
     }
 
     final trimmed = value.trim();
 
     if (trimmed.length < 3) {
-      return 'Class name must be at least 3 characters';
+      return l10n?.classNameMinCharacters ??
+          'Class name must be at least 3 characters';
     }
 
     if (trimmed.length > 100) {
-      return 'Class name must not exceed 100 characters';
-    }
-
-    // Check for invalid characters (optional - can be customized)
-    if (RegExp(r'[<>{}[\]\\]').hasMatch(trimmed)) {
-      return 'Class name contains invalid characters';
+      return l10n?.classNameMaxCharacters ??
+          'Class name cannot exceed 100 characters';
     }
 
     return null;
@@ -35,21 +33,30 @@ class ClassValidators {
   ///
   /// Rules:
   /// - Required
-  /// - Minimum 10 characters
+  /// - Minimum 10 words
   /// - Maximum 500 characters
-  static String? description(String? value) {
+  static String? description(String? value, AppLocalizations? l10n) {
     if (value == null || value.trim().isEmpty) {
-      return ClassConstants.descriptionRequired;
+      return l10n?.descriptionRequired ?? 'Description is required';
     }
 
     final trimmed = value.trim();
 
-    if (trimmed.length < 10) {
-      return 'Description must be at least 10 characters';
+    if (trimmed.length > 500) {
+      return l10n?.descriptionMaxCharacters ??
+          'Description cannot exceed 500 characters';
     }
 
-    if (trimmed.length > 500) {
-      return 'Description must not exceed 500 characters';
+    // Count words (split by whitespace and filter empty strings)
+    final words = trimmed
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+    final wordCount = words.length;
+
+    if (wordCount < 10) {
+      return l10n?.descriptionMinWords ??
+          'Description must contain at least 10 words';
     }
 
     return null;
@@ -117,19 +124,40 @@ class ClassValidators {
         .replaceAll(RegExp(r'\s+'), ' '); // Normalize whitespace
   }
 
+  /// Validate focus field
+  ///
+  /// Rules:
+  /// - Optional (nullable)
+  /// - Must be one of: HTML, CSS, JavaScript, PHP
+  static String? focus(String? value) {
+    if (value == null || value.isEmpty) {
+      return null; // Optional field
+    }
+
+    const validFocuses = ['HTML', 'CSS', 'JavaScript', 'PHP'];
+    if (!validFocuses.contains(value)) {
+      return 'Focus must be one of: HTML, CSS, JavaScript, PHP';
+    }
+
+    return null;
+  }
+
   /// Validate entire class form
   ///
   /// Returns a map of field names to error messages
   static Map<String, String?> validateClassForm({
     required String? className,
-    required String? description,
+    String? description,
     String? teacherId,
+    String? focus,
     List<String>? studentIds,
+    AppLocalizations? l10n,
   }) {
     return {
-      'class_name': ClassValidators.className(className),
-      'description': ClassValidators.description(description),
+      'class_name': ClassValidators.className(className, l10n),
+      'description': ClassValidators.description(description, l10n),
       'teacher_id': ClassValidators.teacherId(teacherId),
+      'focus': ClassValidators.focus(focus),
       'student_ids': ClassValidators.studentIds(studentIds),
     };
   }
@@ -139,4 +167,3 @@ class ClassValidators {
     return errors.values.every((error) => error == null);
   }
 }
-

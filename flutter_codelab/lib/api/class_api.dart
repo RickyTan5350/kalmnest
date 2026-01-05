@@ -5,8 +5,8 @@ import 'package:code_play/api/auth_api.dart';
 import 'package:code_play/constants/api_constants.dart';
 
 class ClassApi {
-  // Replace with your PC's local IP
-  static String get base => ApiConstants.baseUrl;
+  // Base URL for API endpoints (already includes /api)
+  static String base = ApiConstants.baseUrl;
 
   // Helper function to get headers with authentication
   static Future<Map<String, String>> _getAuthHeaders({
@@ -15,6 +15,7 @@ class ClassApi {
     Map<String, String> headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      if (ApiConstants.customBaseUrl.isEmpty) 'Host': 'kalmnest.test',
     };
 
     final token = await AuthApi.getToken();
@@ -36,6 +37,7 @@ class ClassApi {
     String? teacherId,
     String? description,
     String? adminId,
+    String? focus,
     List<String>? studentIds,
   }) async {
     final uri = Uri.parse('$base/classes');
@@ -44,6 +46,7 @@ class ClassApi {
       'teacher_id': teacherId,
       'description': description ?? '',
       'admin_id': adminId,
+      'focus': focus,
       'student_ids': studentIds,
     };
 
@@ -170,6 +173,33 @@ class ClassApi {
     }
   }
 
+  static Future<Map<String, dynamic>> updateClassFocus(
+    String classId,
+    String? focus,
+  ) async {
+    final uri = Uri.parse('$base/classes/$classId/focus');
+    final body = jsonEncode({'focus': focus});
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final response = await http.patch(uri, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        return {'success': true, 'data': decoded['data']};
+      } else {
+        final decoded = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': decoded['message'] ?? 'Failed to update class focus',
+        };
+      }
+    } catch (e) {
+      print("Error updating class focus: $e");
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
   static Future<Map<String, dynamic>> updateClass(
     String id,
     Map<String, dynamic> data,
@@ -233,6 +263,38 @@ class ClassApi {
     } catch (e) {
       print("Error deleting class: $e");
       return false;
+    }
+  }
+
+  /// Bulk delete classes
+  static Future<Map<String, dynamic>> deleteClasses(List<String> classIds) async {
+    final uri = Uri.parse('$base/classes/bulk-delete');
+    final body = jsonEncode({'class_ids': classIds});
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final response = await http.post(uri, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        return {
+          'success': true,
+          'deleted_count': decoded['deleted_count'] ?? classIds.length,
+          'message': decoded['message'] ?? 'Classes deleted successfully',
+        };
+      } else {
+        final decoded = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': decoded['message'] ?? 'Failed to delete classes',
+        };
+      }
+    } catch (e) {
+      print("Error bulk deleting classes: $e");
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
     }
   }
 
@@ -509,6 +571,34 @@ class ClassApi {
     }
   }
 
+  /// Check if class name exists (case-insensitive)
+  /// Used for real-time validation
+  static Future<bool> checkClassNameExists(String className) async {
+    if (className.trim().isEmpty) {
+      return false;
+    }
+
+    final uri = Uri.parse(
+      '$base/classes/check-name',
+    ).replace(queryParameters: {'class_name': className.trim()});
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final res = await http.get(uri, headers: headers);
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return decoded['exists'] ?? false;
+      } else {
+        print("Error checking class name: ${res.statusCode} ${res.body}");
+        return false;
+      }
+    } catch (e) {
+      print("Network error checking class name: $e");
+      return false;
+    }
+  }
+
   /// Get quiz's student completion status for all students in a class
   static Future<Map<String, dynamic>> getQuizStudents(
     String classId,
@@ -551,4 +641,3 @@ class ClassApi {
     }
   }
 }
-

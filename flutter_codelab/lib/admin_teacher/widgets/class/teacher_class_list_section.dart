@@ -4,7 +4,9 @@ import 'package:code_play/admin_teacher/widgets/class/teacher_view_class_page.da
 import 'package:code_play/admin_teacher/widgets/class/admin_edit_class_page.dart';
 import 'package:code_play/constants/view_layout.dart';
 import 'package:code_play/constants/class_constants.dart';
+import 'package:code_play/constants/achievement_constants.dart';
 import 'package:code_play/enums/sort_enums.dart';
+import 'package:code_play/l10n/generated/app_localizations.dart';
 
 // Class List Item Widget
 class _ClassListItem extends StatefulWidget {
@@ -16,6 +18,10 @@ class _ClassListItem extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onSelectionToggle;
 
   const _ClassListItem({
     required this.item,
@@ -26,6 +32,10 @@ class _ClassListItem extends StatefulWidget {
     required this.onTap,
     this.onEdit,
     this.onDelete,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onLongPress,
+    this.onSelectionToggle,
   });
 
   @override
@@ -62,134 +72,192 @@ class _ClassListItemState extends State<_ClassListItem> {
       elevation: 1.0,
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: widget.colorScheme.outline.withOpacity(0.3),
-          width: 1.0,
+          color: widget.isSelected
+              ? widget.colorScheme.primary
+              : widget.colorScheme.outline.withValues(alpha: 0.3),
+          width: widget.isSelected ? 2.0 : 1.0,
         ),
         borderRadius: BorderRadius.circular(12.0),
       ),
+      color: widget.isSelected
+          ? widget.colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : null,
       child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: widget.colorScheme.primaryContainer,
-                  foregroundColor: widget.colorScheme.onPrimaryContainer,
-                  child: Icon(Icons.school_rounded, size: 20),
-                ),
-                title: Text(
-                  widget.item['class_name'] ?? 'No Name',
-                  style: widget.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: widget.colorScheme.onSurface,
+        leading: CircleAvatar(
+          backgroundColor: widget.colorScheme.primaryContainer,
+          foregroundColor: widget.colorScheme.onPrimaryContainer,
+          child: Icon(Icons.school_rounded, size: 20),
+        ),
+        title: Text(
+          widget.item['class_name'] ?? 'No Name',
+          style: widget.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: widget.colorScheme.onSurface,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.item['description'] != null &&
+                widget.item['description'].toString().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: Text(
+                  widget.item['description'],
+                  style: widget.textTheme.bodySmall?.copyWith(
+                    color: widget.colorScheme.onSurfaceVariant,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (widget.item['description'] != null &&
-                        widget.item['description'].toString().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, bottom: 4),
-                        child: Text(
-                          widget.item['description'],
-                          style: widget.textTheme.bodySmall?.copyWith(
-                            color: widget.colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    Icon(
+                      Icons.person_outline,
+                      size: 14,
+                      color: widget.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _hasTeacher ? _teacherName : 'No teacher',
+                      style: widget.textTheme.labelSmall?.copyWith(
+                        color: _hasTeacher
+                            ? widget.colorScheme.onSurfaceVariant
+                            : widget.colorScheme.error,
+                        fontStyle: _hasTeacher
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 4,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.person_outline,
-                              size: 14,
-                              color: widget.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _hasTeacher ? _teacherName : 'No teacher',
-                              style: widget.textTheme.labelSmall?.copyWith(
-                                color: _hasTeacher
-                                    ? widget.colorScheme.onSurfaceVariant
-                                    : widget.colorScheme.error,
-                                fontStyle: _hasTeacher
-                                    ? FontStyle.normal
-                                    : FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 14,
-                              color: widget.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _studentCount > 0
-                                  ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                                  : 'No students',
-                              style: widget.textTheme.labelSmall?.copyWith(
-                                color: _studentCount > 0
-                                    ? widget.colorScheme.onSurfaceVariant
-                                    : widget.colorScheme.error,
-                                fontStyle: _studentCount > 0
-                                    ? FontStyle.normal
-                                    : FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                     ),
                   ],
                 ),
-                trailing: widget.roleName.toLowerCase() == 'admin'
-                    ? PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          color: widget.colorScheme.onSurfaceVariant,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 14,
+                      color: widget.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _studentCount > 0
+                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
+                          : 'No students',
+                      style: widget.textTheme.labelSmall?.copyWith(
+                        color: _studentCount > 0
+                            ? widget.colorScheme.onSurfaceVariant
+                            : widget.colorScheme.error,
+                        fontStyle: _studentCount > 0
+                            ? FontStyle.normal
+                            : FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+                // Focus display
+                if (widget.item['focus'] != null &&
+                    widget.item['focus'].toString().isNotEmpty)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        getAchievementIcon(
+                          widget.item['focus'].toString().toLowerCase(),
                         ),
-                        onSelected: (value) {
-                          if (value == 'edit' && widget.onEdit != null) {
-                            widget.onEdit!();
-                          } else if (value == 'delete' && widget.onDelete != null) {
-                            widget.onDelete!();
-                          }
-                        },
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, size: 20, color: widget.colorScheme.onSurface),
-                                const SizedBox(width: 8),
-                                const Text('Edit'),
-                              ],
-                            ),
+                        size: 14,
+                        color: getAchievementColor(
+                          context,
+                          widget.item['focus'].toString().toLowerCase(),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.item['focus'].toString(),
+                        style: widget.textTheme.labelSmall?.copyWith(
+                          color: getAchievementColor(
+                            context,
+                            widget.item['focus'].toString().toLowerCase(),
                           ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_outline, size: 20, color: widget.colorScheme.error),
-                                const SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: widget.colorScheme.error)),
-                              ],
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+        ),
+        trailing: widget.roleName.toLowerCase() == 'admin'
+            ? PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert,
+                  color: widget.colorScheme.onSurfaceVariant,
+                ),
+                onSelected: (value) {
+                  if (value == 'edit' && widget.onEdit != null) {
+                    widget.onEdit!();
+                  } else if (value == 'delete' && widget.onDelete != null) {
+                    widget.onDelete!();
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Builder(
+                      builder: (context) {
+                        final l10n = AppLocalizations.of(context)!;
+                        return Row(
+                          children: [
+                            Icon(
+                              Icons.edit,
+                              size: 20,
+                              color: widget.colorScheme.onSurface,
                             ),
-                          ),
-                        ],
-                      )
-                    : null,
-                onTap: widget.onTap,
-              ),
+                            const SizedBox(width: 8),
+                            Text(l10n.edit),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Builder(
+                      builder: (context) {
+                        final l10n = AppLocalizations.of(context)!;
+                        return Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 20,
+                              color: widget.colorScheme.error,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.delete,
+                              style: TextStyle(color: widget.colorScheme.error),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              )
+            : null,
+        onTap: widget.isSelectionMode ? widget.onSelectionToggle : widget.onTap,
+        onLongPress: widget.roleName.toLowerCase() == 'admin'
+            ? widget.onLongPress
+            : null,
+      ),
     );
   }
 }
@@ -203,6 +271,10 @@ class _ClassGridCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onSelectionToggle;
 
   const _ClassGridCard({
     required this.item,
@@ -212,6 +284,10 @@ class _ClassGridCard extends StatelessWidget {
     required this.onTap,
     this.onEdit,
     this.onDelete,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onLongPress,
+    this.onSelectionToggle,
   });
 
   String get _teacherName {
@@ -239,158 +315,222 @@ class _ClassGridCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: colorScheme.outline.withOpacity(0.3),
-          width: 1.0,
+          color: isSelected
+              ? colorScheme.primary
+              : colorScheme.outline.withValues(alpha: 0.3),
+          width: isSelected ? 2.0 : 1.0,
         ),
         borderRadius: BorderRadius.circular(12.0),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius),
-        child: Padding(
-          padding: EdgeInsets.all(ClassConstants.defaultPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Icon and Title Row
-              Row(
+      color: isSelected
+          ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : null,
+      child: Stack(
+        children: [
+          InkWell(
+            onTap: isSelectionMode ? onSelectionToggle : onTap,
+            onLongPress: roleName.toLowerCase() == 'admin' ? onLongPress : null,
+            borderRadius: BorderRadius.circular(
+              ClassConstants.cardBorderRadius,
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(ClassConstants.defaultPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(ClassConstants.cardBorderRadius * 0.67),
-                    ),
-                    child: Icon(
-                      Icons.school_rounded,
-                      size: 24,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
+                  // Icon and Title Row
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(
+                            ClassConstants.cardBorderRadius * 0.67,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.school_rounded,
+                          size: 24,
+                          color: colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          item['class_name'] ?? 'No Name',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (roleName.toLowerCase() == 'admin' && !isSelectionMode)
+                        PopupMenuButton<String>(
+                          icon: Icon(
+                            Icons.more_vert,
+                            color: colorScheme.onSurfaceVariant,
+                            size: 20,
+                          ),
+                          onSelected: (value) {
+                            if (value == 'edit' && onEdit != null) {
+                              onEdit!();
+                            } else if (value == 'delete' && onDelete != null) {
+                              onDelete!();
+                            }
+                          },
+                          itemBuilder: (BuildContext context) {
+                            final l10n = AppLocalizations.of(context)!;
+                            return [
+                              PopupMenuItem<String>(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit,
+                                      size: 20,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(l10n.edit),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.delete_outline,
+                                      size: 20,
+                                      color: colorScheme.error,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      l10n.delete,
+                                      style: TextStyle(
+                                        color: colorScheme.error,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ];
+                          },
+                        ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item['class_name'] ?? 'No Name',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
+                  SizedBox(height: ClassConstants.defaultPadding * 0.75),
+                  // Description
+                  if (item['description'] != null &&
+                      item['description'].toString().isNotEmpty)
+                    Text(
+                      item['description'],
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  if (roleName.toLowerCase() == 'admin')
-                    PopupMenuButton<String>(
-                      icon: Icon(
-                        Icons.more_vert,
-                        color: colorScheme.onSurfaceVariant,
-                        size: 20,
+                  const Spacer(),
+                  SizedBox(height: ClassConstants.defaultPadding * 0.75),
+                  // Teacher and Student Info
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: colorScheme.primary,
                       ),
-                      onSelected: (value) {
-                        if (value == 'edit' && onEdit != null) {
-                          onEdit!();
-                        } else if (value == 'delete' && onDelete != null) {
-                          onDelete!();
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit, size: 20, color: colorScheme.onSurface),
-                              const SizedBox(width: 8),
-                              const Text('Edit'),
-                            ],
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          _hasTeacher ? _teacherName : 'No teacher',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: _hasTeacher
+                                ? colorScheme.onSurfaceVariant
+                                : colorScheme.error,
+                            fontStyle: _hasTeacher
+                                ? FontStyle.normal
+                                : FontStyle.italic,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.people_outline,
+                        size: 14,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          _studentCount > 0
+                              ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
+                              : 'No students',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: _studentCount > 0
+                                ? colorScheme.onSurfaceVariant
+                                : colorScheme.error,
+                            fontStyle: _studentCount > 0
+                                ? FontStyle.normal
+                                : FontStyle.italic,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Focus display
+                  if (item['focus'] != null &&
+                      item['focus'].toString().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          getAchievementIcon(
+                            item['focus'].toString().toLowerCase(),
+                          ),
+                          size: 14,
+                          color: getAchievementColor(
+                            context,
+                            item['focus'].toString().toLowerCase(),
                           ),
                         ),
-                        PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
-                              const SizedBox(width: 8),
-                              Text('Delete', style: TextStyle(color: colorScheme.error)),
-                            ],
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item['focus'].toString(),
+                            style: textTheme.labelSmall?.copyWith(
+                              color: getAchievementColor(
+                                context,
+                                item['focus'].toString().toLowerCase(),
+                              ),
+                              fontWeight: FontWeight.normal,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
+                  ],
                 ],
               ),
-              SizedBox(height: ClassConstants.defaultPadding * 0.75),
-              // Description
-              if (item['description'] != null &&
-                  item['description'].toString().isNotEmpty)
-                Text(
-                  item['description'],
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              const Spacer(),
-              SizedBox(height: ClassConstants.defaultPadding * 0.75),
-              // Teacher and Student Info
-              Row(
-                children: [
-                  Icon(
-                    Icons.person_outline,
-                    size: 14,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      _hasTeacher ? _teacherName : 'No teacher',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: _hasTeacher
-                            ? colorScheme.onSurfaceVariant
-                            : colorScheme.error,
-                        fontStyle: _hasTeacher
-                            ? FontStyle.normal
-                            : FontStyle.italic,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.people_outline,
-                    size: 14,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      _studentCount > 0
-                          ? '$_studentCount ${_studentCount == 1 ? 'student' : 'students'}'
-                          : 'No students',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: _studentCount > 0
-                            ? colorScheme.onSurfaceVariant
-                            : colorScheme.error,
-                        fontStyle: _studentCount > 0
-                            ? FontStyle.normal
-                            : FontStyle.italic,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -403,16 +543,22 @@ class ClassListSection extends StatefulWidget {
   final SortType sortType;
   final SortOrder sortOrder;
   final VoidCallback? onReload;
-  
+  final String ownerFilter; // 'all' or 'created_by_me'
+  final String? focusFilter; // null, 'HTML', 'CSS', 'JavaScript', 'PHP'
+  final String currentUserId; // Current user's ID for filtering
+
   const ClassListSection({
-    Key? key,
+    super.key,
     required this.roleName,
     this.searchQuery = '',
     required this.layout,
     this.sortType = SortType.alphabetical,
     this.sortOrder = SortOrder.ascending,
     this.onReload,
-  }) : super(key: key);
+    this.ownerFilter = 'all',
+    this.focusFilter,
+    this.currentUserId = '',
+  });
 
   @override
   State<ClassListSection> createState() => _ClassListSectionState();
@@ -423,6 +569,10 @@ class _ClassListSectionState extends State<ClassListSection> {
   List<dynamic> classList = [];
   List<dynamic> filteredList = [];
 
+  // Selection mode state (only for admin)
+  bool _isSelectionMode = false;
+  final Set<String> _selectedClassIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -432,13 +582,17 @@ class _ClassListSectionState extends State<ClassListSection> {
   @override
   void didUpdateWidget(ClassListSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (        oldWidget.searchQuery != widget.searchQuery ||
+    if (oldWidget.searchQuery != widget.searchQuery ||
         oldWidget.layout != widget.layout ||
         oldWidget.sortType != widget.sortType ||
-        oldWidget.sortOrder != widget.sortOrder) {
+        oldWidget.sortOrder != widget.sortOrder ||
+        oldWidget.ownerFilter != widget.ownerFilter ||
+        oldWidget.focusFilter != widget.focusFilter) {
       if (oldWidget.searchQuery != widget.searchQuery ||
           oldWidget.sortType != widget.sortType ||
-          oldWidget.sortOrder != widget.sortOrder) {
+          oldWidget.sortOrder != widget.sortOrder ||
+          oldWidget.ownerFilter != widget.ownerFilter ||
+          oldWidget.focusFilter != widget.focusFilter) {
         // Just re-filter and sort, don't reload from API
         _applyFiltersAndSort();
       } else {
@@ -454,11 +608,40 @@ class _ClassListSectionState extends State<ClassListSection> {
       final allClasses = await ClassApi.fetchAllClasses();
       if (!mounted) return;
 
-      // Apply search filter if search query is provided
+      // Apply filters
       List<dynamic> filtered = allClasses;
+
+      // Apply owner filter (created by me)
+      if (widget.ownerFilter == 'created_by_me' &&
+          widget.currentUserId.isNotEmpty) {
+        final role = widget.roleName.toLowerCase();
+        if (role == 'admin') {
+          // For admin: filter by admin_id
+          filtered = filtered.where((classItem) {
+            final adminId = classItem['admin_id']?.toString() ?? '';
+            return adminId == widget.currentUserId;
+          }).toList();
+        } else if (role == 'teacher') {
+          // For teacher: filter by teacher_id
+          filtered = filtered.where((classItem) {
+            final teacherId = classItem['teacher_id']?.toString() ?? '';
+            return teacherId == widget.currentUserId;
+          }).toList();
+        }
+      }
+
+      // Apply focus filter
+      if (widget.focusFilter != null && widget.focusFilter!.isNotEmpty) {
+        filtered = filtered.where((classItem) {
+          final focus = classItem['focus']?.toString();
+          return focus == widget.focusFilter;
+        }).toList();
+      }
+
+      // Apply search filter if search query is provided
       if (widget.searchQuery.isNotEmpty) {
         final query = widget.searchQuery.toLowerCase();
-        filtered = allClasses.where((classItem) {
+        filtered = filtered.where((classItem) {
           final className = (classItem['class_name'] ?? '')
               .toString()
               .toLowerCase();
@@ -476,9 +659,7 @@ class _ClassListSectionState extends State<ClassListSection> {
           loading = false;
         });
       }
-    } catch (e, stackTrace) {
-      print('Error loading classes: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         setState(() {
           classList = [];
@@ -490,11 +671,40 @@ class _ClassListSectionState extends State<ClassListSection> {
   }
 
   void _applyFiltersAndSort() {
-    // Apply search filter
+    // Apply filters
     List<dynamic> filtered = classList;
+
+    // Apply owner filter (created by me)
+    if (widget.ownerFilter == 'created_by_me' &&
+        widget.currentUserId.isNotEmpty) {
+      final role = widget.roleName.toLowerCase();
+      if (role == 'admin') {
+        // For admin: filter by admin_id
+        filtered = filtered.where((classItem) {
+          final adminId = classItem['admin_id']?.toString() ?? '';
+          return adminId == widget.currentUserId;
+        }).toList();
+      } else if (role == 'teacher') {
+        // For teacher: filter by teacher_id
+        filtered = filtered.where((classItem) {
+          final teacherId = classItem['teacher_id']?.toString() ?? '';
+          return teacherId == widget.currentUserId;
+        }).toList();
+      }
+    }
+
+    // Apply focus filter
+    if (widget.focusFilter != null && widget.focusFilter!.isNotEmpty) {
+      filtered = filtered.where((classItem) {
+        final focus = classItem['focus']?.toString();
+        return focus == widget.focusFilter;
+      }).toList();
+    }
+
+    // Apply search filter
     if (widget.searchQuery.isNotEmpty) {
       final query = widget.searchQuery.toLowerCase();
-      filtered = classList.where((classItem) {
+      filtered = filtered.where((classItem) {
         final className = (classItem['class_name'] ?? '')
             .toString()
             .toLowerCase();
@@ -558,40 +768,29 @@ class _ClassListSectionState extends State<ClassListSection> {
       if (widget.onReload != null) {
         widget.onReload!();
       }
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Class updated successfully'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      // Note: Success message is already shown in EditClassPage, so we don't show it here to avoid duplicate
     }
   }
 
   void _onDeleteClass(dynamic item) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Class'),
-          content: Text(
-            'Are you sure you want to delete "${item['class_name']}"? This action cannot be undone.',
-          ),
+          title: Text(l10n.deleteClass),
+          content: Text(l10n.deleteClassConfirmation(item['class_name'] ?? '')),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
               ),
-              child: const Text('Delete'),
+              child: Text(l10n.delete),
             ),
           ],
         );
@@ -604,8 +803,8 @@ class _ClassListSectionState extends State<ClassListSection> {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Class deleted successfully'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              content: Text(l10n.classDeletedSuccessfully),
+              backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
             ),
@@ -618,7 +817,171 @@ class _ClassListSectionState extends State<ClassListSection> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Failed to delete class'),
+              content: Text(l10n.failedToUpdateClass),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // Selection mode methods (only for admin)
+  void _enterSelectionMode(String classId) {
+    if (widget.roleName.toLowerCase() != 'admin') return;
+    setState(() {
+      _isSelectionMode = true;
+      _selectedClassIds.add(classId);
+    });
+  }
+
+  void _toggleSelection(String classId) {
+    if (widget.roleName.toLowerCase() != 'admin') return;
+    setState(() {
+      if (_selectedClassIds.contains(classId)) {
+        _selectedClassIds.remove(classId);
+        if (_selectedClassIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedClassIds.add(classId);
+      }
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedClassIds.clear();
+    });
+  }
+
+  Widget _buildResultsHeader(BuildContext context, int count) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      key: const ValueKey("ResultsHeader"),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            height: 40,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                l10n.resultsCount(count),
+                style: textTheme.titleMedium,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionHeader(BuildContext context, int totalCount) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      key: const ValueKey("SelectionHeader"),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+                color: colorScheme.onSecondaryContainer,
+              ),
+              Text(
+                l10n.classesSelected(_selectedClassIds.length),
+                style: textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ],
+          ),
+          IconButton(
+            icon: Icon(Icons.delete_outline, color: colorScheme.error),
+            onPressed: _selectedClassIds.isNotEmpty
+                ? _deleteSelectedClasses
+                : null,
+            tooltip: l10n.delete,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteSelectedClasses() async {
+    if (_selectedClassIds.isEmpty) return;
+    if (widget.roleName.toLowerCase() != 'admin') return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(l10n.deleteClass),
+          content: Text(
+            l10n.deleteClassesConfirmation(_selectedClassIds.length),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: Text(l10n.delete),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && mounted) {
+      final classIds = _selectedClassIds.toList();
+      final result = await ClassApi.deleteClasses(classIds);
+
+      if (mounted) {
+        if (result['success'] == true) {
+          final deletedCount = result['deleted_count'] ?? classIds.length;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.classesDeletedSuccessfully(deletedCount)),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          _exitSelectionMode();
+          loadClasses();
+          if (widget.onReload != null) {
+            widget.onReload!();
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? l10n.failedToUpdateClass),
               backgroundColor: Theme.of(context).colorScheme.error,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
@@ -631,180 +994,210 @@ class _ClassListSectionState extends State<ClassListSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final isAdmin = widget.roleName.toLowerCase() == 'admin';
 
     return Scaffold(
       backgroundColor: colorScheme.surfaceContainerLow,
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : filteredList.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.school_outlined,
-                      size: 64,
-                      color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+      body: Stack(
+        children: [
+          loading
+              ? const Center(child: CircularProgressIndicator())
+              : filteredList.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.school_outlined,
+                          size: 64,
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          l10n.noClassesFound,
+                          style: textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.searchQuery.isNotEmpty
+                              ? l10n.tryAdjustingSearchQuery
+                              : l10n.notEnrolledInAnyClasses,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant.withValues(
+                              alpha: 0.7,
+                            ),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No classes found',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                  ),
+                )
+              : widget.layout == ViewLayout.grid
+              ? CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          16.0,
+                          8.0,
+                          16.0,
+                          16.0,
+                        ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child:
+                              _isSelectionMode && _selectedClassIds.isNotEmpty
+                              ? _buildSelectionHeader(
+                                  context,
+                                  filteredList.length,
+                                )
+                              : _buildResultsHeader(
+                                  context,
+                                  filteredList.length,
+                                ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.searchQuery.isNotEmpty
-                          ? 'Try adjusting your search query'
-                          : 'You are not assigned to any classes yet',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    SliverPadding(
+                      padding: const EdgeInsets.all(8.0),
+                      sliver: SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 250.0,
+                              mainAxisSpacing: 12.0,
+                              crossAxisSpacing: 12.0,
+                              childAspectRatio: 0.85,
+                            ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final item = filteredList[index];
+                          final classId = item['class_id'].toString();
+                          final isSelected = _selectedClassIds.contains(
+                            classId,
+                          );
+                          return _ClassGridCard(
+                            item: item,
+                            roleName: widget.roleName,
+                            colorScheme: colorScheme,
+                            textTheme: textTheme,
+                            isSelectionMode: _isSelectionMode,
+                            isSelected: isSelected,
+                            onTap: () {
+                              if (!_isSelectionMode) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ClassDetailPage(
+                                      classId: classId,
+                                      roleName: widget.roleName,
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            onLongPress: isAdmin
+                                ? () => _enterSelectionMode(classId)
+                                : null,
+                            onSelectionToggle: isAdmin
+                                ? () => _toggleSelection(classId)
+                                : null,
+                            onEdit: isAdmin && !_isSelectionMode
+                                ? () => _onEditClass(item)
+                                : null,
+                            onDelete: isAdmin && !_isSelectionMode
+                                ? () => _onDeleteClass(item)
+                                : null,
+                          );
+                        }, childCount: filteredList.length),
                       ),
-                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                )
+              : CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          16.0,
+                          8.0,
+                          16.0,
+                          16.0,
+                        ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child:
+                              _isSelectionMode && _selectedClassIds.isNotEmpty
+                              ? _buildSelectionHeader(
+                                  context,
+                                  filteredList.length,
+                                )
+                              : _buildResultsHeader(
+                                  context,
+                                  filteredList.length,
+                                ),
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final item = filteredList[index];
+                          final isLast = index == filteredList.length - 1;
+                          final classId = item['class_id'].toString();
+                          final isSelected = _selectedClassIds.contains(
+                            classId,
+                          );
+                          return _ClassListItem(
+                            item: item,
+                            isLast: isLast,
+                            roleName: widget.roleName,
+                            colorScheme: colorScheme,
+                            textTheme: textTheme,
+                            isSelectionMode: _isSelectionMode,
+                            isSelected: isSelected,
+                            onTap: () {
+                              if (!_isSelectionMode) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ClassDetailPage(
+                                      classId: classId,
+                                      roleName: widget.roleName,
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            onLongPress: isAdmin
+                                ? () => _enterSelectionMode(classId)
+                                : null,
+                            onSelectionToggle: isAdmin
+                                ? () => _toggleSelection(classId)
+                                : null,
+                            onEdit: isAdmin && !_isSelectionMode
+                                ? () => _onEditClass(item)
+                                : null,
+                            onDelete: isAdmin && !_isSelectionMode
+                                ? () => _onDeleteClass(item)
+                                : null,
+                          );
+                        }, childCount: filteredList.length),
+                      ),
                     ),
                   ],
                 ),
-              ),
-            )
-          : widget.layout == ViewLayout.grid
-          ? CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          SizedBox(
-                            height: 40,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                "${filteredList.length} Results",
-                                style: textTheme.titleMedium,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.all(8.0),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 250.0,
-                          mainAxisSpacing: 12.0,
-                          crossAxisSpacing: 12.0,
-                          childAspectRatio: 0.85,
-                        ),
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final item = filteredList[index];
-                      return _ClassGridCard(
-                        item: item,
-                        roleName: widget.roleName,
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ClassDetailPage(
-                                classId: item['class_id'].toString(),
-                                roleName: widget.roleName,
-                              ),
-                            ),
-                          );
-                        },
-                        onEdit: widget.roleName.toLowerCase() == 'admin'
-                            ? () => _onEditClass(item)
-                            : null,
-                        onDelete: widget.roleName.toLowerCase() == 'admin'
-                            ? () => _onDeleteClass(item)
-                            : null,
-                      );
-                    }, childCount: filteredList.length),
-                  ),
-                ),
-              ],
-            )
-          : CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          SizedBox(
-                            height: 40,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                "${filteredList.length} Results",
-                                style: textTheme.titleMedium,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final item = filteredList[index];
-                      final isLast = index == filteredList.length - 1;
-                      return _ClassListItem(
-                        item: item,
-                        isLast: isLast,
-                        roleName: widget.roleName,
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ClassDetailPage(
-                                classId: item['class_id'].toString(),
-                                roleName: widget.roleName,
-                              ),
-                            ),
-                          );
-                        },
-                        onEdit: widget.roleName.toLowerCase() == 'admin'
-                            ? () => _onEditClass(item)
-                            : null,
-                        onDelete: widget.roleName.toLowerCase() == 'admin'
-                            ? () => _onDeleteClass(item)
-                            : null,
-                      );
-                    }, childCount: filteredList.length),
-                  ),
-                ),
-              ],
-            ),
+        ],
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -12,23 +13,7 @@ import 'package:code_play/api/file_api.dart';
 // --- NEW IMPORTS FOR HTML RENDERING ---
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-
-// --- Helper Class to Track Upload State ---
-class UploadedAttachment {
-  final PlatformFile localFile;
-  final String? serverFileId;
-  final String? publicUrl; // Stores URL for inserting into Markdown
-  final bool isUploading;
-  final bool isFailed;
-
-  UploadedAttachment({
-    required this.localFile,
-    this.serverFileId,
-    this.publicUrl,
-    this.isUploading = false,
-    this.isFailed = false,
-  });
-}
+import 'quiz_widget.dart';
 
 void showCreateNotesDialog({
   required BuildContext context,
@@ -65,9 +50,9 @@ class _CreateNotePageState extends State<CreateNotePage> {
   String? _selectedTopic;
   bool _noteVisibility = true;
   bool _isLoading = false;
-  List<UploadedAttachment> _attachments = [];
+  final List<UploadedAttachment> _attachments = [];
 
-  final List<String> _topic = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+  final List<String> _topic = ['HTML', 'CSS', 'JS', 'PHP'];
 
   @override
   void initState() {
@@ -144,6 +129,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
         // Call API
         Map<String, dynamic>? result = await _fileApi.uploadSingleAttachment(
           _attachments[i].localFile,
+          folderName: _noteTitleController.text, // Pass title as folder
         );
 
         if (!mounted) return;
@@ -181,172 +167,179 @@ class _CreateNotePageState extends State<CreateNotePage> {
     });
   }
 
-  // --- IMPORT MARKDOWN LOGIC ---
-  Future<void> _handleImportMarkdown() async {
-    // 1. Pick MD or TXT File
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['md', 'txt'],
-    );
-
-    if (result == null || result.files.isEmpty) return;
-
-    final pickedFile = result.files.single;
-    if (pickedFile.path == null) return;
-
-    setState(() => _isLoading = true);
-    widget.showSnackBar(context, 'Importing note...', Colors.blue);
+  Future<void> _insertCodeBlock(UploadedAttachment item) async {
+    final file = item.localFile;
+    String? content;
 
     try {
-      final file = File(pickedFile.path!);
-      final content = await file.readAsString();
-      final baseDir = file.parent.path;
-
-      // 2. Set Title (Filename without extension)
-      final title = pickedFile.name.replaceAll(
-        RegExp(r'\.(md|txt)$', caseSensitive: false),
-        '',
-      );
-      _noteTitleController.text = title;
-
-      // 3. Parse Attachments
-      // Robust Regex to match ![alt](path) handling one level of nested parentheses
-      // e.g. matches "image (1).png" inside ![alt](image (1).png)
-      // Dart's RegExp engine (standard JS-like) supports non-capturing groups
-      final imageRegex = RegExp(r'!\[(.*?)\]\(((?:[^()]|\([^()]*\))+)\)');
-
-      String updatedContent = content;
-      final matches = imageRegex.allMatches(content);
-
-      // Find all UNIQUE paths first
-      Set<String> uniquePaths = {};
-      for (final match in matches) {
-        final path = match.group(2);
-        if (path != null && !path.trim().startsWith('http')) {
-          uniquePaths.add(path);
-        }
+      if (file.path != null) {
+        content = await File(file.path!).readAsString();
       }
-
-      int uploadedCount = 0;
-
-      for (String relativePath in uniquePaths) {
-        // Clean the path: strip quotes, whitespace
-        String cleanPath = relativePath.trim();
-        if ((cleanPath.startsWith('"') && cleanPath.endsWith('"')) ||
-            (cleanPath.startsWith("'") && cleanPath.endsWith("'"))) {
-          cleanPath = cleanPath.substring(1, cleanPath.length - 1);
-        }
-
-        // Possible candidates for the local file
-        List<String> candidates = [];
-
-        // 1. Exact relative path (decoded)
-        String decoded = Uri.decodeFull(cleanPath);
-        candidates.add(decoded);
-
-        // 2. Windows-style path (backslashes)
-        if (Platform.isWindows) {
-          candidates.add(decoded.replaceAll('/', '\\'));
-        }
-
-        // 3. Just the filename (Flat import)
-        String filename = decoded.split('/').last.split('\\').last;
-        candidates.add(filename);
-
-        File? localFile;
-
-        // Try finding the file
-        for (final candidate in candidates) {
-          final attemptPath = '$baseDir${Platform.pathSeparator}$candidate';
-          final f = File(attemptPath);
-          if (await f.exists()) {
-            localFile = f;
-            break;
-          }
-        }
-
-        if (localFile == null) {
-          // 4. Recursive Fallback (Aggressive Search)
-          // If we still haven't found it, search the entire base directory for the filename.
-          try {
-            final parentDir = Directory(baseDir);
-            if (await parentDir.exists()) {
-              await for (var entity in parentDir.list(
-                recursive: true,
-                followLinks: false,
-              )) {
-                if (entity is File) {
-                  String name = entity.path.split(Platform.pathSeparator).last;
-                  if (name.toLowerCase() == filename.toLowerCase()) {
-                    localFile = entity;
-                    debugPrint("Found recursively: ${entity.path}");
-                    break;
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            debugPrint("Recursive search error: $e");
-          }
-        }
-
-        if (localFile != null) {
-          // Upload it
-          // Create PlatformFile for the API
-          final pFile = PlatformFile(
-            name: localFile.path.split(Platform.pathSeparator).last,
-            path: localFile.path,
-            size: await localFile.length(),
-          );
-
-          // Trigger Upload
-          Map<String, dynamic>? res = await _fileApi.uploadSingleAttachment(
-            pFile,
-          );
-
-          if (res != null && res['url'] != null) {
-            final serverUrl = res['url'];
-            final serverId = res['id'];
-
-            // Replace in Markdown
-            // We use replaceAll to replace ALL occurrences of this specific relative path
-            // This is safe enough for "image.png" -> "http://.../uuid.png"
-            updatedContent = updatedContent.replaceAll(relativePath, serverUrl);
-
-            // Add to attachments list for UI
-            setState(() {
-              _attachments.add(
-                UploadedAttachment(
-                  localFile: pFile,
-                  serverFileId: serverId,
-                  publicUrl: serverUrl,
-                  isUploading: false,
-                ),
-              );
-            });
-            uploadedCount++;
-          }
-        } else {
-          debugPrint(
-            "Skipping: Could not find local file for '$cleanPath' in '$baseDir'",
-          );
-        }
-      }
-
-      // 4. Update Content
-      _noteMarkdownController.text = updatedContent;
-
-      widget.showSnackBar(
-        context,
-        'Imported "$title" with $uploadedCount images.',
-        Colors.green,
-      );
     } catch (e) {
-      debugPrint("Import Error: $e");
-      widget.showSnackBar(context, 'Import failed: $e', Colors.red);
-    } finally {
-      setState(() => _isLoading = false);
+      widget.showSnackBar(context, 'Failed to read file: $e', Colors.red);
+      return;
     }
+
+    if (content != null) {
+      final ext = file.extension?.toLowerCase() ?? '';
+      final codeBlock = '\n```$ext\n$content\n```\n';
+
+      final text = _noteMarkdownController.text;
+      final selection = _noteMarkdownController.selection;
+      String newString;
+      int newCursorPos;
+
+      if (selection.isValid && selection.start >= 0) {
+        newString = text.replaceRange(
+          selection.start,
+          selection.end,
+          codeBlock,
+        );
+        newCursorPos = selection.start + codeBlock.length;
+      } else {
+        newString = text + codeBlock;
+        newCursorPos = newString.length;
+      }
+
+      _noteMarkdownController.value = TextEditingValue(
+        text: newString,
+        selection: TextSelection.collapsed(offset: newCursorPos),
+      );
+
+      widget.showSnackBar(context, 'Code inserted!', Colors.green);
+      setState(() {});
+    }
+  }
+
+  // --- QUIZ INSERTION LOGIC ---
+  Future<void> _insertQuiz() async {
+    String question = '';
+    List<String> options = ['', '']; // Start with 2 options
+    int correctIndex = 0;
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Insert Quiz'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(labelText: 'Question'),
+                      onChanged: (value) => question = value,
+                    ),
+                    const SizedBox(height: 10),
+                    const Text('Options:'),
+                    ...options.asMap().entries.map((entry) {
+                      int idx = entry.key;
+                      return Row(
+                        children: [
+                          Radio<int>(
+                            value: idx,
+                            groupValue: correctIndex,
+                            onChanged: (val) {
+                              setStateDialog(() => correctIndex = val!);
+                            },
+                          ),
+                          Expanded(
+                            child: TextField(
+                              decoration: InputDecoration(
+                                labelText: 'Option ${idx + 1}',
+                              ),
+                              controller:
+                                  TextEditingController(text: options[idx])
+                                    ..selection = TextSelection.collapsed(
+                                      offset: options[idx].length,
+                                    ),
+                              onChanged: (val) => options[idx] = val,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle),
+                            onPressed: options.length > 2
+                                ? () {
+                                    setStateDialog(() {
+                                      options.removeAt(idx);
+                                      if (correctIndex >= options.length) {
+                                        correctIndex = options.length - 1;
+                                      }
+                                    });
+                                  }
+                                : null,
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Option'),
+                      onPressed: () {
+                        setStateDialog(() {
+                          options.add('');
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    // Validation
+                    if (question.isEmpty || options.any((o) => o.isEmpty)) {
+                      return;
+                    }
+                    Navigator.pop(context, true);
+                  },
+                  child: const Text('Insert'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((result) {
+      if (result == true) {
+        final quizData = {
+          'question': question,
+          'options': options,
+          'correctIndex': correctIndex,
+        };
+        final jsonStr = const JsonEncoder.withIndent('  ').convert(quizData);
+        final codeBlock = '\n```quiz\n$jsonStr\n```\n';
+
+        final text = _noteMarkdownController.text;
+        final selection = _noteMarkdownController.selection;
+        String newString;
+        int newCursorPos;
+
+        if (selection.isValid && selection.start >= 0) {
+          newString = text.replaceRange(
+            selection.start,
+            selection.end,
+            codeBlock,
+          );
+          newCursorPos = selection.start + codeBlock.length;
+        } else {
+          newString = text + codeBlock;
+          newCursorPos = newString.length;
+        }
+
+        _noteMarkdownController.value = TextEditingValue(
+          text: newString,
+          selection: TextSelection.collapsed(offset: newCursorPos),
+        );
+        setState(() {});
+      }
+    });
   }
 
   // --- SUBMIT FORM LOGIC ---
@@ -412,149 +405,27 @@ class _CreateNotePageState extends State<CreateNotePage> {
 
   // --- WIDGET BUILDERS ---
 
-  Widget _buildUploadedFilePreview(ColorScheme colorScheme) {
-    if (_attachments.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Attached Files (${_attachments.length})',
-          style: TextStyle(
-            color: colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _attachments.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 8),
-          itemBuilder: (context, index) {
-            final item = _attachments[index];
-            final file = item.localFile;
-            final isImage = [
-              'jpg',
-              'jpeg',
-              'png',
-              'webp',
-              'bmp',
-              'gif',
-            ].contains(file.extension?.toLowerCase());
-
-            return Container(
-              decoration: BoxDecoration(
-                // Use surfaceContainer for cards/list items in M3
-                color: colorScheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: item.isFailed
-                      ? colorScheme.error
-                      : colorScheme.outlineVariant,
-                ),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  clipBehavior: Clip.hardEdge,
-                  child: isImage && file.path != null
-                      ? Image.file(File(file.path!), fit: BoxFit.cover)
-                      : Icon(
-                          Icons.insert_drive_file,
-                          color: colorScheme.primary,
-                        ),
-                ),
-                title: Text(
-                  file.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
-                ),
-                subtitle: item.isUploading
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: LinearProgressIndicator(
-                          minHeight: 4,
-                          borderRadius: BorderRadius.circular(2),
-                          backgroundColor: colorScheme.surfaceVariant,
-                          color: colorScheme.primary,
-                        ),
-                      )
-                    : item.isFailed
-                    ? Text(
-                        'Upload Failed',
-                        style: TextStyle(
-                          color: colorScheme.error,
-                          fontSize: 12,
-                        ),
-                      )
-                    : SelectableText(
-                        item.publicUrl ?? 'Ready to insert',
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontSize: 12,
-                        ),
-                        maxLines: 1,
-                      ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!item.isUploading &&
-                        !item.isFailed &&
-                        item.publicUrl != null)
-                      IconButton(
-                        icon: const Icon(Icons.add_link),
-                        color: colorScheme.primary,
-                        tooltip: 'Insert into text',
-                        onPressed: () {
-                          _insertMarkdownLink(
-                            file.name,
-                            item.publicUrl!,
-                            isImage,
-                          );
-                          widget.showSnackBar(
-                            context,
-                            'Link inserted!',
-                            Colors.green,
-                          );
-                        },
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      color: colorScheme.error,
-                      tooltip: 'Remove file',
-                      onPressed: () => _removeFile(index),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-
   InputDecoration _inputDecoration({
     required String labelText,
     required IconData icon,
     String? hintText,
     required ColorScheme colorScheme,
+    bool isMandatory = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: RichText(
+        text: TextSpan(
+          text: labelText,
+          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
+          children: [
+            if (isMandatory)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       hintText: hintText,
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -597,11 +468,6 @@ class _CreateNotePageState extends State<CreateNotePage> {
 
         actions: [
           IconButton(
-            icon: Icon(Icons.file_upload, color: colorScheme.primary),
-            tooltip: 'Import Markdown',
-            onPressed: _isLoading ? null : _handleImportMarkdown,
-          ),
-          IconButton(
             icon: _isLoading
                 ? SizedBox(
                     width: 20,
@@ -628,7 +494,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                 children: [
                   // 1. Topic Selector
                   DropdownButtonFormField<String>(
-                    value: _selectedTopic,
+                    initialValue: _selectedTopic,
                     // Remove hardcoded color, let it use theme canvas/surface
                     dropdownColor: colorScheme.surfaceContainer,
                     style: TextStyle(color: colorScheme.onSurface),
@@ -636,6 +502,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                       labelText: 'Topic',
                       icon: Icons.category,
                       colorScheme: colorScheme,
+                      isMandatory: true,
                     ),
                     items: _topic
                         .map(
@@ -658,10 +525,11 @@ class _CreateNotePageState extends State<CreateNotePage> {
                     controller: _noteTitleController,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: _inputDecoration(
-                      labelText: 'Note Title',
+                      labelText: 'Title',
                       hintText: 'Enter a title',
                       icon: Icons.title,
                       colorScheme: colorScheme,
+                      isMandatory: true,
                     ),
                     validator: (value) => value == null || value.isEmpty
                         ? 'Please enter a title'
@@ -673,11 +541,53 @@ class _CreateNotePageState extends State<CreateNotePage> {
                   FileUploadZone(
                     onTap: _handleFileUpload,
                     isLoading: _isLoading,
+                    attachments: _attachments,
+                    onRemove: _removeFile,
+                    onInsertLink: (item) {
+                      final isImage = [
+                        'jpg',
+                        'jpeg',
+                        'png',
+                        'webp',
+                        'bmp',
+                        'gif',
+                      ].contains(item.localFile.extension?.toLowerCase());
+                      if (item.publicUrl != null) {
+                        _insertMarkdownLink(
+                          item.localFile.name,
+                          item.publicUrl!,
+                          isImage,
+                        );
+                        widget.showSnackBar(
+                          context,
+                          'Link inserted!',
+                          Colors.green,
+                        );
+                      }
+                    },
+                    onInsertCode: _insertCodeBlock,
                   ),
                   const SizedBox(height: 16),
 
-                  // 4. Attachments Preview
-                  _buildUploadedFilePreview(colorScheme),
+                  // 4. Attachments Preview (Moved to FileUploadZone)
+                  // _buildUploadedFilePreview(colorScheme), -- Removed
+
+                  // 5. Quiz Button
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _insertQuiz,
+                      icon: Icon(Icons.quiz, color: colorScheme.primary),
+                      label: Text(
+                        'Insert Quiz',
+                        style: TextStyle(color: colorScheme.primary),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: colorScheme.surfaceContainer,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
 
                   // 5. Markdown Editor
                   TextFormField(
@@ -689,6 +599,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                           'Type notes or HTML here. Images insert automatically.',
                       icon: Icons.description,
                       colorScheme: colorScheme,
+                      isMandatory: true,
                     ),
                     maxLines: 8,
                     validator: (value) => value == null || value.isEmpty
@@ -735,6 +646,34 @@ class _CreateNotePageState extends State<CreateNotePage> {
                             }
                             return null;
                           },
+                          customWidgetBuilder: (element) {
+                            if (element.localName == 'pre' &&
+                                element.children.isNotEmpty &&
+                                element.children.first.localName == 'code') {
+                              final codeClass =
+                                  element.children.first.attributes['class'] ??
+                                  '';
+                              if (codeClass.contains('language-quiz')) {
+                                final jsonStr = element.text;
+                                try {
+                                  final quizData = jsonDecode(jsonStr);
+                                  return QuizWidget(
+                                    question: quizData['question'],
+                                    options: List<String>.from(
+                                      quizData['options'],
+                                    ),
+                                    correctIndex: quizData['correctIndex'],
+                                  );
+                                } catch (e) {
+                                  return Text(
+                                    'Error parsing quiz: $e',
+                                    style: const TextStyle(color: Colors.red),
+                                  );
+                                }
+                              }
+                            }
+                            return null;
+                          },
                         ),
                       ),
                     ],
@@ -760,7 +699,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                       _noteVisibility ? Icons.visibility : Icons.visibility_off,
                       color: colorScheme.onSurfaceVariant,
                     ),
-                    activeColor: colorScheme.primary,
+                    activeThumbColor: colorScheme.primary,
                     // Use surfaceContainer for the tile background
                     tileColor: colorScheme.surfaceContainer,
                     shape: RoundedRectangleBorder(
@@ -777,4 +716,3 @@ class _CreateNotePageState extends State<CreateNotePage> {
     );
   }
 }
-
