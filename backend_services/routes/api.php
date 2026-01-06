@@ -34,6 +34,7 @@ Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- Th
 Route::post('/run-code', [App\Http\Controllers\RunCodeController::class, 'execute']); // Execute PHP code
 Route::get('/get-file', [App\Http\Controllers\RunCodeController::class, 'getFile']);
 Route::post('/delete-file', [App\Http\Controllers\RunCodeController::class, 'deleteFile']); // Delete file permanently
+Route::post('/rename-file', [App\Http\Controllers\RunCodeController::class, 'renameFile']); // Rename file permanently
 
 Route::post('/achievements/new', [AchievementController::class, 'store']);
 Route::get('/achievements', [AchievementController::class, 'showAchievementsBrief']);

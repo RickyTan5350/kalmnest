@@ -245,7 +245,6 @@ class _RunCodePageState extends State<RunCodePage> {
   // --- 3. Asset Loading (Server-First) ---
   Future<void> _loadContextAssets() async {
     if (_resolvedContextPath == null) return;
-    _showWebWarning("Loading assets...");
 
     // Attempt to load from server first.
     await _loadAssetsFromServer();
@@ -341,7 +340,7 @@ class _RunCodePageState extends State<RunCodePage> {
 
           _codeController.text = _files[_activeFileIndex].content;
         });
-        _showWebWarning("Assets Loaded (Server).");
+        print("DEBUG WEB: Assets Loaded (Server).");
         return;
       }
     }
@@ -401,7 +400,7 @@ class _RunCodePageState extends State<RunCodePage> {
           }
         }
       });
-      _showWebWarning("Loaded local assets (Offline Mode)");
+      print("DEBUG WEB: Loaded local assets (Offline Mode)");
     } catch (e) {
       print("Error loading bundle assets: $e");
     }
@@ -582,9 +581,7 @@ class _RunCodePageState extends State<RunCodePage> {
         // Auto-save logic
         if (widget.isAdmin) {
           if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-          _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
-            _saveCurrentFile(isAutoSave: true);
-          });
+          _saveCurrentFile(isAutoSave: true);
         }
       }
     }
@@ -623,12 +620,12 @@ class _RunCodePageState extends State<RunCodePage> {
   Future<void> _saveCurrentFile({bool isAutoSave = false}) async {
     if (!widget.isAdmin || widget.contextId == null) {
       if (!isAutoSave)
-        _showWebWarning("Save not available (Read-only or No Context)");
+        print("DEBUG WEB: Save not available (Read-only or No Context)");
       return;
     }
 
     final currentFile = _files[_activeFileIndex];
-    if (!isAutoSave) _showWebWarning("Saving '${currentFile.name}'...");
+    if (!isAutoSave) print("DEBUG WEB: Saving '${currentFile.name}'...");
 
     try {
       await NoteApi().uploadFile(
@@ -637,7 +634,7 @@ class _RunCodePageState extends State<RunCodePage> {
         content: currentFile.content,
       );
       if (!isAutoSave) {
-        _showWebWarning("File Saved!");
+        print("DEBUG WEB: File Saved!");
       }
       print(
         "DEBUG: '${currentFile.name}' saved successfully (AutoSave: $isAutoSave).",
@@ -722,17 +719,16 @@ class _RunCodePageState extends State<RunCodePage> {
 
     // Admin Sync
     if (widget.isAdmin && widget.contextId != null) {
-      _showWebWarning(
-        "Syncing '$filename' to backend (NoteID: ${widget.contextId})...",
+      print(
+        "DEBUG WEB: Syncing '$filename' to backend (NoteID: ${widget.contextId})...",
       );
-      print("DEBUG: Syncing to NoteID: ${widget.contextId}");
       try {
         await NoteApi().uploadFile(
           noteId: widget.contextId!,
           fileName: filename,
           content: "",
         );
-        _showWebWarning("File Synced!");
+        print("DEBUG WEB: File Synced!");
 
         // Auto-update visible_files.json
         await _updateVisibleFilesManifest();
@@ -786,7 +782,7 @@ class _RunCodePageState extends State<RunCodePage> {
   Future<void> _updateVisibleFilesManifest() async {
     if (_resolvedContextPath == null) return;
 
-    _showWebWarning("Updating visible_files.json...");
+    print("DEBUG WEB: Updating visible_files.json...");
     try {
       // 1. Fetch existing manifest
       // Use API endpoint to bypass CORS
@@ -836,7 +832,7 @@ class _RunCodePageState extends State<RunCodePage> {
         content: const JsonEncoder.withIndent('    ').convert(manifest),
       );
 
-      _showWebWarning("Manifest Updated!");
+      print("DEBUG WEB: Manifest Updated!");
       print("DEBUG: visible_files.json updated for key '$key'");
     } catch (e) {
       print("Error updating manifest: $e");
@@ -851,15 +847,96 @@ class _RunCodePageState extends State<RunCodePage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _renameFile(int index) {
-    _showWebWarning("File renaming not persistent on Web.");
+  Future<void> _renameFile(int index) async {
+    if (!widget.isAdmin) {
+      print("DEBUG WEB: Only Admins can rename files.");
+      return;
+    }
+
+    final oldName = _files[index].name;
+    final TextEditingController nameController = TextEditingController(
+      text: oldName,
+    );
+
+    setState(() => _isDialogOpen = true);
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("Rename '$oldName'"),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: "New Filename"),
+          onSubmitted: (_) {
+            Navigator.pop(ctx);
+            _handleRenameFile(index, nameController.text);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleRenameFile(index, nameController.text);
+            },
+            child: const Text("Rename"),
+          ),
+        ],
+      ),
+    );
+    if (mounted) setState(() => _isDialogOpen = false);
+  }
+
+  Future<void> _handleRenameFile(int index, String newName) async {
+    final oldName = _files[index].name;
+    final cleanName = newName.trim();
+
+    if (cleanName.isEmpty || cleanName == oldName) return;
+
+    final path = '$_resolvedContextPath/$oldName';
+
+    print("DEBUG WEB: Renaming '$oldName' to '$cleanName'...");
+    print("DEBUG WEB: Path: $path");
+
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}/rename-file');
+      final response = await http.post(
+        uri,
+        body: {'path': path, 'new_name': cleanName},
+      );
+
+      if (response.statusCode == 200) {
+        print("DEBUG WEB: Rename Success: ${response.body}");
+
+        setState(() {
+          _files[index].name = cleanName;
+        });
+
+        // Update URL bar if needed?
+        // Not really, just the tab name.
+
+        // 2. Update Manifest
+        await _updateVisibleFilesManifest();
+      } else {
+        print(
+          "DEBUG WEB: Rename Failed: ${response.statusCode} - ${response.body}",
+        );
+        _showWebWarning("Rename Failed: ${response.body}");
+      }
+    } catch (e) {
+      print("DEBUG WEB: Rename Error: $e");
+      _showWebWarning("Error renaming file: $e");
+    }
   }
 
   Future<void> _handleDeleteFile(int index) async {
     final fileName = _files[index].name;
     final path = '$_resolvedContextPath/$fileName';
 
-    _showWebWarning("Deleting '$fileName'...");
+    print("DEBUG WEB: Deleting '$fileName'...");
     print("DEBUG WEB: Deleting file at $path");
 
     try {
@@ -882,7 +959,7 @@ class _RunCodePageState extends State<RunCodePage> {
           }
         });
 
-        _showWebWarning("File Deleted Successfully.");
+        print("DEBUG WEB: File Deleted Successfully.");
 
         // 2. Update Manifest (Remove from list)
         await _updateVisibleFilesManifest();

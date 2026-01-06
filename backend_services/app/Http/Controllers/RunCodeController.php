@@ -457,4 +457,128 @@ class RunCodeController extends Controller
             return response()->json(['error' => 'Delete failed: ' . $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Rename a file in all locations (Public Assets, Seed Data)
+     */
+    public function renameFile(Request $request)
+    {
+        try {
+            $path = $request->input('path'); // Old path relative to public/assets/www
+            $newName = $request->input('new_name');
+
+            if (!$path || !$newName) {
+                return response()->json(['error' => 'Path and new_name are required.'], 400);
+            }
+
+            if (str_contains($path, '..') || str_contains($newName, '..') || str_contains($newName, '/')) {
+                return response()->json(['error' => 'Invalid path or filename.'], 403);
+            }
+
+            $renamedCount = 0;
+            $messages = [];
+
+            // 1. Rename in Public Assets (Immediate Web Effect)
+            $oldPublicPath = public_path($path);
+            $newPublicPath = dirname($oldPublicPath) . '/' . $newName;
+
+            if (file_exists($oldPublicPath)) {
+                if (file_exists($newPublicPath)) {
+                    return response()->json(['error' => 'File with new name already exists.'], 409);
+                }
+                rename($oldPublicPath, $newPublicPath);
+                $renamedCount++;
+                $messages[] = "Renamed in Public Assets.";
+            } else {
+                 return response()->json(['error' => 'File not found.'], 404);
+            }
+
+            // 2. Rename in Seed Data (Dev Consistency)
+            // Expected path format: assets/www/<ContextID>/<Filename>
+            $parts = explode('/', $path);
+            if (count($parts) >= 2) {
+                $oldFilename = end($parts);
+                $contextId = $parts[count($parts) - 2]; 
+
+                $seedBase = database_path('seed_data/notes');
+                if (is_dir($seedBase)) {
+                     // Find file recursively match ContextID/Filename
+                     $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($seedBase));
+                     foreach ($iterator as $file) {
+                         if ($file->getFilename() === $oldFilename && str_contains($file->getPath(), $contextId)) {
+                             $oldSeedPath = $file->getPathname();
+                             $newSeedPath = $file->getPath() . '/' . $newName;
+                             rename($oldSeedPath, $newSeedPath);
+                             $renamedCount++;
+                             $messages[] = "Renamed in Seed Data.";
+                             break; 
+                         }
+                     }
+                }
+            }
+            
+            // 3. Update visible_files.json (Manifest)
+            // We need to update the manifest in both Public and Seed locations if they exist.
+            // The manifest is usually in the PARENT directory of the file (ContextID folder).
+            
+            // Helper to update manifest
+            $updateManifest = function($dir) use ($oldPublicPath, $newName) {
+                $manifestPath = $dir . '/visible_files.json';
+                $oldFilename = basename($oldPublicPath);
+                
+                if (file_exists($manifestPath)) {
+                    $json = json_decode(file_get_contents($manifestPath), true);
+                    if ($json) {
+                        $updated = false;
+                        // Search for old name in values (Lists) or Keys
+                        foreach ($json as $group => $files) {
+                            if (is_array($files)) {
+                                $key = array_search($oldFilename, $files);
+                                if ($key !== false) {
+                                    $json[$group][$key] = $newName;
+                                    $updated = true;
+                                }
+                            } else {
+                                // Legacy Key-Value?
+                                if ($group === $oldFilename) {
+                                    // Complex if key is the filename. 
+                                    // We might need to change key.
+                                    // But usually we use the list format now.
+                                }
+                            }
+                        }
+                        
+                        if ($updated) {
+                            file_put_contents($manifestPath, json_encode($json, JSON_PRETTY_PRINT));
+                        }
+                    }
+                }
+            };
+
+            // Update Public Manifest
+            $updateManifest(dirname($oldPublicPath));
+            
+            // Update Seed Manifest (if we found the directory)
+            // We can try to infer seed dir from the loop above if we wanted, but let's do a quick check
+            // Actually, we can just rely on the user to use the 'sync' command if things get out of whack,
+            // OR we iterate again. 
+            // For now, let's assume if we renamed the file in step 2, we are good. 
+            // BUT: The manifest ALSO needs to be updated.
+            // Let's rely on the frontend to update the manifest via `_updateVisibleFilesManifest` call?
+            // The frontend usually handles "Adding" by uploading.
+            // But "Renaming" is tricky. 
+            // Better if backend handles manifest update for atomicity.
+            
+            // Let's try to update Seed Manifest too.
+            if (isset($newSeedPath)) {
+                $updateManifest(dirname($newSeedPath));
+                $messages[] = "Updated Seed Manifest.";
+            }
+
+            return response()->json(['message' => 'File renamed successfully.', 'details' => $messages]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Rename failed: ' . $e->getMessage()], 500);
+        }
+    }
 }
