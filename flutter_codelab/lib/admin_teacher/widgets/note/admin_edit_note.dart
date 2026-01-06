@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/services.dart';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:code_play/admin_teacher/widgets/note/file_picker.dart';
@@ -149,15 +150,6 @@ class _EditNotePageState extends State<EditNotePage> {
     );
   }
 
-  // Helper to ensure absolute URLs
-  String _processMarkdown(String content) {
-    // Replace relative paths starting with /storage/
-    // Example: ](/storage/...) -> ](https://domain.com/storage/...)
-    // Also handle existing partials if any
-    final domain = ApiConstants.domain;
-    return content.replaceAll('](/storage/', ']($domain/storage/');
-  }
-
   void _insertMarkdownLink(String fileName, String url, bool isImage) {
     final text = _contentController.text;
     final selection = _contentController.selection;
@@ -217,6 +209,7 @@ class _EditNotePageState extends State<EditNotePage> {
               localFile: _attachments[i].localFile,
               serverFileId: result['id'],
               publicUrl: result['url'],
+              rawUrl: result['raw_url'],
               isUploading: false,
             );
           } else {
@@ -531,7 +524,7 @@ class _EditNotePageState extends State<EditNotePage> {
     int newTotal = 0;
     if (term.isNotEmpty) {
       String htmlContent = md.markdownToHtml(
-        _processMarkdown(_contentController.text),
+        _contentController.text,
         extensionSet: md.ExtensionSet.gitHubFlavored,
       );
       final pattern = RegExp(
@@ -605,7 +598,7 @@ class _EditNotePageState extends State<EditNotePage> {
     _matchKeys = [];
 
     String htmlContent = md.markdownToHtml(
-      _processMarkdown(_contentController.text),
+      _contentController.text,
       extensionSet: md.ExtensionSet.gitHubFlavored,
     );
 
@@ -642,9 +635,15 @@ class _EditNotePageState extends State<EditNotePage> {
 
     return HtmlWidget(
       htmlContent,
-      baseUrl: Uri.parse(ApiConstants.domain),
+      baseUrl: Uri.tryParse(ApiConstants.domain),
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 15),
       customWidgetBuilder: (element) {
+        if (element.localName == 'img') {
+          final src = element.attributes['src'];
+          if (src != null) {
+            return _buildImageWidget(src);
+          }
+        }
         if (element.localName == 'pre') {
           if (element.children.isNotEmpty &&
               element.children.first.localName == 'code') {
@@ -808,6 +807,143 @@ class _EditNotePageState extends State<EditNotePage> {
     return position;
   }
 
+  String _fixUrl(String url) {
+    if (kIsWeb) {
+      // On Web, static files from another domain (kalmnest.test) often fail CORS.
+      // We proxy them through our Laravel backend which adds CORS headers.
+      if (url.contains('/storage/')) {
+        final apiBase = ApiConstants.baseUrl; // e.g. https://kalmnest.test/api
+        // Construct proxy URL: /api/file-proxy?url=ORIGINAL_URL
+        return '$apiBase/file-proxy?url=${Uri.encodeComponent(url)}';
+      }
+    }
+
+    try {
+      final uri = Uri.parse(url);
+      if (uri.host == 'kalmnest.test') {
+        final targetBase = Uri.parse(ApiConstants.domain);
+        return uri
+            .replace(
+              scheme: targetBase.scheme,
+              host: targetBase.host,
+              port: targetBase.port,
+            )
+            .toString();
+      }
+    } catch (e) {
+      debugPrint('Error fixing URL: $e');
+    }
+    return url;
+  }
+
+  Widget _buildImageWidget(String src) {
+    if (src.startsWith('http')) {
+      return Image.network(
+        _fixUrl(src),
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.red),
+      );
+    }
+
+    final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+    final fileName = src.split('/').last;
+    // Use selected topic or fallback
+    final currentTopic = _selectedTopic ?? widget.currentTopic;
+
+    return FutureBuilder<String?>(
+      future: _resolveLocalAsset(src, fileName, folders, currentTopic),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final resolvedPath = snapshot.data;
+        if (resolvedPath != null) {
+          return Image.asset(resolvedPath);
+        }
+
+        final networkUrl = src.startsWith('/')
+            ? "${ApiConstants.domain}$src"
+            : (src.startsWith('pictures/')
+                  ? "${ApiConstants.domain}/storage/notes/$src"
+                  : (src.startsWith('http')
+                        ? src
+                        : "${ApiConstants.domain}/storage/notes/pictures/$src"));
+
+        // Fallback network URL with topic if primary fails
+        final topicNetworkUrl = src.startsWith('pictures/')
+            ? "${ApiConstants.domain}/storage/notes/$currentTopic/$src"
+            : null;
+
+        return Image.network(
+          _fixUrl(networkUrl),
+          errorBuilder: (context, error, stackTrace) {
+            if (topicNetworkUrl != null) {
+              return Image.network(
+                _fixUrl(topicNetworkUrl),
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildErrorWidget(fileName),
+              );
+            }
+            return _buildErrorWidget(fileName);
+          },
+        );
+      },
+    );
+  }
+
+  Future<String?> _resolveLocalAsset(
+    String originalPath,
+    String fileName,
+    List<String> folders,
+    String currentTopic,
+  ) async {
+    // A. Only try the original path if it looks like a full asset path
+    if (originalPath.startsWith('assets/')) {
+      try {
+        await rootBundle.load(originalPath);
+        return originalPath;
+      } catch (_) {}
+    }
+
+    // 1. Try flattened global path
+    final flattened = 'assets/www/pictures/$fileName';
+    try {
+      await rootBundle.load(flattened);
+      return flattened;
+    } catch (_) {}
+
+    // 2. Try topic-specific subfolder using the current/selected topic
+    final topicFlattened = 'assets/www/pictures/$currentTopic/$fileName';
+    try {
+      await rootBundle.load(topicFlattened);
+      return topicFlattened;
+    } catch (_) {}
+
+    // 3. Search in known topic subfolders (backward compatibility)
+    for (final folder in folders) {
+      final candidate = 'assets/www/pictures/$folder/$fileName';
+      try {
+        await rootBundle.load(candidate);
+        return candidate;
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Widget _buildErrorWidget(String fileName) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.broken_image, color: Colors.red),
+        Text("Failed to load: $fileName", style: const TextStyle(fontSize: 10)),
+      ],
+    );
+  }
+
   Widget _buildHoverFileInserter(ColorScheme colorScheme) {
     final uniqueFiles = _attachments
         .where((a) => !a.isFailed && a.publicUrl != null)
@@ -891,7 +1027,11 @@ class _EditNotePageState extends State<EditNotePage> {
                     if (isCode) {
                       _insertCodeBlock(item);
                     } else {
-                      _insertMarkdownLink(file.name, item.publicUrl!, isImage);
+                      _insertMarkdownLink(
+                        file.name,
+                        item.rawUrl ?? item.publicUrl!,
+                        isImage,
+                      );
                     }
                   },
                   child: Padding(
@@ -1204,7 +1344,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                         if (item.publicUrl != null) {
                                           _insertMarkdownLink(
                                             item.localFile.name,
-                                            item.publicUrl!,
+                                            item.rawUrl ?? item.publicUrl!,
                                             isImage,
                                           );
                                         }

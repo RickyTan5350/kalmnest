@@ -1,4 +1,0 @@
-     <h1>Tahniah!!</h1>
-            <hr>
-            <h2>Anda Pengguna Yang Sah</h2>
-        </div>

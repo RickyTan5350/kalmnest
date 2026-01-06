@@ -7,6 +7,7 @@ class UploadedAttachment {
   final PlatformFile localFile;
   final String? serverFileId;
   final String? publicUrl;
+  final String? rawUrl;
   final bool isUploading;
   final bool isFailed;
 
@@ -14,6 +15,7 @@ class UploadedAttachment {
     required this.localFile,
     this.serverFileId,
     this.publicUrl,
+    this.rawUrl,
     this.isUploading = false,
     this.isFailed = false,
   });

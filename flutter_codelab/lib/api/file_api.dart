@@ -66,7 +66,7 @@ class FileApi {
           fullUrl = rawUrl;
         }
 
-        return {'id': json['file_id'], 'url': fullUrl};
+        return {'id': json['file_id'], 'url': fullUrl, 'raw_url': rawUrl};
       } else {
         // Now you will see the REAL error message here (e.g. "File too large")
         print('FAILED: ${response.body}');

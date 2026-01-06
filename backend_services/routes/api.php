@@ -41,6 +41,7 @@ Route::get('/achievements', [AchievementController::class, 'showAchievementsBrie
 
 Route::post('/files/upload-batch', [FileController::class, 'uploadBatch']);
 Route::post('/files/upload-independent', [FileController::class, 'uploadIndependent']);
+Route::get('/file-proxy', [FileController::class, 'proxy']); // Public proxy for CORS images
 
 // Health & Debug
 Route::get('/health', function () {
