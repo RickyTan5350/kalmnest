@@ -15,8 +15,17 @@ class PdfService {
       final pdf = pw.Document();
 
       // 1. Load Fonts
-      final font = await PdfGoogleFonts.openSansRegular();
-      final fontBold = await PdfGoogleFonts.openSansBold();
+      // 1. Load Fonts
+      late pw.Font font;
+      late pw.Font fontBold;
+      try {
+        font = await PdfGoogleFonts.openSansRegular();
+        fontBold = await PdfGoogleFonts.openSansBold();
+      } catch (e) {
+        print("Error loading Google Fonts: $e. Using fallback fonts.");
+        font = pw.Font.helvetica();
+        fontBold = pw.Font.helveticaBold();
+      }
 
       // 2. Pre-process Quiz Blocks
       String processedContent = _processQuizBlocks(content, quizStates);
@@ -291,4 +300,3 @@ class PdfService {
     });
   }
 }
-

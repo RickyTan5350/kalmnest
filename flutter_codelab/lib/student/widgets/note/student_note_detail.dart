@@ -131,10 +131,10 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
   // --- PDF Logic (Now using Service) ---
   Future<void> _downloadPdf() async {
-    if (kIsWeb) {
-      _showSnackBar('PDF download is not supported on Web.', isError: true);
-      return;
-    }
+    // if (kIsWeb) {
+    //   _showSnackBar('PDF download is not supported on Web.', isError: true);
+    //   return;
+    // }
     setState(() => _isDownloadingPdf = true);
 
     try {
