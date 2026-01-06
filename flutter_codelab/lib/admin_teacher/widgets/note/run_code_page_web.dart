@@ -736,6 +736,8 @@ class _RunCodePageState extends State<RunCodePage> {
         print("DEBUG: Sync Error: $e");
         _showWebWarning("Sync Failed: $e");
       }
+    } else {
+      print("DEBUG WEB: Student created temporary file '$filename'");
     }
   }
 
@@ -743,8 +745,9 @@ class _RunCodePageState extends State<RunCodePage> {
   // ...
   void _deleteFile(int index) async {
     if (!widget.isAdmin) {
-      _showWebWarning("Only Admins can delete files.");
-      return;
+      // Allow students to delete locally
+      // _showWebWarning("Only Admins can delete files.");
+      // return;
     }
 
     final fileName = _files[index].name;
@@ -753,9 +756,13 @@ class _RunCodePageState extends State<RunCodePage> {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("Delete '$fileName'?"),
-        content: const Text(
-          "This will PERMANENTLY delete the file from all locations (Web, Storage, Seed Data). This cannot be undone.",
+        title: Text(
+          widget.isAdmin ? "Delete '$fileName'?" : "Remove '$fileName'?",
+        ),
+        content: Text(
+          widget.isAdmin
+              ? "This will PERMANENTLY delete the file. This cannot be undone."
+              : "This will remove the file from your current session. You can recover it by reloading the page.",
         ),
         actions: [
           TextButton(
@@ -768,9 +775,9 @@ class _RunCodePageState extends State<RunCodePage> {
               Navigator.pop(ctx);
               _handleDeleteFile(index);
             },
-            child: const Text(
-              "Delete Permanently",
-              style: TextStyle(color: Colors.white),
+            child: Text(
+              widget.isAdmin ? "Delete Permanently" : "Remove",
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         ],
@@ -849,8 +856,9 @@ class _RunCodePageState extends State<RunCodePage> {
 
   Future<void> _renameFile(int index) async {
     if (!widget.isAdmin) {
-      print("DEBUG WEB: Only Admins can rename files.");
-      return;
+      // Allow students to rename locally
+      // print("DEBUG WEB: Only Admins can rename files.");
+      // return;
     }
 
     final oldName = _files[index].name;
@@ -896,82 +904,104 @@ class _RunCodePageState extends State<RunCodePage> {
 
     if (cleanName.isEmpty || cleanName == oldName) return;
 
-    final path = '$_resolvedContextPath/$oldName';
+    if (widget.isAdmin) {
+      final path = '$_resolvedContextPath/$oldName';
 
-    print("DEBUG WEB: Renaming '$oldName' to '$cleanName'...");
-    print("DEBUG WEB: Path: $path");
+      print("DEBUG WEB: Renaming '$oldName' to '$cleanName'...");
+      print("DEBUG WEB: Path: $path");
 
-    try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/rename-file');
-      final response = await http.post(
-        uri,
-        body: {'path': path, 'new_name': cleanName},
-      );
-
-      if (response.statusCode == 200) {
-        print("DEBUG WEB: Rename Success: ${response.body}");
-
-        setState(() {
-          _files[index].name = cleanName;
-        });
-
-        // Update URL bar if needed?
-        // Not really, just the tab name.
-
-        // 2. Update Manifest
-        await _updateVisibleFilesManifest();
-      } else {
-        print(
-          "DEBUG WEB: Rename Failed: ${response.statusCode} - ${response.body}",
+      try {
+        final uri = Uri.parse('${ApiConstants.baseUrl}/rename-file');
+        final response = await http.post(
+          uri,
+          body: {'path': path, 'new_name': cleanName},
         );
-        _showWebWarning("Rename Failed: ${response.body}");
+
+        if (response.statusCode == 200) {
+          print("DEBUG WEB: Rename Success: ${response.body}");
+
+          setState(() {
+            _files[index].name = cleanName;
+          });
+
+          // 2. Update Manifest
+          await _updateVisibleFilesManifest();
+        } else {
+          print(
+            "DEBUG WEB: Rename Failed: ${response.statusCode} - ${response.body}",
+          );
+          _showWebWarning("Rename Failed: ${response.body}");
+        }
+      } catch (e) {
+        print("DEBUG WEB: Rename Error: $e");
+        _showWebWarning("Error renaming file: $e");
       }
-    } catch (e) {
-      print("DEBUG WEB: Rename Error: $e");
-      _showWebWarning("Error renaming file: $e");
+    } else {
+      // Student Local Rename
+      setState(() {
+        _files[index].name = cleanName;
+      });
+      print("DEBUG WEB: Student local rename '$oldName' -> '$cleanName'");
     }
   }
 
   Future<void> _handleDeleteFile(int index) async {
     final fileName = _files[index].name;
-    final path = '$_resolvedContextPath/$fileName';
 
-    print("DEBUG WEB: Deleting '$fileName'...");
-    print("DEBUG WEB: Deleting file at $path");
+    if (widget.isAdmin) {
+      final path = '$_resolvedContextPath/$fileName';
 
-    try {
-      // 1. Call Backend Delete API
-      final uri = Uri.parse('${ApiConstants.baseUrl}/delete-file');
-      final response = await http.post(uri, body: {'path': path});
+      print("DEBUG WEB: Deleting '$fileName'...");
+      print("DEBUG WEB: Deleting file at $path");
 
-      if (response.statusCode == 200) {
-        print("DEBUG WEB: Delete Success: ${response.body}");
+      try {
+        // 1. Call Backend Delete API
+        final uri = Uri.parse('${ApiConstants.baseUrl}/delete-file');
+        final response = await http.post(uri, body: {'path': path});
 
-        setState(() {
-          _files.removeAt(index);
-          if (_activeFileIndex >= _files.length) {
-            _activeFileIndex = _files.isEmpty ? 0 : _files.length - 1;
-          }
-          if (_files.isNotEmpty) {
-            _codeController.text = _files[_activeFileIndex].content;
-          } else {
-            _codeController.text = "";
-          }
-        });
+        if (response.statusCode == 200) {
+          print("DEBUG WEB: Delete Success: ${response.body}");
 
-        print("DEBUG WEB: File Deleted Successfully.");
+          setState(() {
+            _files.removeAt(index);
+            if (_activeFileIndex >= _files.length) {
+              _activeFileIndex = _files.isEmpty ? 0 : _files.length - 1;
+            }
+            if (_files.isNotEmpty) {
+              _codeController.text = _files[_activeFileIndex].content;
+            } else {
+              _codeController.text = "";
+            }
+          });
 
-        // 2. Update Manifest (Remove from list)
-        await _updateVisibleFilesManifest();
-      } else {
-        print(
-          "DEBUG WEB: Delete Failed: ${response.statusCode} - ${response.body}",
-        );
-        _showWebWarning("Delete Failed: ${response.body}");
+          print("DEBUG WEB: File Deleted Successfully.");
+
+          // 2. Update Manifest (Remove from list)
+          await _updateVisibleFilesManifest();
+        } else {
+          print(
+            "DEBUG WEB: Delete Failed: ${response.statusCode} - ${response.body}",
+          );
+          _showWebWarning("Delete Failed: ${response.body}");
+        }
+      } catch (e) {
+        print("DEBUG WEB: Delete Error: $e");
+        _showWebWarning("Error deleting file: $e");
       }
-    } catch (e) {
-      print("DEBUG WEB: Delete Error: $e");
-      _showWebWarning("Error deleting file: $e");
+    } else {
+      // Student Local Delete
+      setState(() {
+        _files.removeAt(index);
+        if (_activeFileIndex >= _files.length) {
+          _activeFileIndex = _files.isEmpty ? 0 : _files.length - 1;
+        }
+        if (_files.isNotEmpty) {
+          _codeController.text = _files[_activeFileIndex].content;
+        } else {
+          _codeController.text = "";
+        }
+      });
+      print("DEBUG WEB: Student local delete '$fileName'");
     }
   }
 
