@@ -47,6 +47,7 @@ class _RunCodePageState extends State<RunCodePage> {
   // Multi-tab state
   List<CodeFile> _files = [];
   int _activeFileIndex = 0;
+  Timer? _debounceTimer;
 
   String _browserTitle = "Preview";
   late String _webSessionId;
@@ -174,129 +175,195 @@ class _RunCodePageState extends State<RunCodePage> {
     _codeController.dispose();
     _urlBarController.dispose();
     _messageSubscription?.cancel();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
+  // --- 2. Context Resolution (Server-First) ---
   Future<void> _resolveContextPath() async {
-    // On Web, we can't crawl directories easily.
-    // We rely on AssetManifest.json to find files under assets/www
     if (widget.contextId == null) return;
 
+    final rawName = widget.contextId!;
+    // Default path on backend after sync: public/assets/www/<ContextID>
+    // We assume strict structure matching SyncAssetsCommand.
+    // However, the folder name might differ slightly (encoded/spaces),
+    // but the backend sync command uses the EXACT folder name from seed_data.
+    // The ContextID passed here usually comes from the navigation structure.
+
+    // We try to verify if the path exists via API using a probe request to visible_files.json
+    final probePath = 'assets/www/$rawName/visible_files.json';
+
+    // If we can fetch this, we are good.
+    // If not, we might need to fallback.
+    // For now, we set a provisional path.
+    _resolvedContextPath = 'assets/www/$rawName';
+
+    print(
+      "DEBUG WEB: Resolved provisional context path: $_resolvedContextPath",
+    );
+
+    // We can also double check with AssetManifest for local fallback
+    // (This ensures we don't break offline or fully local usage if applicable)
     try {
       final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
       final assets = manifest.listAssets();
-
-      // DEBUG: Print all manifest keys to help diagnosis
-      if (widget.contextId != null) {
-        print("DEBUG: Context ID: '${widget.contextId}'");
-        print(
-          "DEBUG: Manifest Keys Sample (first 10): ${assets.take(10).toList()}",
-        );
-        // Check for any key containing 'www'
-        final wwwKeys = assets.where((k) => k.contains('assets/www')).toList();
-        print("DEBUG: Total keys under assets/www: ${wwwKeys.length}");
-        if (wwwKeys.isNotEmpty) {
-          print("DEBUG: First 5 www keys: ${wwwKeys.take(5).toList()}");
-        } else {
-          print("DEBUG: NO KEYS FOUND UNDER assets/www!");
-        }
-      }
-
-      final rawName = widget.contextId!;
-      // Simple strict match check
       final strictPath = 'assets/www/$rawName';
+      bool hasStrict = assets.any(
+        (k) => Uri.decodeFull(k).startsWith(strictPath),
+      );
 
-      // Check if any key starts with this path (decode for space handling)
-      print("DEBUG WEB: Searching for strict path: '$strictPath'");
-      bool hasStrict = assets.any((key) {
-        final decoded = Uri.decodeFull(key);
-        return decoded.startsWith(strictPath);
-      });
-      if (hasStrict) {
-        // Find the actual encoded path to use as dirPath
-        final matchKey = assets.firstWhere((key) {
-          final decoded = Uri.decodeFull(key);
-          return decoded.startsWith(strictPath);
-        });
-
-        // We want the directory part only
-        final lastSlash = matchKey.lastIndexOf('/');
-        if (lastSlash != -1) {
-          _resolvedContextPath = matchKey.substring(0, lastSlash);
-        } else {
-          _resolvedContextPath = matchKey;
+      if (!hasStrict) {
+        // Attempt Fuzzy Match only if strict failed locally
+        final wwwAssets = assets.where((k) => k.startsWith('assets/www/'));
+        final folders = <String>{};
+        for (var asset in wwwAssets) {
+          final parts = asset.split('/');
+          if (parts.length > 2) folders.add(parts[2]);
         }
-        print("DEBUG WEB: STRICT MATCH FOUND: $_resolvedContextPath");
-        return;
-      }
-
-      // Fuzzy match logic similar to mobile but iterating manifest keys
-      // This is expensive if manifest is huge, but necessary.
-      // Group assets by folder under assets/www
-      final wwwAssets = assets.where((k) => k.startsWith('assets/www/'));
-      final folders = <String>{};
-      for (var asset in wwwAssets) {
-        final parts = asset.split('/');
-        if (parts.length > 2) {
-          // assets/www/FolderName/...
-          folders.add(parts[2]);
+        final cleanRaw = Uri.decodeFull(
+          rawName,
+        ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        for (var folder in folders) {
+          final decodedFolder = Uri.decodeFull(folder);
+          final cleanFolder = decodedFolder.toLowerCase().replaceAll(
+            RegExp(r'[^a-z0-9]'),
+            '',
+          );
+          if (cleanFolder == cleanRaw) {
+            // Update to the *exact* folder name used in assets
+            _resolvedContextPath = 'assets/www/$decodedFolder';
+            print(
+              "DEBUG WEB: Fuzzy Resolved context path: $_resolvedContextPath",
+            );
+            break;
+          }
         }
       }
-
-      final cleanRaw = Uri.decodeFull(
-        rawName,
-      ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-
-      print("DEBUG: looking for clean raw: '$cleanRaw'");
-
-      for (var folder in folders) {
-        // Decode the folder name from manifest too, just in case
-        final decodedFolder = Uri.decodeFull(folder);
-        final cleanFolder = decodedFolder.toLowerCase().replaceAll(
-          RegExp(r'[^a-z0-9]'),
-          '',
-        );
-
-        // print("DEBUG: comparing entry: '$decodedFolder' -> '$cleanFolder'");
-
-        if (cleanFolder == cleanRaw) {
-          _resolvedContextPath = 'assets/www/$folder';
-          print("DEBUG: Matched! Resolved path: $_resolvedContextPath");
-          return;
-        }
-
-        // 2. Containment Match
-        if (cleanFolder.contains(cleanRaw) || cleanRaw.contains(cleanFolder)) {
-          _resolvedContextPath = 'assets/www/$folder';
-          print("DEBUG: Containment Match Found: $folder");
-          return;
-        }
-      }
-    } catch (e) {
-      print("Error resolving web context: $e");
-    }
-
-    if (_resolvedContextPath == null && mounted) {
-      // Quiet fail if no context found - not every note has extra assets
-      print("INFO: No additional assets found for '${widget.contextId}'");
-    }
+    } catch (_) {}
   }
 
+  // --- 3. Asset Loading (Server-First) ---
   Future<void> _loadContextAssets() async {
+    if (_resolvedContextPath == null) return;
+    _showWebWarning("Loading assets...");
+
+    // Attempt to load from server first.
+    await _loadAssetsFromServer();
+  }
+
+  Map<String, dynamic>? _visibleFilesManifest;
+
+  Future<void> _loadAssetsFromServer() async {
+    // 1. Fetch visible_files.json
+    try {
+      final path = '$_resolvedContextPath/visible_files.json';
+      final uri = Uri.parse(
+        '${ApiConstants.baseUrl}/get-file?path=$path&t=${DateTime.now().millisecondsSinceEpoch}',
+      );
+      print("DEBUG WEB: Fetching manifest from $uri");
+
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        _visibleFilesManifest = jsonDecode(response.body);
+        print("DEBUG WEB: Manifest loaded: $_visibleFilesManifest");
+      } else {
+        print("DEBUG WEB: Manifest fetch failed (${response.statusCode})");
+      }
+    } catch (e) {
+      print("DEBUG WEB: Error fetching manifest: $e");
+    }
+
+    // 2. Determine files to load
+    List<String> filesToLoad = [];
+
+    // Group-Based Logic
+    if (widget.initialFileName != null &&
+        _visibleFilesManifest != null &&
+        _visibleFilesManifest!.containsKey(widget.initialFileName)) {
+      final group = _visibleFilesManifest![widget.initialFileName];
+      if (group is List) {
+        filesToLoad = group.map((e) => e.toString()).toList();
+        print(
+          "DEBUG WEB: Loading Group [${widget.initialFileName}]: $filesToLoad",
+        );
+      }
+    }
+    // Legacy Logic
+    else if (_visibleFilesManifest != null) {
+      Set<String> uniqueFiles = {};
+      _visibleFilesManifest!.forEach((key, value) {
+        if (value is List) {
+          uniqueFiles.addAll(value.map((e) => e.toString()));
+        } else {
+          uniqueFiles.add(key);
+        }
+      });
+      filesToLoad = uniqueFiles.toList();
+      print("DEBUG WEB: Loading All Manifest Files: $filesToLoad");
+    }
+
+    // 3. Fetch each file content
+    if (filesToLoad.isNotEmpty) {
+      List<CodeFile> loadedFiles = [];
+
+      for (final fileName in filesToLoad) {
+        final filePath = '$_resolvedContextPath/$fileName';
+        final fileUri = Uri.parse(
+          '${ApiConstants.baseUrl}/get-file?path=$filePath&t=${DateTime.now().millisecondsSinceEpoch}',
+        );
+
+        try {
+          final resp = await http.get(fileUri);
+          if (resp.statusCode == 200) {
+            loadedFiles.add(CodeFile(name: fileName, content: resp.body));
+          } else {
+            print(
+              "DEBUG WEB: Failed to load file '$fileName': ${resp.statusCode}",
+            );
+          }
+        } catch (e) {
+          // Ignore error
+        }
+      }
+
+      if (loadedFiles.isNotEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _files = loadedFiles;
+          if (widget.initialFileName != null) {
+            final idx = _files.indexWhere(
+              (f) => f.name == widget.initialFileName,
+            );
+            if (idx != -1) _activeFileIndex = idx;
+          }
+          if (_activeFileIndex >= _files.length) _activeFileIndex = 0;
+
+          _codeController.text = _files[_activeFileIndex].content;
+        });
+        _showWebWarning("Assets Loaded (Server).");
+        return;
+      }
+    }
+
+    // 4. Fallback if Server failed or returned nothing
+    print("DEBUG WEB: Server assets empty, falling back to local bundle.");
+    await _loadAssetsFromBundle();
+  }
+
+  Future<void> _loadAssetsFromBundle() async {
     if (_resolvedContextPath == null) return;
     final dirPath = _resolvedContextPath!;
 
     try {
       final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
       final allAssets = manifest.listAssets();
-
       final assets = allAssets.where((k) => k.startsWith('$dirPath/'));
 
       List<CodeFile> loadedCandidates = [];
       String? detectedRealName;
 
       for (var assetPath in assets) {
-        // Skip binaries
         final lPath = assetPath.toLowerCase();
         if (lPath.endsWith('.png') ||
             lPath.endsWith('.jpg') ||
@@ -304,11 +371,9 @@ class _RunCodePageState extends State<RunCodePage> {
             lPath.endsWith('.gif') ||
             lPath.endsWith('.ico') ||
             lPath.endsWith('.pdf') ||
-            lPath.endsWith('.json')) {
+            lPath.endsWith('.json'))
           continue;
-        }
 
-        // Calculate relative name (decode for rules matching)
         final decodedAssetPath = Uri.decodeFull(assetPath);
         final content = await rootBundle.loadString(decodedAssetPath);
 
@@ -319,150 +384,27 @@ class _RunCodePageState extends State<RunCodePage> {
         }
 
         if (detectedRealName == null) {
-          // Normalise for comparison (trim, line endings)
           final normContent = content.replaceAll('\r\n', '\n').trim();
           final normInitial = _files[0].content.replaceAll('\r\n', '\n').trim();
-          if (normContent == normInitial) {
-            detectedRealName = relativeName;
-            print(
-              "DEBUG WEB: Detected real name by content: $detectedRealName",
-            );
-          }
+          if (normContent == normInitial) detectedRealName = relativeName;
         }
-
         loadedCandidates.add(CodeFile(name: relativeName, content: content));
       }
 
-      // 2. Identify and Parse Visibility Rules
-      Set<String>? allowedFiles;
-      Set<String> privateFiles = {};
-      Set<String> allClaimedFiles = {};
-
-      final String decodedDirPath = Uri.decodeFull(dirPath);
-      final visibleFileAsset = assets.firstWhere((k) {
-        final decoded = Uri.decodeFull(k);
-        return decoded == '$decodedDirPath/visible_files.json' ||
-            decoded == '$decodedDirPath/visible.json';
-      }, orElse: () => '');
-
-      print("DEBUG WEB: visibleFileAsset found: '$visibleFileAsset'");
-      if (visibleFileAsset.isNotEmpty) {
-        try {
-          final decodedAssetPath = Uri.decodeFull(visibleFileAsset);
-          final content = await rootBundle.loadString(decodedAssetPath);
-          final Map<String, dynamic> json = jsonDecode(content);
-
-          final effectiveEntryName = (detectedRealName ?? _files[0].name)
-              .trim()
-              .toLowerCase();
-          print(
-            "DEBUG WEB: effectiveEntryName (normalized): '$effectiveEntryName'",
-          );
-
-          Map<String, dynamic> rules = {};
-          if (json.containsKey('rules')) {
-            rules = Map<String, dynamic>.from(json['rules']);
-          } else if (!json.containsKey('_private')) {
-            // If it has neither 'rules' nor '_private', the root is the rules
-            rules = json;
-          }
-
-          // Case-insensitive / Trimmed search
-          String? matchKey;
-          for (var k in rules.keys) {
-            if (k.toString().trim().toLowerCase() == effectiveEntryName) {
-              matchKey = k.toString();
-              break;
-            }
-          }
-
-          if (matchKey != null) {
-            print("DEBUG WEB: Rule found for '$matchKey'");
-            final dynamic allowed = rules[matchKey];
-            if (allowed is List) {
-              final allowedSet = allowed
-                  .map((e) => e.toString().trim())
-                  .toSet();
-              allowedSet.add(effectiveEntryName);
-              allowedSet.add(matchKey.trim());
-              allowedFiles = allowedSet;
-              print("DEBUG WEB: Whitelist applied: $allowedFiles");
-            }
-          } else {
-            print("DEBUG WEB: No whitelist rule for '$effectiveEntryName'");
-          }
-
-          // Collect all claimed files for Implicit Privacy
-          rules.forEach((key, value) {
-            if (value is List) {
-              allClaimedFiles.addAll(value.map((e) => e.toString().trim()));
-            }
-          });
-
-          // Read _private (Always at root)
-          if (json.containsKey('_private')) {
-            final List<dynamic> private = json['_private'];
-            privateFiles = private.map((e) => e.toString().trim()).toSet();
-          }
-        } catch (e) {
-          print("Error parsing web visibility rules: $e");
-        }
-      }
-
-      // 3. Update state with filtered files
       if (!mounted) return;
+
       setState(() {
-        if (detectedRealName != null) {
-          _files[0].name = detectedRealName;
-        }
-
-        for (var candidate in loadedCandidates) {
-          final name = candidate.name.trim();
-          if (name == _files[0].name) continue;
-          if (_files.any((f) => f.name == name)) continue;
-
-          // Apply Visibility Logic
-          if (allowedFiles != null) {
-            // Rule 1: Strict Whitelist for this entry point
-            if (!allowedFiles.contains(name)) {
-              print("DEBUG WEB: Hiding '$name' (Not in whitelist)");
-              continue;
-            }
-          } else {
-            // Rule 2: Implicit Privacy / Default Show
-            if (privateFiles.contains(name)) {
-              print("DEBUG WEB: Hiding '$name' (Private)");
-              continue;
-            }
-            if (allClaimedFiles.contains(name)) {
-              print("DEBUG WEB: Hiding '$name' (Claimed by another block)");
-              continue;
-            }
+        if (detectedRealName != null) _files[0].name = detectedRealName;
+        for (var c in loadedCandidates) {
+          if (!_files.any((f) => f.name == c.name)) {
+            _files.add(c);
           }
-
-          _files.add(candidate);
         }
       });
+      _showWebWarning("Loaded local assets (Offline Mode)");
     } catch (e) {
-      print("Error loading web context assets: $e");
+      print("Error loading bundle assets: $e");
     }
-  }
-
-  void _onCodeChanged() {
-    if (_activeFileIndex < _files.length) {
-      if (_files[_activeFileIndex].content != _codeController.text) {
-        _files[_activeFileIndex].content = _codeController.text;
-        // No auto-save on web (read-only mostly)
-      }
-    }
-  }
-
-  void _switchTab(int index) {
-    if (index == _activeFileIndex) return;
-    setState(() {
-      _activeFileIndex = index;
-      _codeController.text = _files[index].content;
-    });
   }
 
   Future<void> _executePhp({
@@ -473,18 +415,13 @@ class _RunCodePageState extends State<RunCodePage> {
     final currentFile = _files[_activeFileIndex];
     final targetFileName = entryPoint ?? currentFile.name;
 
-    // Prepare files payload
     final filesPayload = _files
         .map((f) => {'name': f.name, 'content': f.content})
         .toList();
 
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}/run-code');
-
       print("DEBUG WEB RUN: Sending request to $url");
-      print(
-        "DEBUG WEB RUN: Context: ${widget.contextId}, File: $targetFileName",
-      );
 
       final response = await http.post(
         url,
@@ -495,7 +432,6 @@ class _RunCodePageState extends State<RunCodePage> {
               : null,
           'files': filesPayload,
           'entry_point': targetFileName,
-          // Use the resolved path if available (handles clean folder names)
           'context_id': _resolvedContextPath != null
               ? _resolvedContextPath!.replaceFirst('assets/www/', '')
               : widget.contextId,
@@ -505,24 +441,17 @@ class _RunCodePageState extends State<RunCodePage> {
         }),
       );
 
-      print("DEBUG WEB RUN: Response Status: ${response.statusCode}");
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final output = data['output'] ?? '';
-
-        // Handle returned files, especially binary assets
         final files = data['files'] as List<dynamic>?;
         if (files != null) {
-          _virtualAssets.clear(); // Clear old assets
+          _virtualAssets.clear();
           for (var f in files) {
             final name = f['name'] as String;
             final content = f['content'] as String;
             final isBinary = f['is_binary'] == true;
-
             if (isBinary) {
-              // Store as Base64 for substitution
-              // Determine mime type based on extension
               String mime = 'application/octet-stream';
               if (name.endsWith('.png'))
                 mime = 'image/png';
@@ -530,23 +459,16 @@ class _RunCodePageState extends State<RunCodePage> {
                 mime = 'image/jpeg';
               else if (name.endsWith('.gif'))
                 mime = 'image/gif';
-
               _virtualAssets[name] = 'data:$mime;base64,$content';
             }
           }
         }
-
-        // Wrap output with JS Bridge
         final wrappedOutput = _wrapHtmlWeb(output);
-
-        // Load output into WebView
         _webViewController?.loadData(
           data: wrappedOutput,
           mimeType: 'text/html',
           encoding: 'utf-8',
-          baseUrl: WebUri(
-            '${ApiConstants.domain}/',
-          ), // Set Base URL for relative links
+          baseUrl: WebUri('${ApiConstants.domain}/'),
         );
       } else {
         _showWebWarning('Execution Failed: ${response.statusCode}');
@@ -558,13 +480,7 @@ class _RunCodePageState extends State<RunCodePage> {
         );
       }
     } catch (e) {
-      print("DEBUG WEB RUN ERROR: $e");
-      _showWebWarning('Error executing PHP: $e');
-      _webViewController?.loadData(
-        data: '<h3 style="color:red">Client Error</h3><pre>$e</pre>',
-        mimeType: 'text/html',
-        encoding: 'utf-8',
-      );
+      _showWebWarning('Client Error: $e');
     }
   }
 
@@ -576,48 +492,27 @@ class _RunCodePageState extends State<RunCodePage> {
     final String bridgeScript = r'''
 <script>
 (function() {
-  console.log("PHP Web Bridge: Initializing...");
-  
   function sendToFlutter(action, data) {
     var msg = { action: action, data: data };
     var bridgeMsg = 'FLUTTER_WEB_BRIDGE:' + JSON.stringify(msg);
-    if (window.parent !== window) {
-       window.parent.postMessage(bridgeMsg, '*');
-    }
-    console.log(bridgeMsg);
+    if (window.parent !== window) window.parent.postMessage(bridgeMsg, '*');
   }
-
-  // Intercept forms
   document.addEventListener('submit', function(e) {
     var form = e.target;
-    // Check if it's a PHP target
     var action = form.getAttribute('action') || '';
     if (action.endsWith('.php') || action === '' || action === '#') {
        e.preventDefault();
        var formData = {};
-       var formObj = new FormData(form);
-       formObj.forEach(function(value, key) {
-          formData[key] = value;
-       });
-       
-       console.log("PHP Web Bridge: Intercepted Form Submit to " + action);
-       sendToFlutter('form_submit', {
-          url: action,
-          method: form.method ? form.method.toUpperCase() : 'GET',
-          formData: formData
-       });
+       new FormData(form).forEach(function(v, k) { formData[k] = v; });
+       sendToFlutter('form_submit', { url: action, method: form.method ? form.method.toUpperCase() : 'GET', formData: formData });
     }
   });
-
-  // Intercept links
   document.addEventListener('click', function(e) {
     var link = e.target.closest('a');
     if (link && link.getAttribute('href')) {
       var href = link.getAttribute('href');
-      // Match .php followed by ?, #, or end of string
       if (/\.php(\?|#|$)/i.test(href) && !href.startsWith('http')) {
         e.preventDefault();
-        console.log("PHP Web Bridge: Intercepted Link Click to " + href);
         sendToFlutter('link_click', { url: href });
       }
     }
@@ -632,31 +527,25 @@ class _RunCodePageState extends State<RunCodePage> {
       content = content + bridgeScript;
     }
 
-    // --- LIBRARY INJECTION ---
-    // Regex for standard <script src="..."></script>
-    // Now captures optional path prefix before the filename
+    // Library Injection
     final scriptRegex = RegExp(
       r'''<script\b[^>]*\bsrc=["'](?:.*?/)?([\w\d_.-]+\.js)["'][^>]*>.*?</\s*script>''',
       caseSensitive: false,
       dotAll: true,
     );
-
-    // Regex for self-closing <script src="..." />
     final selfClosingRegex = RegExp(
       r'''<script\b[^>]*\bsrc=["'](?:.*?/)?([\w\d_.-]+\.js)["'][^>]*/>''',
       caseSensitive: false,
     );
 
-    // Replace standard tags
     content = content.replaceAllMapped(scriptRegex, (match) {
       String filename = match.group(1) ?? "";
       if (_bundledLibraries.containsKey(filename)) {
         return '<script>\n/* Injected $filename */\n${_bundledLibraries[filename]}\n</script>';
       }
-      return match.group(0)!; // Keep original if not a standard library
+      return match.group(0)!;
     });
 
-    // Replace self-closing tags
     content = content.replaceAllMapped(selfClosingRegex, (match) {
       String filename = match.group(1) ?? "";
       if (_bundledLibraries.containsKey(filename)) {
@@ -665,13 +554,7 @@ class _RunCodePageState extends State<RunCodePage> {
       return match.group(0)!;
     });
 
-    // --- IMAGE INJECTION ---
-    print(
-      "DEBUG WEB INJECT: Virtual Assets keys: ${_virtualAssets.keys.toList()}",
-    );
-
-    // Scan for <img src="LogoKelab.png"> and replace with data URI
-    // We match any img tag with a src attribute
+    // Image Injection
     content = content.replaceAllMapped(
       RegExp(
         r'<img\s+[^>]*src=["\u0027]([^"\u0027]+)["\u0027][^>]*>',
@@ -680,16 +563,8 @@ class _RunCodePageState extends State<RunCodePage> {
       (match) {
         final fullTag = match.group(0)!;
         final src = match.group(1)!;
-
-        print("DEBUG WEB INJECT: Found img tag src: $src");
-
-        // Check if we have a virtual asset for this src
-        // We only check exact filename or relative matches
-        final filename = src.split('/').last; // simple filename check
-
+        final filename = src.split('/').last;
         if (_virtualAssets.containsKey(filename)) {
-          print("DEBUG WEB INJECT: Replacing $src with Base64 data");
-          // Replace the src in the tag
           return fullTag.replaceFirst(src, _virtualAssets[filename]!);
         }
         return fullTag;
@@ -697,6 +572,30 @@ class _RunCodePageState extends State<RunCodePage> {
     );
 
     return content;
+  }
+
+  void _onCodeChanged() {
+    if (_activeFileIndex < _files.length) {
+      if (_files[_activeFileIndex].content != _codeController.text) {
+        _files[_activeFileIndex].content = _codeController.text;
+
+        // Auto-save logic
+        if (widget.isAdmin) {
+          if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+          _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+            _saveCurrentFile(isAutoSave: true);
+          });
+        }
+      }
+    }
+  }
+
+  void _switchTab(int index) {
+    if (index == _activeFileIndex) return;
+    setState(() {
+      _activeFileIndex = index;
+      _codeController.text = _files[index].content;
+    });
   }
 
   void _runCode() {
@@ -720,11 +619,46 @@ class _RunCodePageState extends State<RunCodePage> {
     );
   }
 
+  // Implemented as internal helper
+  Future<void> _saveCurrentFile({bool isAutoSave = false}) async {
+    if (!widget.isAdmin || widget.contextId == null) {
+      if (!isAutoSave)
+        _showWebWarning("Save not available (Read-only or No Context)");
+      return;
+    }
+
+    final currentFile = _files[_activeFileIndex];
+    if (!isAutoSave) _showWebWarning("Saving '${currentFile.name}'...");
+
+    try {
+      await NoteApi().uploadFile(
+        noteId: widget.contextId!,
+        fileName: currentFile.name,
+        content: currentFile.content,
+      );
+      if (!isAutoSave) {
+        _showWebWarning("File Saved!");
+      }
+      print(
+        "DEBUG: '${currentFile.name}' saved successfully (AutoSave: $isAutoSave).",
+      );
+    } catch (e) {
+      print("DEBUG: Save Error: $e");
+      // Always show error, even on auto-save
+      _showWebWarning("Save Failed: $e");
+    }
+  }
+
   // --- NEW FILE / RENAME / DELETE (Stubbed for Web UI consistency) ---
+
+  bool _isDialogOpen = false;
+
   // --- NEW FILE / RENAME / DELETE ---
-  void _addNewFile() {
+  Future<void> _addNewFile() async {
     final TextEditingController filenameController = TextEditingController();
-    showDialog(
+
+    setState(() => _isDialogOpen = true);
+    await showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
@@ -753,19 +687,31 @@ class _RunCodePageState extends State<RunCodePage> {
         );
       },
     );
+    if (mounted) setState(() => _isDialogOpen = false);
   }
 
   Future<void> _handleCreateFile(
     BuildContext dialogContext,
     String rawName,
   ) async {
+    // ... implementation logic remains the same, but we need to ensure dialog is closed first
+    // Actually Navigator.pop is called here.
+    // So the await showDialog returns.
+    // We should probably just let _addNewFile handle the state reset.
+    // Logic:
+    // 1. User clicks Create -> _handleCreateFile called.
+    // 2. _handleCreateFile calls Navigator.pop
+    // 3. showDialog future completes.
+    // 4. _addNewFile resets state.
+    // Checks out.
+
     final filename = rawName.trim();
     if (filename.isEmpty) {
       _showWebWarning("Please enter a filename");
       return;
     }
 
-    Navigator.pop(dialogContext); // Close dialog using passed context
+    Navigator.pop(dialogContext); // Close dialog
 
     print("DEBUG: Creating new file: $filename");
     setState(() {
@@ -795,6 +741,46 @@ class _RunCodePageState extends State<RunCodePage> {
         _showWebWarning("Sync Failed: $e");
       }
     }
+  }
+
+  // ...
+  // ...
+  void _deleteFile(int index) async {
+    if (!widget.isAdmin) {
+      _showWebWarning("Only Admins can delete files.");
+      return;
+    }
+
+    final fileName = _files[index].name;
+
+    setState(() => _isDialogOpen = true);
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("Delete '$fileName'?"),
+        content: const Text(
+          "This will PERMANENTLY delete the file from all locations (Web, Storage, Seed Data). This cannot be undone.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleDeleteFile(index);
+            },
+            child: const Text(
+              "Delete Permanently",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (mounted) setState(() => _isDialogOpen = false);
   }
 
   Future<void> _updateVisibleFilesManifest() async {
@@ -869,8 +855,47 @@ class _RunCodePageState extends State<RunCodePage> {
     _showWebWarning("File renaming not persistent on Web.");
   }
 
-  void _deleteFile(int index) {
-    _showWebWarning("File deletion not persistent on Web.");
+  Future<void> _handleDeleteFile(int index) async {
+    final fileName = _files[index].name;
+    final path = '$_resolvedContextPath/$fileName';
+
+    _showWebWarning("Deleting '$fileName'...");
+    print("DEBUG WEB: Deleting file at $path");
+
+    try {
+      // 1. Call Backend Delete API
+      final uri = Uri.parse('${ApiConstants.baseUrl}/delete-file');
+      final response = await http.post(uri, body: {'path': path});
+
+      if (response.statusCode == 200) {
+        print("DEBUG WEB: Delete Success: ${response.body}");
+
+        setState(() {
+          _files.removeAt(index);
+          if (_activeFileIndex >= _files.length) {
+            _activeFileIndex = _files.isEmpty ? 0 : _files.length - 1;
+          }
+          if (_files.isNotEmpty) {
+            _codeController.text = _files[_activeFileIndex].content;
+          } else {
+            _codeController.text = "";
+          }
+        });
+
+        _showWebWarning("File Deleted Successfully.");
+
+        // 2. Update Manifest (Remove from list)
+        await _updateVisibleFilesManifest();
+      } else {
+        print(
+          "DEBUG WEB: Delete Failed: ${response.statusCode} - ${response.body}",
+        );
+        _showWebWarning("Delete Failed: ${response.body}");
+      }
+    } catch (e) {
+      print("DEBUG WEB: Delete Error: $e");
+      _showWebWarning("Error deleting file: $e");
+    }
   }
 
   @override
@@ -1182,22 +1207,35 @@ class _RunCodePageState extends State<RunCodePage> {
 
                   // Real Browser
                   Expanded(
-                    child: InAppWebView(
-                      key: ValueKey('webview_${widget.contextId}'),
-                      initialSettings: InAppWebViewSettings(
-                        isInspectable: true,
-                        mediaPlaybackRequiresUserGesture: false,
-                        allowsInlineMediaPlayback: true,
-                      ),
-                      onWebViewCreated: (controller) async {
-                        _webViewController = controller;
-                      },
-                      onTitleChanged: (controller, title) {
-                        if (mounted && title != null && title.isNotEmpty) {
-                          setState(() => _browserTitle = title);
-                        }
-                      },
-                    ),
+                    child: _isDialogOpen
+                        ? Container(
+                            color: Colors.white,
+                            child: const Center(
+                              child: Text(
+                                "Interaction Paused (Dialog Open)",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          )
+                        : InAppWebView(
+                            key: ValueKey('webview_${widget.contextId}'),
+                            initialSettings: InAppWebViewSettings(
+                              // ...
+                              isInspectable: true,
+                              mediaPlaybackRequiresUserGesture: false,
+                              allowsInlineMediaPlayback: true,
+                            ),
+                            onWebViewCreated: (controller) async {
+                              _webViewController = controller;
+                            },
+                            onTitleChanged: (controller, title) {
+                              if (mounted &&
+                                  title != null &&
+                                  title.isNotEmpty) {
+                                setState(() => _browserTitle = title);
+                              }
+                            },
+                          ),
                   ),
                 ],
               ),

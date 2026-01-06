@@ -1,7 +1,11 @@
 {
     "Pengesahan.php": [
         "Pengesahan.php",
-        "Sah.php",
-        "style.css"
+        "Sah.php"
+    ],
+    "Senarai.php": [
+        "Senarai.php",
+        "KemasKini.php",
+        "ProsesKemasKini.php"
     ]
 }

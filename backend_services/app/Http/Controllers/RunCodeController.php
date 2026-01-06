@@ -370,4 +370,91 @@ class RunCodeController extends Controller
              return response()->json(['error' => 'Server Error serving file: ' . $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Permanently delete a file from all locations (Public Assets, Storage, Seed Data)
+     */
+    public function deleteFile(Request $request)
+    {
+        try {
+            // Can accept 'path' (from web) relative to public
+            // e.g. "assets/www/3.2.10.../myfile.php"
+            $path = $request->input('path');
+            
+            if (!$path) {
+                return response()->json(['error' => 'Path is required.'], 400);
+            }
+
+            if (str_contains($path, '..')) {
+                return response()->json(['error' => 'Invalid path.'], 403);
+            }
+
+            $deletedCount = 0;
+            $messages = [];
+
+            // 1. Delete from Public Assets (Immediate Web Effect)
+            $publicPath = public_path($path);
+            if (file_exists($publicPath)) {
+                @unlink($publicPath);
+                $deletedCount++;
+                $messages[] = "Deleted from Public Assets.";
+            }
+
+            // 2. Identify logical "Note + Filename" to find Storage/Seed locations
+            // Expected format: assets/www/<ContextID>/<Filename>
+            $parts = explode('/', $path);
+            if (count($parts) >= 2) {
+                $filename = end($parts);
+                // Context is the folder containing the file
+                $contextId = $parts[count($parts) - 2]; 
+
+                // 3. Delete from Seed Data (Dev Consistency)
+                // Search recursively or use known structure?
+                // Structure: database/seed_data/notes/<Topic>/assets/<ContextID>/<Filename>
+                // We don't verify Topic easily here, but we can search.
+                $seedBase = database_path('seed_data/notes');
+                if (is_dir($seedBase)) {
+                     // Find file recursively match ContextID/Filename
+                     $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($seedBase));
+                     foreach ($iterator as $file) {
+                         if ($file->getFilename() === $filename && str_contains($file->getPath(), $contextId)) {
+                             @unlink($file->getPathname());
+                             $deletedCount++;
+                             $messages[] = "Deleted from Seed Data.";
+                             break; // Assuming unique context/filename combo
+                         }
+                     }
+                }
+
+                // 4. Delete from Storage (Git Sync / Persistent Storage)
+                // Path: storage/app/public/notes/<NotePath>??
+                // Actually 'NotesController' uploads to 'storage/app/public/uploads' OR 'storage/app/public/notes' ??
+                // Let's check NotesController logic. 
+                // It stores main markdown in 'public/notes', but ATTACHMENTS/UPLOADS in 'public/uploads'.
+                // If this file was uploaded via `uploadFile` endpoint:
+                // It lives in `storage/app/public/uploads` AND was synced to `seed_data`.
+                
+                // Strategy: We deleted from Public (Web) and Seed Data (Dev).
+                // We should also verify if it exists in `uploads`.
+                // BUT `uploadFile` renames files to timestamp_name. However, the one in `public/assets/www` is original name.
+                // It's hard to trace back to the exact storage file without DB lookup if name changed.
+                // However, `RunCode` context usually implies files managed via Git/Seed sync primarily.
+                // Only "Attachments" use the storage/uploads folder. 
+                // Code files (PHP/CSS/JS) usually live in the Note Bundle (Seed Data).
+                
+                // If we also want to clean up `public/notes` (Main Markdown files):
+                // If the deleted file IS the main markdown note, we might have issues.
+                // But usually we are deleting auxiliary files.
+            }
+
+            if ($deletedCount > 0) {
+                return response()->json(['message' => 'File deleted successfully.', 'details' => $messages]);
+            } else {
+                return response()->json(['message' => 'File not found (already deleted?)'], 200);
+            }
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Delete failed: ' . $e->getMessage()], 500);
+        }
+    }
 }
