@@ -1,11 +1,7 @@
 {
-    "Senarai.php": [
-        "Senarai.php",
-        "KemasKini.php",
-        "ProsesKemasKini.php"
-    ],
     "Pengesahan.php": [
         "Pengesahan.php",
-        "Sah.php"
+        "Sah.php",
+        "1.txt"
     ]
 }

@@ -9,6 +9,7 @@ import 'package:code_play/utils/brand_color_extension.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:code_play/constants/api_constants.dart';
+import 'package:code_play/api/note_api.dart';
 import 'package:web/web.dart' as web;
 import 'dart:js_interop';
 
@@ -46,6 +47,7 @@ class _RunCodePageState extends State<RunCodePage> {
   // Multi-tab state
   List<CodeFile> _files = [];
   int _activeFileIndex = 0;
+
   String _browserTitle = "Preview";
   late String _webSessionId;
   StreamSubscription? _messageSubscription;
@@ -718,14 +720,149 @@ class _RunCodePageState extends State<RunCodePage> {
     );
   }
 
-  void _showWebWarning(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  // --- NEW FILE / RENAME / DELETE (Stubbed for Web UI consistency) ---
+  // --- NEW FILE / RENAME / DELETE ---
+  void _addNewFile() {
+    final TextEditingController filenameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text("New File"),
+          content: TextField(
+            controller: filenameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: "Filename",
+              hintText: "e.g. style.css",
+            ),
+            onSubmitted: (_) =>
+                _handleCreateFile(dialogContext, filenameController.text),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () =>
+                  _handleCreateFile(dialogContext, filenameController.text),
+              child: const Text("Create"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  // --- NEW FILE / RENAME / DELETE (Stubbed for Web UI consistency) ---
-  void _addNewFile() {
-    _showWebWarning("File creation not persistent on Web.");
-    // We could implement in-memory add for playground feel
+  Future<void> _handleCreateFile(
+    BuildContext dialogContext,
+    String rawName,
+  ) async {
+    final filename = rawName.trim();
+    if (filename.isEmpty) {
+      _showWebWarning("Please enter a filename");
+      return;
+    }
+
+    Navigator.pop(dialogContext); // Close dialog using passed context
+
+    print("DEBUG: Creating new file: $filename");
+    setState(() {
+      _files.add(CodeFile(name: filename, content: ""));
+      _activeFileIndex = _files.length - 1;
+      _codeController.text = "";
+    });
+
+    // Admin Sync
+    if (widget.isAdmin && widget.contextId != null) {
+      _showWebWarning(
+        "Syncing '$filename' to backend (NoteID: ${widget.contextId})...",
+      );
+      print("DEBUG: Syncing to NoteID: ${widget.contextId}");
+      try {
+        await NoteApi().uploadFile(
+          noteId: widget.contextId!,
+          fileName: filename,
+          content: "",
+        );
+        _showWebWarning("File Synced!");
+
+        // Auto-update visible_files.json
+        await _updateVisibleFilesManifest();
+      } catch (e) {
+        print("DEBUG: Sync Error: $e");
+        _showWebWarning("Sync Failed: $e");
+      }
+    }
+  }
+
+  Future<void> _updateVisibleFilesManifest() async {
+    if (_resolvedContextPath == null) return;
+
+    _showWebWarning("Updating visible_files.json...");
+    try {
+      // 1. Fetch existing manifest
+      // Use API endpoint to bypass CORS
+      final apiUri = Uri.parse('${ApiConstants.baseUrl}/get-file');
+      final url = apiUri.replace(
+        queryParameters: {'path': '$_resolvedContextPath/visible_files.json'},
+      );
+      print("DEBUG: Fetching manifest from API: $url");
+
+      final response = await http.get(url);
+      Map<String, dynamic> manifest = {};
+
+      if (response.statusCode == 200) {
+        try {
+          manifest = jsonDecode(response.body);
+        } catch (e) {
+          print("Error decoding existing manifest: $e");
+        }
+      } else if (response.statusCode == 404) {
+        print("Manifest not found, creating new.");
+      } else {
+        // CRITICAL FIX: If 500 or other error, DO NOT OVERWRITE.
+        print("Server error fetching manifest: ${response.statusCode}");
+        print("Response body: ${response.body}");
+        _showWebWarning(
+          "Manifest Fetch Error: ${response.statusCode} - ${response.body}",
+        );
+        return;
+      }
+
+      // 2. Update Entry
+      // Key: The "Main File" (entry point)
+      // If initialized via 'src=Main.php', usage is typically mapped to that key.
+      // If we don't have a specific key, we might default to the first file's name.
+      String key = widget.initialFileName ?? _files[0].name;
+
+      // Filter list to names only
+      final fileList = _files.map((f) => f.name).toList();
+
+      // Update or Add
+      manifest[key] = fileList;
+
+      // 3. Upload back
+      await NoteApi().uploadFile(
+        noteId: widget.contextId!,
+        fileName: 'visible_files.json',
+        content: const JsonEncoder.withIndent('    ').convert(manifest),
+      );
+
+      _showWebWarning("Manifest Updated!");
+      print("DEBUG: visible_files.json updated for key '$key'");
+    } catch (e) {
+      print("Error updating manifest: $e");
+      _showWebWarning("Manifest Update Failed: $e");
+    }
+  }
+
+  void _showWebWarning(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _renameFile(int index) {
@@ -738,6 +875,7 @@ class _RunCodePageState extends State<RunCodePage> {
 
   @override
   Widget build(BuildContext context) {
+    print("DEBUG: RunCodePageWeb BUILD called");
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -887,7 +1025,6 @@ class _RunCodePageState extends State<RunCodePage> {
                             },
                           ),
                         ),
-                        // Add File Button (Stubbed)
                         IconButton(
                           icon: const Icon(Icons.add, size: 20),
                           tooltip: "New File",

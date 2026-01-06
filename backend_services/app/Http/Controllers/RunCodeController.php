@@ -342,4 +342,32 @@ class RunCodeController extends Controller
         }
         return rmdir($dir);
     }
+
+    /**
+     * Serve a file from public/storage via API to bypass CORS on static files.
+     */
+    public function getFile(Request $request) {
+        try {
+            $path = $request->query('path');
+            if (!$path) {
+                return response()->json(['error' => 'Path required'], 400);
+            }
+
+            // Prevent traversal
+            if (str_contains($path, '..')) {
+                return response()->json(['error' => 'Invalid path'], 403);
+            }
+
+            // We assume path is relative to public folder (e.g. assets/www/...)
+            $fullPath = public_path($path);
+
+            if (file_exists($fullPath)) {
+                return response()->file($fullPath);
+            }
+
+            return response()->json(['error' => 'File not found: ' . $path], 404);
+        } catch (\Exception $e) {
+             return response()->json(['error' => 'Server Error serving file: ' . $e->getMessage()], 500);
+        }
+    }
 }

@@ -32,7 +32,7 @@ Route::get('/notes/search', [NotesController::class, 'search']);
 Route::post('/notes/new', [NotesController::class, 'store']);         // <--- This is the active Create Note route
 Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- This is the active Upload route
 Route::post('/run-code', [App\Http\Controllers\RunCodeController::class, 'execute']); // Execute PHP code
-Route::get('/get-file', [RunCodeController::class, 'getFile']);
+Route::get('/get-file', [App\Http\Controllers\RunCodeController::class, 'getFile']);
 
 Route::post('/achievements/new', [AchievementController::class, 'store']);
 Route::get('/achievements', [AchievementController::class, 'showAchievementsBrief']);
