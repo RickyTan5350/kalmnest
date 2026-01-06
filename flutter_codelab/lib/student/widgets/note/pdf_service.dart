@@ -4,17 +4,19 @@ import 'dart:convert';
 import 'package:printing/printing.dart';
 import 'package:htmltopdfwidgets/htmltopdfwidgets.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:flutter/services.dart';
+import 'dart:typed_data';
 
 class PdfService {
   Future<void> generateAndDownloadPdf({
     required String title,
     required String content,
     Map<String, int> quizStates = const {},
+    String topic = '',
   }) async {
     try {
       final pdf = pw.Document();
 
-      // 1. Load Fonts
       // 1. Load Fonts
       late pw.Font font;
       late pw.Font fontBold;
@@ -30,16 +32,19 @@ class PdfService {
       // 2. Pre-process Quiz Blocks
       String processedContent = _processQuizBlocks(content, quizStates);
 
-      // 3. Pre-process Large Code Blocks (to avoid TooManyPagesException)
+      // 3. Pre-process Large Code Blocks
       processedContent = _splitLargeCodeBlocks(processedContent);
 
-      // 3. Convert Markdown -> HTML
+      // 4. Convert Markdown -> HTML
       String htmlContent = md.markdownToHtml(
         processedContent,
         extensionSet: md.ExtensionSet.gitHubFlavored,
       );
 
-      // 4. Rename Tags to remove red highlights
+      // 5. Pre-process HTML (Resolve Images & Add Table Styles)
+      htmlContent = await _preprocessHtml(htmlContent, topic);
+
+      // 6. Rename Tags to remove red highlights (Legacy cleanup)
       htmlContent = htmlContent.replaceAllMapped(
         RegExp(r'<pre[^>]*>'),
         (match) =>
@@ -59,19 +64,14 @@ class PdfService {
         (match) => '<a style="color: #000000; text-decoration: underline;">',
       );
 
-      // 5. Convert HTML -> PDF Widgets
-      // FIX: Removed the outer <div> wrapper to allow better pagination splitting.
-      // We still try-catch this specific part just in case, but the outer catch handles everything too.
+      // 7. Convert HTML -> PDF Widgets
       final List<pw.Widget> widgets = await HTMLToPdf().convert(htmlContent);
 
-      // 7. Create the PDF Page
+      // 8. Create the PDF Page
       pdf.addPage(
         pw.MultiPage(
-          maxPages: 500, // Increase limit
-          theme: pw.ThemeData.withFont(
-            base: font,
-            bold: fontBold,
-          ), // Font size defaults to 12, which is fine
+          maxPages: 500,
+          theme: pw.ThemeData.withFont(base: font, bold: fontBold),
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           build: (pw.Context context) {
@@ -94,20 +94,19 @@ class PdfService {
         ),
       );
 
-      // 8. Generate Safe Filename
+      // 9. Generate Safe Filename
       String safeFilename = title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
       if (!safeFilename.toLowerCase().endsWith('.pdf')) {
         safeFilename += '.pdf';
       }
 
-      // 9. Save and Share
+      // 10. Save and Share
       await Printing.sharePdf(bytes: await pdf.save(), filename: safeFilename);
     } catch (e) {
       // FALLBACK: Generate simple text PDF
       try {
         final fallbackPdf = pw.Document();
-        final font =
-            await PdfGoogleFonts.openSansRegular(); // Re-load just in case
+        final font = await PdfGoogleFonts.openSansRegular();
 
         fallbackPdf.addPage(
           pw.MultiPage(
@@ -154,10 +153,91 @@ class PdfService {
           filename: safeFilename,
         );
       } catch (fallbackError) {
-        // If even fallback fails, we can't do much.
         print("Critical error generating fallback PDF: $fallbackError");
       }
     }
+  }
+
+  Future<String> _preprocessHtml(String htmlContent, String topic) async {
+    // 1. Resolve Images to Base64
+    final imgRegExp = RegExp(r'<img[^>]+src="([^">]+)"');
+    final matches = imgRegExp.allMatches(htmlContent);
+
+    String processed = htmlContent;
+    Set<String> srcs = matches.map((m) => m.group(1)!).toSet();
+
+    for (final src in srcs) {
+      if (src.startsWith('data:')) continue;
+      if (src.startsWith('http')) continue;
+
+      String? base64Str = await _resolveLocalImageToBase64(src, topic);
+      if (base64Str != null) {
+        // Use replaceAll to replace all instances of this specific src
+        processed = processed.replaceAll(
+          'src="$src"',
+          'src="data:image/png;base64,$base64Str"',
+        );
+      }
+    }
+
+    // 2. Inject CSS for Tables
+    // htmltopdfwidgets supports some basic CSS via style block or inline styles.
+    // Adding a global style block for tables.
+    final styleBlock = '''
+    <style>
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        border: 1px solid #bfbfbf;
+      }
+      th, td {
+        border: 1px solid #bfbfbf;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+      }
+    </style>
+    ''';
+
+    return "$styleBlock\n$processed";
+  }
+
+  Future<String?> _resolveLocalImageToBase64(String src, String topic) async {
+    final fileName = src.split('/').last;
+
+    List<String> candidates = [];
+
+    // If it looks like a full asset path already
+    if (src.startsWith('assets/')) {
+      candidates.add(src);
+    } else {
+      // 1. Flattened
+      candidates.add('assets/www/pictures/$fileName');
+      // 2. Topic specific
+      if (topic.isNotEmpty) {
+        candidates.add('assets/www/pictures/$topic/$fileName');
+      }
+      // 3. Known folders
+      final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+      for (var f in folders) {
+        candidates.add('assets/www/pictures/$f/$fileName');
+      }
+    }
+
+    for (final path in candidates) {
+      try {
+        final ByteData data = await rootBundle.load(path);
+        final Uint8List bytes = data.buffer.asUint8List();
+        return base64Encode(bytes);
+      } catch (e) {
+        // continue
+      }
+    }
+    return null;
   }
 
   String _processQuizBlocks(String content, Map<String, int> quizStates) {

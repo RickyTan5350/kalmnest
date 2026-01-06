@@ -142,6 +142,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
         title: _currentTitle,
         content: _markdownContent,
         quizStates: _quizStates,
+        topic: _currentTopic,
       );
     } catch (e) {
       _showSnackBar('Failed to generate PDF: $e', isError: true);
