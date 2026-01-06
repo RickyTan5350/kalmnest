@@ -68,8 +68,8 @@ class _EditNotePageState extends State<EditNotePage> {
   bool _isHoveringInput = false;
   final ScrollController _inputScrollController = ScrollController();
   List<GlobalKey> _matchKeys = [];
-  Timer? _quizHoverTimer;
-  bool _showQuizPopup = false;
+  // Timer? _quizHoverTimer; // Removed
+  // bool _showQuizPopup = false; // Removed
 
   @override
   void initState() {
@@ -114,7 +114,7 @@ class _EditNotePageState extends State<EditNotePage> {
     _searchFocusNode.dispose();
 
     _pageFocusNode.dispose();
-    _quizHoverTimer?.cancel();
+    // _quizHoverTimer?.cancel();
     super.dispose();
   }
 
@@ -236,7 +236,11 @@ class _EditNotePageState extends State<EditNotePage> {
     String? content;
 
     try {
-      if (file.path != null) {
+      if (file.bytes != null) {
+        // WEB
+        content = utf8.decode(file.bytes!);
+      } else if (file.path != null) {
+        // MOBILE
         content = await File(file.path!).readAsString();
       }
     } catch (e) {
@@ -962,6 +966,24 @@ class _EditNotePageState extends State<EditNotePage> {
     );
   }
 
+  Widget _buildHoverControls(ColorScheme colorScheme) {
+    final showFiles = _attachments.any(
+      (a) => !a.isFailed && a.publicUrl != null,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _buildHoverQuizPopup(colorScheme),
+        if (showFiles) ...[
+          const SizedBox(height: 8),
+          _buildHoverFileInserter(colorScheme),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -1266,22 +1288,10 @@ class _EditNotePageState extends State<EditNotePage> {
                                   child: MouseRegion(
                                     onEnter: (_) {
                                       setState(() => _isHoveringInput = true);
-                                      _quizHoverTimer = Timer(
-                                        const Duration(seconds: 2),
-                                        () {
-                                          if (mounted && _isHoveringInput) {
-                                            setState(
-                                              () => _showQuizPopup = true,
-                                            );
-                                          }
-                                        },
-                                      );
                                     },
                                     onExit: (_) {
-                                      _quizHoverTimer?.cancel();
                                       setState(() {
                                         _isHoveringInput = false;
-                                        _showQuizPopup = false;
                                       });
                                     },
                                     child: Stack(
@@ -1309,20 +1319,11 @@ class _EditNotePageState extends State<EditNotePage> {
                                           validator: (v) =>
                                               v!.isEmpty ? 'Required' : null,
                                         ),
-                                        if (_attachments.isNotEmpty &&
-                                            _isHoveringInput)
+                                        if (_isHoveringInput)
                                           Positioned(
                                             top: _getCursorVerticalPosition(),
                                             right: 16,
-                                            child: _buildHoverFileInserter(
-                                              colorScheme,
-                                            ),
-                                          ),
-                                        if (_showQuizPopup)
-                                          Positioned(
-                                            top: _getCursorVerticalPosition(),
-                                            left: 16,
-                                            child: _buildHoverQuizPopup(
+                                            child: _buildHoverControls(
                                               colorScheme,
                                             ),
                                           ),
