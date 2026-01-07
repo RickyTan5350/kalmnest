@@ -14,8 +14,11 @@ use Illuminate\Support\Facades\File;
 class LevelUserController extends Controller
 {
     /**
-     * Save or update level data for the authenticated user
-     * This method is called from Unity when a student saves their progress
+     * Save or update level data for the authenticated user in the level_user table
+     * This method is called from Flutter/Unity when a student saves their progress
+     * 
+     * Creates a new level_user entry if it doesn't exist, or updates existing entry
+     * Saves: saved_data, index_files, timer, level_id, user_id
      */
     public function saveLevelData(Request $request, $levelId)
     {
@@ -101,6 +104,7 @@ class LevelUserController extends Controller
 
     /**
      * Get level data for the authenticated user
+     * If entry doesn't exist, creates one with default level_data
      */
     public function getLevelData(Request $request, $levelId)
     {
@@ -111,15 +115,30 @@ class LevelUserController extends Controller
             }
             $userId = $user->user_id;
 
+            // Check if level exists
+            $levelExists = DB::table('levels')->where('level_id', $levelId)->exists();
+            if (!$levelExists) {
+                return response()->json(['error' => 'Level not found'], 404);
+            }
+
             $levelUser = LevelUser::where('level_id', $levelId)
                                   ->where('user_id', $userId)
                                   ->first();
 
             if (!$levelUser) {
-                return response()->json([
-                    'message' => 'Level data not found',
-                    'saved_data' => null,
-                ], 200);
+                // Create new entry with default level_data
+                $defaultLevelData = DB::table('levels')->where('level_id', $levelId)->value('level_data');
+                
+                $levelUser = LevelUser::create([
+                    'level_user_id' => (string) Str::uuid7(),
+                    'level_id' => $levelId,
+                    'user_id' => $userId,
+                    'saved_data' => $defaultLevelData,
+                    'index_files' => null,
+                    'timer' => 0,
+                ]);
+
+                Log::info("LEVEL_USER_CREATED_ON_LOAD: New entry created for Level {$levelId} and User {$userId} with default level_data");
             }
 
             return response()->json([

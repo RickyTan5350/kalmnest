@@ -24,32 +24,132 @@
       </div>
     </div>
     <script>
-      var canvas = document.querySelector("#unity-canvas");
+      // Flutter Bridge Initialization (must be before Unity loads)
+      (function() {
+        // Initialize Flutter message queue and handlers
+        window._flutterMessageQueue = window._flutterMessageQueue || [];
+        window._flutterResponseHandlers = window._flutterResponseHandlers || {};
+        window._flutterCallId = window._flutterCallId || 0;
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
-      function unityShowBanner(msg, type) {
-        var warningBanner = document.querySelector("#unity-warning");
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        // Implement Flutter handler bridge
+        if (!window.flutter_inappwebview) {
+          window.flutter_inappwebview = {};
         }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
+
+        window.flutter_inappwebview.callHandler = function(handlerName) {
+          var args = Array.prototype.slice.call(arguments, 1);
+          var callId = window._flutterCallId++;
+          
+          var message = {
+            type: 'FLUTTER_HANDLER_CALL',
+            handlerName: handlerName,
+            args: args,
+            callId: callId
+          };
+
+          // Push to message queue
+          window._flutterMessageQueue.push(message);
+
+          // Write to localStorage for polling
+          try {
+            var queueStr = JSON.stringify(window._flutterMessageQueue);
+            localStorage.setItem('_flutter_handler_queue', queueStr);
+          } catch (e) {
+            // Silently handle localStorage errors
+          }
+
+          // Send postMessage to parent (if in iframe)
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({
+                type: '__FLUTTER_HANDLER__',
+                handlerName: handlerName,
+                args: args,
+                callId: callId
+              }, '*');
+            }
+          } catch (e) {
+            // Silently handle postMessage errors
+          }
+
+          // Return a promise for async handlers
+          return new Promise(function(resolve, reject) {
+            window._flutterResponseHandlers[callId] = {
+              resolve: resolve,
+              reject: reject
+            };
+
+            // Timeout after 30 seconds
+            setTimeout(function() {
+              if (window._flutterResponseHandlers[callId]) {
+                delete window._flutterResponseHandlers[callId];
+                reject(new Error('Handler timeout'));
+              }
+            }, 30000);
+          });
+        };
+
+        // Implement response receiver for Flutter
+        window._flutterReceiveResponse = function(callId, success, result) {
+          if (window._flutterResponseHandlers && window._flutterResponseHandlers[callId]) {
+            var handler = window._flutterResponseHandlers[callId];
+            delete window._flutterResponseHandlers[callId];
+            
+            if (success) {
+              handler.resolve(result);
+            } else {
+              handler.reject(new Error(result || 'Unknown error'));
+            }
+          }
+        };
+      })();
+
+      // Wrap Unity initialization in IIFE to allow proper scoping
+      (function() {
+        var canvas = document.querySelector("#unity-canvas");
+        
+        // Check if canvas exists
+        if (!canvas) {
+          console.error("Unity canvas element not found!");
+          return;
+        }
+
+        // Shows a temporary message banner/ribbon for a few seconds, or
+        // a permanent error message on top of the canvas if type=='error'.
+        // If type=='warning', a yellow highlight color is used.
+        // Modify or remove this function to customize the visually presented
+        // way that non-critical warnings and error messages are presented to the
+        // user.
+        function unityShowBanner(msg, type) {
+          try {
+            var warningBanner = document.querySelector("#unity-warning");
+            if (!warningBanner) {
+              console.warn("Unity warning banner not found");
+              return;
+            }
+            function updateBannerVisibility() {
+              if (warningBanner) {
+                warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+              }
+            }
+            var div = document.createElement('div');
+            div.innerHTML = msg || '';
+            warningBanner.appendChild(div);
+            if (type == 'error') div.style = 'background: red; padding: 10px;';
+            else {
+              if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+              setTimeout(function() {
+                if (warningBanner && div.parentNode === warningBanner) {
+                  warningBanner.removeChild(div);
+                  updateBannerVisibility();
+                }
+              }, 5000);
+            }
             updateBannerVisibility();
-          }, 5000);
+          } catch (e) {
+            console.error("Error in unityShowBanner:", e);
+          }
         }
-        updateBannerVisibility();
-      }
 
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/unity.loader.js";
@@ -63,12 +163,20 @@
         productName: "CodePlay",
         productVersion: "1.0",
         showBanner: unityShowBanner,
-        // errorHandler: function(err, url, line) {
-        //    alert("error " + err + " occurred at line " + line);
-        //    // Return 'true' if you handled this error and don't want Unity
-        //    // to process it further, 'false' otherwise.
-        //    return true;
-        // },
+        errorHandler: function(err, url, line) {
+          try {
+            var errorMsg = "Error: " + (err || 'Unknown error');
+            if (url) errorMsg += " at " + url;
+            if (line) errorMsg += ":" + line;
+            console.error(errorMsg);
+            unityShowBanner(errorMsg, 'error');
+          } catch (e) {
+            console.error("Error in errorHandler:", e);
+          }
+          // Return 'true' if you handled this error and don't want Unity
+          // to process it further, 'false' otherwise.
+          return false; // Let Unity handle it too
+        },
       };
 
       // By default, Unity keeps WebGL canvas render target size matched with
@@ -87,48 +195,136 @@
       // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
       // expected to change.
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+          // Mobile device style: fill the whole browser client area with the game canvas:
+          try {
+            var meta = document.createElement('meta');
+            meta.name = 'viewport';
+            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+            var head = document.getElementsByTagName('head')[0];
+            if (head) {
+              head.appendChild(meta);
+            }
+            var container = document.querySelector("#unity-container");
+            if (container) {
+              container.className = "unity-mobile";
+            }
+            if (canvas) {
+              canvas.className = "unity-mobile";
+            }
+          } catch (e) {
+            console.error("Error setting up mobile view:", e);
+          }
 
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        document.querySelector("#unity-container").className = "unity-mobile";
-        canvas.className = "unity-mobile";
-
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
+          // To lower canvas resolution on mobile devices to gain some
+          // performance, uncomment the following line:
+          // config.devicePixelRatio = 1;
 
 
-      } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-        canvas.style.width = "1280px";
-        canvas.style.height = "720px";
-      }
+        } else {
+          // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+          try {
+            if (canvas) {
+              canvas.style.width = "1280px";
+              canvas.style.height = "720px";
+            }
+          } catch (e) {
+            console.error("Error setting canvas size:", e);
+          }
+        }
 
-      document.querySelector("#unity-loading-bar").style.display = "block";
+        var loadingBar = document.querySelector("#unity-loading-bar");
+        if (loadingBar) {
+          loadingBar.style.display = "block";
+        }
 
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                  window.unityInstance = unityInstance;
-  window.uGameInstance = unityInstance; 
-                document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+          try {
+            if (!canvas) {
+              console.error("Canvas is null, cannot create Unity instance");
+              unityShowBanner("Canvas element not found", 'error');
+              return;
+            }
+            
+            if (typeof createUnityInstance === 'undefined') {
+              console.error("createUnityInstance function not found. Check if unity.loader.js loaded correctly.");
+              unityShowBanner("Unity loader failed to load", 'error');
+              return;
+            }
+            
+            createUnityInstance(canvas, config, (progress) => {
+              try {
+                var progressBar = document.querySelector("#unity-progress-bar-full");
+                if (progressBar && typeof progress === 'number') {
+                  progressBar.style.width = (100 * progress) + "%";
+                }
+              } catch (e) {
+                console.error("Error updating progress bar:", e);
+              }
+            }).then((unityInstance) => {
+              try {
+                if (!unityInstance) {
+                  console.error("Unity instance is null");
+                  unityShowBanner("Failed to create Unity instance", 'error');
+                  return;
+                }
+                
+                // Store Unity instance globally for Flutter bridge
+                window.unityInstance = unityInstance;
+                window.uGameInstance = unityInstance;
 
-              }).catch((message) => {
-                alert(message);
-              });
-            };
+                var loadingBar = document.querySelector("#unity-loading-bar");
+                if (loadingBar) {
+                  loadingBar.style.display = "none";
+                }
+                
+                var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+                if (fullscreenButton && unityInstance && typeof unityInstance.SetFullscreen === 'function') {
+                  fullscreenButton.onclick = () => {
+                    try {
+                      unityInstance.SetFullscreen(1);
+                    } catch (e) {
+                      console.error("Error setting fullscreen:", e);
+                    }
+                  };
+                }
+              } catch (e) {
+                console.error("Error in Unity instance initialization:", e);
+                unityShowBanner("Error initializing Unity: " + (e.message || e), 'error');
+              }
+            }).catch((message) => {
+              try {
+                var errorMsg = message || 'Unknown error';
+                console.error("Unity instance creation failed:", errorMsg);
+                unityShowBanner("Failed to load Unity: " + errorMsg, 'error');
+                
+                var loadingBar = document.querySelector("#unity-loading-bar");
+                if (loadingBar) {
+                  loadingBar.style.display = "none";
+                }
+              } catch (e) {
+                console.error("Error handling Unity creation failure:", e);
+              }
+            });
+          } catch (e) {
+            console.error("Error in script onload:", e);
+            unityShowBanner("Script loading error: " + (e.message || e), 'error');
+          }
+        };
+        
+        script.onerror = () => {
+          console.error("Failed to load Unity loader script:", loaderUrl);
+          unityShowBanner("Failed to load Unity script: " + loaderUrl, 'error');
+        };
 
-      document.body.appendChild(script);
+        if (document.body) {
+          document.body.appendChild(script);
+        } else {
+          console.error("Document body not found, cannot load Unity script");
+        }
+      })(); // End of IIFE
 
     </script>
   </body>

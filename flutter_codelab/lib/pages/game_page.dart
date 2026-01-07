@@ -611,17 +611,28 @@ class _GamePageState extends State<GamePage> {
     final bool isAdmin = role == 'admin';
     final bool isTeacher = role == 'teacher';
     final bool isStaff = isAdmin || isTeacher;
-    final bool canViewResults =
-        isAdmin || (isTeacher && (level.isCreatedByMe ?? false));
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isQuiz && isStaff && canViewResults) ...[
+        // Show View Results button for all admins and teachers on quiz levels
+        if (isStaff) ...[
           IconButton(
             icon: Icon(Icons.bar_chart, color: Colors.green, size: iconSize),
             tooltip: 'View Quiz Results',
             onPressed: () {
+              // Check if teacher can view this quiz (only their own)
+              final bool canViewResults = isAdmin || (isTeacher && (level.isCreatedByMe ?? false));
+              
+              if (!canViewResults) {
+                showSnackBar(
+                  context,
+                  "You can only view results for quizzes you created",
+                  Colors.orange,
+                );
+                return;
+              }
+              
               showTeacherQuizResults(context: context, level: level);
             },
             constraints: const BoxConstraints(),

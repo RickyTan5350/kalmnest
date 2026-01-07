@@ -8,6 +8,8 @@ import 'package:code_play/utils/local_asset_server.dart';
 import 'package:code_play/api/auth_api.dart';
 
 import 'package:code_play/services/local_level_storage.dart';
+import 'package:code_play/admin_teacher/widgets/game/index_file_preview.dart';
+import 'package:code_play/constants/api_constants.dart';
 import 'dart:convert';
 
 /// ===============================================================
@@ -69,8 +71,8 @@ class _CreateGamePageState extends State<CreateGamePage> {
     text: '0',
   );
 
-  final GlobalKey<_IndexFilePreviewState> previewKey =
-      GlobalKey<_IndexFilePreviewState>();
+  final GlobalKey<IndexFilePreviewState> previewKey =
+      GlobalKey<IndexFilePreviewState>();
 
   LocalAssetServer? _server;
   LocalAssetServer? _previewServer;
@@ -97,39 +99,72 @@ class _CreateGamePageState extends State<CreateGamePage> {
   Future<void> _initServer() async {
     _server = LocalAssetServer();
     _previewServer = LocalAssetServer();
+    String? userId;
     try {
-      await _server!.start(path: 'assets');
-
-      // Fetch user ID to pass to Unity
+      // Fetch user ID for storage path
       final user = await AuthApi.getStoredUser();
-      final userId = user?['user_id']?.toString();
+      userId = user?['user_id']?.toString();
+
+      if (kIsWeb) {
+        setState(() {
+          _serverUrl = 'assets';
+          _previewServerUrl = 'web_storage';
+          _userId = userId;
+        });
+        return;
+      }
+
+      await _server!.start(path: 'assets');
 
       setState(() {
         _userId = userId;
       });
 
       // Clear any existing temp data for this user
+      try {
       await _clearTempData();
+      } catch (e) {
+        // Continue anyway
+      }
 
       // Start preview server for local storage
+      try {
       final storage = LocalLevelStorage();
       final storageBasePath = await storage.getBasePath(userId: userId);
       await _previewServer!.start(path: storageBasePath);
+      } catch (e) {
+        // Try to continue
+      }
 
       setState(() {
         _serverUrl = 'http://localhost:${_server!.port}';
-        _previewServerUrl = 'http://localhost:${_previewServer!.port}';
-        _userId = userId;
+        _previewServerUrl = _previewServer != null 
+            ? 'http://localhost:${_previewServer!.port}'
+            : 'http://localhost:8081';
       });
     } catch (e) {
-      print("Error starting local server: $e");
+      // Set default values even on error to prevent UI from hanging
+      setState(() {
+        _serverUrl = kIsWeb ? 'assets' : 'http://localhost:8080';
+        _previewServerUrl = kIsWeb ? 'web_storage' : 'http://localhost:8081';
+        _userId = userId ?? '';
+      });
     }
   }
 
   @override
   void dispose() {
-    _server?.stop();
-    _previewServer?.stop();
+    // Stop servers (synchronous)
+    try {
+      _server?.stop();
+      _previewServer?.stop();
+    } catch (e) {
+      // Silently handle error
+    }
+    
+    // Don't manually stop WebView - Flutter will handle disposal automatically
+    // Trying to stop it manually causes race conditions with Flutter's disposal
+    
     super.dispose();
   }
 
@@ -148,7 +183,22 @@ class _CreateGamePageState extends State<CreateGamePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const BackButton(),
+                BackButton(
+                  onPressed: () {
+                    // Clear files (synchronous operation)
+                    try {
+                      GameAPI.clearFiles();
+                    } catch (e) {
+                      // Silently handle error - continue with navigation
+                    }
+                    
+                    // Navigate immediately - let Flutter's dispose() handle cleanup
+                    // Don't try to manually stop WebViews as it causes race conditions
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                ),
                 Text(
                   "Create Game",
                   style: Theme.of(
@@ -287,9 +337,6 @@ class _CreateGamePageState extends State<CreateGamePage> {
                           String? newLevelName;
 
                           if (data != null) {
-                            print(
-                              "Game Creation Response Data: $data",
-                            ); // Debug log
                             try {
                               if (data.containsKey('level') &&
                                   data['level'] is Map) {
@@ -301,7 +348,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                                 newLevelName = data['level_name']?.toString();
                               }
                             } catch (e) {
-                              print("Error parsing game data: $e");
+                              // Silently handle error
                             }
                           }
 
@@ -361,21 +408,37 @@ class _CreateGamePageState extends State<CreateGamePage> {
                     height: 1000,
                     width: 1250,
                     child: InAppWebView(
+                      key: const ValueKey('unity_webview_create'),
                       initialUrlRequest: URLRequest(
                         url: WebUri(
-                          "$_serverUrl/unity/index.html?role=${widget.userRole}&user_Id=$_userId&level_Id=temp&level_Type=$selectedValue",
+                          kIsWeb
+                              ? Uri.base
+                                    .resolve('assets/unity/index.html')
+                                    .replace(
+                                      queryParameters: {
+                                        'role': widget.userRole,
+                                        'user_Id': _userId ?? '',
+                                        'level_Id': 'temp',
+                                        'level_Type': selectedValue,
+                                      },
+                                    )
+                                    .toString()
+                              : "$_serverUrl/unity/index.html?role=${widget.userRole}&user_Id=$_userId&level_Id=temp&level_Type=$selectedValue",
                         ),
                       ),
                       initialSettings: InAppWebViewSettings(
-                        // Cross-platform settings
                         javaScriptEnabled: true,
-                        //isInspectable: kDebugMode,
                       ),
                       onWebViewCreated: (controller) {
+                        // Wrap all handlers in try-catch to prevent web crashes
+                        try {
                         // Handler for saving level data (triggered by Unity)
                         controller.addJavaScriptHandler(
                           handlerName: 'saveLevelFile',
                           callback: (args) async {
+                            // Check if widget is still mounted
+                            if (!mounted) return false;
+                            
                             // Unity calls: window.flutter_inappwebview.callHandler('saveLevelFile', levelId, type, dataType, content)
                             if (args.length >= 4) {
                               final levelId = args[0] as String? ?? 'temp';
@@ -402,6 +465,9 @@ class _CreateGamePageState extends State<CreateGamePage> {
                         controller.addJavaScriptHandler(
                           handlerName: 'saveIndexFile',
                           callback: (args) async {
+                            // Check if widget is still mounted
+                            if (!mounted) return false;
+                            
                             // Unity calls: window.flutter_inappwebview.callHandler('saveIndexFile', levelId, type, content)
                             if (args.length >= 3) {
                               final levelId = args[0] as String? ?? 'temp';
@@ -425,13 +491,16 @@ class _CreateGamePageState extends State<CreateGamePage> {
                         controller.addJavaScriptHandler(
                           handlerName: 'getLevelFile',
                           callback: (args) async {
+                            // Check if widget is still mounted
+                            if (!mounted) return '';
+                            
                             // Unity calls: window.flutter_inappwebview.callHandler('getLevelFile', levelId, type, dataType, useProgress)
                             if (args.length >= 3) {
                               final levelId = args[0] as String? ?? 'temp';
                               final type = (args[1] as String? ?? 'html')
                                   .toLowerCase();
                               final dataType =
-                                  args[2] as String? ?? 'levelData';
+                                  args[2] as String? ?? 'level';
                               final useProgress = args.length >= 4
                                   ? (args[3] as bool? ?? false)
                                   : false;
@@ -443,12 +512,43 @@ class _CreateGamePageState extends State<CreateGamePage> {
                                 dataType: dataType,
                                 useProgress: useProgress,
                                 userId: _userId,
-                                userRole: widget.userRole, // Added userRole
-                              );
+                                userRole: widget.userRole,
+                              ) ?? '';
                             }
                             return '';
                           },
                         );
+                        } catch (e) {
+                          // Continue - handlers might not work on web but shouldn't crash
+                        }
+                      },
+                      onLoadStop: (controller, url) async {
+                        // Check if widget is still mounted before proceeding
+                        if (!mounted) return;
+                        
+                        // Wait a bit for Unity to initialize
+                        await Future.delayed(const Duration(milliseconds: 500));
+                        
+                        // Check again after delay
+                        if (!mounted) return;
+                        
+                        // Set API URL and auth token in localStorage for Unity to access
+                        try {
+                          if (!mounted) return;
+                          
+                          final apiUrl = ApiConstants.baseUrl;
+                          final token = await AuthApi.getToken();
+                          
+                          if (!mounted) return;
+                          
+                          final jsCode = '''
+                            localStorage.setItem('laravel_api_url', '$apiUrl');
+                            ${token != null ? "localStorage.setItem('auth_token', '$token');" : ''}
+                          ''';
+                          await controller.evaluateJavascript(source: jsCode);
+                        } catch (e) {
+                          // Silently handle error
+                        }
                       },
                     ),
                   ),
@@ -483,6 +583,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                       userRole: widget.userRole,
                       serverUrl: _previewServerUrl ?? '',
                       levelId: 'temp',
+                      userId: _userId,
                     ),
                   ),
                 ),
@@ -492,53 +593,5 @@ class _CreateGamePageState extends State<CreateGamePage> {
         ),
       ),
     );
-  }
-}
-
-/// ===============================================================
-/// index.html Preview WebView (Windows + Mobile)
-/// ===============================================================
-class IndexFilePreview extends StatefulWidget {
-  final String userRole;
-  final String serverUrl;
-  final String levelId;
-
-  const IndexFilePreview({
-    super.key,
-    required this.userRole,
-    required this.serverUrl,
-    required this.levelId,
-  });
-
-  @override
-  State<IndexFilePreview> createState() => _IndexFilePreviewState();
-}
-
-class _IndexFilePreviewState extends State<IndexFilePreview> {
-  // Key to force rebuild on reload
-  Key _key = UniqueKey();
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.serverUrl.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final url = "${widget.serverUrl}/${widget.levelId}/index/index.html";
-
-    return InAppWebView(
-      key: _key,
-      initialUrlRequest: URLRequest(url: WebUri(url)),
-      initialSettings: InAppWebViewSettings(
-        javaScriptEnabled: true,
-        isInspectable: kDebugMode,
-      ),
-    );
-  }
-
-  void reloadPreview(String userRole) {
-    setState(() {
-      _key = UniqueKey();
-    });
   }
 }

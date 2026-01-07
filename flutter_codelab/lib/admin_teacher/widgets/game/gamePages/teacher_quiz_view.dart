@@ -1,12 +1,8 @@
 import 'dart:convert';
-import 'package:code_play/admin_teacher/widgets/game/gamePages/play_game_page.dart';
-import 'package:code_play/utils/local_asset_server.dart';
 import 'package:flutter/material.dart';
-import 'package:code_play/api/game_api.dart'; // Ensure this matches your path
+import 'package:code_play/api/game_api.dart';
 import 'package:code_play/models/level.dart';
 import 'package:intl/intl.dart';
-import 'package:code_play/services/local_level_storage.dart';
-import 'package:flutter/foundation.dart';
 
 /// ===============================================================
 /// Opens the teacher quiz results in a dialog "window"
@@ -17,22 +13,25 @@ void showTeacherQuizResults({
 }) {
   showDialog(
     context: context,
-    builder: (context) => Dialog(
-      insetPadding: const EdgeInsets.all(20),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.8,
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+    builder: (context) {
+      final theme = Theme.of(context);
+      return Dialog(
+        insetPadding: const EdgeInsets.all(20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: MediaQuery.of(context).size.height * 0.8,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: TeacherQuizView(
+            level: level,
+            onBack: () => Navigator.pop(context),
+          ),
         ),
-        child: TeacherQuizView(
-          level: level,
-          onBack: () => Navigator.pop(context),
-        ),
-      ),
-    ),
+      );
+    },
   );
 }
 
@@ -182,129 +181,121 @@ class StudentQuizPreviewPage extends StatefulWidget {
 
 class _StudentQuizPreviewPageState extends State<StudentQuizPreviewPage> {
   bool _loading = true;
-  LocalAssetServer? _server;
-  String? _serverUrl;
-  final LocalLevelStorage _storage = LocalLevelStorage();
 
   @override
   void initState() {
     super.initState();
-    _initServerAndData();
-  }
-
-  Future<void> _initServerAndData() async {
-    // 1. Start Server
-    _server = LocalAssetServer();
-    try {
-      final studentId = widget.student['user_id']?.toString();
-      final storageBasePath = await _storage.getBasePath(userId: studentId);
-      await _server!.start(path: storageBasePath);
-
-      setState(() {
-        _serverUrl = "http://localhost:${_server!.port}";
-      });
-    } catch (e) {
-      print("Error starting local server: $e");
-    }
-
-    // 2. Write Student Data to Index folder (overwriting implementation)
-    final indexFilesStr = widget.student['index_files'] as String?;
-    final savedDataStr = widget.student['saved_data'] as String?;
-
-    if (kDebugMode) {
-      print(
-        'DEBUG: [TeacherQuizPreviewPage] Student: ${widget.student['name']}',
-      );
-      print(
-        'DEBUG: [TeacherQuizPreviewPage] index_files present: ${indexFilesStr != null}',
-      );
-      if (indexFilesStr != null) {
-        print(
-          'DEBUG: [TeacherQuizPreviewPage] index_files length: ${indexFilesStr.length}',
-        );
-      }
-    }
-
-    if (indexFilesStr != null) {
-      try {
-        final Map<String, dynamic> indexFiles = jsonDecode(indexFilesStr);
-        final levelId = widget.level.levelId!;
-        final studentId = widget.student['user_id']?.toString();
-
-        for (final type in ['html', 'css', 'js', 'php']) {
-          final content = indexFiles[type] as String?;
-          if (content != null) {
-            if (kDebugMode) {
-              print(
-                'DEBUG: [TeacherQuizPreviewPage] Writing index.$type, length: ${content.length}',
-              );
-            }
-            await _storage.saveIndexFile(
-              levelId: levelId,
-              type: type,
-              content: content,
-              userId: studentId,
-            );
-          } else {
-            if (kDebugMode)
-              print(
-                'DEBUG: [TeacherQuizPreviewPage] content for $type is NULL',
-              );
-          }
-        }
-      } catch (e) {
-        print("Error parsing index files: $e");
-      }
-    } else if (savedDataStr != null) {
-      // Fallback to saved_data if index_files is not present (legacy)
-      if (kDebugMode)
-        print('DEBUG: [TeacherQuizPreviewPage] Falling back to saved_data');
-      try {
-        final Map<String, dynamic> savedData = jsonDecode(savedDataStr);
-        final levelId = widget.level.levelId!;
-        final studentId = widget.student['user_id']?.toString();
-
-        for (final type in ['html', 'css', 'js', 'php']) {
-          final content = savedData[type] as String?;
-          if (content != null) {
-            await _storage.saveIndexFile(
-              levelId: levelId,
-              type: type,
-              content: content,
-              userId: studentId,
-            );
-          }
-        }
-      } catch (e) {
-        print("Error parsing saved data: $e");
-      }
-    } else {
-      if (kDebugMode)
-        print(
-          'DEBUG: [TeacherQuizPreviewPage] NO DATA FOUND for student preview',
-        );
-    }
-
+    // No server initialization needed - we'll display code directly
     setState(() => _loading = false);
-  }
-
-  @override
-  void dispose() {
-    _server?.stop();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("${widget.student['name']}'s Submission")),
-      body: _loading || _serverUrl == null
+      body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : IndexFilePreview(
-              userRole: 'teacher',
-              serverUrl: _serverUrl!,
-              levelId: widget.level.levelId!,
+          : _buildCodeView(),
+    );
+  }
+
+  Widget _buildCodeView() {
+    final indexFilesStr = widget.student['index_files'] as String?;
+    
+    if (indexFilesStr == null) {
+      return const Center(
+        child: Text('No submission data available'),
+      );
+    }
+
+    try {
+      final Map<String, dynamic> indexFiles = jsonDecode(indexFilesStr);
+      
+      return DefaultTabController(
+        length: 4,
+        child: Column(
+          children: [
+            const TabBar(
+              tabs: [
+                Tab(text: 'HTML'),
+                Tab(text: 'CSS'),
+                Tab(text: 'JS'),
+                Tab(text: 'PHP'),
+              ],
             ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildCodeTab('HTML', indexFiles['html'] as String?),
+                  _buildCodeTab('CSS', indexFiles['css'] as String?),
+                  _buildCodeTab('JS', indexFiles['js'] as String?),
+                  _buildCodeTab('PHP', indexFiles['php'] as String?),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      return Center(
+        child: Text('Error loading submission: $e'),
+      );
+    }
+  }
+
+  Widget _buildCodeTab(String title, String? content) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    // Use theme-aware colors for code display
+    final codeBackgroundColor = isDark 
+        ? theme.colorScheme.surfaceContainerHighest
+        : theme.colorScheme.surfaceContainerHighest;
+    final codeBorderColor = isDark
+        ? theme.colorScheme.outline
+        : theme.colorScheme.outlineVariant;
+    final codeTextColor = isDark
+        ? theme.colorScheme.onSurface
+        : theme.colorScheme.onSurface;
+    
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: codeBackgroundColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: codeBorderColor),
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    content ?? 'No $title code available',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 14,
+                      color: codeTextColor,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

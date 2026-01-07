@@ -50,6 +50,7 @@ dependencies:
   path: ^1.9.1          # For joining path strings
   flutter_secure_storage: ^9.2.4
   
+  flutter_unity_widget: ^2022.2.1
   flutter_inappwebview: ^6.1.5
   shelf: ^1.4.1
   shelf_static: ^1.1.2
