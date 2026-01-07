@@ -45,25 +45,59 @@ class NotesController extends Controller
     public function uploadFile(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|max:20480|mimes:pdf,doc,docx,txt,png,jpg,gif', 
+            'file' => 'required|file|max:20480', 
+            'note_id' => 'required|string',
         ]);
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $originalName = $file->getClientOriginalName();
-            $safeFileName = time() . '_' . $file->getClientOriginalName();
+            $safeFileName = time() . '_' . $originalName; // Unique name for uploads folder
 
             try {
+                // 1. Store in public uploads first
                 $path = $file->storeAs('uploads', $safeFileName, 'public');
 
-                // SYNC TO SEED DATA
-                $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
+                // 2. Resolve Sync Path (Topic/Assets/NoteTitle)
+                $noteId = $request->input('note_id');
+                \Log::info("DEBUG: uploadFile - Received note_id: " . $noteId);
+                
+                $note = Notes::find($noteId);
+                if (!$note) {
+                    \Log::info("DEBUG: Note not found by ID. Trying Title lookup: " . $noteId);
+                    $note = Notes::where('title', $noteId)->first();
+                }
+                
+                if ($note) {
+                    \Log::info("DEBUG: uploadFile - Note Found: " . $note->title);
+                    $topicName = 'General';
+                    if ($note->topic_id) {
+                        $topic = Topic::find($note->topic_id);
+                        if ($topic) $topicName = $topic->topic_name;
+                    }
+
+                    $noteTitle = $note->title;
+                    // Sanitize Title for Folder Name
+                    $safeTitle = preg_replace('/[\\/\\\:\*\?\"\<\>\|]/', '', $noteTitle);
+                    $safeTitle = trim($safeTitle);
+                    if (empty($safeTitle)) $safeTitle = 'Untitled';
+
+                    // Subfolder: <Topic>/assets/<NoteTitle>
+                    $subfolder = $topicName . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . $safeTitle;
+
+                    // SYNC TO SEED DATA (Correct Folder)
+                    // We use originalName for the sync file to keep it clean in the repo
+                    $this->syncFileToSeedData(storage_path('app/public/' . $path), $originalName, $subfolder);
+                } else {
+                    // Fallback to pictures if note not found
+                     $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
+                }
 
                 return response()->json([
                     'message' => 'File uploaded successfully',
                     'original_name' => $originalName,
                     'filename' => $safeFileName,
-                    'file_url' => $this->getEncodedUrl($path), // Force absolute encoded URL
+                    'file_url' => $this->getEncodedUrl($path), 
                 ], 200);
 
             } catch (\Exception $e) {

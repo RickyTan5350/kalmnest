@@ -66,9 +66,14 @@ class SyncAssetsCommand extends Command
         // AND sync seed_data/notes/<Topic>/pictures to Frontend
         $this->syncBackendToFrontend($backendNotesDir, $frontendAssetsDir);
 
-        // 5. Sync Backend -> Public Storage
+        // 5. Sync Backend -> Public Storage (Existing)
         $publicNotesDir = storage_path('app/public/notes');
         $this->syncBackendToPublic($backendNotesDir, $publicNotesDir);
+
+        // 6. Sync Backend -> Public Assets (For Web API)
+        // We mirror the frontend structure to 'public/assets/www' so get-file API works
+        $publicAssetsDir = public_path('assets/www');
+        $this->syncBackendToPublicAssets($backendNotesDir, $publicAssetsDir);
 
         $this->info('Asset Synchronization Completed!');
     }
@@ -86,7 +91,14 @@ class SyncAssetsCommand extends Command
                 if ($file->getExtension() === 'md') {
                     // Note Title is filename without extension
                     $noteTitle = $file->getFilenameWithoutExtension();
-                    $map[$noteTitle] = $topicName;
+                    
+                    // We map the NORMALIZED title to the original details
+                    $normalized = $this->normalizeTitle($noteTitle);
+                    
+                    $map[$normalized] = [
+                        'topic' => $topicName,
+                        'original_title' => $noteTitle
+                    ];
                 }
             }
         }
@@ -106,10 +118,16 @@ class SyncAssetsCommand extends Command
             // Skip "pictures" folder in root of assets/www if it exists (treated separately)
             if ($folderName === 'pictures') continue;
 
-            // Check if this folder corresponds to a known backend note
-            if (isset($noteToTopicMap[$folderName])) {
-                $topic = $noteToTopicMap[$folderName];
-                $targetDir = "$backendNotesDir/$topic/assets/$folderName";
+            // Check if this folder corresponds to a known backend note (using fuzzy matching)
+            $normalizedFolder = $this->normalizeTitle($folderName);
+            
+            if (isset($noteToTopicMap[$normalizedFolder])) {
+                $match = $noteToTopicMap[$normalizedFolder];
+                $topic = $match['topic'];
+                $backendNoteTitle = $match['original_title'];
+                
+                // We use the BACKEND note title for the target directory to maintain consistency in seed_data
+                $targetDir = "$backendNotesDir/$topic/assets/$backendNoteTitle";
 
                 // Ensure target directory exists
                 if (!File::exists($targetDir)) {
@@ -189,9 +207,9 @@ class SyncAssetsCommand extends Command
             
             $backendPicDir = "$topicPath/pictures";
             if (File::exists($backendPicDir)) {
-                // Target: flutter_codelab/assets/www/pictures/<Topic>
+                // Target: flutter_codelab/assets/www/pictures
                 // We'll create a `pictures` folder in `www`.
-                $targetPicDir = "$frontendAssetsDir/pictures/$topicName";
+                $targetPicDir = "$frontendAssetsDir/pictures";
                 
                 if (!File::exists($targetPicDir)) {
                     File::makeDirectory($targetPicDir, 0755, true);
@@ -217,7 +235,15 @@ class SyncAssetsCommand extends Command
         $files = File::allFiles($backendNotesDir);
         foreach ($files as $file) {
             $relativePath = $file->getRelativePathname();
-            $destPath = "$publicNotesDir/$relativePath";
+            
+            // Check if file is inside a 'pictures' folder
+            // e.g., CSS/pictures/zoomin.png -> pictures/zoomin.png
+            if (str_contains($relativePath, 'pictures/')) {
+                $imageName = $file->getFilename();
+                $destPath = "$publicNotesDir/pictures/$imageName";
+            } else {
+                $destPath = "$publicNotesDir/$relativePath";
+            }
 
             // Ensure subdirectories exist
             $destDir = dirname($destPath);
@@ -226,6 +252,56 @@ class SyncAssetsCommand extends Command
             }
             
             $this->copyIfNewer($file->getPathname(), $destPath);
+        }
+    }
+
+    private function syncBackendToPublicAssets($backendNotesDir, $publicAssetsDir)
+    {
+        $this->section('Syncing Backend -> Public Assets (API)');
+
+        $topics = File::directories($backendNotesDir);
+
+        foreach ($topics as $topicPath) {
+            $topicName = basename($topicPath);
+
+            // A. Sync Note-Specific Assets
+            $assetsBaseDir = "$topicPath/assets";
+            if (File::exists($assetsBaseDir)) {
+                $noteAssetDirs = File::directories($assetsBaseDir);
+                foreach ($noteAssetDirs as $noteAssetDir) {
+                    $noteTitle = basename($noteAssetDir);
+                    // Match Frontend Structure: public/assets/www/<NoteTitle>
+                    $targetDir = "$publicAssetsDir/$noteTitle";
+
+                    if (!File::exists($targetDir)) {
+                        File::makeDirectory($targetDir, 0755, true);
+                    }
+
+                    $files = File::allFiles($noteAssetDir);
+                    foreach ($files as $file) {
+                        $relativePath = $file->getRelativePathname();
+                        $destPath = "$targetDir/$relativePath";
+                        $this->copyIfNewer($file->getPathname(), $destPath);
+                    }
+                }
+            }
+
+            // B. Sync Pictures
+            $backendPicDir = "$topicPath/pictures";
+            if (File::exists($backendPicDir)) {
+                // Match Frontend Structure: public/assets/www/pictures
+                $targetPicDir = "$publicAssetsDir/pictures";
+                
+                if (!File::exists($targetPicDir)) {
+                    File::makeDirectory($targetPicDir, 0755, true);
+                }
+
+                $pics = File::files($backendPicDir);
+                foreach ($pics as $pic) {
+                    $destPath = "$targetPicDir/" . $pic->getFilename();
+                    $this->copyIfNewer($pic->getPathname(), $destPath);
+                }
+            }
         }
     }
 
@@ -251,5 +327,20 @@ class SyncAssetsCommand extends Command
         $this->line('');
         $this->info("=== $title ===");
         $this->line('');
+    }
+
+    /**
+     * Normalizes a title to allow for fuzzy matching between 
+     * folder names and file names.
+     */
+    private function normalizeTitle($title)
+    {
+        // 1. Lowercase
+        $title = strtolower($title);
+        // 2. Replace non-alphanumeric with space
+        $title = preg_replace('/[^a-z0-9]/', ' ', $title);
+        // 3. Flatten extra spaces
+        $title = preg_replace('/\s+/', ' ', $title);
+        return trim($title);
     }
 }

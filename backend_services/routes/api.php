@@ -35,13 +35,18 @@ Route::get('/notes/search', [NotesController::class, 'search']);
 Route::post('/notes/new', [NotesController::class, 'store']);         // <--- This is the active Create Note route
 Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- This is the active Upload route
 Route::post('/run-code', [App\Http\Controllers\RunCodeController::class, 'execute']); // Execute PHP code
-Route::get('/get-file', [RunCodeController::class, 'getFile']);
+Route::get('/get-file', [App\Http\Controllers\RunCodeController::class, 'getFile']);
+Route::get('/list-files', [App\Http\Controllers\RunCodeController::class, 'listFiles']);
+
+Route::post('/delete-file', [App\Http\Controllers\RunCodeController::class, 'deleteFile']); // Delete file permanently
+Route::post('/rename-file', [App\Http\Controllers\RunCodeController::class, 'renameFile']); // Rename file permanently
 
 Route::post('/achievements/new', [AchievementController::class, 'store']);
 Route::get('/achievements', [AchievementController::class, 'showAchievementsBrief']);
 
 Route::post('/files/upload-batch', [FileController::class, 'uploadBatch']);
 Route::post('/files/upload-independent', [FileController::class, 'uploadIndependent']);
+Route::get('/file-proxy', [FileController::class, 'proxy']); // Public proxy for CORS images
 
 // Health & Debug
 Route::get('/health', function () {

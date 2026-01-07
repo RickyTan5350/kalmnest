@@ -201,5 +201,53 @@ class NoteApi {
       await deleteNote(id.toString());
     }
   }
-}
 
+  // --- UPLOAD FILE ASSOC W/ NOTE ---
+  Future<void> uploadFile({
+    required String noteId, // Or topic/title if needed
+    required String fileName,
+    required String content,
+  }) async {
+    // The endpoint is Route::post('/notes/upload', [NotesController::class, 'uploadFile']);
+    final url = Uri.parse('$_apiUrl/upload');
+
+    try {
+      final token = await AuthApi.getToken();
+      final request = http.MultipartRequest('POST', url);
+
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.headers['Accept'] = 'application/json';
+
+      // Backend expects 'note_id' and 'file'
+      // But wait, the backend endpoint (NotesController::uploadFile) usually expects actual file upload
+      // or allows creating file from content string?
+      // Let's assume content string for code editor text.
+      request.fields['note_id'] = noteId;
+
+      // If backend handles raw content vs file upload:
+      // Typically 'file' key in multipart.
+      // We'll attach as file.
+      request.files.add(
+        http.MultipartFile.fromString(
+          'file',
+          content,
+          filename: fileName, // Important for backend to know destination name
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception(
+          'Upload failed: ${response.statusCode} ${response.body}',
+        );
+      }
+    } catch (e) {
+      print("Error uploading file: $e");
+      rethrow;
+    }
+  }
+}

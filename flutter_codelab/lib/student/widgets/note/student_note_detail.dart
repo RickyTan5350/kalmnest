@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:code_play/api/note_api.dart';
 // Make sure this import path matches where you created the file above
@@ -11,7 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:code_play/student/widgets/note/pdf_service.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
-import 'dart:convert';
+
 import 'package:code_play/admin_teacher/widgets/note/quiz_widget.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:code_play/utils/brand_color_extension.dart';
@@ -129,6 +131,10 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
   // --- PDF Logic (Now using Service) ---
   Future<void> _downloadPdf() async {
+    // if (kIsWeb) {
+    //   _showSnackBar('PDF download is not supported on Web.', isError: true);
+    //   return;
+    // }
     setState(() => _isDownloadingPdf = true);
 
     try {
@@ -136,6 +142,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
         title: _currentTitle,
         content: _markdownContent,
         quizStates: _quizStates,
+        topic: _currentTopic,
       );
     } catch (e) {
       _showSnackBar('Failed to generate PDF: $e', isError: true);
@@ -248,26 +255,199 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   String _processMarkdown(String content) {
     debugPrint("DEBUG processMarkdown: Raw content length: ${content.length}");
     final domain = ApiConstants.domain;
-    final processed = content.replaceAll('](/storage/', ']($domain/storage/');
 
-    // Debug: Find image links
-    final imageRegex = RegExp(r'!\[.*?\]\((.*?)\)');
-    final matches = imageRegex.allMatches(processed);
-    for (final match in matches) {
-      debugPrint("DEBUG: Found processed image URL: ${match.group(1)}");
-    }
+    // 1. Resolve relative /storage/ paths to domain
+    String processed = content.replaceAll('](/storage/', ']($domain/storage/');
+
+    // 2. Resolve relative pictures/ paths (if they don't have a protocol)
+    // This helps markdown parsing identify them as images
+    processed = processed.replaceAllMapped(
+      RegExp(r'!\[(.*?)\]\((?!(http|assets|file))(.*?)\)'),
+      (match) {
+        final alt = match.group(1);
+        final path = match.group(3);
+        if (path != null && !path.startsWith('/')) {
+          // Keep it relative, our _buildImageWidget will handle the lookup
+          return '![$alt]($path)';
+        }
+        return match.group(0)!;
+      },
+    );
 
     return processed;
+  }
+
+  Widget _buildImageWidget(String src) {
+    // 1. Handle absolute URLs
+    if (src.startsWith('http')) {
+      return Image.network(
+        src,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.red),
+      );
+    }
+
+    // 2. Handle potential local asset paths
+    // List of folders to search in
+    final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+    final fileName = src.split('/').last;
+
+    return FutureBuilder<String?>(
+      future: _resolveLocalAsset(src, fileName, folders),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final resolvedPath = snapshot.data;
+        if (resolvedPath != null) {
+          return Image.asset(resolvedPath);
+        }
+
+        // 3. Fallback to network if not found in assets
+        final networkUrl = src.startsWith('/')
+            ? "${ApiConstants.domain}$src"
+            : (src.startsWith('pictures/')
+                  ? "${ApiConstants.domain}/storage/notes/$src"
+                  : (src.startsWith('http')
+                        ? src
+                        : "${ApiConstants.domain}/storage/notes/pictures/$src"));
+
+        // Fallback network URL with topic if primary fails
+        final topicNetworkUrl = src.startsWith('pictures/')
+            ? "${ApiConstants.domain}/storage/notes/$_currentTopic/$src"
+            : null;
+
+        return Image.network(
+          networkUrl,
+          errorBuilder: (context, error, stackTrace) {
+            if (topicNetworkUrl != null) {
+              return Image.network(
+                topicNetworkUrl,
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildErrorWidget(fileName),
+              );
+            }
+            return _buildErrorWidget(fileName);
+          },
+        );
+      },
+    );
+  }
+
+  Future<String?> _resolveLocalAsset(
+    String originalPath,
+    String fileName,
+    List<String> folders,
+  ) async {
+    // A. Only try the original path if it looks like a full asset path
+    // This avoids 404 noise on Web when using relative paths in Markdown
+    if (originalPath.startsWith('assets/')) {
+      try {
+        await rootBundle.load(originalPath);
+        return originalPath;
+      } catch (_) {}
+    }
+
+    // 1. Try flattened global path
+    final flattened = 'assets/www/pictures/$fileName';
+    try {
+      await rootBundle.load(flattened);
+      return flattened;
+    } catch (_) {}
+
+    // 2. Try topic-specific subfolder in flattened pictures
+    final topicFlattened = 'assets/www/pictures/$_currentTopic/$fileName';
+    try {
+      await rootBundle.load(topicFlattened);
+      return topicFlattened;
+    } catch (_) {}
+
+    // 3. Search in known picture subfolders (backward compatibility)
+    for (final folder in folders) {
+      final candidate = 'assets/www/pictures/$folder/$fileName';
+      try {
+        await rootBundle.load(candidate);
+        return candidate;
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  Widget _buildErrorWidget(String fileName) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.broken_image, color: Colors.red),
+        Text("Failed to load: $fileName", style: const TextStyle(fontSize: 10)),
+      ],
+    );
   }
 
   // --- UI WIDGETS ---
   Future<String> _loadLinkedFile(String fileName) async {
     try {
-      final cwd = Directory.current;
-      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
       final cleanTitle = _currentTitle
           .replaceAll(RegExp(r'[\r\n]+'), ' ')
           .trim();
+
+      // WEB IMPLEMENTATION
+      // WEB IMPLEMENTATION
+      if (kIsWeb) {
+        try {
+          final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+          final assets = manifest.listAssets();
+
+          final cleanRaw = Uri.decodeFull(
+            _currentTitle,
+          ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+          final wwwKeys = assets.where((k) => k.startsWith('assets/www/'));
+          String? resolvedPath;
+
+          for (var key in wwwKeys) {
+            final parts = key.split('/');
+            if (parts.length > 3) {
+              final folderName = parts[2];
+              final fName = parts.last;
+
+              if (fName.toLowerCase() == fileName.toLowerCase()) {
+                final decodedFolder = Uri.decodeFull(folderName);
+                final cleanFolder = decodedFolder.toLowerCase().replaceAll(
+                  RegExp(r'[^a-z0-9]'),
+                  '',
+                );
+
+                print("DEBUG (Student): Checking $key");
+                print(
+                  "DEBUG (Student): Folder Clean '$cleanFolder' vs Raw '$cleanRaw'",
+                );
+
+                if (cleanFolder == cleanRaw) {
+                  resolvedPath = key;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (resolvedPath != null) {
+            final content = await rootBundle.loadString(resolvedPath);
+            return content;
+          }
+          return "File not found (Web): $fileName";
+        } catch (e) {
+          return "Error reading file (Web): $e";
+        }
+      }
+
+      // MOBILE IMPLEMENTATION
+      final cwd = Directory.current;
+      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
       final file = File(p.join(assetsWwwPath, cleanTitle, fileName));
       debugPrint(
         "Debug: Trying to load asset using clean title: '$cleanTitle', path: ${file.path}",
@@ -275,10 +455,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
       if (await file.exists()) {
         debugPrint("Debug: Asset found: ${file.path}");
         final content = await file.readAsString();
-        return content
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;');
+        return content;
       }
       return "File not found: $fileName";
     } catch (e) {
@@ -412,7 +589,6 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
     return HtmlWidget(
       htmlContent,
-      baseUrl: Uri.parse(ApiConstants.domain),
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 16),
       customWidgetBuilder: (element) {
         if (element.localName == 'pre') {
@@ -468,14 +644,17 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
               future: _loadLinkedFile(linkedFileName),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
-                  final escapedContent = snapshot.data!;
+                  final rawContent = snapshot.data!;
+                  // Escape for display in HtmlWidget
+                  final escapedForDisplay = rawContent
+                      .replaceAll('&', '&amp;')
+                      .replaceAll('<', '&lt;')
+                      .replaceAll('>', '&gt;');
+
                   final html =
-                      '<pre style="margin: 0; padding: 0;">$escapedContent</pre>';
-                  final raw = escapedContent
-                      .replaceAll('&lt;', '<')
-                      .replaceAll('&gt;', '>')
-                      .replaceAll('&amp;', '&');
-                  return _buildCodeBlockUI(html, raw, linkedFileName);
+                      '<pre style="margin: 0; padding: 0;">$escapedForDisplay</pre>';
+
+                  return _buildCodeBlockUI(html, rawContent, linkedFileName);
                 }
                 return const SizedBox(
                   height: 50,
@@ -493,49 +672,8 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
         if (element.localName == 'img') {
           final src = element.attributes['src'];
-          debugPrint("DEBUG HtmlWidget: Rendering Image with src: $src");
-
           if (src != null) {
-            // 1. Check for direct local assets
-            if (src.startsWith('assets/')) {
-              return Image.asset(src);
-            }
-
-            // 2. Check for Storage URLs that should be local assets
-            // Example: https://.../storage/notes/123456789_filename.png
-            if (src.contains('/storage/notes/')) {
-              try {
-                final uri = Uri.parse(src);
-                final filename = uri.pathSegments.last;
-                // Remove timestamp prefix if present (digits + underscore)
-                final cleanFilename = filename.replaceFirst(
-                  RegExp(r'^\d+_'),
-                  '',
-                );
-
-                // Map topic to folder (Simple mapping for now)
-                String folder = 'JS'; // Default or based on topic
-                if (_currentTopic == 'HTML') folder = 'HTML';
-                if (_currentTopic == 'CSS') folder = 'CSS';
-                if (_currentTopic == 'PHP') folder = 'PHP';
-                // Add more mappings if needed
-
-                final assetPath = 'assets/www/pictures/$folder/$cleanFilename';
-                debugPrint("DEBUG HtmlWidget: Trying local asset: $assetPath");
-
-                return Image.asset(
-                  assetPath,
-                  errorBuilder: (context, error, stackTrace) {
-                    debugPrint(
-                      "DEBUG HtmlWidget: Local asset failed ($assetPath), falling back to network",
-                    );
-                    return Image.network(src);
-                  },
-                );
-              } catch (e) {
-                debugPrint("DEBUG HtmlWidget: Error parsing URL: $e");
-              }
-            }
+            return _buildImageWidget(src);
           }
         }
 
