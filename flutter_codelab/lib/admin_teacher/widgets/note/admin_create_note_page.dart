@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:code_play/admin_teacher/widgets/note/file_helper.dart';
@@ -173,16 +172,8 @@ class _CreateNotePageState extends State<CreateNotePage> {
     String? content;
 
     try {
-      if (kIsWeb) {
-        // WEB: Use bytes
-        if (file.bytes != null) {
-          content = utf8.decode(file.bytes!);
-        }
-      } else {
-        // MOBILE: Use path
-        if (file.path != null) {
-          content = await File(file.path!).readAsString();
-        }
+      if (file.path != null) {
+        content = await File(file.path!).readAsString();
       }
     } catch (e) {
       widget.showSnackBar(context, 'Failed to read file: $e', Colors.red);
@@ -371,17 +362,14 @@ class _CreateNotePageState extends State<CreateNotePage> {
     final String fileName =
         '${_noteTitleController.text.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_').toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}.md';
 
-    try {
-      File? markdownFile;
+    FileHelper output = FileHelper(fileName: fileName, folderName: 'notes');
 
-      // 1. Create Markdown File Locally (ONLY IF NOT WEB)
-      if (!kIsWeb) {
-        FileHelper output = FileHelper(fileName: fileName, folderName: 'notes');
-        markdownFile = await output.writeStringToFile(
-          content: fileContent,
-          fileName: fileName,
-        );
-      }
+    try {
+      // 1. Create Markdown File Locally
+      final File markdownFile = await output.writeStringToFile(
+        content: fileContent,
+        fileName: fileName,
+      );
 
       // 2. Collect IDs of successfully uploaded files
       List<String> attachmentIds = _attachments
@@ -394,8 +382,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
         title: _noteTitleController.text,
         visibility: _noteVisibility,
         topic: _selectedTopic!,
-        markdownFile: markdownFile, // Null on Web
-        markdownContent: kIsWeb ? fileContent : null, // Pass content on Web
+        markdownFile: markdownFile,
         attachmentIds: attachmentIds,
       );
 
