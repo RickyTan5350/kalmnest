@@ -83,8 +83,7 @@ class FileApi {
     required String title,
     required bool visibility,
     required String topic,
-    required File? markdownFile, // Made nullable
-    String? markdownContent, // Added optional content for Web
+    required File markdownFile,
     required List<String> attachmentIds,
   }) async {
     var uri = Uri.parse('$_baseUrl/notes/new');
@@ -101,20 +100,9 @@ class FileApi {
       request.fields['attachment_ids[$i]'] = attachmentIds[i];
     }
 
-    if (markdownFile != null && await markdownFile.exists()) {
-      // MOBILE: File path exists
+    if (await markdownFile.exists()) {
       request.files.add(
         await http.MultipartFile.fromPath('file', markdownFile.path),
-      );
-    } else if (markdownContent != null) {
-      // WEB: In-memory string content
-      request.files.add(
-        http.MultipartFile.fromString(
-          'file',
-          markdownContent,
-          filename:
-              'note.md', // Need a filename for the backend to accept it as a file
-        ),
       );
     }
 

@@ -3,12 +3,6 @@
         Options -MultiViews -Indexes
     </IfModule>
 
-    <IfModule mod_headers.c>
-        <FilesMatch "\.(bmp|cur|gif|ico|jpe?g|png|svgz?|webp)$">
-            Header set Access-Control-Allow-Origin "*"
-        </FilesMatch>
-    </IfModule>
-
     RewriteEngine On
 
     # Handle Authorization Header
