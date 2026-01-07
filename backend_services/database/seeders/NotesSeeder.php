@@ -17,120 +17,99 @@ class NotesSeeder extends Seeder
      */
     public function run(): void
     {
-        // 0. Clear Existing Data (Optional/Safe for re-seeding)
-        // This ensures we don't have duplicates and everything is fresh
+        // 0. Clean up DB tables (Foreign Key checks disabled for safety)
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        DB::table('note_files')->truncate(); // Pivot table
+        DB::table('note_files')->truncate(); 
         DB::table('notes')->truncate();
-        // We only truncate files that are notes (type 'md') to be safe, 
-        // or just truncate all if 'files' is strictly for notes/attachments.
-        // For simplicity and matching migration structure:
         DB::table('files')->truncate(); 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-        // 1. Get Admin ID (Query by Email)
-        // We fetch the user_id for 'admin@example.com' to assign as the creator
+
+        // 1. Get Admin ID
         $adminUserId = DB::table('users')
             ->where('email', 'admin@example.com')
             ->value('user_id');
 
-        // Fallback safety: If admin doesn't exist, default to 1
         if (!$adminUserId) {
             $this->command->warn("User 'admin@example.com' not found. Defaulting created_by to 1.");
             $adminUserId = 1;
         }
 
-        // 2. Define Source Path (Seed Data)
-        $seedPath = database_path('seed_data/notes');
+        // 2. Define Source Path (Targeting the PUBLIC STORAGE now)
+        // We look directly at where the files are hosted.
+        $storageRoot = storage_path('app/public/notes');
 
-        if (!File::exists($seedPath)) {
-            $this->command->error("Seed path not found: $seedPath");
+        if (!File::exists($storageRoot)) {
+            $this->command->error("Notes storage directory not found: $storageRoot");
             return;
         }
 
-        // 3. Define Destination Path (Public Storage)
-        $storageFolder = 'notes'; 
-        Storage::disk('public')->makeDirectory($storageFolder);
+        $this->command->info("Scanning storage directory: $storageRoot");
 
-        // Get all Topic folders (HTML, CSS, etc.)
-        $topicDirectories = File::directories($seedPath);
+        // 3. Scan Topics (Subdirectories)
+        $topicDirectories = File::directories($storageRoot);
 
         foreach ($topicDirectories as $topicDir) {
             $topicName = basename($topicDir);
+            
+            // Skip 'pictures' or other utility folders if they exist at root level and aren't topics
+            if (in_array(strtolower($topicName), ['pictures', 'css', 'js', 'img', 'uploads', 'assets'])) {
+                // Determine if this is actually a topic or just assets. 
+                // Based on previous context, 'CSS' and 'JS' ARE topics. 
+                // 'pictures' might be assets. 
+                if ($topicName === 'pictures') continue;
+            }
+
             $this->command->info("Processing Topic: $topicName");
 
-            // Query or Create Topic using Eloquent to handle UUIDs automatically
+            // Query or Create Topic
             $topic = \App\Models\Topic::firstOrCreate(['topic_name' => $topicName]);
             $topicId = $topic->topic_id;
 
-            // Scan for Markdown files in this topic
-            $files = File::files($topicDir);
+            // Scan for Markdown files recursively in this topic
+            // We use recursive scan to find notes even in sub-subfolders if any
+            $files = File::allFiles($topicDir);
 
             foreach ($files as $file) {
                 if ($file->getExtension() !== 'md') continue;
 
-                // Pass the $adminUserId to the processing function
-                $this->processNoteFile($file, $topicId, $topicName, $storageFolder, $adminUserId);
+                $this->syncNoteFromDisk($file, $topicId, $topicName, $adminUserId);
             }
         }
     }
 
     /**
-     * Process a single Markdown file: Move images, Rewrite links, Save to DB.
+     * Create DB entries for an existing file on disk.
      */
-    private function processNoteFile($file, $topicId, $topicName, $storageFolder, $adminUserId)
+    private function syncNoteFromDisk($file, $topicId, $topicName, $adminUserId)
     {
         $filename = $file->getFilename();
-        $originalContent = File::get($file->getPathname());
-        $sourceDir = $file->getPath(); 
         
-        // 1. IMAGE PROCESSING LOGIC
-        $processedContent = preg_replace_callback('/!\[(.*?)\]\((.*?)\)/', function ($matches) use ($sourceDir, $storageFolder, $topicName) {
-            $altText = $matches[1];
-            $linkPath = $matches[2];
+        // Calculate relative path for storage
+        // storage/app/public/notes/PHP/MyNote.md -> notes/PHP/MyNote.md
+        $fullPath = $file->getPathname();
+        $relativePath = 'notes/' . $topicName . '/' . $file->getRelativePathname();
+        
+        // Normalize slashes
+        $relativePath = str_replace('\\', '/', $relativePath);
 
-            $linkPath = rawurldecode(trim($linkPath, '"\''));
-            $linkPath = str_replace('\\', '/', $linkPath);
-            $imageName = basename($linkPath);
-            
-            $sourceImagePath = $sourceDir . '/pictures/' . $imageName;
-
-            if (File::exists($sourceImagePath)) {
-                // Determine destination path inside 'notes/pictures'
-                $destDir = $storageFolder . '/pictures';
-                Storage::disk('public')->makeDirectory($destDir);
-                
-                // Copy the image without prefix
-                Storage::disk('public')->putFileAs($destDir, new \Illuminate\Http\File($sourceImagePath), $imageName);
-
-                // Return the relative path specifically as 'pictures/...'
-                return "![$altText](pictures/$imageName)";
-            } else {
-                return $matches[0];
-            }
-        }, $originalContent);
-
-        // 2. SAVE THE MARKDOWN FILE TO STORAGE
-        $mdStorageName = Str::uuid7() . '.md';
-        Storage::disk('public')->put("$storageFolder/$mdStorageName", $processedContent);
-
-        // 3. CREATE FILE RECORD IN DB
+        // 1. CREATE FILE RECORD IN DB
         $fileRecord = FileModel::create([
-            'file_path' => "$storageFolder/$mdStorageName",
+            'file_path' => $relativePath,
             'type' => 'md'
         ]);
 
-        // 4. CREATE NOTE RECORD IN DB
+        // 2. CREATE NOTE RECORD IN DB
+        // Use filename without extension as title
         $title = pathinfo($filename, PATHINFO_FILENAME);
 
-        
         Notes::create([
             'title' => $title,
             'topic_id' => $topicId,
             'file_id' => $fileRecord->file_id,
             'visibility' => true,
-            'created_by' => $adminUserId, // Uses the ID queried by email
+            'created_by' => $adminUserId,
         ]);
 
-        $this->command->info("   -> Imported: $title (Created by User ID: $adminUserId)");
+        $this->command->info("   -> Synced: $title");
     }
 }

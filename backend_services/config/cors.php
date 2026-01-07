@@ -15,23 +15,13 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'storage/*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'http://localhost:3000',
-        'http://localhost:8080',
-        'http://localhost:8000',
-        env('FRONTEND_URL', 'https://your-frontend.vercel.app'),
-    ],
+    'allowed_origins' => ['*', 'http://localhost:*', 'https://localhost:*'],
 
-    'allowed_origins_patterns' => [
-        '/^https:\/\/.*\.vercel\.app$/',
-        '/^https:\/\/.*\.netlify\.app$/',
-        '/^https:\/\/.*\.railway\.app$/',
-        '/^http:\/\/localhost:[0-9]+$/', // Allow any localhost port
-    ],
+    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 
@@ -39,7 +29,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    'supports_credentials' => false,
 
 ];
-
