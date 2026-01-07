@@ -95,8 +95,8 @@ class FileController extends Controller
                 // Let's use 'assets/' . $folder if folder is provided, else 'uploads'.
                 
                 $uploadPath = $request->input('folder') 
-                    ? 'assets/' . Str::slug($request->input('folder')) 
-                    : 'uploads';
+                    ? 'notes/assets/' . Str::slug($request->input('folder')) 
+                    : 'notes/uploads';
 
                 $path = $file->storeAs($uploadPath, $safeFileName, 'public');
 
@@ -192,8 +192,8 @@ class FileController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $safeFileName = time() . '_' . $file->getClientOriginalName();
 
-                    // Store in 'uploads' folder
-                    $path = $file->storeAs('uploads', $safeFileName, 'public');
+                    // Store in 'notes/uploads' folder
+                    $path = $file->storeAs('notes/uploads', $safeFileName, 'public');
 
                     // SYNC ATTACHMENT TO SEED DATA
                     $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
@@ -241,7 +241,7 @@ class FileController extends Controller
             $safeFileName = time() . '_' . $file->getClientOriginalName();
 
             try {
-                $path = $file->storeAs('uploads', $safeFileName, 'public');
+                $path = $file->storeAs('notes/uploads', $safeFileName, 'public');
 
                 // SYNC TO SEED DATA
                 $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');

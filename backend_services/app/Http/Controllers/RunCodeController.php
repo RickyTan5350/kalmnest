@@ -352,23 +352,93 @@ class RunCodeController extends Controller
             if (!$path) {
                 return response()->json(['error' => 'Path required'], 400);
             }
+            
+            // Decode path to handle spaces and special chars
+            $path = urldecode($path);
 
             // Prevent traversal
             if (str_contains($path, '..')) {
                 return response()->json(['error' => 'Invalid path'], 403);
             }
 
-            // We assume path is relative to public folder (e.g. assets/www/...)
-            $fullPath = public_path($path);
-
-            if (file_exists($fullPath)) {
-                return response()->file($fullPath);
+            // Clean path logic
+            $storagePath = '';
+            if (str_starts_with($path, 'assets/www/')) {
+                // Legacy path: assets/www/foo -> notes/foo
+                $storagePath = 'notes/' . substr($path, strlen('assets/www/'));
+            } elseif (str_starts_with($path, 'notes/')) {
+                // New path: notes/foo -> notes/foo
+                $storagePath = $path;
+            } else {
+                // Fallback: foo -> notes/foo
+                $storagePath = 'notes/' . $path;
             }
 
-            // GRACEFUL FALLBACK for visible_files.json to avoid 404 logs
+            // DEBUG LOGGING
+            error_log("RunCodeController::getFile - Raw Path: '$path'");
+            error_log("RunCodeController::getFile - Resolved Storage Path: '$storagePath'");
+            error_log("RunCodeController::getFile - Exists on Public Disk? " . (Storage::disk('public')->exists($storagePath) ? 'YES' : 'NO'));
+            error_log("RunCodeController::getFile - Real Path on Disk: " . Storage::disk('public')->path($storagePath));
+
+            // Check if file exists on 'public' disk
+            $finalPath = null;
+            if (Storage::disk('public')->exists($storagePath)) {
+                $finalPath = $storagePath;
+            } else {
+                // FALLBACK: Check subfolders (PHP, CSS, HTML, JS) 
+                // because seed_data was organized by language.
+                // We strip 'notes/' prefix from storagePath to get relative path
+                $relativePath = substr($storagePath, 6); // 'notes/' is 6 chars
+                $candidates = ['PHP', 'HTML', 'CSS', 'JS'];
+                
+                foreach ($candidates as $dir) {
+                    $tryPath = 'notes/' . $dir . '/' . $relativePath;
+                    if (Storage::disk('public')->exists($tryPath)) {
+                        $finalPath = $tryPath;
+                        error_log("RunCodeController::getFile - Found in fallback: $dir");
+                        break;
+                    }
+                }
+            }
+
+            if ($finalPath) {
+                 return Storage::disk('public')->response($finalPath, null, [
+                    'Access-Control-Allow-Origin' => '*'
+                 ]);
+            }
+
+            // LAST RESORT: Check legacy public/assets/www directly
+            // This handles cases where list-files sees it in public/ but it wasn't moved to storage
+            // LEGACY MAPPING: notes/Topic/Folder -> assets/www/Folder
+            // The frontend sends notes/JS/3.1.1, but legacy is assets/www/3.1.1
+            $parts = explode('/', $path);
+            if (count($parts) >= 3 && $parts[0] === 'notes') {
+                $legacyRelPath = implode('/', array_slice($parts, 2));
+                $legacyMappedPath = public_path('assets/www/' . $legacyRelPath);
+                 if (file_exists($legacyMappedPath) && is_file($legacyMappedPath)) {
+                    error_log("RunCodeController::getFile - Found in mapped legacy path: $legacyMappedPath");
+                    return response()->file($legacyMappedPath, [
+                        'Access-Control-Allow-Origin' => '*'
+                    ]);
+                }
+            }
+
+            // Also check strict public_path fallback just in case
+            $legacyFullPath = public_path($path);
+            if (file_exists($legacyFullPath) && is_file($legacyFullPath)) {
+                error_log("RunCodeController::getFile - Found in strict public_path: $legacyFullPath");
+                return response()->file($legacyFullPath, [
+                    'Access-Control-Allow-Origin' => '*'
+                ]);
+            }
+
+            // GRACEFUL FALLBACK for visible_files.json
             if (basename($path) === 'visible_files.json') {
-                return response()->json((object)[], 200); // Return empty manifest as object {}
+                return response()->json((object)[], 200); 
             }
+            
+            error_log("RunCodeController::getFile - 404 Not Found: $storagePath");
+            return response()->json(['error' => 'File not found'], 404);
 
             return response()->json(['error' => 'File not found: ' . $path], 404);
         } catch (\Exception $e) {
@@ -386,11 +456,52 @@ class RunCodeController extends Controller
                 return response()->json(['error' => 'Path required'], 400);
             }
 
+            // Decode and Normalize
+            $path = urldecode($path);
+
             // Prevent traversal
             if (str_contains($path, '..')) {
                 return response()->json(['error' => 'Invalid path'], 403);
             }
 
+            // CHECK STORAGE FIRST (New Standard)
+            // If path starts with 'notes/', map to public storage
+            if (str_starts_with($path, 'notes/')) {
+                 if (Storage::disk('public')->exists($path)) {
+                     $files = Storage::disk('public')->files($path);
+                     $result = [];
+                     foreach ($files as $f) {
+                         $result[] = basename($f);
+                     }
+                     return response()->json(['files' => $result]);
+                 }
+                 
+                 // FALLBACK FOR LEGACY STRUCTURE
+                 // Frontend asks for: notes/JS/3.1.1...
+                 // Actual Legacy Path: assets/www/3.1.1... (No 'JS' folder)
+                 // Logic: Strip 'notes/TOPIC/' and look in public_path('assets/www/REST')
+                 
+                 $parts = explode('/', $path); // [notes, JS, 3.1.1...]
+                 if (count($parts) >= 3) {
+                     // Reconstruct strict legacy path: assets/www/ + (parts after topic)
+                     $legacyRelPath = implode('/', array_slice($parts, 2));
+                     $legacyFullPath = public_path('assets/www/' . $legacyRelPath);
+                     
+                     if (is_dir($legacyFullPath)) {
+                         $files = scandir($legacyFullPath);
+                         $result = [];
+                         foreach ($files as $file) {
+                             if ($file === '.' || $file === '..' || $file === 'visible_files.json') continue;
+                             if (is_file($legacyFullPath . '/' . $file)) {
+                                 $result[] = $file;
+                             }
+                         }
+                         return response()->json(['files' => $result]);
+                     }
+                 }
+            }
+
+            // LEGACY: Check public_path (assets/www) directly if path matches that structure
             $fullPath = public_path($path);
 
             if (is_dir($fullPath)) {
@@ -405,7 +516,7 @@ class RunCodeController extends Controller
                 return response()->json(['files' => $result]);
             }
 
-            return response()->json(['error' => 'Directory not found'], 404);
+            return response()->json(['error' => 'Directory not found: ' . $path], 404);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Server Error listing files: ' . $e->getMessage()], 500);
         }

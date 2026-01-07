@@ -807,44 +807,7 @@ class _EditNotePageState extends State<EditNotePage> {
     return position;
   }
 
-  String _fixUrl(String url) {
-    if (kIsWeb) {
-      // On Web, static files from another domain (kalmnest.test) often fail CORS.
-      // We proxy them through our Laravel backend which adds CORS headers.
-      if (url.contains('/storage/')) {
-        final apiBase = ApiConstants.baseUrl; // e.g. https://kalmnest.test/api
-        // Construct proxy URL: /api/file-proxy?url=ORIGINAL_URL
-        return '$apiBase/file-proxy?url=${Uri.encodeComponent(url)}';
-      }
-    }
-
-    try {
-      final uri = Uri.parse(url);
-      if (uri.host == 'kalmnest.test') {
-        final targetBase = Uri.parse(ApiConstants.domain);
-        return uri
-            .replace(
-              scheme: targetBase.scheme,
-              host: targetBase.host,
-              port: targetBase.port,
-            )
-            .toString();
-      }
-    } catch (e) {
-      debugPrint('Error fixing URL: $e');
-    }
-    return url;
-  }
-
   Widget _buildImageWidget(String src) {
-    if (src.startsWith('http')) {
-      return Image.network(
-        _fixUrl(src),
-        errorBuilder: (context, error, stackTrace) =>
-            const Icon(Icons.broken_image, color: Colors.red),
-      );
-    }
-
     final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
     final fileName = src.split('/').last;
     // Use selected topic or fallback
@@ -865,25 +828,55 @@ class _EditNotePageState extends State<EditNotePage> {
           return Image.asset(resolvedPath);
         }
 
-        final networkUrl = src.startsWith('/')
-            ? "${ApiConstants.domain}$src"
-            : (src.startsWith('pictures/')
-                  ? "${ApiConstants.domain}/storage/notes/$src"
-                  : (src.startsWith('http')
-                        ? src
-                        : "${ApiConstants.domain}/storage/notes/pictures/$src"));
+        // Use api/get-file instead of direct storage access
+        final apiBase = ApiConstants.baseUrl; // e.g. https://kalmnest.test/api
+
+        String networkUrl;
+        if (src.startsWith('http')) {
+          if (src.contains('/storage/')) {
+            // Rewrite full storage URLs to use get-file to avoid CORS
+            final uri = Uri.parse(src);
+            String relativePath = uri.path;
+            // Remove /storage/ prefix (e.g. /storage/assets/foo -> assets/foo)
+            final storageIndex = relativePath.indexOf('/storage/');
+            if (storageIndex != -1) {
+              relativePath = relativePath.substring(
+                storageIndex + '/storage/'.length,
+              );
+            }
+            networkUrl =
+                '$apiBase/get-file?path=${Uri.encodeComponent(relativePath)}';
+          } else {
+            networkUrl = src;
+          }
+        } else {
+          // Construct path parameter for get-file
+          String pathParam = src;
+          if (src.startsWith('/')) {
+            pathParam = src.substring(1); // remove leading slash
+          } else if (src.startsWith('pictures/')) {
+            pathParam = 'notes/$src';
+          } else {
+            pathParam = 'notes/pictures/$src';
+          }
+          networkUrl =
+              '$apiBase/get-file?path=${Uri.encodeComponent(pathParam)}';
+        }
 
         // Fallback network URL with topic if primary fails
-        final topicNetworkUrl = src.startsWith('pictures/')
-            ? "${ApiConstants.domain}/storage/notes/$currentTopic/$src"
-            : null;
+        String? topicNetworkUrl;
+        if (src.startsWith('pictures/')) {
+          final topicPath = 'notes/$currentTopic/$src';
+          topicNetworkUrl =
+              '$apiBase/get-file?path=${Uri.encodeComponent(topicPath)}';
+        }
 
         return Image.network(
-          _fixUrl(networkUrl),
+          networkUrl,
           errorBuilder: (context, error, stackTrace) {
             if (topicNetworkUrl != null) {
               return Image.network(
-                _fixUrl(topicNetworkUrl),
+                topicNetworkUrl,
                 errorBuilder: (context, error, stackTrace) =>
                     _buildErrorWidget(fileName),
               );
