@@ -365,9 +365,49 @@ class RunCodeController extends Controller
                 return response()->file($fullPath);
             }
 
+            // GRACEFUL FALLBACK for visible_files.json to avoid 404 logs
+            if (basename($path) === 'visible_files.json') {
+                return response()->json((object)[], 200); // Return empty manifest as object {}
+            }
+
             return response()->json(['error' => 'File not found: ' . $path], 404);
         } catch (\Exception $e) {
              return response()->json(['error' => 'Server Error serving file: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * List files in a directory within public/assets/www
+     */
+    public function listFiles(Request $request) {
+        try {
+            $path = $request->query('path');
+            if (!$path) {
+                return response()->json(['error' => 'Path required'], 400);
+            }
+
+            // Prevent traversal
+            if (str_contains($path, '..')) {
+                return response()->json(['error' => 'Invalid path'], 403);
+            }
+
+            $fullPath = public_path($path);
+
+            if (is_dir($fullPath)) {
+                $files = scandir($fullPath);
+                $result = [];
+                foreach ($files as $file) {
+                    if ($file === '.' || $file === '..' || $file === 'visible_files.json') continue;
+                    if (is_file($fullPath . '/' . $file)) {
+                        $result[] = $file;
+                    }
+                }
+                return response()->json(['files' => $result]);
+            }
+
+            return response()->json(['error' => 'Directory not found'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Server Error listing files: ' . $e->getMessage()], 500);
         }
     }
 

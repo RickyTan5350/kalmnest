@@ -180,30 +180,42 @@ class PdfService {
       }
     }
 
-    // 2. Inject CSS for Tables
-    // htmltopdfwidgets supports some basic CSS via style block or inline styles.
-    // Adding a global style block for tables.
-    final styleBlock = '''
-    <style>
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-        border: 1px solid #bfbfbf;
-      }
-      th, td {
-        border: 1px solid #bfbfbf;
-        padding: 8px;
-        text-align: left;
-      }
-      th {
-        background-color: #f2f2f2;
-        font-weight: bold;
-      }
-    </style>
-    ''';
+    // 2. Inject CSS for Tables via Inline Styles
+    // Global style blocks can be unreliable in some PDF converters,
+    // so we inject explicit inline styles for better compatibility.
 
-    return "$styleBlock\n$processed";
+    // A. Use a unique marker temporarily for the first cell of each row
+    processed = processed.replaceAllMapped(
+      RegExp(r'<tr>(\s*)<(th|td)'),
+      (match) => '<tr>${match.group(1)}<${match.group(2)} data-first="true"',
+    );
+
+    const baseStyle =
+        'border: 1px solid #333333; padding: 10px; text-align: left; vertical-align: top;';
+
+    processed = processed.replaceAll(
+      '<table',
+      '<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #333333;"',
+    );
+
+    // B. Style the first cells (often row headers) with more width
+    processed = processed.replaceAll(
+      '<th data-first="true"',
+      '<th style="$baseStyle background-color: #eeeeee; font-weight: bold; width: 25%; min-width: 100px;"',
+    );
+    processed = processed.replaceAll(
+      '<td data-first="true"',
+      '<td style="$baseStyle background-color: #f9f9f9; font-weight: bold; width: 25%; min-width: 100px;"',
+    );
+
+    // C. Style all other cells
+    processed = processed.replaceAll(
+      '<th',
+      '<th style="$baseStyle background-color: #eeeeee; font-weight: bold;"',
+    );
+    processed = processed.replaceAll('<td', '<td style="$baseStyle"');
+
+    return processed;
   }
 
   Future<String?> _resolveLocalImageToBase64(String src, String topic) async {

@@ -276,30 +276,49 @@ class _RunCodePageState extends State<RunCodePage> {
     // 2. Determine files to load
     List<String> filesToLoad = [];
 
-    // Group-Based Logic
-    if (widget.initialFileName != null &&
-        _visibleFilesManifest != null &&
-        _visibleFilesManifest!.containsKey(widget.initialFileName)) {
-      final group = _visibleFilesManifest![widget.initialFileName];
-      if (group is List) {
-        filesToLoad = group.map((e) => e.toString()).toList();
-        print(
-          "DEBUG WEB: Loading Group [${widget.initialFileName}]: $filesToLoad",
-        );
-      }
-    }
-    // Legacy Logic
-    else if (_visibleFilesManifest != null) {
-      Set<String> uniqueFiles = {};
-      _visibleFilesManifest!.forEach((key, value) {
-        if (value is List) {
-          uniqueFiles.addAll(value.map((e) => e.toString()));
-        } else {
-          uniqueFiles.add(key);
+    if (_visibleFilesManifest != null && _visibleFilesManifest!.isNotEmpty) {
+      // Group-Based Logic
+      if (widget.initialFileName != null &&
+          _visibleFilesManifest!.containsKey(widget.initialFileName)) {
+        final group = _visibleFilesManifest![widget.initialFileName];
+        if (group is List) {
+          filesToLoad = group.map((e) => e.toString()).toList();
+          print(
+            "DEBUG WEB: Loading Group [${widget.initialFileName}]: $filesToLoad",
+          );
         }
-      });
-      filesToLoad = uniqueFiles.toList();
-      print("DEBUG WEB: Loading All Manifest Files: $filesToLoad");
+      }
+      // Legacy Logic
+      else {
+        Set<String> uniqueFiles = {};
+        _visibleFilesManifest!.forEach((key, value) {
+          if (value is List) {
+            uniqueFiles.addAll(value.map((e) => e.toString()));
+          } else {
+            uniqueFiles.add(key);
+          }
+        });
+        filesToLoad = uniqueFiles.toList();
+        print("DEBUG WEB: Loading All Manifest Files: $filesToLoad");
+      }
+    } else {
+      // Fallback: If no manifest, try to list all files in directory from server
+      try {
+        final listUri = Uri.parse(
+          '${ApiConstants.baseUrl}/list-files?path=$_resolvedContextPath',
+        );
+        print("DEBUG WEB: No manifest. Attempting to list files from $listUri");
+        final listResp = await http.get(listUri);
+        if (listResp.statusCode == 200) {
+          final listData = jsonDecode(listResp.body);
+          if (listData['files'] is List) {
+            filesToLoad = List<String>.from(listData['files']);
+            print("DEBUG WEB: Discovered Files: $filesToLoad");
+          }
+        }
+      } catch (e) {
+        print("DEBUG WEB: Error listing files: $e");
+      }
     }
 
     // 3. Fetch each file content
@@ -315,14 +334,38 @@ class _RunCodePageState extends State<RunCodePage> {
         try {
           final resp = await http.get(fileUri);
           if (resp.statusCode == 200) {
-            loadedFiles.add(CodeFile(name: fileName, content: resp.body));
+            final lowerName = fileName.toLowerCase();
+            final isImg =
+                lowerName.endsWith('.png') ||
+                lowerName.endsWith('.jpg') ||
+                lowerName.endsWith('.jpeg') ||
+                lowerName.endsWith('.gif') ||
+                lowerName.endsWith('.ico');
+
+            if (isImg) {
+              // Store in virtual assets as Data URI
+              String mime = 'image/png';
+              if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg'))
+                mime = 'image/jpeg';
+              else if (lowerName.endsWith('.gif'))
+                mime = 'image/gif';
+              else if (lowerName.endsWith('.ico'))
+                mime = 'image/x-icon';
+
+              final base64Data = base64Encode(resp.bodyBytes);
+              _virtualAssets[fileName] = 'data:$mime;base64,$base64Data';
+              print("DEBUG WEB: Loaded Image into Virtual Assets: $fileName");
+            } else {
+              // Add to editor files
+              loadedFiles.add(CodeFile(name: fileName, content: resp.body));
+            }
           } else {
             print(
               "DEBUG WEB: Failed to load file '$fileName': ${resp.statusCode}",
             );
           }
         } catch (e) {
-          // Ignore error
+          print("DEBUG WEB: Error loading file '$fileName': $e");
         }
       }
 

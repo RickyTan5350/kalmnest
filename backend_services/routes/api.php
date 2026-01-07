@@ -33,6 +33,8 @@ Route::post('/notes/new', [NotesController::class, 'store']);         // <--- Th
 Route::post('/notes/upload', [NotesController::class, 'uploadFile']); // <--- This is the active Upload route
 Route::post('/run-code', [App\Http\Controllers\RunCodeController::class, 'execute']); // Execute PHP code
 Route::get('/get-file', [App\Http\Controllers\RunCodeController::class, 'getFile']);
+Route::get('/list-files', [App\Http\Controllers\RunCodeController::class, 'listFiles']);
+
 Route::post('/delete-file', [App\Http\Controllers\RunCodeController::class, 'deleteFile']); // Delete file permanently
 Route::post('/rename-file', [App\Http\Controllers\RunCodeController::class, 'renameFile']); // Rename file permanently
 
