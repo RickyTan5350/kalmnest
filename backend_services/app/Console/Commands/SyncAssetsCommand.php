@@ -36,6 +36,9 @@ class SyncAssetsCommand extends Command
         // Frontend Assets Root: configured in .env
         $frontendAssetsDir = env('FRONTEND_ASSETS_PATH');
 
+        // Public Storage Root: storage/app/public/notes (The "Updated Directory")
+        $publicNotesDir = storage_path('app/public/notes');
+
         if (!$frontendAssetsDir) {
             $this->error("FRONTEND_ASSETS_PATH is not set in .env file.");
             $this->line("Please add FRONTEND_ASSETS_PATH=/absolute/path/to/flutter_codelab/assets/www");
@@ -48,34 +51,95 @@ class SyncAssetsCommand extends Command
         }
 
         if (!File::exists($frontendAssetsDir)) {
-            $this->error("Frontend assets directory not found: $frontendAssetsDir");
-            return 1;
+             $this->warn("Frontend assets directory not found: $frontendAssetsDir. Skipping frontend sync.");
         }
 
         $this->info("Backend Dir: $backendNotesDir");
         $this->info("Frontend Dir: $frontendAssetsDir");
+        $this->info("Public Storage Dir: $publicNotesDir");
 
         // 2. Index Backend Notes (Title -> Topic Mapping)
         $noteToTopicMap = $this->indexBackendNotes($backendNotesDir);
 
-        // 3. Sync Frontend -> Backend
-        $this->syncFrontendToBackend($frontendAssetsDir, $backendNotesDir, $noteToTopicMap);
+        // 3. PULL: Sync Sources -> Backend (Source of Truth)
+        $this->syncPublicToBackend($publicNotesDir, $backendNotesDir, $noteToTopicMap);
+        
+        if (File::exists($frontendAssetsDir)) {
+            $this->syncFrontendToBackend($frontendAssetsDir, $backendNotesDir, $noteToTopicMap);
+        }
 
-        // 4. Sync Backend -> Backend (Pictures) & Backend -> Frontend
-        // We actually want to sync assets located in seed_data/notes/<Topic>/assets/<NoteTitle> to Frontend
-        // AND sync seed_data/notes/<Topic>/pictures to Frontend
-        $this->syncBackendToFrontend($backendNotesDir, $frontendAssetsDir);
-
-        // 5. Sync Backend -> Public Storage (Existing)
-        $publicNotesDir = storage_path('app/public/notes');
+        // 4. PUSH: Sync Backend -> Redistribution Targets
+        
+        // A. Sync Backend -> Public Storage (Existing)
         $this->syncBackendToPublic($backendNotesDir, $publicNotesDir);
 
-        // 6. Sync Backend -> Public Assets (For Web API)
+        // B. Sync Backend -> Public Assets (For Web API)
         // We mirror the frontend structure to 'public/assets/www' so get-file API works
         $publicAssetsDir = public_path('assets/www');
         $this->syncBackendToPublicAssets($backendNotesDir, $publicAssetsDir);
 
+        // C. Sync Backend -> Frontend Assets
+        if (File::exists($frontendAssetsDir)) {
+            $this->syncBackendToFrontend($backendNotesDir, $frontendAssetsDir);
+        }
+
+        // 5. POST-PROCESS: Run Packager
+        $this->section('Post-Processing');
+        $this->info('Running Note Packager to ensure relative links and UUIDs...');
+        $this->call('notes:package');
+
         $this->info('Asset Synchronization Completed!');
+    }
+
+    private function syncPublicToBackend($publicNotesDir, $backendNotesDir, $noteToTopicMap)
+    {
+        $this->section('Syncing Public Storage -> Backend');
+
+        if (!File::exists($publicNotesDir)) {
+            $this->warn("Public storage directory not found: $publicNotesDir");
+            return;
+        }
+
+        // 1. Sync topic folders (HTML, CSS, JS, PHP)
+        $topics = File::directories($publicNotesDir);
+        foreach ($topics as $topicPath) {
+            $topicName = basename($topicPath);
+            
+            // Skip non-topic folders
+            if (in_array($topicName, ['pictures', 'assets', 'uploads'])) continue;
+
+            $this->info("Processing topic: $topicName");
+            $files = File::allFiles($topicPath);
+            foreach ($files as $file) {
+                $relativePath = $file->getRelativePathname();
+                $destPath = "$backendNotesDir/$topicName/$relativePath";
+                
+                $destDir = dirname($destPath);
+                if (!File::exists($destDir)) {
+                    File::makeDirectory($destDir, 0755, true);
+                }
+
+                $this->copyIfNewer($file->getPathname(), $destPath);
+            }
+        }
+
+        // 2. Sync loose files (if they match indexed notes)
+        $looseFiles = File::files($publicNotesDir);
+        foreach ($looseFiles as $file) {
+            if ($file->getExtension() === 'md') {
+                $filename = $file->getFilenameWithoutExtension();
+                $normalized = $this->normalizeTitle($filename);
+
+                if (isset($noteToTopicMap[$normalized])) {
+                    $match = $noteToTopicMap[$normalized];
+                    $topic = $match['topic'];
+                    $originalTitle = $match['original_title'];
+                    $destPath = "$backendNotesDir/$topic/$originalTitle.md";
+
+                    $this->copyIfNewer($file->getPathname(), $destPath);
+                }
+            }
+        }
     }
 
     private function indexBackendNotes($backendNotesDir)
