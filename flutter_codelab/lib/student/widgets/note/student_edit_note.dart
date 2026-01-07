@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart'; // Import for keyboard shortcuts
 import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -152,7 +153,153 @@ class _ViewNotePageState extends State<ViewNotePage> {
   // Helper to ensure absolute URLs
   String _processMarkdown(String content) {
     final domain = ApiConstants.domain;
-    return content.replaceAll('](/storage/', ']($domain/storage/');
+    String processed = content.replaceAll('](/storage/', ']($domain/storage/');
+    return processed;
+  }
+
+  String _fixUrl(String url) {
+    // 1. Double slash fix
+    String fixedUrl = url;
+    final slashParts = fixedUrl.split('://');
+    if (slashParts.length > 1) {
+      fixedUrl = '${slashParts[0]}://${slashParts[1].replaceAll('//', '/')}';
+    } else {
+      fixedUrl = fixedUrl.replaceAll('//', '/');
+    }
+
+    // 2. Domain replacement (kalmnest.test -> current environment domain)
+    try {
+      final uri = Uri.parse(fixedUrl);
+      if (uri.hasAuthority && uri.host == 'kalmnest.test') {
+        final targetBase = Uri.parse(ApiConstants.domain);
+        fixedUrl = uri
+            .replace(
+              scheme: targetBase.scheme,
+              host: targetBase.host,
+              port: targetBase.port,
+            )
+            .toString();
+      }
+    } catch (e) {
+      debugPrint('Error fixing domain: $e');
+    }
+
+    // 3. Web Proxy
+    if (kIsWeb) {
+      if (fixedUrl.contains('/storage/')) {
+        final apiBase = ApiConstants.baseUrl;
+        return '$apiBase/file-proxy?url=${Uri.encodeComponent(fixedUrl)}';
+      }
+    }
+
+    return fixedUrl;
+  }
+
+  Widget _buildImageWidget(String src) {
+    if (src.isEmpty) return const SizedBox.shrink();
+
+    // 1. Handle absolute URLs
+    if (src.startsWith('http')) {
+      return Image.network(
+        _fixUrl(src),
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.red),
+      );
+    }
+
+    // 2. Handle potential local asset paths
+    final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+    final fileName = src.split('/').last;
+
+    return FutureBuilder<String?>(
+      future: _resolveLocalAsset(src, fileName, folders),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final resolvedPath = snapshot.data;
+        if (resolvedPath != null) {
+          return Image.asset(resolvedPath);
+        }
+
+        // 3. Fallback to network if not found in assets
+        final networkUrl = src.startsWith('/')
+            ? "${ApiConstants.domain}$src"
+            : (src.startsWith('pictures/')
+                  ? "${ApiConstants.domain}/storage/notes/$src"
+                  : (src.startsWith('http')
+                        ? src
+                        : "${ApiConstants.domain}/storage/notes/pictures/$src"));
+
+        // Fallback network URL with topic if primary fails
+        final topicNetworkUrl = src.startsWith('pictures/')
+            ? "${ApiConstants.domain}/storage/notes/${widget.currentTopic}/$src"
+            : null;
+
+        return Image.network(
+          _fixUrl(networkUrl),
+          errorBuilder: (context, error, stackTrace) {
+            if (topicNetworkUrl != null) {
+              return Image.network(
+                _fixUrl(topicNetworkUrl),
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildErrorWidget(fileName),
+              );
+            }
+            return _buildErrorWidget(fileName);
+          },
+        );
+      },
+    );
+  }
+
+  Future<String?> _resolveLocalAsset(
+    String originalPath,
+    String fileName,
+    List<String> folders,
+  ) async {
+    if (originalPath.startsWith('assets/')) {
+      try {
+        await rootBundle.load(originalPath);
+        return originalPath;
+      } catch (_) {}
+    }
+
+    final flattened = 'assets/www/pictures/$fileName';
+    try {
+      await rootBundle.load(flattened);
+      return flattened;
+    } catch (_) {}
+
+    final topicFlattened =
+        'assets/www/pictures/${widget.currentTopic}/$fileName';
+    try {
+      await rootBundle.load(topicFlattened);
+      return topicFlattened;
+    } catch (_) {}
+
+    for (final folder in folders) {
+      final candidate = 'assets/www/pictures/$folder/$fileName';
+      try {
+        await rootBundle.load(candidate);
+        return candidate;
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Widget _buildErrorWidget(String fileName) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.broken_image, color: Colors.grey),
+        Text("Failed to load: $fileName", style: const TextStyle(fontSize: 10)),
+      ],
+    );
   }
 
   // --- HTML Rendering with Highlighting ---
@@ -203,6 +350,10 @@ class _ViewNotePageState extends State<ViewNotePage> {
       baseUrl: Uri.parse(ApiConstants.domain),
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 15),
       customWidgetBuilder: (element) {
+        if (element.localName == 'img') {
+          final src = element.attributes['src'] ?? '';
+          return _buildImageWidget(src);
+        }
         if (element.localName == 'pre') {
           // Extract text. Note: If we highlighted inside the pre tag, the
           // <span> tags are technically part of the text now.

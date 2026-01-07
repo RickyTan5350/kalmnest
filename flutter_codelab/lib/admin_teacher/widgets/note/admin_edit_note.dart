@@ -808,21 +808,21 @@ class _EditNotePageState extends State<EditNotePage> {
   }
 
   String _fixUrl(String url) {
-    if (kIsWeb) {
-      // On Web, static files from another domain (kalmnest.test) often fail CORS.
-      // We proxy them through our Laravel backend which adds CORS headers.
-      if (url.contains('/storage/')) {
-        final apiBase = ApiConstants.baseUrl; // e.g. https://kalmnest.test/api
-        // Construct proxy URL: /api/file-proxy?url=ORIGINAL_URL
-        return '$apiBase/file-proxy?url=${Uri.encodeComponent(url)}';
-      }
+    // 1. Double slash fix
+    String fixedUrl = url;
+    final slashParts = fixedUrl.split('://');
+    if (slashParts.length > 1) {
+      fixedUrl = '${slashParts[0]}://${slashParts[1].replaceAll('//', '/')}';
+    } else {
+      fixedUrl = fixedUrl.replaceAll('//', '/');
     }
 
+    // 2. Domain replacement (kalmnest.test -> current environment domain)
     try {
-      final uri = Uri.parse(url);
-      if (uri.host == 'kalmnest.test') {
+      final uri = Uri.parse(fixedUrl);
+      if (uri.hasAuthority && uri.host == 'kalmnest.test') {
         final targetBase = Uri.parse(ApiConstants.domain);
-        return uri
+        fixedUrl = uri
             .replace(
               scheme: targetBase.scheme,
               host: targetBase.host,
@@ -831,9 +831,18 @@ class _EditNotePageState extends State<EditNotePage> {
             .toString();
       }
     } catch (e) {
-      debugPrint('Error fixing URL: $e');
+      debugPrint('Error fixing domain: $e');
     }
-    return url;
+
+    // 3. Web Proxy
+    if (kIsWeb) {
+      if (fixedUrl.contains('/storage/')) {
+        final apiBase = ApiConstants.baseUrl;
+        return '$apiBase/file-proxy?url=${Uri.encodeComponent(fixedUrl)}';
+      }
+    }
+
+    return fixedUrl;
   }
 
   Widget _buildImageWidget(String src) {

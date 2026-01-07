@@ -277,11 +277,49 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
     return processed;
   }
 
+  String _fixUrl(String url) {
+    // 1. Double slash fix
+    String fixedUrl = url;
+    final slashParts = fixedUrl.split('://');
+    if (slashParts.length > 1) {
+      fixedUrl = '${slashParts[0]}://${slashParts[1].replaceAll('//', '/')}';
+    } else {
+      fixedUrl = fixedUrl.replaceAll('//', '/');
+    }
+
+    // 2. Domain replacement (kalmnest.test -> current environment domain)
+    try {
+      final uri = Uri.parse(fixedUrl);
+      if (uri.hasAuthority && uri.host == 'kalmnest.test') {
+        final targetBase = Uri.parse(ApiConstants.domain);
+        fixedUrl = uri
+            .replace(
+              scheme: targetBase.scheme,
+              host: targetBase.host,
+              port: targetBase.port,
+            )
+            .toString();
+      }
+    } catch (e) {
+      debugPrint('Error fixing domain: $e');
+    }
+
+    // 3. Web Proxy
+    if (kIsWeb) {
+      if (fixedUrl.contains('/storage/')) {
+        final apiBase = ApiConstants.baseUrl;
+        return '$apiBase/file-proxy?url=${Uri.encodeComponent(fixedUrl)}';
+      }
+    }
+
+    return fixedUrl;
+  }
+
   Widget _buildImageWidget(String src) {
     // 1. Handle absolute URLs
     if (src.startsWith('http')) {
       return Image.network(
-        src,
+        _fixUrl(src),
         errorBuilder: (context, error, stackTrace) =>
             const Icon(Icons.broken_image, color: Colors.red),
       );
@@ -322,11 +360,11 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
             : null;
 
         return Image.network(
-          networkUrl,
+          _fixUrl(networkUrl),
           errorBuilder: (context, error, stackTrace) {
             if (topicNetworkUrl != null) {
               return Image.network(
-                topicNetworkUrl,
+                _fixUrl(topicNetworkUrl),
                 errorBuilder: (context, error, stackTrace) =>
                     _buildErrorWidget(fileName),
               );
@@ -599,8 +637,7 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
 
             // 1. Check for Quiz
             if (codeClass.contains('language-quiz')) {
-              final jsonStr = element.text.trim();
-              debugPrint('DEBUG: Found Quiz Block. Length: ${jsonStr.length}');
+              final jsonStr = element.text;
               try {
                 final quizData = jsonDecode(jsonStr);
                 return QuizWidget(
@@ -613,22 +650,9 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
                   },
                 );
               } catch (e) {
-                debugPrint('DEBUG: Quiz Parsing Error: $e');
-                debugPrint('DEBUG: JSON content: $jsonStr');
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Error parsing quiz: $e',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Raw JSON:',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(jsonStr),
-                  ],
+                return Text(
+                  'Error parsing quiz: $e',
+                  style: const TextStyle(color: Colors.red),
                 );
               }
             }
