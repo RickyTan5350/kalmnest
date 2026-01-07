@@ -10,6 +10,7 @@ class FileHelper {
   FileHelper({required this.fileName, required this.folderName});
 
   Future<String> get localPath async {
+    if (kIsWeb) return ''; // path_provider not available on web
     final directory = await getApplicationDocumentsDirectory();
     return directory.path;
   }

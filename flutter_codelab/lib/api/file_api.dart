@@ -83,7 +83,9 @@ class FileApi {
     required String title,
     required bool visibility,
     required String topic,
-    required File markdownFile,
+    File? markdownFile,
+    List<int>? markdownBytes,
+    String? markdownFileName,
     required List<String> attachmentIds,
   }) async {
     var uri = Uri.parse('$_baseUrl/notes/new');
@@ -100,7 +102,17 @@ class FileApi {
       request.fields['attachment_ids[$i]'] = attachmentIds[i];
     }
 
-    if (await markdownFile.exists()) {
+    if (markdownBytes != null && markdownFileName != null) {
+      // WEB COMPATIBLE
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          markdownBytes,
+          filename: markdownFileName,
+        ),
+      );
+    } else if (markdownFile != null && await markdownFile.exists()) {
+      // MOBILE COMPATIBLE
       request.files.add(
         await http.MultipartFile.fromPath('file', markdownFile.path),
       );

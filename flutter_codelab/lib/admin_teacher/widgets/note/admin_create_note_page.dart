@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:code_play/admin_teacher/widgets/note/file_helper.dart';
 import 'package:code_play/admin_teacher/widgets/note/file_picker.dart';
@@ -362,14 +363,21 @@ class _CreateNotePageState extends State<CreateNotePage> {
     final String fileName =
         '${_noteTitleController.text.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_').toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}.md';
 
-    FileHelper output = FileHelper(fileName: fileName, folderName: 'notes');
-
     try {
-      // 1. Create Markdown File Locally
-      final File markdownFile = await output.writeStringToFile(
-        content: fileContent,
-        fileName: fileName,
-      );
+      File? markdownFile;
+      List<int>? markdownBytes;
+
+      if (kIsWeb) {
+        // WEB: Just send bytes
+        markdownBytes = utf8.encode(fileContent);
+      } else {
+        // MOBILE: Continue using FileHelper for backup/local storage if needed
+        FileHelper output = FileHelper(fileName: fileName, folderName: 'notes');
+        markdownFile = await output.writeStringToFile(
+          content: fileContent,
+          fileName: fileName,
+        );
+      }
 
       // 2. Collect IDs of successfully uploaded files
       List<String> attachmentIds = _attachments
@@ -383,6 +391,8 @@ class _CreateNotePageState extends State<CreateNotePage> {
         visibility: _noteVisibility,
         topic: _selectedTopic!,
         markdownFile: markdownFile,
+        markdownBytes: markdownBytes,
+        markdownFileName: fileName,
         attachmentIds: attachmentIds,
       );
 
