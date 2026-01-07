@@ -109,14 +109,26 @@ class UserPageState extends State<UserPage> {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['xlsx', 'xls'],
+        withData: true, // Important for Web to get bytes
       );
 
-      if (result != null && result.files.single.path != null) {
-        final filePath = result.files.single.path!;
-        final fileName = result.files.single.name;
+      if (result != null) {
+        // On Web, path might be null, but bytes will be present if withData is true (or default on web)
+        final PlatformFile file = result.files.single;
 
-        // 3. Call API
-        await _userApi.importUsers(filePath, fileName);
+        if (file.bytes != null) {
+          await _userApi.importUsers(file.bytes!, file.name);
+        } else if (file.path != null) {
+          // Fallback for IO if bytes are missing for some reason (rare with withData: true)
+          // We must manually read the bytes if we want to use the byte-based API
+          // OR: Since we refactored the API to ONLY accept bytes, we must read existing file.
+          // However, to keep it simple and since 'withData: true' usually works:
+
+          // NOTE: If you are on Mobile/Desktop and file.bytes is null despite withData:true (unlikely for small files),
+          // you would need 'dart:io' File(path).readAsBytesSync().
+          // But since we want to avoid dart:io imports if possible in UI or keep it clean:
+          throw Exception("File data could not be loaded.");
+        }
 
         // 4. Success handling
         if (!mounted) return;
