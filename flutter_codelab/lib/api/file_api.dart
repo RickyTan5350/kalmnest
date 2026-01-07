@@ -56,36 +56,17 @@ class FileApi {
         print('SUCCESS: File saved. JSON: $json');
 
         // Handle URL Construction
-        String incomingUrl = json['file_url'];
-        String relativePath;
+        String rawUrl = json['file_url'];
         String fullUrl;
 
-        if (incomingUrl.startsWith('http')) {
-          // If server returns absolute URL, extract the path
-          // e.g. http://localhost/storage/foo.png -> /storage/foo.png
-          try {
-            final uri = Uri.parse(incomingUrl);
-            relativePath = uri.path; // This gives /storage/foo.png
-          } catch (e) {
-            // Fallback if parse fails
-            relativePath = incomingUrl;
-          }
+        // If Laravel returns a relative path (e.g. /storage/...), prepend the domain
+        if (!rawUrl.startsWith('http')) {
+          fullUrl = '$_domain$rawUrl';
         } else {
-          // It's already relative (e.g. /storage/foo.png or storage/foo.png)
-          relativePath = incomingUrl.startsWith('/')
-              ? incomingUrl
-              : '/$incomingUrl';
+          fullUrl = rawUrl;
         }
 
-        // Always construct full URL using our local configured domain
-        // This ensures it works even if server returned an internal container URL
-        fullUrl = '$_domain$relativePath';
-
-        return {
-          'id': json['file_id'],
-          'url': fullUrl, // For immediate display in UI
-          'raw_url': relativePath, // For saving in Markdown (PORTABLE)
-        };
+        return {'id': json['file_id'], 'url': fullUrl, 'raw_url': rawUrl};
       } else {
         // Now you will see the REAL error message here (e.g. "File too large")
         print('FAILED: ${response.body}');
@@ -102,9 +83,7 @@ class FileApi {
     required String title,
     required bool visibility,
     required String topic,
-    File? markdownFile, // Made optional
-    String? fileContent, // New for Web/Direct content
-    String? fileName, // Required if fileContent is used
+    required File markdownFile,
     required List<String> attachmentIds,
   }) async {
     var uri = Uri.parse('$_baseUrl/notes/new');
@@ -121,13 +100,7 @@ class FileApi {
       request.fields['attachment_ids[$i]'] = attachmentIds[i];
     }
 
-    if (fileContent != null && fileName != null) {
-      // WEB/Direct String Implementation
-      request.files.add(
-        http.MultipartFile.fromString('file', fileContent, filename: fileName),
-      );
-    } else if (markdownFile != null && await markdownFile.exists()) {
-      // Old Mobile/File Implementation
+    if (await markdownFile.exists()) {
       request.files.add(
         await http.MultipartFile.fromPath('file', markdownFile.path),
       );
