@@ -5,7 +5,7 @@
     ],
     "inline.html": [
         "inline.html"
-    ],  
+    ],
     "head.html": [
         "head.html",
         "body.html"
@@ -14,11 +14,8 @@
         "TukarWarna.html",
         "JajaranTeks.html",
         "BayangTeks.html",
-        "KeluargaFon.html",
         "SaizFon.html",
         "StailFon.html"
-        
-       
     ],
     "WarnaLatarBelakang.html": [
         "WarnaLatarBelakang.html"
@@ -44,9 +41,5 @@
     "Position.html": [
         "Position.html",
         "Position2.html"
-    ]   
-
-
-    
-    
+    ]
 }

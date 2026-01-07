@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:code_play/admin_teacher/widgets/note/file_helper.dart';
@@ -362,14 +363,16 @@ class _CreateNotePageState extends State<CreateNotePage> {
     final String fileName =
         '${_noteTitleController.text.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_').toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}.md';
 
-    FileHelper output = FileHelper(fileName: fileName, folderName: 'notes');
-
     try {
-      // 1. Create Markdown File Locally
-      final File markdownFile = await output.writeStringToFile(
-        content: fileContent,
-        fileName: fileName,
-      );
+      // 1. Create Markdown File Locally (Only on Mobile)
+      File? markdownFile;
+      if (!kIsWeb) {
+        FileHelper output = FileHelper(fileName: fileName, folderName: 'notes');
+        markdownFile = await output.writeStringToFile(
+          content: fileContent,
+          fileName: fileName,
+        );
+      }
 
       // 2. Collect IDs of successfully uploaded files
       List<String> attachmentIds = _attachments
@@ -383,6 +386,8 @@ class _CreateNotePageState extends State<CreateNotePage> {
         visibility: _noteVisibility,
         topic: _selectedTopic!,
         markdownFile: markdownFile,
+        fileContent: kIsWeb ? fileContent : null,
+        fileName: kIsWeb ? fileName : null,
         attachmentIds: attachmentIds,
       );
 
@@ -553,9 +558,18 @@ class _CreateNotePageState extends State<CreateNotePage> {
                         'gif',
                       ].contains(item.localFile.extension?.toLowerCase());
                       if (item.publicUrl != null) {
+                        // FORCE "pictures/" format relative to note folder
+                        // The rawUrl returns "/storage/temp/..." or "/storage/notes/pictures/..."
+                        // We want to force the Markdown to say "pictures/filename.ext"
+                        // so that when saved, the backend moves it there and it resolves correctly.
+
+                        // Use the filename from the server response if available (in case of rename),
+                        // otherwise local name. But item.localFile.name is reliable enough for creation flow.
+                        final ckFileName = item.localFile.name;
+
                         _insertMarkdownLink(
                           item.localFile.name,
-                          item.rawUrl ?? item.publicUrl!,
+                          'pictures/$ckFileName',
                           isImage,
                         );
                         widget.showSnackBar(
@@ -648,6 +662,40 @@ class _CreateNotePageState extends State<CreateNotePage> {
                             return null;
                           },
                           customWidgetBuilder: (element) {
+                            if (element.localName == 'img') {
+                              final src = element.attributes['src'] ?? '';
+                              if (src.startsWith('pictures/')) {
+                                // Find matching attachment
+                                final fileName = src.replaceFirst(
+                                  'pictures/',
+                                  '',
+                                );
+                                try {
+                                  // Look for fuzzy match on name
+                                  final attachment = _attachments.firstWhere(
+                                    (a) => a.localFile.name == fileName,
+                                  );
+
+                                  if (attachment.localFile.bytes != null) {
+                                    // Web / Memory
+                                    return Image.memory(
+                                      attachment.localFile.bytes!,
+                                      fit: BoxFit.contain,
+                                    );
+                                  } else if (attachment.localFile.path !=
+                                      null) {
+                                    // Mobile / Desktop
+                                    return Image.file(
+                                      File(attachment.localFile.path!),
+                                      fit: BoxFit.contain,
+                                    );
+                                  }
+                                } catch (_) {
+                                  // Not found in uploads, let it fail or show placeholder
+                                }
+                              }
+                            }
+
                             if (element.localName == 'pre' &&
                                 element.children.isNotEmpty &&
                                 element.children.first.localName == 'code') {

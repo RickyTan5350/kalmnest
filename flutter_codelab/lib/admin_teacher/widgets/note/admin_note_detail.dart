@@ -646,19 +646,39 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
                         ? src
                         : "${ApiConstants.domain}/storage/notes/pictures/$src"));
 
-        // Fallback network URL with topic if primary fails
+        // Fallback 1: Topic folder
         final topicNetworkUrl = src.startsWith('pictures/')
             ? "${ApiConstants.domain}/storage/notes/$_currentTopic/$src"
+            : null;
+
+        // Fallback 2: Direct storage (legacy/flat structure)
+        final directStorageUrl = src.startsWith('pictures/')
+            ? "${ApiConstants.domain}/storage/$src"
             : null;
 
         return Image.network(
           networkUrl,
           errorBuilder: (context, error, stackTrace) {
+            print('DEBUG: Failed to load primary URL: $networkUrl');
+
             if (topicNetworkUrl != null) {
               return Image.network(
                 topicNetworkUrl,
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildErrorWidget(fileName),
+                errorBuilder: (context, error, stackTrace) {
+                  print('DEBUG: Failed to load topic URL: $topicNetworkUrl');
+                  if (directStorageUrl != null) {
+                    return Image.network(
+                      directStorageUrl,
+                      errorBuilder: (context, error, stackTrace) {
+                        print(
+                          'DEBUG: Failed to load direct storage URL: $directStorageUrl',
+                        );
+                        return _buildErrorWidget(fileName);
+                      },
+                    );
+                  }
+                  return _buildErrorWidget(fileName);
+                },
               );
             }
             return _buildErrorWidget(fileName);
@@ -681,6 +701,11 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         return originalPath;
       } catch (_) {}
     }
+
+    // WEB FIX: Dynamic uploads (pictures/...) are NOT in the asset bundle.
+    // If we are on web and it's not an explicit 'assets/' path (checked above),
+    // stop here to avoid 404 errors in the console from rootBundle.load().
+    if (kIsWeb) return null;
 
     // 1. Try flattened global path
     final flattened = 'assets/www/pictures/$fileName';
