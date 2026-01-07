@@ -332,15 +332,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String deleteUsersConfirmation(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other:
-          'Are you sure you want to delete $count users? This action cannot be undone.',
-      one:
-          'Are you sure you want to delete 1 user? This action cannot be undone.',
-    );
-    return '$_temp0';
+    return 'Are you sure you want to delete $count user(s)? This action cannot be undone.';
   }
 
   @override

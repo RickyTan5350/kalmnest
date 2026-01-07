@@ -66,12 +66,10 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: ButtonStyle(
-              foregroundColor: WidgetStateProperty.all(
-                Theme.of(context).colorScheme.error,
-              ),
+            child: Text(
+              l10n.delete,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            child: Text(l10n.delete),
           ),
         ],
       ),

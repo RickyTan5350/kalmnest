@@ -151,7 +151,7 @@
   },
   "createUser": "Create User",
   "deleteUsers": "Delete Users",
-  "deleteUsersConfirmation": "{count, plural, =1{Are you sure you want to delete 1 user? This action cannot be undone.} other{Are you sure you want to delete {count} users? This action cannot be undone.}}",
+  "deleteUsersConfirmation": "Are you sure you want to delete {count} user(s)? This action cannot be undone.",
   "@deleteUsersConfirmation": {
     "placeholders": {
       "count": {

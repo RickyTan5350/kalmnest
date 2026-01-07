@@ -643,15 +643,20 @@ class _GamePageState extends State<GamePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Level'),
-        content: const Text('Are you sure you want to delete this level?'),
+        title: const Text('Delete Level?'),
+        content: const Text(
+          'Are you sure you want to delete 1 level(s)? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             child: const Text('Cancel'),
             onPressed: () => Navigator.pop(context),
           ),
           TextButton(
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
             onPressed: () {
               Navigator.pop(context);
               deleteLevel(level.levelId!);

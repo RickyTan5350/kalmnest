@@ -115,21 +115,21 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Delete Notes"),
+        title: const Text("Delete Notes?"),
         content: Text(
-          "Are you sure you want to delete ${_selectedIds.length} notes?",
+          "Are you sure you want to delete ${_selectedIds.length} note(s)? This action cannot be undone.",
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text("Cancel"),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+            child: Text(
+              "Delete",
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            child: const Text("Delete"),
           ),
         ],
       ),
@@ -630,4 +630,3 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
     );
   }
 }
-

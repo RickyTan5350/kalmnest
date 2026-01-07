@@ -273,12 +273,12 @@ class UserListContentState extends State<UserListContent> {
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(AppLocalizations.of(context)!.cancel),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+            child: Text(
+              AppLocalizations.of(context)!.delete,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),

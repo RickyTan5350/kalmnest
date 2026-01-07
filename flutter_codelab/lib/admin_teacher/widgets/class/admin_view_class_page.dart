@@ -61,12 +61,10 @@ class _AdminViewClassPageState extends State<AdminViewClassPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: ButtonStyle(
-              foregroundColor: WidgetStateProperty.all(
-                Theme.of(context).colorScheme.error,
-              ),
+            child: Text(
+              l10n.delete,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            child: Text(l10n.delete),
           ),
         ],
       ),

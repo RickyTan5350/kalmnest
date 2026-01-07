@@ -276,12 +276,12 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
               onPressed: () => Navigator.pop(context, false),
               child: Text(l10n.cancel),
             ),
-            FilledButton(
+            TextButton(
               onPressed: () => Navigator.pop(context, true),
-              style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error,
+              child: Text(
+                l10n.remove,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-              child: Text(l10n.remove),
             ),
           ],
         );

@@ -695,7 +695,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteUsersConfirmation.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{Are you sure you want to delete 1 user? This action cannot be undone.} other{Are you sure you want to delete {count} users? This action cannot be undone.}}'**
+  /// **'Are you sure you want to delete {count} user(s)? This action cannot be undone.'**
   String deleteUsersConfirmation(int count);
 
   /// No description provided for @deletingUsers.
