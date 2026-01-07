@@ -275,6 +275,7 @@ class _RunCodePageState extends State<RunCodePage> {
 
     // 2. Determine files to load
     List<String> filesToLoad = [];
+    bool needsContentMatching = false;
 
     if (_visibleFilesManifest != null && _visibleFilesManifest!.isNotEmpty) {
       // Group-Based Logic
@@ -288,7 +289,23 @@ class _RunCodePageState extends State<RunCodePage> {
           );
         }
       }
-      // Legacy Logic
+      // If we don't know the filename, we must load ALL and find the match
+      else if (widget.initialFileName == null) {
+        needsContentMatching = true;
+        Set<String> uniqueFiles = {};
+        _visibleFilesManifest!.forEach((key, value) {
+          if (value is List) {
+            uniqueFiles.addAll(value.map((e) => e.toString()));
+          } else {
+            uniqueFiles.add(key);
+          }
+        });
+        filesToLoad = uniqueFiles.toList();
+        print(
+          "DEBUG WEB: Unknown filename. Loading ALL candidates for matching: $filesToLoad",
+        );
+      }
+      // Legacy Logic (Fallback)
       else {
         Set<String> uniqueFiles = {};
         _visibleFilesManifest!.forEach((key, value) {
@@ -299,7 +316,7 @@ class _RunCodePageState extends State<RunCodePage> {
           }
         });
         filesToLoad = uniqueFiles.toList();
-        print("DEBUG WEB: Loading All Manifest Files: $filesToLoad");
+        print("DEBUG WEB: Loading All Manifest Files (Legacy): $filesToLoad");
       }
     } else {
       // Fallback: If no manifest, try to list all files in directory from server
@@ -313,6 +330,7 @@ class _RunCodePageState extends State<RunCodePage> {
           final listData = jsonDecode(listResp.body);
           if (listData['files'] is List) {
             filesToLoad = List<String>.from(listData['files']);
+            needsContentMatching = (widget.initialFileName == null);
             print("DEBUG WEB: Discovered Files: $filesToLoad");
           }
         }
@@ -371,6 +389,61 @@ class _RunCodePageState extends State<RunCodePage> {
 
       if (loadedFiles.isNotEmpty) {
         if (!mounted) return;
+
+        // --- CONTENT MATCHING LOGIC ---
+        if (needsContentMatching) {
+          String? detectedRealName;
+          // Normalize input code
+          final normInput = widget.initialCode.replaceAll('\r\n', '\n').trim();
+
+          for (var f in loadedFiles) {
+            final normF = f.content.replaceAll('\r\n', '\n').trim();
+            if (normF == normInput) {
+              detectedRealName = f.name;
+              print(
+                "DEBUG WEB: Content Match Found! Real Name: $detectedRealName",
+              );
+              break;
+            }
+          }
+
+          if (detectedRealName != null &&
+              _visibleFilesManifest != null &&
+              _visibleFilesManifest!.containsKey(detectedRealName)) {
+            // We found the real name, and it has a group rule.
+            // Re-filter loadedFiles to ONLY show that group.
+            final group = _visibleFilesManifest![detectedRealName];
+            if (group is List) {
+              final allowedSet = group.map((e) => e.toString()).toSet();
+              // Ensure the main file is included
+              allowedSet.add(detectedRealName);
+
+              final filteredFiles = loadedFiles
+                  .where((f) => allowedSet.contains(f.name))
+                  .toList();
+
+              // Put main file first
+              final mainFile = filteredFiles.firstWhere(
+                (f) => f.name == detectedRealName,
+              );
+              filteredFiles.remove(mainFile);
+              filteredFiles.insert(0, mainFile);
+
+              loadedFiles = filteredFiles;
+              print("DEBUG WEB: Filtered to group: ${allowedSet.toList()}");
+            }
+          } else if (detectedRealName != null) {
+            // No specific rule, but we know the main file. Put it first.
+            final mainFile = loadedFiles.firstWhere(
+              (f) => f.name == detectedRealName,
+            );
+            loadedFiles.remove(mainFile);
+            loadedFiles.insert(0, mainFile);
+          }
+        }
+
+        // -----------------------------
+
         setState(() {
           _files = loadedFiles;
           if (widget.initialFileName != null) {
