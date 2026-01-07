@@ -266,6 +266,38 @@ class ClassApi {
     }
   }
 
+  /// Bulk delete classes
+  static Future<Map<String, dynamic>> deleteClasses(List<String> classIds) async {
+    final uri = Uri.parse('$base/classes/bulk-delete');
+    final body = jsonEncode({'class_ids': classIds});
+
+    try {
+      final headers = await _getAuthHeaders(requiresAuth: true);
+      final response = await http.post(uri, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        return {
+          'success': true,
+          'deleted_count': decoded['deleted_count'] ?? classIds.length,
+          'message': decoded['message'] ?? 'Classes deleted successfully',
+        };
+      } else {
+        final decoded = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': decoded['message'] ?? 'Failed to delete classes',
+        };
+      }
+    } catch (e) {
+      print("Error bulk deleting classes: $e");
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
   // ------------------------------------------------------------------------
   // ⭐ NEW METHOD — Fetch Total Class Count (No existing code touched)
   // ------------------------------------------------------------------------

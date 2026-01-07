@@ -16,7 +16,7 @@ class FileApi {
     PlatformFile file, {
     String? folderName,
   }) async {
-    if (file.path == null) return null;
+    if (file.path == null && file.bytes == null) return null;
 
     var uri = Uri.parse('$_baseUrl/files/upload-independent');
     var request = http.MultipartRequest('POST', uri);
@@ -28,13 +28,23 @@ class FileApi {
       request.fields['folder'] = folderName.trim();
     }
 
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        'file',
-        file.path!,
-        filename: file.name,
-      ),
-    );
+    if (file.bytes != null) {
+      // WEB COMPATIBLE
+      request.files.add(
+        http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name),
+      );
+    } else if (file.path != null) {
+      // MOBILE COMPATIBLE (Fallback)
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          file.path!,
+          filename: file.name,
+        ),
+      );
+    } else {
+      return null;
+    }
 
     try {
       print('DEBUG: Uploading ${file.name} immediately...');
@@ -56,7 +66,7 @@ class FileApi {
           fullUrl = rawUrl;
         }
 
-        return {'id': json['file_id'], 'url': fullUrl};
+        return {'id': json['file_id'], 'url': fullUrl, 'raw_url': rawUrl};
       } else {
         // Now you will see the REAL error message here (e.g. "File too large")
         print('FAILED: ${response.body}');
@@ -112,4 +122,3 @@ class FileApi {
     }
   }
 }
-

@@ -275,4 +275,36 @@ class FileController extends Controller
         
         return response()->json(['message' => 'File not found'], 404);
     }
+
+    public function proxy(Request $request)
+    {
+        $url = $request->query('url');
+        if (!$url) {
+            return response()->json(['error' => 'URL required'], 400);
+        }
+
+        // Parse path from URL
+        $path = parse_url($url, PHP_URL_PATH); // e.g. /storage/assets/file.png
+        
+        // Remove /storage/ prefix to get disk relative path
+        // Note: This assumes standard Laravel storage link structure
+        $relativePath = preg_replace('/^\/?storage\//', '', $path);
+        $relativePath = urldecode($relativePath); // Decode spaces etc
+        
+        // Security check
+        if (strpos($relativePath, '..') !== false) {
+             return response()->json(['error' => 'Invalid path'], 400);
+        }
+
+        if (Storage::disk('public')->exists($relativePath)) {
+            $fullPath = Storage::disk('public')->path($relativePath);
+            return response()->file($fullPath, [
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+                'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With',
+            ]);
+        }
+
+        return response()->json(['error' => 'File not found', 'path' => $relativePath], 404);
+    }
 }

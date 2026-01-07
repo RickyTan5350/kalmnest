@@ -1,0 +1,14 @@
+Starting Asset Synchronization...
+Backend Dir: D:\Github_Project\kalmnest\backend_services\database\seed_data/notes
+Frontend Dir: d:\Github_Project\kalmnest\flutter_codelab\assets\www
+
+=== Syncing Frontend -> Backend ===
+
+Skipping Frontend folder '3.2.3 Penggunaan Bahasa Penskripan Pelayan untuk Membina Laman Web yang Unik bagi Setiap Pengguna': No matching Backend note found.
+
+=== Syncing Backend -> Frontend ===
+
+
+=== Syncing Backend -> Public Storage ===
+
+Asset Synchronization Completed!

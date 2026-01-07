@@ -6,9 +6,8 @@ import 'package:code_play/admin_teacher/widgets/note/file_helper.dart';
 import 'package:code_play/admin_teacher/widgets/note/file_picker.dart';
 import 'package:code_play/admin_teacher/widgets/note/file_upload_zone.dart';
 
-import 'package:code_play/models/note_data.dart';
-
 import 'package:code_play/api/file_api.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 // --- NEW IMPORTS FOR HTML RENDERING ---
 import 'package:markdown/markdown.dart' as md;
@@ -141,6 +140,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
               localFile: _attachments[i].localFile,
               serverFileId: result['id'],
               publicUrl: result['url'],
+              rawUrl: result['raw_url'],
               isUploading: false,
             );
           } else {
@@ -555,7 +555,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                       if (item.publicUrl != null) {
                         _insertMarkdownLink(
                           item.localFile.name,
-                          item.publicUrl!,
+                          item.rawUrl ?? item.publicUrl!,
                           isImage,
                         );
                         widget.showSnackBar(
@@ -633,6 +633,7 @@ class _CreateNotePageState extends State<CreateNotePage> {
                         ),
                         child: HtmlWidget(
                           md.markdownToHtml(_noteMarkdownController.text),
+                          baseUrl: Uri.tryParse(ApiConstants.domain),
                           textStyle: TextStyle(
                             color: colorScheme.onSurface,
                             fontSize: 16,

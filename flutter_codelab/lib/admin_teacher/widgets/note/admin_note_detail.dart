@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // Required for downloading images
+import 'package:flutter/foundation.dart';
 import 'package:code_play/admin_teacher/widgets/note/admin_edit_note.dart';
 import 'package:code_play/api/note_api.dart';
-import 'package:code_play/admin_teacher/widgets/note/run_code_page.dart';
+import 'package:code_play/admin_teacher/widgets/note/run_code_launcher.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -15,8 +17,9 @@ import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
 import 'package:code_play/utils/brand_color_extension.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
+
 import 'quiz_widget.dart';
+import 'package:code_play/constants/api_constants.dart';
 
 class AdminNoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -287,6 +290,12 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
   }
 
   Future<void> _downloadPdf() async {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PDF download is not supported on Web.')),
+      );
+      return;
+    }
     // Show a different loading indicator for PDF download
     setState(() => _isDownloadingPdf = true);
 
@@ -384,18 +393,66 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
       final imageUrl = match.group(2); // Group 2 is the URL
       if (imageUrl != null) {
         try {
-          // Download image bytes
-          debugPrint("DEBUG PDF: Downloading image: $imageUrl");
-          final response = await http.get(Uri.parse(imageUrl));
-          debugPrint(
-            "DEBUG PDF: Image download status: ${response.statusCode}",
-          );
-          if (response.statusCode == 200) {
-            final imageBytes = response.bodyBytes;
+          Uint8List? imageBytes;
+
+          // A. Try loading as a local asset first
+          final fileName = imageUrl.split('/').last;
+          final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+
+          // Try original path
+          try {
+            final data = await rootBundle.load(imageUrl);
+            imageBytes = data.buffer.asUint8List();
+          } catch (_) {}
+
+          // Search folders if not found
+          if (imageBytes == null) {
+            // 1. Try flattened global path
+            try {
+              final data = await rootBundle.load(
+                'assets/www/pictures/$fileName',
+              );
+              imageBytes = data.buffer.asUint8List();
+            } catch (_) {}
+          }
+
+          if (imageBytes == null) {
+            // 2. Search folders (backward compatibility)
+            for (final folder in folders) {
+              try {
+                final data = await rootBundle.load(
+                  'assets/www/pictures/$folder/$fileName',
+                );
+                imageBytes = data.buffer.asUint8List();
+                break;
+              } catch (_) {}
+            }
+          }
+
+          // B. Fallback to network if not found in assets
+          if (imageBytes == null) {
+            final networkUrl = imageUrl.startsWith('http')
+                ? imageUrl
+                : (imageUrl.startsWith('/')
+                      ? "${ApiConstants.domain}$imageUrl"
+                      : (imageUrl.startsWith('pictures/')
+                            ? "${ApiConstants.domain}/storage/notes/$imageUrl"
+                            : "${ApiConstants.domain}/storage/$imageUrl"));
+
+            debugPrint(
+              "DEBUG PDF: Downloading image from network: $networkUrl",
+            );
+            final response = await http.get(Uri.parse(networkUrl));
+            if (response.statusCode == 200) {
+              imageBytes = response.bodyBytes;
+            }
+          }
+
+          if (imageBytes != null) {
             widgets.add(
               pw.Container(
                 alignment: pw.Alignment.center,
-                height: 200, // Constrain height to prevent page overflow issues
+                height: 200,
                 child: pw.Image(
                   pw.MemoryImage(imageBytes),
                   fit: pw.BoxFit.contain,
@@ -406,7 +463,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
           } else {
             widgets.add(
               pw.Text(
-                "[Image failed to load]",
+                "[Image failed to load: $imageUrl]",
                 style: const pw.TextStyle(color: PdfColors.red),
               ),
             );
@@ -414,7 +471,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         } catch (e) {
           widgets.add(
             pw.Text(
-              "[Error loading image]",
+              "[Error loading image: $e]",
               style: const pw.TextStyle(color: PdfColors.red),
             ),
           );
@@ -442,12 +499,79 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
   Future<String> _loadLinkedFile(String fileName) async {
     try {
-      final cwd = Directory.current;
-      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
-      // sanitize title for path: replace newlines with space and trim
       final cleanTitle = _currentTitle
           .replaceAll(RegExp(r'[\r\n]+'), ' ')
           .trim();
+
+      // WEB IMPLEMENTATION
+      // WEB IMPLEMENTATION
+      if (kIsWeb) {
+        try {
+          // 1. Load Manifest
+          final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+          final assets = manifest.listAssets();
+
+          // 2. Find matching folder
+          // Clean title: "My Note" -> "mynote"
+          final cleanRaw = Uri.decodeFull(
+            _currentTitle,
+          ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+          // Filter keys starting with assets/www
+          final wwwKeys = assets.where((k) => k.startsWith('assets/www/'));
+
+          String? resolvedPath;
+
+          // Check direct match first (optimization)
+          // Note: Manifest keys might be URL encoded
+
+          // Iterate to find folder match
+          // We need to group by folder, or just check each file path?
+          // Checking each file path is easier if we know what file we want.
+
+          for (var key in wwwKeys) {
+            // key: assets/www/Some%20Fold/file.html
+            final parts = key.split('/');
+            if (parts.length > 3) {
+              // assets, www, FolderName, [subfolders?], fileName
+              // Let's assume structure is assets/www/FolderName/fileName
+              final folderName = parts[2];
+              final fName = parts.last;
+
+              // Compare filename case-insensitively
+              if (fName.toLowerCase() == fileName.toLowerCase()) {
+                // Potential match, check folder
+                final decodedFolder = Uri.decodeFull(folderName);
+                final cleanFolder = decodedFolder.toLowerCase().replaceAll(
+                  RegExp(r'[^a-z0-9]'),
+                  '',
+                );
+
+                print("DEBUG: Checking $key");
+                print("DEBUG: Folder Clean '$cleanFolder' vs Raw '$cleanRaw'");
+
+                if (cleanFolder == cleanRaw) {
+                  resolvedPath = key;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (resolvedPath != null) {
+            final content = await rootBundle.loadString(resolvedPath);
+            return content;
+          }
+
+          return "File not found (Web): $fileName";
+        } catch (e) {
+          return "Error reading file (Web): $e";
+        }
+      }
+
+      // MOBILE IMPLEMENTATION
+      final cwd = Directory.current;
+      final assetsWwwPath = p.join(cwd.path, 'assets', 'www');
       final file = File(p.join(assetsWwwPath, cleanTitle, fileName));
       debugPrint(
         "Debug: Trying to load asset using clean title: '$cleanTitle', path: ${file.path}",
@@ -456,15 +580,141 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
         debugPrint("Debug: Asset found: ${file.path}");
         final content = await file.readAsString();
         // Simple HTML escape for display
-        return content
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;');
+        return content;
       }
       return "File not found: $fileName (in $_currentTitle)";
     } catch (e) {
       return "Error reading file: $e";
     }
+  }
+
+  String _processMarkdown(String content) {
+    debugPrint("DEBUG processMarkdown: Raw content length: ${content.length}");
+    final domain = ApiConstants.domain;
+
+    // 1. Resolve relative /storage/ paths to domain
+    String processed = content.replaceAll('](/storage/', ']($domain/storage/');
+
+    // 2. Resolve relative pictures/ paths
+    processed = processed.replaceAllMapped(
+      RegExp(r'!\[(.*?)\]\((?!(http|assets|file))(.*?)\)'),
+      (match) {
+        final alt = match.group(1);
+        final path = match.group(3);
+        if (path != null && !path.startsWith('/')) {
+          return '![$alt]($path)';
+        }
+        return match.group(0)!;
+      },
+    );
+
+    return processed;
+  }
+
+  Widget _buildImageWidget(String src) {
+    if (src.startsWith('http')) {
+      return Image.network(
+        src,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.red),
+      );
+    }
+
+    final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+    final fileName = src.split('/').last;
+
+    return FutureBuilder<String?>(
+      future: _resolveLocalAsset(src, fileName, folders),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final resolvedPath = snapshot.data;
+        if (resolvedPath != null) {
+          return Image.asset(resolvedPath);
+        }
+
+        final networkUrl = src.startsWith('/')
+            ? "${ApiConstants.domain}$src"
+            : (src.startsWith('pictures/')
+                  ? "${ApiConstants.domain}/storage/notes/$src"
+                  : (src.startsWith('http')
+                        ? src
+                        : "${ApiConstants.domain}/storage/notes/pictures/$src"));
+
+        // Fallback network URL with topic if primary fails
+        final topicNetworkUrl = src.startsWith('pictures/')
+            ? "${ApiConstants.domain}/storage/notes/$_currentTopic/$src"
+            : null;
+
+        return Image.network(
+          networkUrl,
+          errorBuilder: (context, error, stackTrace) {
+            if (topicNetworkUrl != null) {
+              return Image.network(
+                topicNetworkUrl,
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildErrorWidget(fileName),
+              );
+            }
+            return _buildErrorWidget(fileName);
+          },
+        );
+      },
+    );
+  }
+
+  Future<String?> _resolveLocalAsset(
+    String originalPath,
+    String fileName,
+    List<String> folders,
+  ) async {
+    // A. Only try the original path if it looks like a full asset path
+    // This avoids 404 noise on Web when using relative paths in Markdown
+    if (originalPath.startsWith('assets/')) {
+      try {
+        await rootBundle.load(originalPath);
+        return originalPath;
+      } catch (_) {}
+    }
+
+    // 1. Try flattened global path
+    final flattened = 'assets/www/pictures/$fileName';
+    try {
+      await rootBundle.load(flattened);
+      return flattened;
+    } catch (_) {}
+
+    // 2. Try topic-specific subfolder in flattened pictures
+    final topicFlattened = 'assets/www/pictures/$_currentTopic/$fileName';
+    try {
+      await rootBundle.load(topicFlattened);
+      return topicFlattened;
+    } catch (_) {}
+
+    // 3. Search in known topic subfolders (backward compatibility)
+    for (final folder in folders) {
+      final candidate = 'assets/www/pictures/$folder/$fileName';
+      try {
+        await rootBundle.load(candidate);
+        return candidate;
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Widget _buildErrorWidget(String fileName) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.broken_image, color: Colors.red),
+        Text("Failed to load: $fileName", style: const TextStyle(fontSize: 10)),
+      ],
+    );
   }
 
   Widget _buildCodeBlockUI(
@@ -543,7 +793,7 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
     _matchKeys = [];
 
     String htmlContent = md.markdownToHtml(
-      _markdownContent,
+      _processMarkdown(_markdownContent),
       extensionSet: md.ExtensionSet.gitHubFlavored,
     );
 
@@ -621,24 +871,17 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
               future: _loadLinkedFile(linkedFileName),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
-                  final escapedContent = snapshot.data!;
-                  // Wrap in pre for styling consistency
+                  final rawContent = snapshot.data!;
+                  // Escape for display in HtmlWidget
+                  final escapedForDisplay = rawContent
+                      .replaceAll('&', '&amp;')
+                      .replaceAll('<', '&lt;')
+                      .replaceAll('>', '&gt;');
+
                   final html =
-                      '<pre style="margin: 0; padding: 0;">$escapedContent</pre>';
-                  // Raw content is unescaped for running
-                  final raw = escapedContent
-                      .replaceAll('&lt;', '<')
-                      .replaceAll('&gt;', '>')
-                      .replaceAll('&amp;', '&');
-                  // Wait, loadLinkedFile returned escaped!
-                  // Actually I should have _loadLinkedFile return RAW and then escape it for display.
-                  // I'll fix that.
+                      '<pre style="margin: 0; padding: 0;">$escapedForDisplay</pre>';
 
-                  // Re-decode for running, or just load again?
-                  // Sticking to "load returns escaped" is weird.
-                  // Better: load returns raw.
-
-                  return _buildCodeBlockUI(html, raw, linkedFileName);
+                  return _buildCodeBlockUI(html, rawContent, linkedFileName);
                 }
                 return const SizedBox(
                   height: 50,
@@ -656,48 +899,8 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
         if (element.localName == 'img') {
           final src = element.attributes['src'];
-          debugPrint("DEBUG Admin HtmlWidget: Rendering Image with src: $src");
           if (src != null) {
-            // 1. Check for direct local assets
-            if (src.startsWith('assets/')) {
-              return Image.asset(src);
-            }
-
-            // 2. Check for Storage URLs that should be local assets
-            if (src.contains('/storage/notes/')) {
-              try {
-                final uri = Uri.parse(src);
-                final filename = uri.pathSegments.last;
-                // Remove timestamp prefix
-                final cleanFilename = filename.replaceFirst(
-                  RegExp(r'^\d+_'),
-                  '',
-                );
-
-                // Map topic to folder
-                String folder = 'JS'; // Default or based on topic
-                if (_currentTopic == 'HTML') folder = 'HTML';
-                if (_currentTopic == 'CSS') folder = 'CSS';
-                if (_currentTopic == 'PHP') folder = 'PHP';
-
-                final assetPath = 'assets/www/pictures/$folder/$cleanFilename';
-                debugPrint(
-                  "DEBUG Admin HtmlWidget: Trying local asset: $assetPath",
-                );
-
-                return Image.asset(
-                  assetPath,
-                  errorBuilder: (context, error, stackTrace) {
-                    debugPrint(
-                      "DEBUG Admin HtmlWidget: Local asset failed ($assetPath), falling back to network",
-                    );
-                    return Image.network(src);
-                  },
-                );
-              } catch (e) {
-                debugPrint("DEBUG Admin HtmlWidget: Error parsing URL: $e");
-              }
-            }
+            return _buildImageWidget(src);
           }
         }
 

@@ -151,7 +151,7 @@
   },
   "createUser": "Create User",
   "deleteUsers": "Delete Users",
-  "deleteUsersConfirmation": "Are you sure you want to delete {count} users? This action cannot be undone.",
+  "deleteUsersConfirmation": "{count, plural, =1{Are you sure you want to delete 1 user? This action cannot be undone.} other{Are you sure you want to delete {count} users? This action cannot be undone.}}",
   "@deleteUsersConfirmation": {
     "placeholders": {
       "count": {
@@ -160,7 +160,7 @@
     }
   },
   "deletingUsers": "Deleting selected users...",
-  "deletedUsersSuccess": "Successfully deleted {count} users",
+  "deletedUsersSuccess": "{count, plural, =1{Successfully deleted 1 user} other{Successfully deleted {count} users}}",
   "@deletedUsersSuccess": {
     "placeholders": {
       "count": {
@@ -434,6 +434,30 @@
   "details": "Details",
   "refresh": "Refresh",
   "deleteClass": "Delete Class",
+  "classesSelected": "{count} Classes Selected",
+  "@classesSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteClassesConfirmation": "Are you sure you want to delete {count} class(es)? This action cannot be undone.",
+  "@deleteClassesConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "classesDeletedSuccessfully": "{count} class(es) deleted successfully!",
+  "@classesDeletedSuccessfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noName": "No Name",
   "noTeacherAssigned": "No Teacher Assigned",
   "generalInfo": "General Information",
@@ -529,6 +553,8 @@
   "createdAt": "Created At",
   "updatedAt": "Updated At",
   "assignStudentsOptional": "Assign Students (Optional)",
+  "enrollStudentsOptional": "Enroll Students (Optional)",
+  "classInformation": "Class Information",
   "studentNumber": "Student {number}",
   "@studentNumber": {
     "placeholders": {
@@ -569,5 +595,39 @@
   "reloadQuizzes": "Reload Quizzes",
   "noQuizzesAssigned": "No quizzes assigned",
   "pleaseEnterQuestion": "Please enter a question",
-  "aiLanguageNotice": "AI responds in the same language as your question"
+  "aiLanguageNotice": "AI responds in the same language as your question",
+  "deleteFeedbacksConfirmation": "Are you sure you want to delete {count} feedback(s)? This action cannot be undone.",
+  "@deleteFeedbacksConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbacksDeletedSuccessfully": "Successfully deleted {count} feedback(s).",
+  "@feedbacksDeletedSuccessfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selected": "Selected",
+  "deleteChatSessionsTitle": "Delete Chat Sessions?",
+  "deleteChatSessionsConfirmation": "Are you sure you want to delete {count} chat session(s)? This action cannot be undone.",
+  "@deleteChatSessionsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatSessionsDeletedSuccessfully": "Successfully deleted {count} chat session(s).",
+  "@chatSessionsDeletedSuccessfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }
