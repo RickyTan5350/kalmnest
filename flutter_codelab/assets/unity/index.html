@@ -106,7 +106,7 @@
 
       // Wrap Unity initialization in IIFE to allow proper scoping
       (function() {
-        var canvas = document.querySelector("#unity-canvas");
+      var canvas = document.querySelector("#unity-canvas");
         
         // Check if canvas exists
         if (!canvas) {
@@ -114,42 +114,42 @@
           return;
         }
 
-        // Shows a temporary message banner/ribbon for a few seconds, or
-        // a permanent error message on top of the canvas if type=='error'.
-        // If type=='warning', a yellow highlight color is used.
-        // Modify or remove this function to customize the visually presented
-        // way that non-critical warnings and error messages are presented to the
-        // user.
-        function unityShowBanner(msg, type) {
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
           try {
-            var warningBanner = document.querySelector("#unity-warning");
+        var warningBanner = document.querySelector("#unity-warning");
             if (!warningBanner) {
               console.warn("Unity warning banner not found");
               return;
             }
-            function updateBannerVisibility() {
+        function updateBannerVisibility() {
               if (warningBanner) {
-                warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
               }
-            }
-            var div = document.createElement('div');
+        }
+        var div = document.createElement('div');
             div.innerHTML = msg || '';
-            warningBanner.appendChild(div);
-            if (type == 'error') div.style = 'background: red; padding: 10px;';
-            else {
-              if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-              setTimeout(function() {
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
                 if (warningBanner && div.parentNode === warningBanner) {
-                  warningBanner.removeChild(div);
-                  updateBannerVisibility();
-                }
-              }, 5000);
-            }
+            warningBanner.removeChild(div);
             updateBannerVisibility();
+                }
+          }, 5000);
+        }
+        updateBannerVisibility();
           } catch (e) {
             console.error("Error in unityShowBanner:", e);
           }
-        }
+      }
 
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/unity.loader.js";
@@ -195,12 +195,12 @@
       // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
       // expected to change.
 
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          // Mobile device style: fill the whole browser client area with the game canvas:
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
           try {
-            var meta = document.createElement('meta');
-            meta.name = 'viewport';
-            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
             var head = document.getElementsByTagName('head')[0];
             if (head) {
               head.appendChild(meta);
@@ -210,37 +210,37 @@
               container.className = "unity-mobile";
             }
             if (canvas) {
-              canvas.className = "unity-mobile";
+        canvas.className = "unity-mobile";
             }
           } catch (e) {
             console.error("Error setting up mobile view:", e);
           }
 
-          // To lower canvas resolution on mobile devices to gain some
-          // performance, uncomment the following line:
-          // config.devicePixelRatio = 1;
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
 
 
-        } else {
-          // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
           try {
             if (canvas) {
-              canvas.style.width = "1280px";
-              canvas.style.height = "720px";
+        canvas.style.width = "1280px";
+        canvas.style.height = "720px";
             }
           } catch (e) {
             console.error("Error setting canvas size:", e);
           }
-        }
+      }
 
         var loadingBar = document.querySelector("#unity-loading-bar");
         if (loadingBar) {
           loadingBar.style.display = "block";
         }
 
-        var script = document.createElement("script");
-        script.src = loaderUrl;
-        script.onload = () => {
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
           try {
             if (!canvas) {
               console.error("Canvas is null, cannot create Unity instance");
@@ -254,7 +254,7 @@
               return;
             }
             
-            createUnityInstance(canvas, config, (progress) => {
+        createUnityInstance(canvas, config, (progress) => {
               try {
                 var progressBar = document.querySelector("#unity-progress-bar-full");
                 if (progressBar && typeof progress === 'number') {
@@ -263,7 +263,7 @@
               } catch (e) {
                 console.error("Error updating progress bar:", e);
               }
-            }).then((unityInstance) => {
+              }).then((unityInstance) => {
               try {
                 if (!unityInstance) {
                   console.error("Unity instance is null");
@@ -284,7 +284,7 @@
                 if (fullscreenButton && unityInstance && typeof unityInstance.SetFullscreen === 'function') {
                   fullscreenButton.onclick = () => {
                     try {
-                      unityInstance.SetFullscreen(1);
+                  unityInstance.SetFullscreen(1);
                     } catch (e) {
                       console.error("Error setting fullscreen:", e);
                     }
@@ -307,7 +307,7 @@
               } catch (e) {
                 console.error("Error handling Unity creation failure:", e);
               }
-            });
+              });
           } catch (e) {
             console.error("Error in script onload:", e);
             unityShowBanner("Script loading error: " + (e.message || e), 'error');
@@ -320,7 +320,7 @@
         };
 
         if (document.body) {
-          document.body.appendChild(script);
+      document.body.appendChild(script);
         } else {
           console.error("Document body not found, cannot load Unity script");
         }

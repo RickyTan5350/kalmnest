@@ -468,7 +468,7 @@ class _GamePageState extends State<GamePage> {
           foregroundColor: color,
           child: Icon(icon),
         ),
-        trailing: isStudent ? null : _buildAdminActions(level, iconSize: 20),
+        trailing: isStudent ? null : _buildAdminActions(level, iconSize: 28),
         onTap: () => _onLevelTap(level),
       ),
     );
@@ -569,7 +569,7 @@ class _GamePageState extends State<GamePage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _buildVisibilityBadge(level),
-                      if (!isStudent) _buildAdminActions(level, iconSize: 20),
+                      if (!isStudent) _buildAdminActions(level, iconSize: 28),
                     ],
                   ),
                 ),
@@ -605,8 +605,7 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  Widget _buildAdminActions(LevelModel level, {double iconSize = 20}) {
-    final bool isQuiz = level.levelTypeName == 'Quiz';
+  Widget _buildAdminActions(LevelModel level, {double iconSize = 28}) {
     final String role = widget.userRole.trim().toLowerCase();
     final bool isAdmin = role == 'admin';
     final bool isTeacher = role == 'teacher';
@@ -615,24 +614,13 @@ class _GamePageState extends State<GamePage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Show View Results button for all admins and teachers on quiz levels
+        // Show View Results button for all admins and teachers on all level types
+        // Teachers can view results for any level, not just their own
         if (isStaff) ...[
           IconButton(
             icon: Icon(Icons.bar_chart, color: Colors.green, size: iconSize),
-            tooltip: 'View Quiz Results',
+            tooltip: 'View Results',
             onPressed: () {
-              // Check if teacher can view this quiz (only their own)
-              final bool canViewResults = isAdmin || (isTeacher && (level.isCreatedByMe ?? false));
-              
-              if (!canViewResults) {
-                showSnackBar(
-                  context,
-                  "You can only view results for quizzes you created",
-                  Colors.orange,
-                );
-                return;
-              }
-              
               showTeacherQuizResults(context: context, level: level);
             },
             constraints: const BoxConstraints(),
@@ -683,7 +671,10 @@ class _GamePageState extends State<GamePage> {
 
     if (canEdit) {
       // Trigger Edit for Staff
-      final currentLevel = await GameAPI.fetchLevelById(level.levelId!);
+      final currentLevel = await GameAPI.fetchLevelById(
+        level.levelId!,
+        userRole: widget.userRole,
+      );
       if (currentLevel == null) {
         showSnackBar(context, "Failed to load level data", Colors.red);
         return;
@@ -700,7 +691,10 @@ class _GamePageState extends State<GamePage> {
     }
 
     // For students or staff viewing shared levels, trigger Play
-    final currentLevel = await GameAPI.fetchLevelById(level.levelId!);
+    final currentLevel = await GameAPI.fetchLevelById(
+      level.levelId!,
+      userRole: widget.userRole,
+    );
     if (currentLevel == null) {
       showSnackBar(context, "Failed to load level data", Colors.red);
       return;

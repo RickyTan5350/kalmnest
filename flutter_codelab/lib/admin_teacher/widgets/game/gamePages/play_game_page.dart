@@ -551,10 +551,11 @@ class _PlayGamePageState extends State<PlayGamePage> {
               );
 
               // After saving level file (only for level data, not win data), sync progress to server
-              // Skip if user is teacher (teachers don't need to save progress)
+              // Skip if user is teacher or admin (teachers/admins don't need to save progress)
+              final userRoleLower = widget.userRole.toLowerCase();
               if (result == true && 
                   dataType.toLowerCase().contains('level') &&
-                  widget.userRole.toLowerCase() != 'teacher') {
+                  userRoleLower != 'teacher' && userRoleLower != 'admin') {
                 // Don't await - let it run in background
                 _syncProgressToServer(levelId);
               }
@@ -578,8 +579,9 @@ class _PlayGamePageState extends State<PlayGamePage> {
               );
 
               // After saving index file, sync progress to server
-              // Skip if user is teacher (teachers don't need to save progress)
-              if (result == true && widget.userRole.toLowerCase() != 'teacher') {
+              // Skip if user is teacher or admin (teachers/admins don't need to save progress)
+              final userRoleLower = widget.userRole.toLowerCase();
+              if (result == true && userRoleLower != 'teacher' && userRoleLower != 'admin') {
                 // Don't await - let it run in background
                 _syncProgressToServer(levelId);
               }
@@ -612,8 +614,9 @@ class _PlayGamePageState extends State<PlayGamePage> {
                 indexFilesJson = null;
               }
 
-              // Skip if user is teacher (teachers don't need to save progress)
-              if (widget.userRole.toLowerCase() == 'teacher') {
+              // Skip if user is teacher or admin (teachers/admins don't need to save progress)
+              final userRoleLower = widget.userRole.toLowerCase();
+              if (userRoleLower == 'teacher' || userRoleLower == 'admin') {
                 result = true; // Return success but don't actually save
               } else {
                 // Directly call GameAPI - no localStorage
@@ -640,8 +643,9 @@ class _PlayGamePageState extends State<PlayGamePage> {
               String? userId =
                   args.length >= 2 ? args[1] as String? : null;
 
-              // Skip if user is teacher (teachers don't need to complete levels)
-              if (widget.userRole.toLowerCase() == 'teacher') {
+              // Skip if user is teacher or admin (teachers/admins don't need to complete levels)
+              final userRoleLower = widget.userRole.toLowerCase();
+              if (userRoleLower == 'teacher' || userRoleLower == 'admin') {
                 result = true; // Return success but don't actually save
               } else {
                 // Get userId if not provided
@@ -709,10 +713,11 @@ class _PlayGamePageState extends State<PlayGamePage> {
 
   /// Build savedData JSON from local storage and call GameAPI.saveStudentProgress
   /// This is a workaround since saveStudentProgress handler doesn't work reliably
-  /// Skip if user is teacher (teachers don't need to save progress)
+  /// Skip if user is teacher or admin (teachers/admins don't need to save progress)
   Future<void> _syncProgressToServer(String levelId) async {
-    // Skip if user is teacher
-    if (widget.userRole.toLowerCase() == 'teacher') {
+    // Skip if user is teacher or admin
+    final userRoleLower = widget.userRole.toLowerCase();
+    if (userRoleLower == 'teacher' || userRoleLower == 'admin') {
       return;
     }
     

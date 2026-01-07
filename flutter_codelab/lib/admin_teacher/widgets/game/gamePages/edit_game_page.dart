@@ -122,11 +122,11 @@ class _EditGamePageState extends State<EditGamePage> {
 
       // Clear index files for this level to ensure a fresh preview
       try {
-        if (widget.level.levelId != null) {
-          await _levelStorage.clearIndexFiles(
-            levelId: widget.level.levelId!,
-            userId: userId,
-          );
+      if (widget.level.levelId != null) {
+        await _levelStorage.clearIndexFiles(
+          levelId: widget.level.levelId!,
+          userId: userId,
+        );
         }
       } catch (e) {
         // Continue anyway - not critical
@@ -138,8 +138,8 @@ class _EditGamePageState extends State<EditGamePage> {
 
       // Start preview server for local storage base path
       try {
-        final storageBasePath = await _levelStorage.getBasePath(userId: userId);
-        await _previewServer!.start(path: storageBasePath);
+      final storageBasePath = await _levelStorage.getBasePath(userId: userId);
+      await _previewServer!.start(path: storageBasePath);
       } catch (e) {
         // Try to continue
       }
@@ -164,8 +164,8 @@ class _EditGamePageState extends State<EditGamePage> {
   void dispose() {
     // Stop servers (synchronous)
     try {
-      _server?.stop();
-      _previewServer?.stop();
+    _server?.stop();
+    _previewServer?.stop();
     } catch (e) {
       // Silently handle error
     }
@@ -200,7 +200,7 @@ class _EditGamePageState extends State<EditGamePage> {
                   onPressed: () {
                     // Clear files (synchronous operation)
                     try {
-                      GameAPI.clearFiles();
+                    GameAPI.clearFiles();
                     } catch (e) {
                       // Silently handle error - continue with navigation
                     }
@@ -208,7 +208,7 @@ class _EditGamePageState extends State<EditGamePage> {
                     // Navigate immediately - let Flutter's dispose() handle cleanup
                     // Don't try to manually stop WebViews as it causes race conditions
                     if (mounted) {
-                      Navigator.of(context).pop();
+                    Navigator.of(context).pop();
                     }
                   },
                 ),
@@ -415,8 +415,8 @@ class _EditGamePageState extends State<EditGamePage> {
                       onWebViewCreated: (controller) {
                         // Wrap all handlers in try-catch to prevent web crashes
                         try {
-                          // Handler for saving level data (triggered by Unity)
-                          controller.addJavaScriptHandler(
+                        // Handler for saving level data (triggered by Unity)
+                        controller.addJavaScriptHandler(
                           handlerName: 'saveLevelFile',
                           callback: (args) async {
                             // Check if widget is still mounted
@@ -511,13 +511,13 @@ class _EditGamePageState extends State<EditGamePage> {
                                 dataType: dataType,
                                 useProgress: useProgress,
                                 userRole: widget.userRole,
-                              );
+                                );
 
                               return content ?? '';
                             }
                             return '';
                           },
-                          );
+                        );
                         } catch (e) {
                           // Continue - handlers might not work on web but shouldn't crash
                         }
