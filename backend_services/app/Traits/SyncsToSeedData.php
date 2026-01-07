@@ -47,7 +47,7 @@ trait SyncsToSeedData
 
             $publicDestDir = '';
 
-            if ($subfolder === 'pictures') {
+            if ($subfolder === 'pictures' || str_ends_with(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $subfolder), DIRECTORY_SEPARATOR . 'pictures')) {
                 $publicDestDir = $publicBase . DIRECTORY_SEPARATOR . 'pictures';
             } elseif (str_contains($subfolder, 'assets')) {
                  // Extract Note Title from "Topic/assets/NoteTitle"

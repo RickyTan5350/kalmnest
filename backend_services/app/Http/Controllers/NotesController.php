@@ -55,8 +55,9 @@ class NotesController extends Controller
             $safeFileName = time() . '_' . $originalName; // Unique name for uploads folder
 
             try {
-                // 1. Store in public uploads first
-                $path = $file->storeAs('uploads', $safeFileName, 'public');
+                // 1. Store in note-specific pictures folder
+                $uploadPath = 'notes/pictures';
+                $path = $file->storeAs($uploadPath, $safeFileName, 'public');
 
                 // 2. Resolve Sync Path (Topic/Assets/NoteTitle)
                 $noteId = $request->input('note_id');
@@ -82,14 +83,13 @@ class NotesController extends Controller
                     $safeTitle = trim($safeTitle);
                     if (empty($safeTitle)) $safeTitle = 'Untitled';
 
-                    // Subfolder: <Topic>/assets/<NoteTitle>
-                    $subfolder = $topicName . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . $safeTitle;
+                     // Subfolder: <Topic>/pictures
+                    $subfolder = $topicName . DIRECTORY_SEPARATOR . 'pictures';
 
                     // SYNC TO SEED DATA (Correct Folder)
-                    // We use originalName for the sync file to keep it clean in the repo
-                    $this->syncFileToSeedData(storage_path('app/public/' . $path), $originalName, $subfolder);
+                    $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, $subfolder);
                 } else {
-                    // Fallback to pictures if note not found
+                    // Fallback to general pictures if note not found
                      $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
                 }
 

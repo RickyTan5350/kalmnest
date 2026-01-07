@@ -13,6 +13,7 @@ import 'package:code_play/constants/api_constants.dart';
 // --- NEW IMPORTS FOR HTML RENDERING ---
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:flutter/services.dart';
 import 'quiz_widget.dart';
 
 void showCreateNotesDialog({
@@ -415,6 +416,181 @@ class _CreateNotePageState extends State<CreateNotePage> {
 
   // --- WIDGET BUILDERS ---
 
+  Widget _buildImageWidget(String src) {
+    if (src.isEmpty) return const SizedBox.shrink();
+
+    final domain = ApiConstants.domain;
+
+    // Handle standard network URLs
+    if (src.startsWith('http')) {
+      return Image.network(
+        _fixUrl(src),
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.red),
+      );
+    }
+
+    final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+    final fileName = src.split('/').last;
+    final currentTopic = _selectedTopic ?? 'General';
+
+    return FutureBuilder<String?>(
+      future: _resolveLocalAsset(src, fileName, folders, currentTopic),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final resolvedPath = snapshot.data;
+        if (resolvedPath != null) {
+          return Image.asset(resolvedPath);
+        }
+
+        // --- Network Resolution Logic (notes/pictures) ---
+        final networkUrl = src.startsWith('/')
+            ? "$domain$src"
+            : (src.startsWith('pictures/')
+                  ? "$domain/storage/notes/$src"
+                  : (src.startsWith('http')
+                        ? src
+                        : "$domain/storage/notes/pictures/$src"));
+
+        // Fallback network URL with topic if primary fails
+        final topicNetworkUrl = src.startsWith('pictures/')
+            ? "$domain/storage/notes/$currentTopic/$src"
+            : null;
+
+        return Image.network(
+          _fixUrl(networkUrl),
+          errorBuilder: (context, error, stackTrace) {
+            if (topicNetworkUrl != null) {
+              return Image.network(
+                _fixUrl(topicNetworkUrl),
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildErrorWidget(fileName),
+              );
+            }
+            return _buildErrorWidget(fileName);
+          },
+        );
+      },
+    );
+  }
+
+  Future<String?> _resolveLocalAsset(
+    String originalPath,
+    String fileName,
+    List<String> folders,
+    String currentTopic,
+  ) async {
+    // A. Original path check
+    if (originalPath.startsWith('assets/')) {
+      try {
+        await rootBundle.load(originalPath);
+        return originalPath;
+      } catch (_) {}
+    }
+
+    // B. notes/pictures resolution (Standard)
+    final rootPicturesPath = 'assets/www/pictures/$fileName';
+    try {
+      await rootBundle.load(rootPicturesPath);
+      return rootPicturesPath;
+    } catch (_) {}
+
+    // C. Flattened pictures Check
+    final flattenedPath = 'assets/www/pictures/$fileName';
+    try {
+      await rootBundle.load(flattenedPath);
+      return flattenedPath;
+    } catch (_) {}
+
+    // D. Topic-specific pictures Check (Recursive)
+    for (var topic in folders) {
+      final topicPath = 'assets/www/pictures/$topic/$fileName';
+      try {
+        await rootBundle.load(topicPath);
+        return topicPath;
+      } catch (_) {}
+    }
+
+    // E. Direct topic check
+    final directTopicPath = 'assets/www/pictures/$currentTopic/$fileName';
+    try {
+      await rootBundle.load(directTopicPath);
+      return directTopicPath;
+    } catch (_) {}
+
+    return null;
+  }
+
+  Widget _buildErrorWidget(String fileName) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: Colors.grey[200],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.broken_image, color: Colors.grey),
+          const SizedBox(height: 4),
+          Text(
+            fileName,
+            style: const TextStyle(fontSize: 10, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fixUrl(String url) {
+    // 1. Double slash fix
+    String fixedUrl = url;
+    final slashParts = fixedUrl.split('://');
+    if (slashParts.length > 1) {
+      fixedUrl = '${slashParts[0]}://${slashParts[1].replaceAll('//', '/')}';
+    } else {
+      fixedUrl = fixedUrl.replaceAll('//', '/');
+    }
+
+    // 2. Domain replacement (kalmnest.test -> current environment domain)
+    try {
+      final uri = Uri.parse(fixedUrl);
+      if (uri.hasAuthority && uri.host == 'kalmnest.test') {
+        final targetBase = Uri.parse(ApiConstants.domain);
+        fixedUrl = uri
+            .replace(
+              scheme: targetBase.scheme,
+              host: targetBase.host,
+              port: targetBase.port,
+            )
+            .toString();
+      }
+    } catch (e) {
+      debugPrint('Error fixing domain: $e');
+    }
+
+    // 3. Web Proxy
+    if (kIsWeb) {
+      if (fixedUrl.contains('/storage/')) {
+        final apiBase = ApiConstants.baseUrl;
+        return '$apiBase/file-proxy?url=${Uri.encodeComponent(fixedUrl)}';
+      }
+    }
+
+    return fixedUrl;
+  }
+
+  String _processMarkdown(String content) {
+    final domain = ApiConstants.domain;
+    // 1. Resolve relative /storage/ paths to domain
+    String processed = content.replaceAll('](/storage/', ']($domain/storage/');
+    return processed;
+  }
+
   InputDecoration _inputDecoration({
     required String labelText,
     required IconData icon,
@@ -626,7 +802,9 @@ class _CreateNotePageState extends State<CreateNotePage> {
                           border: Border.all(color: colorScheme.outlineVariant),
                         ),
                         child: HtmlWidget(
-                          md.markdownToHtml(_noteMarkdownController.text),
+                          _processMarkdown(
+                            md.markdownToHtml(_noteMarkdownController.text),
+                          ),
                           baseUrl: Uri.tryParse(ApiConstants.domain),
                           textStyle: TextStyle(
                             color: colorScheme.onSurface,
@@ -642,6 +820,10 @@ class _CreateNotePageState extends State<CreateNotePage> {
                             return null;
                           },
                           customWidgetBuilder: (element) {
+                            if (element.localName == 'img') {
+                              final src = element.attributes['src'] ?? '';
+                              return _buildImageWidget(src);
+                            }
                             if (element.localName == 'pre' &&
                                 element.children.isNotEmpty &&
                                 element.children.first.localName == 'code') {
