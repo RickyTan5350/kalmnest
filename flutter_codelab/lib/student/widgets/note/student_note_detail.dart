@@ -278,6 +278,16 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
   }
 
   Widget _buildImageWidget(String src) {
+    // 1. Handle absolute URLs
+    if (src.startsWith('http')) {
+      return Image.network(
+        src,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.red),
+      );
+    }
+
+    // 2. Handle potential local asset paths
     // List of folders to search in
     final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
     final fileName = src.split('/').last;
@@ -298,49 +308,18 @@ class _StudentNoteDetailPageState extends State<StudentNoteDetailPage> {
         }
 
         // 3. Fallback to network if not found in assets
-        // Use api/get-file instead of direct storage access
-        // This handles legacy paths and avoids CORS issues on the frontend by using the APi endpoint
-        final apiBase = ApiConstants.baseUrl; // e.g. https://kalmnest.test/api
-
-        String networkUrl;
-        if (src.startsWith('http')) {
-          if (src.contains('/storage/')) {
-            // Rewrite full storage URLs to use get-file to avoid CORS
-            final uri = Uri.parse(src);
-            String relativePath = uri.path;
-            // Remove /storage/ prefix (e.g. /storage/assets/foo -> assets/foo)
-            final storageIndex = relativePath.indexOf('/storage/');
-            if (storageIndex != -1) {
-              relativePath = relativePath.substring(
-                storageIndex + '/storage/'.length,
-              );
-            }
-            networkUrl =
-                '$apiBase/get-file?path=${Uri.encodeComponent(relativePath)}';
-          } else {
-            networkUrl = src;
-          }
-        } else {
-          // Construct path parameter for get-file
-          String pathParam = src;
-          if (src.startsWith('/')) {
-            pathParam = src.substring(1); // remove leading slash
-          } else if (src.startsWith('pictures/')) {
-            pathParam = 'notes/$src';
-          } else {
-            pathParam = 'notes/pictures/$src';
-          }
-          networkUrl =
-              '$apiBase/get-file?path=${Uri.encodeComponent(pathParam)}';
-        }
+        final networkUrl = src.startsWith('/')
+            ? "${ApiConstants.domain}$src"
+            : (src.startsWith('pictures/')
+                  ? "${ApiConstants.domain}/storage/notes/$src"
+                  : (src.startsWith('http')
+                        ? src
+                        : "${ApiConstants.domain}/storage/notes/pictures/$src"));
 
         // Fallback network URL with topic if primary fails
-        String? topicNetworkUrl;
-        if (src.startsWith('pictures/')) {
-          final topicPath = 'notes/$_currentTopic/$src';
-          topicNetworkUrl =
-              '$apiBase/get-file?path=${Uri.encodeComponent(topicPath)}';
-        }
+        final topicNetworkUrl = src.startsWith('pictures/')
+            ? "${ApiConstants.domain}/storage/notes/$_currentTopic/$src"
+            : null;
 
         return Image.network(
           networkUrl,

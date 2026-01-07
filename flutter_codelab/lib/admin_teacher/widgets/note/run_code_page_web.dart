@@ -196,8 +196,7 @@ class _RunCodePageState extends State<RunCodePage> {
     // If we can fetch this, we are good.
     // If not, we might need to fallback.
     // For now, we set a provisional path.
-    // Standardize to Server Path: notes/<Topic>/<ContextID>
-    _resolvedContextPath = 'notes/${widget.topic}/$rawName';
+    _resolvedContextPath = 'assets/www/$rawName';
 
     print(
       "DEBUG WEB: Resolved provisional context path: $_resolvedContextPath",
@@ -231,8 +230,8 @@ class _RunCodePageState extends State<RunCodePage> {
             '',
           );
           if (cleanFolder == cleanRaw) {
-            // Update to the *exact* folder name used in assets (but keep notes/ structure)
-            _resolvedContextPath = 'notes/${widget.topic}/$decodedFolder';
+            // Update to the *exact* folder name used in assets
+            _resolvedContextPath = 'assets/www/$decodedFolder';
             print(
               "DEBUG WEB: Fuzzy Resolved context path: $_resolvedContextPath",
             );
@@ -256,7 +255,6 @@ class _RunCodePageState extends State<RunCodePage> {
   Future<void> _loadAssetsFromServer() async {
     // 1. Fetch visible_files.json
     try {
-      // Path is now already notes/<Topic>/...
       final path = '$_resolvedContextPath/visible_files.json';
       final uri = Uri.parse(
         '${ApiConstants.baseUrl}/get-file?path=$path&t=${DateTime.now().millisecondsSinceEpoch}',
@@ -328,9 +326,7 @@ class _RunCodePageState extends State<RunCodePage> {
       List<CodeFile> loadedFiles = [];
 
       for (final fileName in filesToLoad) {
-        // Path joining: notes/<Topic>/<Context>/<FileName>
         final filePath = '$_resolvedContextPath/$fileName';
-
         final fileUri = Uri.parse(
           '${ApiConstants.baseUrl}/get-file?path=$filePath&t=${DateTime.now().millisecondsSinceEpoch}',
         );
@@ -399,18 +395,7 @@ class _RunCodePageState extends State<RunCodePage> {
 
   Future<void> _loadAssetsFromBundle() async {
     if (_resolvedContextPath == null) return;
-
-    // Map 'notes/<Topic>/Folder' back to 'assets/www/Folder' for local lookup
-    String dirPath = _resolvedContextPath!;
-    if (dirPath.startsWith('notes/')) {
-      // Remove 'notes/<Topic>/' prefix
-      final parts = dirPath.split('/');
-      if (parts.length >= 3) {
-        // parts[0]=notes, parts[1]=Topic, parts[2...]=rest
-        // Local assets are at assets/www/rest
-        dirPath = 'assets/www/${parts.sublist(2).join('/')}';
-      }
-    }
+    final dirPath = _resolvedContextPath!;
 
     try {
       final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
@@ -490,7 +475,7 @@ class _RunCodePageState extends State<RunCodePage> {
           'files': filesPayload,
           'entry_point': targetFileName,
           'context_id': _resolvedContextPath != null
-              ? _resolvedContextPath!.replaceFirst('notes/${widget.topic}/', '')
+              ? _resolvedContextPath!.replaceFirst('assets/www/', '')
               : widget.contextId,
           'php_session_id': _webSessionId,
           'form_data': formData,
@@ -852,11 +837,9 @@ class _RunCodePageState extends State<RunCodePage> {
       // 1. Fetch existing manifest
       // Use API endpoint to bypass CORS
       final apiUri = Uri.parse('${ApiConstants.baseUrl}/get-file');
-
-      // Path is already correct: notes/<Topic>/...
-      final apiPath = '$_resolvedContextPath/visible_files.json';
-
-      final url = apiUri.replace(queryParameters: {'path': apiPath});
+      final url = apiUri.replace(
+        queryParameters: {'path': '$_resolvedContextPath/visible_files.json'},
+      );
       print("DEBUG: Fetching manifest from API: $url");
 
       final response = await http.get(url);
