@@ -101,6 +101,12 @@ class _StudentAchievementDetailPageState
     return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
+  String _formatTimer(int seconds) {
+    final int minutes = seconds ~/ 60;
+    final int remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final IconData icon = _getIconData(_displayData.icon);
@@ -198,6 +204,14 @@ class _StudentAchievementDetailPageState
                           'Topic Icon',
                           _displayData.icon ?? 'N/A',
                         ),
+                        // NEW: Show Timer if Quiz
+                        if (_displayData.timer != null &&
+                            _displayData.timer! > 0)
+                          _buildInfoRow(
+                            context,
+                            'Time Taken',
+                            _formatTimer(_displayData.timer!),
+                          ),
                       ],
                     ),
               const Divider(height: 30),
@@ -272,4 +286,3 @@ class _StudentAchievementDetailPageState
     );
   }
 }
-

@@ -58,7 +58,7 @@ IconData getAchievementIcon(String? iconValue) {
   try {
     // Map 'js' to 'javascript' for lookup
     if (iconValue == 'js') iconValue = 'javascript';
-    
+
     final entry = achievementIconOptions.firstWhere(
       (opt) => opt['value'] == iconValue,
       orElse: () => {'icon': Icons.help_outline},
@@ -97,9 +97,7 @@ List<AchievementData> filterAchievements({
       isMatchingTopic = !item.isUnlocked;
     } else {
       isMatchingTopic =
-          selectedTopic == null ||
-          icon.contains(selectedTopic.toLowerCase()) ||
-          (selectedTopic.toLowerCase() == 'quiz');
+          selectedTopic == null || icon.contains(selectedTopic.toLowerCase());
     }
 
     return isMatchingSearch && isMatchingTopic;
@@ -138,4 +136,3 @@ List<AchievementData> sortAchievements({
   });
   return sortedList;
 }
-
