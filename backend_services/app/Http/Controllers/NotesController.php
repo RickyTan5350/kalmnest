@@ -52,46 +52,66 @@ class NotesController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $originalName = $file->getClientOriginalName();
-            $safeFileName = time() . '_' . $originalName; // Unique name for uploads folder
+            $ext = strtolower($file->getClientOriginalExtension());
+
+            // Check if this is a "Code Asset" that needs name preservation
+            $isCodeAsset = in_array($ext, ['json', 'html', 'css', 'js', 'php']);
+            
+            // Allow explicit "visible_files.json" override even if we missed the extension somehow
+            if ($originalName === 'visible_files.json') $isCodeAsset = true;
 
             try {
-                // 1. Store in note-specific pictures folder
-                $uploadPath = 'notes/pictures';
-                $path = $file->storeAs($uploadPath, $safeFileName, 'public');
-
-                // 2. Resolve Sync Path (Topic/Assets/NoteTitle)
+                // 2. Resolve Note (We need Note Title for folder structure)
                 $noteId = $request->input('note_id');
-                \Log::info("DEBUG: uploadFile - Received note_id: " . $noteId);
+                // \Log::info("DEBUG: uploadFile - Received note_id: " . $noteId); // Commented out to reduce noise
                 
                 $note = Notes::find($noteId);
                 if (!$note) {
-                    \Log::info("DEBUG: Note not found by ID. Trying Title lookup: " . $noteId);
                     $note = Notes::where('title', $noteId)->first();
                 }
-                
+
+                $topicName = 'General';
+                $safeTitle = 'Untitled';
+                $noteTitle = 'Untitled';
+
                 if ($note) {
-                    \Log::info("DEBUG: uploadFile - Note Found: " . $note->title);
-                    $topicName = 'General';
                     if ($note->topic_id) {
                         $topic = Topic::find($note->topic_id);
                         if ($topic) $topicName = $topic->topic_name;
                     }
-
                     $noteTitle = $note->title;
                     // Sanitize Title for Folder Name
                     $safeTitle = preg_replace('/[\\/\\\:\*\?\"\<\>\|]/', '', $noteTitle);
                     $safeTitle = trim($safeTitle);
                     if (empty($safeTitle)) $safeTitle = 'Untitled';
-
-                     // Subfolder: <Topic>/pictures
-                    $subfolder = $topicName . DIRECTORY_SEPARATOR . 'pictures';
-
-                    // SYNC TO SEED DATA (Correct Folder)
-                    $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, $subfolder);
-                } else {
-                    // Fallback to general pictures if note not found
-                     $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
                 }
+
+                if ($isCodeAsset) {
+                    // --- CODE ASSET STRATEGY ---
+                    // 1. Preserve Name
+                    $safeFileName = $originalName; // No timestamp
+                    
+                    // 2. Organized Storage
+                    // notes/assets/<SafeTitle>
+                    $uploadPath = 'notes/assets/' . $safeTitle;
+                    
+                    // 3. Sync Logic
+                    // Target: <Topic>/assets/<NoteTitle>  (Unsafe title is fine for internal mapping if SyncsToSeedData handles it, but safer to use original)
+                    // SyncsToSeedData expects "Topic/assets/NoteTitle" format for the subfolder to map to public/assets/www
+                    $subfolder = $topicName . '/assets/' . $noteTitle;
+                    
+                } else {
+                    // --- LEGACY IMAGE STRATEGY ---
+                    $safeFileName = time() . '_' . $originalName; 
+                    $uploadPath = 'notes/pictures';
+                    $subfolder = $topicName . DIRECTORY_SEPARATOR . 'pictures';
+                }
+
+                // Store File
+                $path = $file->storeAs($uploadPath, $safeFileName, 'public');
+
+                // SYNC TO SEED DATA & PUBLIC ASSETS
+                $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, $subfolder);
 
                 return response()->json([
                     'message' => 'File uploaded successfully',
