@@ -241,6 +241,7 @@ class _GamePageState extends State<GamePage> {
                     hintText: "Search levels...",
                     onChanged: _onSearchChanged,
                     onSubmitted: _onSearchChanged,
+                    leading: const Icon(Icons.search),
                     trailing: <Widget>[
                       if (_searchQuery.isNotEmpty)
                         IconButton(
@@ -250,10 +251,6 @@ class _GamePageState extends State<GamePage> {
                             _onSearchChanged('');
                           },
                         ),
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {},
-                      ),
                     ],
                   ),
                 ),
