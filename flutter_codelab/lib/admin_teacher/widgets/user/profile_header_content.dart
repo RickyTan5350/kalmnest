@@ -35,44 +35,8 @@ class ProfileHeaderContent extends StatelessWidget {
             padding: const EdgeInsets.only(right: 12.0),
             child: Builder(
               builder: (context) {
-                final fullGreeting = AppLocalizations.of(
-                  context,
-                )!.helloUser(currentUser.name);
-                final nameIdx = fullGreeting.indexOf(currentUser.name);
-
-                if (nameIdx != -1) {
-                  final prefix = fullGreeting.substring(0, nameIdx);
-                  final suffix = fullGreeting.substring(
-                    nameIdx + currentUser.name.length,
-                  );
-                  return Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: prefix,
-                          style: const TextStyle(fontWeight: FontWeight.normal),
-                        ),
-                        TextSpan(
-                          text: currentUser.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        TextSpan(
-                          text: suffix,
-                          style: const TextStyle(fontWeight: FontWeight.normal),
-                        ),
-                      ],
-                    ),
-                    style: textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontSize: 14,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  );
-                }
-
                 return Text(
-                  fullGreeting,
+                  currentUser.name,
                   style: textTheme.titleMedium?.copyWith(
                     color: colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
@@ -207,6 +171,7 @@ class ProfileHeaderContent extends StatelessWidget {
               PopupMenuButton<String>(
                 // Set offset to position the menu directly below the icon/profile area
                 offset: const Offset(0, 48),
+                tooltip: 'Profile', // Set tooltip to "Profile"
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
