@@ -194,9 +194,21 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
     required IconData icon,
     String? hintText,
     required ColorScheme colorScheme,
+    bool isMandatory = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: labelText),
+            if (isMandatory)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       hintText: hintText,
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
       border: OutlineInputBorder(
@@ -265,6 +277,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                           labelText: l10n.selectStudent,
                           icon: Icons.person,
                           colorScheme: colorScheme,
+                          isMandatory: true,
                         ),
                         hint: Text(
                           l10n.selectAStudent,
@@ -332,6 +345,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                           labelText: l10n.selectTopic,
                           icon: Icons.subject,
                           colorScheme: colorScheme,
+                          isMandatory: true,
                         ),
                         hint: Text(
                           l10n.selectATopic,
@@ -374,6 +388,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                     hintText: l10n.titleHint,
                     icon: Icons.title,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -393,6 +408,7 @@ class _CreateFeedbackDialogState extends State<CreateFeedbackDialog> {
                     hintText: l10n.feedbackHint,
                     icon: Icons.message,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   maxLines: 5,
                   validator: (value) {

@@ -161,9 +161,21 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
     required IconData icon,
     String? hintText,
     required ColorScheme colorScheme,
+    bool isMandatory = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: labelText),
+            if (isMandatory)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       hintText: hintText,
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
       border: OutlineInputBorder(
@@ -268,6 +280,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                             labelText: l10n.selectTopic,
                             icon: Icons.subject,
                             colorScheme: colorScheme,
+                            isMandatory: true,
                           ),
                           hint: Text(
                             l10n.selectATopic,
@@ -324,6 +337,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                       labelText: l10n.title,
                       icon: Icons.title,
                       colorScheme: colorScheme,
+                      isMandatory: true,
                     ),
                     validator: (val) => val == null || val.isEmpty
                         ? l10n.pleaseEnterTitle
@@ -337,6 +351,7 @@ class _EditFeedbackDialogState extends State<EditFeedbackDialog> {
                       labelText: l10n.feedback,
                       icon: Icons.message,
                       colorScheme: colorScheme,
+                      isMandatory: true,
                     ),
                     maxLines: 5,
                     validator: (val) => val == null || val.isEmpty
