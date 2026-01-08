@@ -13,6 +13,7 @@ class AchievementData {
   final int? unlockedCount;
   final int? totalStudents;
   final DateTime? unlockedAt; // NEW
+  final int? timer;
 
   AchievementData({
     this.achievementId,
@@ -29,6 +30,7 @@ class AchievementData {
     this.unlockedCount,
     this.totalStudents,
     this.unlockedAt,
+    this.timer,
   });
 
   factory AchievementData.fromJson(Map<String, dynamic> json) {
@@ -54,6 +56,7 @@ class AchievementData {
       unlockedAt: json['unlocked_at'] == null
           ? null
           : DateTime.tryParse(json['unlocked_at'] as String),
+      timer: json['timer'] as int?,
     );
   }
 
