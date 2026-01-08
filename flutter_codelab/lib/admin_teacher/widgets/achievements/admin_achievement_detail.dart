@@ -105,6 +105,7 @@ class _AdminAchievementDetailPageState
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Achievement deleted successfully.'),
+              behavior: SnackBarBehavior.floating,
               backgroundColor: Colors.green,
             ),
           );
@@ -115,7 +116,8 @@ class _AdminAchievementDetailPageState
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error deleting achievement: $e'),
-              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -212,7 +214,11 @@ class _AdminAchievementDetailPageState
                   achievement: achievementMap,
                   showSnackBar: (ctx, msg, color) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text(msg), backgroundColor: color),
+                      SnackBar(
+                        content: Text(msg),
+                        backgroundColor: color,
+                        behavior: SnackBarBehavior.floating,
+                      ),
                     );
                   },
                 );

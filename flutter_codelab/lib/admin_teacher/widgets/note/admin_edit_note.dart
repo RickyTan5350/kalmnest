@@ -127,9 +127,21 @@ class _EditNotePageState extends State<EditNotePage> {
     required String labelText,
     IconData? icon,
     required ColorScheme colorScheme,
+    bool isMandatory = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: labelText),
+            if (isMandatory)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       prefixIcon: icon != null
           ? Icon(icon, size: 20, color: colorScheme.onSurfaceVariant)
           : null,
@@ -174,7 +186,9 @@ class _EditNotePageState extends State<EditNotePage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Link inserted!'),
+        content: Text('Link inserted!', style: TextStyle(color: Colors.white)),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.green,
         duration: Duration(seconds: 1),
       ),
     );
@@ -238,9 +252,16 @@ class _EditNotePageState extends State<EditNotePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to read file: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to read file: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
       return;
     }
@@ -275,7 +296,12 @@ class _EditNotePageState extends State<EditNotePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Code block inserted!'),
+            content: Text(
+              'Code block inserted!',
+              style: TextStyle(color: Colors.white),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
             duration: Duration(seconds: 1),
           ),
         );
@@ -470,9 +496,16 @@ class _EditNotePageState extends State<EditNotePage> {
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
     if (_attachments.any((a) => a.isUploading)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Wait for uploads...')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Wait for uploads...',
+            style: TextStyle(color: Colors.white),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
       return;
     }
 
@@ -494,9 +527,13 @@ class _EditNotePageState extends State<EditNotePage> {
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to update'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text(
+              'Failed to update',
+              style: TextStyle(color: Colors.white),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
