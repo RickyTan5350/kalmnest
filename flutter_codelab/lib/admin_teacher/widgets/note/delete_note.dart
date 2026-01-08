@@ -15,31 +15,15 @@ class DeleteNoteHandler {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          // 2. Use theme surface color (Standard M3 dialog color)
-          backgroundColor: colorScheme.surfaceContainerHigh,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-
-          title: Text(
-            'Delete Note?',
-            style: TextStyle(color: colorScheme.onSurface),
-          ),
-          content: Text(
+          title: const Text('Delete Note?'),
+          content: const Text(
             'Are you sure you want to delete this note? This action cannot be undone.',
-            style: TextStyle(color: colorScheme.onSurfaceVariant),
           ),
           actions: [
-            // 3. Cancel Button - Neutral Theme Color
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: colorScheme.onSurfaceVariant),
-              ),
+              child: const Text('Cancel'),
             ),
-
-            // 4. Delete Button - Error Theme Color
             TextButton(
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
@@ -75,13 +59,10 @@ class DeleteNoteHandler {
                   }
                 }
               },
-              child: Text(
-                'Delete',
-                style: TextStyle(
-                  color: colorScheme.error,
-                  fontWeight: FontWeight.bold,
-                ),
+              style: ButtonStyle(
+                foregroundColor: WidgetStateProperty.all(Colors.red),
               ),
+              child: const Text('Delete'),
             ),
           ],
         );
