@@ -35,43 +35,38 @@ trait SyncsToSeedData
             } catch (\Exception $e) {}
         }
 
-        // 2. Sync to Public Assets (Web Runtime Persistence)
-        // Mapping: <Topic>/assets/<NoteTitle>  ->  public/assets/www/<NoteTitle>
-        // Mapping: pictures -> public/assets/www/pictures
-        
+        // 2. Sync to Frontend Assets (Flutter Bundle Synchronization)
+        // This ensures the local Flutter assets folder is always up to date with backend changes.
         try {
-            $publicBase = public_path('assets/www');
-            if (!File::exists($publicBase)) {
-                File::makeDirectory($publicBase, 0755, true);
-            }
+            $frontendAssetsDir = env('FRONTEND_ASSETS_PATH');
 
-            $publicDestDir = '';
+            if ($frontendAssetsDir && File::exists($frontendAssetsDir)) {
+                $targetFrontendDir = '';
 
-            if ($subfolder === 'pictures' || str_ends_with(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $subfolder), DIRECTORY_SEPARATOR . 'pictures')) {
-                $publicDestDir = $publicBase . DIRECTORY_SEPARATOR . 'pictures';
-            } elseif (str_contains($subfolder, 'assets')) {
-                 // Extract Note Title from "Topic/assets/NoteTitle"
-                 // Note: We use DIRECTORY_SEPARATOR agnostic regex or simple explode
-                 $parts = preg_split('/[\\/\\\\]/', $subfolder);
-                 // Expected: [Topic, assets, NoteTitle]
-                 $keyIndex = array_search('assets', $parts);
-                 if ($keyIndex !== false && isset($parts[$keyIndex + 1])) {
-                     $noteTitle = $parts[$keyIndex + 1];
-                     $publicDestDir = $publicBase . DIRECTORY_SEPARATOR . $noteTitle;
-                 }
-            }
-
-            if (!empty($publicDestDir)) {
-                if (!File::exists($publicDestDir)) {
-                    File::makeDirectory($publicDestDir, 0755, true);
+                // Handle pictures (notes/pictures -> flutter/assets/www/pictures)
+                if ($subfolder === 'pictures' || str_ends_with(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $subfolder), DIRECTORY_SEPARATOR . 'pictures')) {
+                    $targetFrontendDir = $frontendAssetsDir . DIRECTORY_SEPARATOR . 'pictures';
+                } 
+                // Handle assets (Topic/assets/NoteTitle -> flutter/assets/www/NoteTitle)
+                elseif (str_contains($subfolder, 'assets')) {
+                    $parts = preg_split('/[\\/\\\\]/', $subfolder);
+                    $keyIndex = array_search('assets', $parts);
+                    if ($keyIndex !== false && isset($parts[$keyIndex + 1])) {
+                        $noteTitle = $parts[$keyIndex + 1];
+                        $targetFrontendDir = $frontendAssetsDir . DIRECTORY_SEPARATOR . $noteTitle;
+                    }
                 }
-                $publicDestPath = $publicDestDir . DIRECTORY_SEPARATOR . $filename;
-                File::copy($sourcePath, $publicDestPath);
-                // \Log::info("DEBUG: Synced to Public Assets: $publicDestPath");
-            }
 
+                if (!empty($targetFrontendDir)) {
+                    if (!File::exists($targetFrontendDir)) {
+                        File::makeDirectory($targetFrontendDir, 0755, true);
+                    }
+                    $frontendDestPath = $targetFrontendDir . DIRECTORY_SEPARATOR . $filename;
+                    File::copy($sourcePath, $frontendDestPath);
+                }
+            }
         } catch (\Exception $ex) {
-            // \Log::error("Failed to sync to public assets: " . $ex->getMessage());
+            // Log if needed, but fail silently to not block the main process
         }
     }
 }

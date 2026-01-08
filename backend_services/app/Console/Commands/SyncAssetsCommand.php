@@ -73,12 +73,7 @@ class SyncAssetsCommand extends Command
         // A. Sync Backend -> Public Storage (Existing)
         $this->syncBackendToPublic($backendNotesDir, $publicNotesDir);
 
-        // B. Sync Backend -> Public Assets (For Web API)
-        // We mirror the frontend structure to 'public/assets/www' so get-file API works
-        $publicAssetsDir = public_path('assets/www');
-        $this->syncBackendToPublicAssets($backendNotesDir, $publicAssetsDir);
-
-        // C. Sync Backend -> Frontend Assets
+        // B. Sync Backend -> Frontend Assets
         if (File::exists($frontendAssetsDir)) {
             $this->syncBackendToFrontend($backendNotesDir, $frontendAssetsDir);
         }
@@ -319,55 +314,6 @@ class SyncAssetsCommand extends Command
         }
     }
 
-    private function syncBackendToPublicAssets($backendNotesDir, $publicAssetsDir)
-    {
-        $this->section('Syncing Backend -> Public Assets (API)');
-
-        $topics = File::directories($backendNotesDir);
-
-        foreach ($topics as $topicPath) {
-            $topicName = basename($topicPath);
-
-            // A. Sync Note-Specific Assets
-            $assetsBaseDir = "$topicPath/assets";
-            if (File::exists($assetsBaseDir)) {
-                $noteAssetDirs = File::directories($assetsBaseDir);
-                foreach ($noteAssetDirs as $noteAssetDir) {
-                    $noteTitle = basename($noteAssetDir);
-                    // Match Frontend Structure: public/assets/www/<NoteTitle>
-                    $targetDir = "$publicAssetsDir/$noteTitle";
-
-                    if (!File::exists($targetDir)) {
-                        File::makeDirectory($targetDir, 0755, true);
-                    }
-
-                    $files = File::allFiles($noteAssetDir);
-                    foreach ($files as $file) {
-                        $relativePath = $file->getRelativePathname();
-                        $destPath = "$targetDir/$relativePath";
-                        $this->copyIfNewer($file->getPathname(), $destPath);
-                    }
-                }
-            }
-
-            // B. Sync Pictures
-            $backendPicDir = "$topicPath/pictures";
-            if (File::exists($backendPicDir)) {
-                // Match Frontend Structure: public/assets/www/pictures
-                $targetPicDir = "$publicAssetsDir/pictures";
-                
-                if (!File::exists($targetPicDir)) {
-                    File::makeDirectory($targetPicDir, 0755, true);
-                }
-
-                $pics = File::files($backendPicDir);
-                foreach ($pics as $pic) {
-                    $destPath = "$targetPicDir/" . $pic->getFilename();
-                    $this->copyIfNewer($pic->getPathname(), $destPath);
-                }
-            }
-        }
-    }
 
     private function copyIfNewer($source, $dest)
     {

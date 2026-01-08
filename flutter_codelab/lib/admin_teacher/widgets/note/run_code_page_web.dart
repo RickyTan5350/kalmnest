@@ -191,12 +191,11 @@ class _RunCodePageState extends State<RunCodePage> {
     // The ContextID passed here usually comes from the navigation structure.
 
     // We try to verify if the path exists via API using a probe request to visible_files.json
-    final probePath = 'assets/www/$rawName/visible_files.json';
+    // NEW PATH: notes/assets/<ContextID>/visible_files.json
+    final probePath = 'notes/assets/$rawName/visible_files.json';
 
     // If we can fetch this, we are good.
-    // If not, we might need to fallback.
-    // For now, we set a provisional path.
-    _resolvedContextPath = 'assets/www/$rawName';
+    _resolvedContextPath = 'notes/assets/$rawName';
 
     print(
       "DEBUG WEB: Resolved provisional context path: $_resolvedContextPath",
@@ -548,7 +547,7 @@ class _RunCodePageState extends State<RunCodePage> {
           'files': filesPayload,
           'entry_point': targetFileName,
           'context_id': _resolvedContextPath != null
-              ? _resolvedContextPath!.replaceFirst('assets/www/', '')
+              ? _resolvedContextPath!.replaceFirst('notes/assets/', '')
               : widget.contextId,
           'php_session_id': _webSessionId,
           'form_data': formData,

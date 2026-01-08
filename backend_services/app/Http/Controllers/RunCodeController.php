@@ -62,10 +62,10 @@ class RunCodeController extends Controller
 
             if ($contextId) {
                 // Adjust this matching your folder structure
-                $rawPath = base_path('../flutter_codelab/assets/www/' . $contextId);
-                $sourceDir = realpath($rawPath);
+                // We now pull from Storage (notes/assets) which matches what Seeder/Controller upload.
+                $sourceDir = storage_path('app/public/notes/assets/' . $contextId);
                 
-                if ($sourceDir && is_dir($sourceDir)) {
+                if (file_exists($sourceDir) && is_dir($sourceDir)) {
                     \Illuminate\Support\Facades\File::copyDirectory($sourceDir, $tempDir);
                 }
             }
@@ -358,8 +358,9 @@ class RunCodeController extends Controller
                 return response()->json(['error' => 'Invalid path'], 403);
             }
 
-            // We assume path is relative to public folder (e.g. assets/www/...)
-            $fullPath = public_path($path);
+            // We serve from Storage now (notes/assets/...)
+            // $path is e.g. "notes/assets/Title/file.js"
+            $fullPath = storage_path('app/public/' . $path);
 
             if (file_exists($fullPath)) {
                 return response()->file($fullPath);
@@ -391,7 +392,7 @@ class RunCodeController extends Controller
                 return response()->json(['error' => 'Invalid path'], 403);
             }
 
-            $fullPath = public_path($path);
+            $fullPath = storage_path('app/public/' . $path);
 
             if (is_dir($fullPath)) {
                 $files = scandir($fullPath);

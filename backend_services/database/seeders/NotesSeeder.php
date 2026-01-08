@@ -82,6 +82,7 @@ class NotesSeeder extends Seeder
         $filename = $file->getFilename();
         $originalContent = File::get($file->getPathname());
         $sourceDir = $file->getPath(); 
+        $title = pathinfo($filename, PATHINFO_FILENAME);
         
         // 1. IMAGE PROCESSING LOGIC
         $processedContent = preg_replace_callback('/!\[(.*?)\]\((.*?)\)/', function ($matches) use ($sourceDir, $storageFolder, $topicName) {
@@ -95,42 +96,60 @@ class NotesSeeder extends Seeder
             $sourceImagePath = $sourceDir . '/pictures/' . $imageName;
 
             if (File::exists($sourceImagePath)) {
-                // Determine destination path inside 'notes/pictures'
                 $destDir = $storageFolder . '/pictures';
                 Storage::disk('public')->makeDirectory($destDir);
-                
-                // Copy the image without prefix
                 Storage::disk('public')->putFileAs($destDir, new \Illuminate\Http\File($sourceImagePath), $imageName);
-
-                // Return the relative path specifically as 'pictures/...'
                 return "![$altText](pictures/$imageName)";
             } else {
                 return $matches[0];
             }
         }, $originalContent);
 
-        // 2. SAVE THE MARKDOWN FILE TO STORAGE
+        // 2. ASSET FOLDER PROCESSING (New)
+        // Scan for assets targeted at this specific note
+        // Expected: seed_data/notes/<Topic>/assets/<NoteTitle>/*
+        $noteAssetsDir = $sourceDir . '/assets/' . $title;
+        
+        // Exclude specific notes from having assets created
+        $excludedNotes = [
+            '3.1.1 Keperluan Bahasa Penskripan Klien dalam Laman Web',
+            '3.1.2 Atur Cara dan Carta Alir bagi Bahasa Penskripan Klien'
+        ];
+
+        if (!in_array($title, $excludedNotes) && File::exists($noteAssetsDir) && File::isDirectory($noteAssetsDir)) {
+            $this->command->info("   -> Found assets for: $title");
+            $assetFiles = File::allFiles($noteAssetsDir);
+            
+            $destAssetDir = "$storageFolder/assets/$title";
+            Storage::disk('public')->makeDirectory($destAssetDir);
+
+            foreach ($assetFiles as $assetFile) {
+                $assetName = $assetFile->getFilename();
+                $assetPath = $assetFile->getPathname();
+                
+                // Copy to Storage
+                Storage::disk('public')->putFileAs($destAssetDir, new \Illuminate\Http\File($assetPath), $assetName);
+            }
+        }
+
+        // 3. SAVE THE MARKDOWN FILE TO STORAGE
         $mdStorageName = Str::uuid7() . '.md';
         Storage::disk('public')->put("$storageFolder/$mdStorageName", $processedContent);
 
-        // 3. CREATE FILE RECORD IN DB
+        // 4. CREATE DB RECORDS
         $fileRecord = FileModel::create([
             'file_path' => "$storageFolder/$mdStorageName",
             'type' => 'md'
         ]);
 
-        // 4. CREATE NOTE RECORD IN DB
-        $title = pathinfo($filename, PATHINFO_FILENAME);
-
-        
         Notes::create([
             'title' => $title,
             'topic_id' => $topicId,
             'file_id' => $fileRecord->file_id,
             'visibility' => true,
-            'created_by' => $adminUserId, // Uses the ID queried by email
+            'created_by' => $adminUserId,
         ]);
 
-        $this->command->info("   -> Imported: $title (Created by User ID: $adminUserId)");
+        $this->command->info("   -> Imported: $title");
     }
 }
