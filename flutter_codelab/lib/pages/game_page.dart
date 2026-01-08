@@ -160,16 +160,23 @@ class _GamePageState extends State<GamePage> {
     final response = await GameAPI.deleteLevel(levelId);
     if (response.success) {
       fetchLevels(topic: _selectedTopic, forceRefresh: true);
-      showSnackBar(context, response.message, Colors.green);
+      showSnackBar(context, "Successfully deleted 1 level(s).", Colors.green);
     } else {
       showSnackBar(context, response.message, Colors.red);
     }
   }
 
   void showSnackBar(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: color,
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override

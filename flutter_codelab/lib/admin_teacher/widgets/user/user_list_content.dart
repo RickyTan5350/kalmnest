@@ -258,6 +258,20 @@ class UserListContentState extends State<UserListContent> {
   }
 
   // --- Bulk Delete Logic ---
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   void _deleteSelectedUsers() async {
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -288,42 +302,22 @@ class UserListContentState extends State<UserListContent> {
       try {
         await _userApi.deleteUsers(_selectedIds.toList());
 
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(
-                context,
-              )!.deletedUsersSuccess(_selectedIds.length),
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
+        _showSnackBar(
+          AppLocalizations.of(
+            context,
+          )!.deletedUsersSuccess(_selectedIds.length),
+          Colors.green,
         );
 
         _selectedIds.clear();
         _isSelectionMode = false;
         refreshData();
       } catch (e) {
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(
-                context,
-              )!.errorDeletingUsers(e.toString().replaceAll('Exception: ', '')),
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
+        _showSnackBar(
+          AppLocalizations.of(
+            context,
+          )!.errorDeletingUsers(e.toString().replaceAll('Exception: ', '')),
+          Theme.of(context).colorScheme.error,
         );
       }
     }

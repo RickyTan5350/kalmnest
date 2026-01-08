@@ -340,13 +340,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String deletedUsersSuccess(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Successfully deleted $count users',
-      one: 'Successfully deleted 1 user',
-    );
-    return '$_temp0';
+    return 'Successfully deleted $count user(s).';
   }
 
   @override
@@ -785,7 +779,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get classDeletedSuccessfully => 'Class deleted successfully!';
+  String get classDeletedSuccessfully => 'Successfully deleted 1 class(es).';
 
   @override
   String errorDeletingClass(String error) {
@@ -819,7 +813,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String classesDeletedSuccessfully(int count) {
-    return '$count class(es) deleted successfully!';
+    return 'Successfully deleted $count class(es).';
   }
 
   @override
@@ -961,7 +955,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get remove => 'Remove';
 
   @override
-  String get quizRemovedSuccessfully => 'Quiz removed successfully!';
+  String get quizRemovedSuccessfully => 'Successfully removed 1 quiz(zes).';
 
   @override
   String quizzesAvailable(int count) {
