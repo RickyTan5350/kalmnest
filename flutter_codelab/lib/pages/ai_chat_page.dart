@@ -283,7 +283,7 @@ class _AiChatPageState extends State<AiChatPage>
     } catch (e) {
       if (mounted) {
         String errorMessage =
-            'Connection error. Please ensure the backend is running and reachable.';
+            'Connection error. Please try again later.';
 
         // Provide more specific error messages
         final errorString = e.toString();
