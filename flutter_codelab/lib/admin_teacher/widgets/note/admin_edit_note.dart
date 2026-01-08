@@ -1261,6 +1261,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                                   labelText: 'Topic',
                                                   icon: Icons.category,
                                                   colorScheme: colorScheme,
+                                                  isMandatory: true,
                                                 ),
                                                 items: _topics
                                                     .map(
@@ -1364,6 +1365,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                         labelText: 'Title',
                                         icon: Icons.title,
                                         colorScheme: colorScheme,
+                                        isMandatory: true,
                                       ),
                                       validator: (v) =>
                                           v!.isEmpty ? 'Required' : null,

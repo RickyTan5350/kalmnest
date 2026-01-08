@@ -234,25 +234,32 @@ class _GamePageState extends State<GamePage> {
                 const SizedBox(height: 16),
 
                 // SEARCH BAR
-                SizedBox(
-                  width: 300,
-                  child: SearchBar(
-                    controller: _searchController,
-                    hintText: "Search levels...",
-                    onChanged: _onSearchChanged,
-                    onSubmitted: _onSearchChanged,
-                    leading: const Icon(Icons.search),
-                    trailing: <Widget>[
-                      if (_searchQuery.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            _onSearchChanged('');
-                          },
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 300,
+                      child: SearchBar(
+                        controller: _searchController,
+                        hintText: "Search levels...",
+                        padding: const WidgetStatePropertyAll<EdgeInsets>(
+                          EdgeInsets.symmetric(horizontal: 16.0),
                         ),
-                    ],
-                  ),
+                        onChanged: _onSearchChanged,
+                        onSubmitted: _onSearchChanged,
+                        leading: const Icon(Icons.search),
+                        trailing: <Widget>[
+                          if (_searchQuery.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 

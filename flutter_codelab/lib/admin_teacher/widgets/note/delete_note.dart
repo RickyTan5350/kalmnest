@@ -51,7 +51,7 @@ class DeleteNoteHandler {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Note deleted',
+                          'Note deleted successfully',
                           style: TextStyle(color: colorScheme.onPrimary),
                         ),
                         behavior: SnackBarBehavior.floating,

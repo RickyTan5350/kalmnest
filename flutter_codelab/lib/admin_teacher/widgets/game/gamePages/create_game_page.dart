@@ -122,23 +122,23 @@ class _CreateGamePageState extends State<CreateGamePage> {
 
       // Clear any existing temp data for this user
       try {
-      await _clearTempData();
+        await _clearTempData();
       } catch (e) {
         // Continue anyway
       }
 
       // Start preview server for local storage
       try {
-      final storage = LocalLevelStorage();
-      final storageBasePath = await storage.getBasePath(userId: userId);
-      await _previewServer!.start(path: storageBasePath);
+        final storage = LocalLevelStorage();
+        final storageBasePath = await storage.getBasePath(userId: userId);
+        await _previewServer!.start(path: storageBasePath);
       } catch (e) {
         // Try to continue
       }
 
       setState(() {
         _serverUrl = 'http://localhost:${_server!.port}';
-        _previewServerUrl = _previewServer != null 
+        _previewServerUrl = _previewServer != null
             ? 'http://localhost:${_previewServer!.port}'
             : 'http://localhost:8081';
       });
@@ -161,10 +161,10 @@ class _CreateGamePageState extends State<CreateGamePage> {
     } catch (e) {
       // Silently handle error
     }
-    
+
     // Don't manually stop WebView - Flutter will handle disposal automatically
     // Trying to stop it manually causes race conditions with Flutter's disposal
-    
+
     super.dispose();
   }
 
@@ -191,7 +191,7 @@ class _CreateGamePageState extends State<CreateGamePage> {
                     } catch (e) {
                       // Silently handle error - continue with navigation
                     }
-                    
+
                     // Navigate immediately - let Flutter's dispose() handle cleanup
                     // Don't try to manually stop WebViews as it causes race conditions
                     if (mounted) {
@@ -210,7 +210,17 @@ class _CreateGamePageState extends State<CreateGamePage> {
                 /// Level name
                 TextField(
                   decoration: InputDecoration(
-                    labelText: 'Enter level name *',
+                    label: Text.rich(
+                      TextSpan(
+                        children: [
+                          const TextSpan(text: 'Enter level name'),
+                          const TextSpan(
+                            text: ' *',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
                     border: const OutlineInputBorder(),
                     errorText: _nameError ? 'Level name is required' : null,
                   ),
@@ -432,92 +442,92 @@ class _CreateGamePageState extends State<CreateGamePage> {
                       onWebViewCreated: (controller) {
                         // Wrap all handlers in try-catch to prevent web crashes
                         try {
-                        // Handler for saving level data (triggered by Unity)
-                        controller.addJavaScriptHandler(
-                          handlerName: 'saveLevelFile',
-                          callback: (args) async {
-                            // Check if widget is still mounted
-                            if (!mounted) return false;
-                            
-                            // Unity calls: window.flutter_inappwebview.callHandler('saveLevelFile', levelId, type, dataType, content)
-                            if (args.length >= 4) {
-                              final levelId = args[0] as String? ?? 'temp';
-                              final type = (args[1] as String? ?? 'html')
-                                  .toLowerCase();
-                              final dataType =
-                                  args[2] as String? ?? 'levelData';
-                              final content = args[3] as String? ?? '';
+                          // Handler for saving level data (triggered by Unity)
+                          controller.addJavaScriptHandler(
+                            handlerName: 'saveLevelFile',
+                            callback: (args) async {
+                              // Check if widget is still mounted
+                              if (!mounted) return false;
 
-                              final storage = LocalLevelStorage();
-                              return await storage.saveDataFile(
-                                levelId: levelId,
-                                type: type,
-                                dataType: dataType,
-                                content: content,
-                                userId: _userId,
-                              );
-                            }
-                            return false;
-                          },
-                        );
+                              // Unity calls: window.flutter_inappwebview.callHandler('saveLevelFile', levelId, type, dataType, content)
+                              if (args.length >= 4) {
+                                final levelId = args[0] as String? ?? 'temp';
+                                final type = (args[1] as String? ?? 'html')
+                                    .toLowerCase();
+                                final dataType =
+                                    args[2] as String? ?? 'levelData';
+                                final content = args[3] as String? ?? '';
 
-                        // Handler for saving index file (triggered by Unity)
-                        controller.addJavaScriptHandler(
-                          handlerName: 'saveIndexFile',
-                          callback: (args) async {
-                            // Check if widget is still mounted
-                            if (!mounted) return false;
-                            
-                            // Unity calls: window.flutter_inappwebview.callHandler('saveIndexFile', levelId, type, content)
-                            if (args.length >= 3) {
-                              final levelId = args[0] as String? ?? 'temp';
-                              final type = (args[1] as String? ?? 'html')
-                                  .toLowerCase();
-                              final content = args[2] as String? ?? '';
+                                final storage = LocalLevelStorage();
+                                return await storage.saveDataFile(
+                                  levelId: levelId,
+                                  type: type,
+                                  dataType: dataType,
+                                  content: content,
+                                  userId: _userId,
+                                );
+                              }
+                              return false;
+                            },
+                          );
 
-                              final storage = LocalLevelStorage();
-                              return await storage.saveIndexFile(
-                                levelId: levelId,
-                                type: type,
-                                content: content,
-                                userId: _userId,
-                              );
-                            }
-                            return false;
-                          },
-                        );
+                          // Handler for saving index file (triggered by Unity)
+                          controller.addJavaScriptHandler(
+                            handlerName: 'saveIndexFile',
+                            callback: (args) async {
+                              // Check if widget is still mounted
+                              if (!mounted) return false;
 
-                        // Handler for getting level files (triggered by Unity)
-                        controller.addJavaScriptHandler(
-                          handlerName: 'getLevelFile',
-                          callback: (args) async {
-                            // Check if widget is still mounted
-                            if (!mounted) return '';
-                            
-                            // Unity calls: window.flutter_inappwebview.callHandler('getLevelFile', levelId, type, dataType, useProgress)
-                            if (args.length >= 3) {
-                              final levelId = args[0] as String? ?? 'temp';
-                              final type = (args[1] as String? ?? 'html')
-                                  .toLowerCase();
-                              final dataType =
-                                  args[2] as String? ?? 'level';
-                              final useProgress = args.length >= 4
-                                  ? (args[3] as bool? ?? false)
-                                  : false;
+                              // Unity calls: window.flutter_inappwebview.callHandler('saveIndexFile', levelId, type, content)
+                              if (args.length >= 3) {
+                                final levelId = args[0] as String? ?? 'temp';
+                                final type = (args[1] as String? ?? 'html')
+                                    .toLowerCase();
+                                final content = args[2] as String? ?? '';
 
-                              final storage = LocalLevelStorage();
-                              return await storage.getFileContent(
-                                levelId: levelId,
-                                type: type,
-                                dataType: dataType,
-                                useProgress: useProgress,
-                                userId: _userId,
-                                userRole: widget.userRole,
-                              ) ?? '';
-                            }
-                            return '';
-                          },
-                        );
+                                final storage = LocalLevelStorage();
+                                return await storage.saveIndexFile(
+                                  levelId: levelId,
+                                  type: type,
+                                  content: content,
+                                  userId: _userId,
+                                );
+                              }
+                              return false;
+                            },
+                          );
+
+                          // Handler for getting level files (triggered by Unity)
+                          controller.addJavaScriptHandler(
+                            handlerName: 'getLevelFile',
+                            callback: (args) async {
+                              // Check if widget is still mounted
+                              if (!mounted) return '';
+
+                              // Unity calls: window.flutter_inappwebview.callHandler('getLevelFile', levelId, type, dataType, useProgress)
+                              if (args.length >= 3) {
+                                final levelId = args[0] as String? ?? 'temp';
+                                final type = (args[1] as String? ?? 'html')
+                                    .toLowerCase();
+                                final dataType = args[2] as String? ?? 'level';
+                                final useProgress = args.length >= 4
+                                    ? (args[3] as bool? ?? false)
+                                    : false;
+
+                                final storage = LocalLevelStorage();
+                                return await storage.getFileContent(
+                                      levelId: levelId,
+                                      type: type,
+                                      dataType: dataType,
+                                      useProgress: useProgress,
+                                      userId: _userId,
+                                      userRole: widget.userRole,
+                                    ) ??
+                                    '';
+                              }
+                              return '';
+                            },
+                          );
                         } catch (e) {
                           // Continue - handlers might not work on web but shouldn't crash
                         }
@@ -525,23 +535,24 @@ class _CreateGamePageState extends State<CreateGamePage> {
                       onLoadStop: (controller, url) async {
                         // Check if widget is still mounted before proceeding
                         if (!mounted) return;
-                        
+
                         // Wait a bit for Unity to initialize
                         await Future.delayed(const Duration(milliseconds: 500));
-                        
+
                         // Check again after delay
                         if (!mounted) return;
-                        
+
                         // Set API URL and auth token in localStorage for Unity to access
                         try {
                           if (!mounted) return;
-                          
+
                           final apiUrl = ApiConstants.baseUrl;
                           final token = await AuthApi.getToken();
-                          
+
                           if (!mounted) return;
-                          
-                          final jsCode = '''
+
+                          final jsCode =
+                              '''
                             localStorage.setItem('laravel_api_url', '$apiUrl');
                             ${token != null ? "localStorage.setItem('auth_token', '$token');" : ''}
                           ''';
