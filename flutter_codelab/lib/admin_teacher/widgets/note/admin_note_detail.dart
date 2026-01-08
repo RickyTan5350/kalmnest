@@ -134,6 +134,19 @@ class _AdminNoteDetailPageState extends State<AdminNoteDetailPage> {
 
     if (result == true) {
       _fetchContent();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Note updated successfully',
+              style: TextStyle(color: Colors.white),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
