@@ -1,0 +1,49 @@
+name: Build Flutter Web for Vercel
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          channel: 'stable'
+
+      - name: Get Flutter dependencies
+        working-directory: flutter_codelab
+        run: flutter pub get
+
+      - name: Build Flutter Web
+        working-directory: flutter_codelab
+        run: flutter build web --release --base-href /
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-web-build
+          path: flutter_codelab/build/web
+          retention-days: 7
+
+      # Optional: Commit build files to a separate branch
+      # - name: Commit build files
+      #   run: |
+      #     git config --local user.email "action@github.com"
+      #     git config --local user.name "GitHub Action"
+      #     git checkout -b build/main
+      #     git add flutter_codelab/build/web
+      #     git commit -m "Build Flutter Web for Vercel [skip ci]" || exit 0
+      #     git push origin build/main
