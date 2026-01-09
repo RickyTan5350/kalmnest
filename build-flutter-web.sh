@@ -9,24 +9,24 @@ echo "🚀 Starting Flutter Web build for Vercel..."
 
 # Step 1: Download and setup Flutter SDK
 echo "📦 Downloading Flutter SDK..."
-# Using latest stable Flutter version
-# Note: Current stable Flutter includes Dart SDK 3.6.0
-# If Flutter 3.27.0 doesn't exist, will fallback to latest stable
-FLUTTER_VERSION="3.27.0"
+# Using Flutter 3.35.4 which includes Dart SDK 3.9.2
+# Reference: https://flutterreleases.com
+FLUTTER_VERSION="3.35.4"
 FLUTTER_SDK_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
 
-echo "📥 Downloading Flutter ${FLUTTER_VERSION}..."
+echo "📥 Downloading Flutter ${FLUTTER_VERSION} (includes Dart 3.9.2)..."
 # Download Flutter with retry mechanism
 curl -L --progress-bar --retry 3 --retry-delay 5 "$FLUTTER_SDK_URL" -o flutter.tar.xz || {
-    echo "❌ Failed to download Flutter SDK"
+    echo "❌ Failed to download Flutter ${FLUTTER_VERSION}"
     echo "💡 Trying alternative: using latest stable version..."
-    # Fallback: try to get latest stable version
+    # Fallback: try to get latest stable version (may have newer Dart)
     FLUTTER_VERSION="stable"
     FLUTTER_SDK_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
     curl -L --progress-bar --retry 3 --retry-delay 5 "$FLUTTER_SDK_URL" -o flutter.tar.xz || {
         echo "❌ Failed to download Flutter SDK after retry"
         exit 1
     }
+    echo "⚠️  Using fallback Flutter version - Dart version may differ"
 }
 
 echo "📦 Extracting Flutter SDK..."
@@ -58,14 +58,31 @@ echo "📌 Dart SDK version: $DART_VERSION"
 if [[ "$DART_VERSION" != "unknown" ]]; then
     DART_MAJOR=$(echo "$DART_VERSION" | cut -d. -f1)
     DART_MINOR=$(echo "$DART_VERSION" | cut -d. -f2)
-    if [[ "$DART_MAJOR" -lt 3 ]] || [[ "$DART_MAJOR" -eq 3 && "$DART_MINOR" -lt 9 ]]; then
-        echo "⚠️  Warning: Dart SDK version $DART_VERSION does not meet requirement (^3.9.2)"
-        echo "💡 Current Flutter stable version includes Dart $DART_VERSION"
-        echo "💡 Solution: Lower SDK requirement in pubspec.yaml to ^3.6.0 or use pre-built files"
-        echo "⚠️  Continuing build - this may fail during 'flutter pub get'"
-    else
-        echo "✅ Dart SDK version meets requirement (^3.9.2)"
+    DART_PATCH=$(echo "$DART_VERSION" | cut -d. -f3)
+    
+    # Check if version is >= 3.9.2
+    VERSION_OK=false
+    if [[ "$DART_MAJOR" -gt 3 ]]; then
+        VERSION_OK=true
+    elif [[ "$DART_MAJOR" -eq 3 ]]; then
+        if [[ "$DART_MINOR" -gt 9 ]]; then
+            VERSION_OK=true
+        elif [[ "$DART_MINOR" -eq 9 ]]; then
+            if [[ -n "$DART_PATCH" ]] && [[ "$DART_PATCH" -ge 2 ]]; then
+                VERSION_OK=true
+            fi
+        fi
     fi
+    
+    if [[ "$VERSION_OK" == "true" ]]; then
+        echo "✅ Dart SDK version $DART_VERSION meets requirement (^3.9.2)"
+    else
+        echo "⚠️  Warning: Dart SDK version $DART_VERSION does not meet requirement (^3.9.2)"
+        echo "💡 Expected Flutter 3.35.4 with Dart 3.9.2, but got Dart $DART_VERSION"
+        echo "⚠️  Continuing build - this may fail during 'flutter pub get'"
+    fi
+else
+    echo "⚠️  Could not determine Dart SDK version"
 fi
 
 # Step 2: Get Flutter dependencies
