@@ -8,7 +8,7 @@ services:
       php artisan config:cache
       php artisan route:cache
       php artisan view:cache
-    startCommand: php -d register_argc_argv=On vendor/bin/heroku-php-apache2 public/
+    startCommand:" php -d register_argc_argv=On vendor/bin/heroku-php-apache2 public/"
     envVars:
       - key: APP_ENV
         value: production

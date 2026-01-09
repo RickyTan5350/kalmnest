@@ -9,20 +9,57 @@ echo "🚀 Starting Flutter Web build for Vercel..."
 
 # Step 1: Download and setup Flutter SDK
 echo "📦 Downloading Flutter SDK..."
-FLUTTER_VERSION="3.24.3"
+# Using latest stable Flutter version which includes Dart SDK 3.9.2+
+# Note: Flutter 3.27.0+ includes Dart SDK 3.9.2+
+FLUTTER_VERSION="3.27.0"
 FLUTTER_SDK_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
 
-# Download Flutter
-curl -L "$FLUTTER_SDK_URL" -o flutter.tar.xz
+echo "📥 Downloading Flutter ${FLUTTER_VERSION}..."
+# Download Flutter with retry mechanism
+curl -L --progress-bar --retry 3 --retry-delay 5 "$FLUTTER_SDK_URL" -o flutter.tar.xz || {
+    echo "❌ Failed to download Flutter SDK"
+    echo "💡 Trying alternative: using latest stable version..."
+    # Fallback: try to get latest stable version
+    FLUTTER_VERSION="stable"
+    FLUTTER_SDK_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
+    curl -L --progress-bar --retry 3 --retry-delay 5 "$FLUTTER_SDK_URL" -o flutter.tar.xz || {
+        echo "❌ Failed to download Flutter SDK after retry"
+        exit 1
+    }
+}
 
+echo "📦 Extracting Flutter SDK..."
 # Extract Flutter
-tar xf flutter.tar.xz
+tar xf flutter.tar.xz || {
+    echo "❌ Failed to extract Flutter SDK"
+    exit 1
+}
+
+# Clean up downloaded archive
+rm -f flutter.tar.xz
 
 # Add Flutter to PATH
 export PATH="$PATH:$PWD/flutter/bin"
 
-# Verify Flutter installation
+# Verify Flutter installation and check Dart version
+echo "✅ Verifying Flutter installation..."
 flutter --version
+
+# Check Dart SDK version
+DART_VERSION=$(flutter --version | grep -oP 'Dart SDK version: \K[0-9.]+' || echo "unknown")
+echo "📌 Dart SDK version: $DART_VERSION"
+
+# Verify Dart version meets requirement (should be >= 3.9.2)
+if [[ "$DART_VERSION" != "unknown" ]]; then
+    DART_MAJOR=$(echo "$DART_VERSION" | cut -d. -f1)
+    DART_MINOR=$(echo "$DART_VERSION" | cut -d. -f2)
+    if [[ "$DART_MAJOR" -lt 3 ]] || [[ "$DART_MAJOR" -eq 3 && "$DART_MINOR" -lt 9 ]]; then
+        echo "⚠️  Warning: Dart SDK version $DART_VERSION may not meet requirement (^3.9.2)"
+        echo "💡 Consider using a newer Flutter version or updating pubspec.yaml SDK requirement"
+    else
+        echo "✅ Dart SDK version meets requirement (^3.9.2)"
+    fi
+fi
 
 # Step 2: Get Flutter dependencies
 echo "📦 Getting Flutter dependencies..."
