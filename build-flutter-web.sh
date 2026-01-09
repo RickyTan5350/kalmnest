@@ -9,8 +9,9 @@ echo "🚀 Starting Flutter Web build for Vercel..."
 
 # Step 1: Download and setup Flutter SDK
 echo "📦 Downloading Flutter SDK..."
-# Using latest stable Flutter version which includes Dart SDK 3.9.2+
-# Note: Flutter 3.27.0+ includes Dart SDK 3.9.2+
+# Using latest stable Flutter version
+# Note: Current stable Flutter includes Dart SDK 3.6.0
+# If Flutter 3.27.0 doesn't exist, will fallback to latest stable
 FLUTTER_VERSION="3.27.0"
 FLUTTER_SDK_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
 
@@ -41,6 +42,10 @@ rm -f flutter.tar.xz
 # Add Flutter to PATH
 export PATH="$PATH:$PWD/flutter/bin"
 
+# Fix Git safe directory warning (for Flutter's internal git operations)
+git config --global --add safe.directory "$PWD/flutter" || true
+git config --global --add safe.directory '*' || true
+
 # Verify Flutter installation and check Dart version
 echo "✅ Verifying Flutter installation..."
 flutter --version
@@ -54,8 +59,10 @@ if [[ "$DART_VERSION" != "unknown" ]]; then
     DART_MAJOR=$(echo "$DART_VERSION" | cut -d. -f1)
     DART_MINOR=$(echo "$DART_VERSION" | cut -d. -f2)
     if [[ "$DART_MAJOR" -lt 3 ]] || [[ "$DART_MAJOR" -eq 3 && "$DART_MINOR" -lt 9 ]]; then
-        echo "⚠️  Warning: Dart SDK version $DART_VERSION may not meet requirement (^3.9.2)"
-        echo "💡 Consider using a newer Flutter version or updating pubspec.yaml SDK requirement"
+        echo "⚠️  Warning: Dart SDK version $DART_VERSION does not meet requirement (^3.9.2)"
+        echo "💡 Current Flutter stable version includes Dart $DART_VERSION"
+        echo "💡 Solution: Lower SDK requirement in pubspec.yaml to ^3.6.0 or use pre-built files"
+        echo "⚠️  Continuing build - this may fail during 'flutter pub get'"
     else
         echo "✅ Dart SDK version meets requirement (^3.9.2)"
     fi
