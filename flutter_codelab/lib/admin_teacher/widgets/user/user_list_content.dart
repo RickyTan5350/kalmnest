@@ -258,6 +258,20 @@ class UserListContentState extends State<UserListContent> {
   }
 
   // --- Bulk Delete Logic ---
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   void _deleteSelectedUsers() async {
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -273,54 +287,37 @@ class UserListContentState extends State<UserListContent> {
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(AppLocalizations.of(context)!.cancel),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+            child: Text(
+              AppLocalizations.of(context)!.delete,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
     );
 
     if (confirm == true) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.deletingUsers)),
-      );
-
       try {
         await _userApi.deleteUsers(_selectedIds.toList());
 
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(
-                context,
-              )!.deletedUsersSuccess(_selectedIds.length),
-            ),
-            backgroundColor: Colors.green,
-          ),
+        _showSnackBar(
+          AppLocalizations.of(
+            context,
+          )!.deletedUsersSuccess(_selectedIds.length),
+          Colors.green,
         );
 
         _selectedIds.clear();
         _isSelectionMode = false;
         refreshData();
       } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(
-                context,
-              )!.errorDeletingUsers(e.toString().replaceAll('Exception: ', '')),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        _showSnackBar(
+          AppLocalizations.of(
+            context,
+          )!.errorDeletingUsers(e.toString().replaceAll('Exception: ', '')),
+          Theme.of(context).colorScheme.error,
         );
       }
     }

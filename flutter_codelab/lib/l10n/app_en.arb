@@ -151,7 +151,7 @@
   },
   "createUser": "Create User",
   "deleteUsers": "Delete Users",
-  "deleteUsersConfirmation": "Are you sure you want to delete {count} users? This action cannot be undone.",
+  "deleteUsersConfirmation": "Are you sure you want to delete {count} user(s)? This action cannot be undone.",
   "@deleteUsersConfirmation": {
     "placeholders": {
       "count": {
@@ -160,7 +160,7 @@
     }
   },
   "deletingUsers": "Deleting selected users...",
-  "deletedUsersSuccess": "Successfully deleted {count} users",
+  "deletedUsersSuccess": "Successfully deleted {count} user(s).",
   "@deletedUsersSuccess": {
     "placeholders": {
       "count": {
@@ -420,7 +420,7 @@
       }
     }
   },
-  "classDeletedSuccessfully": "Class deleted successfully!",
+  "classDeletedSuccessfully": "Successfully deleted 1 class(es).",
   "errorDeletingClass": "Error deleting class: {error}",
   "@errorDeletingClass": {
     "placeholders": {
@@ -450,7 +450,7 @@
       }
     }
   },
-  "classesDeletedSuccessfully": "{count} class(es) deleted successfully!",
+  "classesDeletedSuccessfully": "Successfully deleted {count} class(es).",
   "@classesDeletedSuccessfully": {
     "placeholders": {
       "count": {
@@ -509,7 +509,7 @@
   "removeQuiz": "Remove Quiz",
   "areYouSureRemoveQuiz": "Are you sure you want to remove this quiz from the class?",
   "remove": "Remove",
-  "quizRemovedSuccessfully": "Quiz removed successfully!",
+  "quizRemovedSuccessfully": "Successfully removed 1 quiz(zes).",
   "quizzesAvailable": "{count} quizzes available",
   "@quizzesAvailable": {
     "placeholders": {

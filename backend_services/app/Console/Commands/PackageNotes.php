@@ -60,7 +60,7 @@ class PackageNotes extends Command
             $hasChanges = false;
 
             // Regex matches your specific URL format
-            $pattern = '/!\[(.*?)\]\(((?:https?:\/\/[^\/]+|)?.*?\/storage\/uploads\/([^\)]+))\)/';
+            $pattern = '/!\[(.*?)\]\(((?:https?:\/\/[^\/]+|)?.*?\/storage\/notes\/pictures\/([^\)]+))\)/';
             
             $newContent = preg_replace_callback($pattern, function ($matches) use ($picturesPath, &$copiedCount, &$hasChanges) {
                 $altText = $matches[1];
@@ -68,7 +68,7 @@ class PackageNotes extends Command
                 $serverFilename = basename($matches[3]); 
                 $serverFilename = urldecode($serverFilename); // Fixes %20 to space
 
-                $sourcePath = storage_path('app/public/uploads/' . $serverFilename);
+                $sourcePath = storage_path('app/public/notes/pictures/' . $serverFilename);
 
                 if (File::exists($sourcePath)) {
                     // Logic to clean filename

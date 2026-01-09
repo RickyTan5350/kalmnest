@@ -492,7 +492,10 @@ class _FeedState extends State<Feed> {
                       }
                     },
                     isExtended: _isRailExtended,
-                    onAddButtonPressed: isChatPage ? null : _onAddButtonPressed,
+                    onAddButtonPressed:
+                        (isChatPage || widget.currentUser.isStudent)
+                        ? null
+                        : _onAddButtonPressed,
                   ),
                 Expanded(
                   child: Container(
@@ -505,7 +508,7 @@ class _FeedState extends State<Feed> {
           ),
         ],
       ),
-      floatingActionButton: (wideScreen || isChatPage)
+      floatingActionButton: (wideScreen || widget.currentUser.isStudent)
           ? null
           : FloatingActionButton(
               backgroundColor: colorScheme.tertiaryContainer,

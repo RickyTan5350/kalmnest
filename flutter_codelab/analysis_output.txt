@@ -1,0 +1,22 @@
+Analyzing 3 items...                                            
+
+   info - Don't invoke 'print' in production code - lib\admin_teacher\widgets\note\admin_note_detail.dart:566:17 - avoid_print
+   info - Don't invoke 'print' in production code - lib\admin_teacher\widgets\note\admin_note_detail.dart:567:17 - avoid_print
+  error - Expected to find ')' - lib\admin_teacher\widgets\note\admin_note_detail.dart:703:10 - expected_token
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\admin_teacher\widgets\note\admin_note_detail.dart:862:33 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\admin_teacher\widgets\note\admin_note_detail.dart:864:35 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\admin_teacher\widgets\note\admin_note_detail.dart:866:42 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\admin_teacher\widgets\note\admin_note_detail.dart:868:44 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\admin_teacher\widgets\note\admin_note_detail.dart:870:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\admin_teacher\widgets\note\admin_note_detail.dart:1032:18 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\student\widgets\note\student_note_detail.dart:511:17 - avoid_print
+   info - Don't invoke 'print' in production code - lib\student\widgets\note\student_note_detail.dart:512:17 - avoid_print
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\student\widgets\note\student_note_detail.dart:644:33 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\student\widgets\note\student_note_detail.dart:646:35 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\student\widgets\note\student_note_detail.dart:648:42 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\student\widgets\note\student_note_detail.dart:650:44 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\student\widgets\note\student_note_detail.dart:652:40 - deprecated_member_use
+warning - The value of the local variable 'screenWidth' isn't used - lib\student\widgets\note\student_note_detail.dart:782:11 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\student\widgets\note\student_note_detail.dart:817:20 - deprecated_member_use
+
+18 issues found. (ran in 2.7s)

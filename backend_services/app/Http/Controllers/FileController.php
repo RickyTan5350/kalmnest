@@ -87,16 +87,9 @@ class FileController extends Controller
                 // Determine header based on folder input, or default to 'uploads'
                 $folder = $request->input('folder') ? Str::slug($request->input('folder')) : 'uploads';
                 
-                // If folder is provided, structure might be assets/folder
-                // But to keep it simple and consistent with "upload in assets which name same with the title":
-                // If the user means "public/assets", that's usually for static build assets.
-                // Storage public is for user uploads. We'll put it in 'uploads/TitleSlug'.
-                // Or if user specifically said "assets", maybe they want 'assets/TitleSlug'.
-                // Let's use 'assets/' . $folder if folder is provided, else 'uploads'.
-                
-                $uploadPath = $request->input('folder') 
-                    ? 'assets/' . Str::slug($request->input('folder')) 
-                    : 'uploads';
+                // ALIGNMENT: Store all note-related pictures in 'notes/pictures'
+                // This matches NotesSeeder and the frontend's expectation for relatice markdown links.
+                $uploadPath = 'notes/pictures';
 
                 $path = $file->storeAs($uploadPath, $safeFileName, 'public');
 
@@ -192,8 +185,8 @@ class FileController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $safeFileName = time() . '_' . $file->getClientOriginalName();
 
-                    // Store in 'uploads' folder
-                    $path = $file->storeAs('uploads', $safeFileName, 'public');
+                    // Store in 'notes/pictures' folder
+                    $path = $file->storeAs('notes/pictures', $safeFileName, 'public');
 
                     // SYNC ATTACHMENT TO SEED DATA
                     $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
@@ -241,7 +234,7 @@ class FileController extends Controller
             $safeFileName = time() . '_' . $file->getClientOriginalName();
 
             try {
-                $path = $file->storeAs('uploads', $safeFileName, 'public');
+                $path = $file->storeAs('notes/pictures', $safeFileName, 'public');
 
                 // SYNC TO SEED DATA
                 $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
@@ -274,5 +267,37 @@ class FileController extends Controller
         }
         
         return response()->json(['message' => 'File not found'], 404);
+    }
+
+    public function proxy(Request $request)
+    {
+        $url = $request->query('url');
+        if (!$url) {
+            return response()->json(['error' => 'URL required'], 400);
+        }
+
+        // Parse path from URL
+        $path = parse_url($url, PHP_URL_PATH); // e.g. /storage/assets/file.png
+        
+        // Remove /storage/ prefix to get disk relative path
+        // Note: This assumes standard Laravel storage link structure
+        $relativePath = preg_replace('/^\/?storage\//', '', $path);
+        $relativePath = urldecode($relativePath); // Decode spaces etc
+        
+        // Security check
+        if (strpos($relativePath, '..') !== false) {
+             return response()->json(['error' => 'Invalid path'], 400);
+        }
+
+        if (Storage::disk('public')->exists($relativePath)) {
+            $fullPath = Storage::disk('public')->path($relativePath);
+            return response()->file($fullPath, [
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+                'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With',
+            ]);
+        }
+
+        return response()->json(['error' => 'File not found', 'path' => $relativePath], 404);
     }
 }

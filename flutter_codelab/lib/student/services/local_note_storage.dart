@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:io'; // Required for File AND Platform checks
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 // Ensure you import your Note model
-import 'package:code_play/models/note_brief.dart'; 
+import 'package:code_play/models/note_brief.dart';
 
 class LocalNoteStorage {
   final _storage = const FlutterSecureStorage();
@@ -16,7 +17,10 @@ class LocalNoteStorage {
 
   // Dynamic URL: Checks if Android or Windows
   String get baseUrl {
-    if (Platform.isAndroid) {
+    if (kIsWeb) {
+      return 'http://127.0.0.1:8000/api';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:8000/api';
     } else {
       return 'http://127.0.0.1:8000/api';
@@ -37,7 +41,8 @@ class LocalNoteStorage {
 
   /// 1. GET FILE REFERENCE
   /// Returns a file specific to the user, e.g., "12_notes.json"
-  Future<File> _getLocalFile(String userId) async {
+  Future<File?> _getLocalFile(String userId) async {
+    if (kIsWeb) return null;
     final directory = await getApplicationDocumentsDirectory();
     return File('${directory.path}/${userId}_notes.json');
   }
@@ -47,6 +52,7 @@ class LocalNoteStorage {
   Future<void> saveLocalNotes(String userId, List<NoteBrief> notes) async {
     try {
       final file = await _getLocalFile(userId);
+      if (file == null) return;
 
       // Convert List<NoteBrief> -> List<Map> -> JSON String
       final String jsonString = jsonEncode(
@@ -66,7 +72,7 @@ class LocalNoteStorage {
     try {
       final file = await _getLocalFile(userId);
 
-      if (!await file.exists()) {
+      if (file == null || !await file.exists()) {
         print('No local notes found for user: $userId');
         return [];
       }
@@ -76,7 +82,6 @@ class LocalNoteStorage {
 
       // Convert JSON List -> List<NoteBrief>
       return jsonList.map((json) => NoteBrief.fromJson(json)).toList();
-
     } catch (e) {
       print('Error reading local notes: $e');
       return [];
@@ -86,7 +91,7 @@ class LocalNoteStorage {
   /// 4. CLEAR LOCAL DATA
   Future<void> clearLocalNotes(String userId) async {
     final file = await _getLocalFile(userId);
-    if (await file.exists()) {
+    if (file != null && await file.exists()) {
       await file.delete();
     }
   }
@@ -119,10 +124,7 @@ class LocalNoteStorage {
       request.fields['visibility'] = visibility;
 
       request.files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          markdownFile.path,
-        ),
+        await http.MultipartFile.fromPath('file', markdownFile.path),
       );
 
       final streamedResponse = await request.send();
@@ -134,9 +136,13 @@ class LocalNoteStorage {
         throw Exception('Authentication Failed: Token expired or invalid.');
       } else if (response.statusCode == 422) {
         final errorBody = jsonDecode(response.body);
-        throw Exception('Validation Failed: ${errorBody['message'] ?? response.body}');
+        throw Exception(
+          'Validation Failed: ${errorBody['message'] ?? response.body}',
+        );
       } else {
-        throw Exception('Failed to create note (Status ${response.statusCode}): ${response.body}');
+        throw Exception(
+          'Failed to create note (Status ${response.statusCode}): ${response.body}',
+        );
       }
     } catch (e) {
       print("Connection Error: $e");

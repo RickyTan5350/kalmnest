@@ -153,22 +153,113 @@ class GameAPI {
               );
               if (progressResponse.statusCode == 200) {
                 final progressData = jsonDecode(progressResponse.body);
-                if (progressData['saved_data'] != null) {
+                
+                // Check if saved_data and index_files exist in level_user
+                final savedData = progressData['saved_data'];
+                final indexFiles = progressData['index_files'];
+                
+                final hasSavedData = savedData != null && 
+                    savedData.toString().isNotEmpty &&
+                    savedData != 'null';
+                final hasIndexFiles = indexFiles != null && 
+                    indexFiles.toString().isNotEmpty &&
+                    indexFiles != 'null';
+                
+                // If both saved_data and index_files are null, use data from levels table and leave index files empty
+                if (!hasSavedData && !hasIndexFiles) {
+                  // Use default level_data from levels table, leave index files empty
+                  if (level.levelData != null) {
+                    final levelDataJson = jsonDecode(level.levelData!);
+                    await storage.saveStudentProgress(
+                      levelId: levelId,
+                      savedDataJson: jsonEncode(levelDataJson),
+                      userId: userId,
+                    );
+                    if (kDebugMode) {
+                      print("level_user table has null saved_data and index_files, using level_data from levels table for level $levelId, leaving index files empty");
+                    }
+                  }
+                } else {
+                  // At least one of saved_data or index_files exists, use them
+                  if (hasSavedData) {
+                    // Use saved_data from level_user table
+                    await storage.saveStudentProgress(
+                      levelId: levelId,
+                      savedDataJson: savedData is String
+                          ? savedData
+                          : jsonEncode(savedData),
+                      userId: userId,
+                    );
+                  } else {
+                    // saved_data is null but index_files exists, use default level_data
+                    if (level.levelData != null) {
+                      final levelDataJson = jsonDecode(level.levelData!);
+                      await storage.saveStudentProgress(
+                        levelId: levelId,
+                        savedDataJson: jsonEncode(levelDataJson),
+                        userId: userId,
+                      );
+                    }
+                  }
+                  
+                  // Handle index_files if they exist
+                  if (hasIndexFiles) {
+                    try {
+                      final indexFilesMap = indexFiles is String 
+                          ? jsonDecode(indexFiles) as Map<String, dynamic>
+                          : indexFiles as Map<String, dynamic>;
+                      
+                      final indexFileTypes = ['html', 'css', 'js', 'php'];
+                      for (final type in indexFileTypes) {
+                        final content = indexFilesMap[type]?.toString();
+                        if (content != null && content.isNotEmpty && content != 'null') {
+                          await storage.saveIndexFile(
+                            levelId: levelId,
+                            type: type,
+                            content: content,
+                            userId: userId,
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (kDebugMode) {
+                        print("Error parsing index_files from level_user for level $levelId: $e");
+                      }
+                    }
+                  }
+                  
+                  if (kDebugMode) {
+                    print("Loaded backend progress from level_user table for level $levelId (saved_data: $hasSavedData, index_files: $hasIndexFiles)");
+                  }
+                }
+              } else if (progressResponse.statusCode == 404) {
+                // level_user entry doesn't exist at all
+                // Use default level_data from levels table
+                if (level.levelData != null) {
+                  final levelDataJson = jsonDecode(level.levelData!);
                   await storage.saveStudentProgress(
                     levelId: levelId,
-                    savedDataJson: progressData['saved_data'] is String
-                        ? progressData['saved_data']
-                        : jsonEncode(progressData['saved_data']),
+                    savedDataJson: jsonEncode(levelDataJson),
                     userId: userId,
                   );
                   if (kDebugMode) {
-                    print("Loaded backend progress for level $levelId");
+                    print("level_user table empty (404), using level_data from levels table for level $levelId");
                   }
                 }
               }
             } catch (e) {
-              // Progress may not exist yet, which is fine
-              print("No saved progress found for level: $levelId");
+              // If error occurs, fall back to using level_data from levels table
+              if (level.levelData != null) {
+                final levelDataJson = jsonDecode(level.levelData!);
+                await storage.saveStudentProgress(
+                  levelId: levelId,
+                  savedDataJson: jsonEncode(levelDataJson),
+                  userId: userId,
+                );
+                if (kDebugMode) {
+                  print("Error loading level_user, using level_data from levels table as fallback for level $levelId: $e");
+                }
+              }
             }
           }
         }
@@ -347,14 +438,21 @@ class GameAPI {
 
   /// ------------------------------------------------------------
   /// SAVE STUDENT PROGRESS
+  /// Saves student progress to the level_user table in the database
+  /// Creates a new entry if it doesn't exist, or updates existing entry
   /// ------------------------------------------------------------
   static Future<Map<String, dynamic>> saveStudentProgress({
     required String levelId,
     required String? savedData,
-    String? indexFiles, // Add indexFiles
-    int? timer, // Add timer
+    String? indexFiles, // Index files (HTML/CSS/JS/PHP) as JSON string
+    int? timer, // Remaining time on timer
   }) async {
     try {
+      // POST to /level-user/{levelId}/save endpoint
+      // This endpoint saves/updates the level_user table with:
+      // - saved_data: Student's progress JSON
+      // - index_files: Index files (HTML/CSS/JS/PHP) as JSON
+      // - timer: Remaining time
       final url = Uri.parse("$apiBase/level-user/$levelId/save");
       final headers = await _getHeaders();
 

@@ -45,25 +45,79 @@ class NotesController extends Controller
     public function uploadFile(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|max:20480|mimes:pdf,doc,docx,txt,png,jpg,gif', 
+            'file' => 'required|file|max:20480', 
+            'note_id' => 'required|string',
         ]);
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $originalName = $file->getClientOriginalName();
-            $safeFileName = time() . '_' . $file->getClientOriginalName();
+            $ext = strtolower($file->getClientOriginalExtension());
+
+            // Check if this is a "Code Asset" that needs name preservation
+            $isCodeAsset = in_array($ext, ['json', 'html', 'css', 'js', 'php']);
+            
+            // Allow explicit "visible_files.json" override even if we missed the extension somehow
+            if ($originalName === 'visible_files.json') $isCodeAsset = true;
 
             try {
-                $path = $file->storeAs('uploads', $safeFileName, 'public');
+                // 2. Resolve Note (We need Note Title for folder structure)
+                $noteId = $request->input('note_id');
+                // \Log::info("DEBUG: uploadFile - Received note_id: " . $noteId); // Commented out to reduce noise
+                
+                $note = Notes::find($noteId);
+                if (!$note) {
+                    $note = Notes::where('title', $noteId)->first();
+                }
 
-                // SYNC TO SEED DATA
-                $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, 'pictures');
+                $topicName = 'General';
+                $safeTitle = 'Untitled';
+                $noteTitle = 'Untitled';
+
+                if ($note) {
+                    if ($note->topic_id) {
+                        $topic = Topic::find($note->topic_id);
+                        if ($topic) $topicName = $topic->topic_name;
+                    }
+                    $noteTitle = $note->title;
+                    // Sanitize Title for Folder Name
+                    $safeTitle = preg_replace('/[\\/\\\:\*\?\"\<\>\|]/', '', $noteTitle);
+                    $safeTitle = trim($safeTitle);
+                    if (empty($safeTitle)) $safeTitle = 'Untitled';
+                }
+
+                if ($isCodeAsset) {
+                    // --- CODE ASSET STRATEGY ---
+                    // 1. Preserve Name
+                    $safeFileName = $originalName; // No timestamp
+                    
+                    // 2. Organized Storage
+                    // notes/assets/<SafeTitle>
+                    $uploadPath = 'notes/assets/' . $safeTitle;
+                    
+                    // 3. Sync Logic
+                    // Target: <Topic>/assets/<NoteTitle>  (Unsafe title is fine for internal mapping if SyncsToSeedData handles it, but safer to use original)
+                    // SyncsToSeedData expects "Topic/assets/NoteTitle" format for the subfolder to map to public/assets/www
+                    $subfolder = $topicName . '/assets/' . $noteTitle;
+                    
+                } else {
+                    // --- LEGACY IMAGE STRATEGY ---
+                    $safeFileName = time() . '_' . $originalName; 
+                    $uploadPath = 'notes/pictures';
+                    $subfolder = $topicName . DIRECTORY_SEPARATOR . 'pictures';
+                }
+
+                // Store File
+                $path = $file->storeAs($uploadPath, $safeFileName, 'public');
+
+                // SYNC TO SEED DATA & PUBLIC ASSETS
+                $this->syncFileToSeedData(storage_path('app/public/' . $path), $safeFileName, $subfolder);
 
                 return response()->json([
                     'message' => 'File uploaded successfully',
                     'original_name' => $originalName,
                     'filename' => $safeFileName,
-                    'file_url' => $this->getEncodedUrl($path), // Force absolute encoded URL
+                    'file_url' => $this->getEncodedUrl($path), 
                 ], 200);
 
             } catch (\Exception $e) {

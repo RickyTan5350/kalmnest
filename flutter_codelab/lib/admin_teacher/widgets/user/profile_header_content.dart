@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart'; // ADDED
 import 'package:code_play/models/user_data.dart';
 import 'package:code_play/admin_teacher/widgets/user/user_detail_page.dart';
-import 'package:code_play/pages/help_support_pages.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
 import 'package:code_play/widgets/language_selector.dart';
 import 'package:code_play/widgets/user_avatar.dart';
@@ -35,44 +35,8 @@ class ProfileHeaderContent extends StatelessWidget {
             padding: const EdgeInsets.only(right: 12.0),
             child: Builder(
               builder: (context) {
-                final fullGreeting = AppLocalizations.of(
-                  context,
-                )!.helloUser(currentUser.name);
-                final nameIdx = fullGreeting.indexOf(currentUser.name);
-
-                if (nameIdx != -1) {
-                  final prefix = fullGreeting.substring(0, nameIdx);
-                  final suffix = fullGreeting.substring(
-                    nameIdx + currentUser.name.length,
-                  );
-                  return Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: prefix,
-                          style: const TextStyle(fontWeight: FontWeight.normal),
-                        ),
-                        TextSpan(
-                          text: currentUser.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        TextSpan(
-                          text: suffix,
-                          style: const TextStyle(fontWeight: FontWeight.normal),
-                        ),
-                      ],
-                    ),
-                    style: textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontSize: 14,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  );
-                }
-
                 return Text(
-                  fullGreeting,
+                  currentUser.name,
                   style: textTheme.titleMedium?.copyWith(
                     color: colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
@@ -151,29 +115,35 @@ class ProfileHeaderContent extends StatelessWidget {
                   Icons.help_outline,
                   color: colorScheme.onSurfaceVariant,
                 ),
-                onSelected: (String result) {
+                onSelected: (String result) async {
                   if (result == 'help_center') {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const HelpCenterPage(),
-                      ),
+                    final Uri url = Uri.parse(
+                      'https://misty-pruner-069.notion.site/2e1ee9e36cb0800e992aee5aba0a4ebe?v=2e1ee9e36cb081799b7d000c3be8d000&source=copy_link',
                     );
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    }
                   } else if (result == 'faq') {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const FaqPage()),
+                    final Uri url = Uri.parse(
+                      'https://misty-pruner-069.notion.site/FAQs-2e1ee9e36cb0805a96e1d29c7650094f?source=copy_link',
                     );
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    }
                   } else if (result == 'feedback') {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const FeedbackPage(),
-                      ),
+                    final Uri url = Uri.parse(
+                      'https://misty-pruner-069.notion.site/Feedback-2e1ee9e36cb080369eadfa37c10e66b6?source=copy_link',
                     );
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    }
                   } else if (result == 'user_manual') {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const UserManualPage(),
-                      ),
+                    final Uri url = Uri.parse(
+                      'https://misty-pruner-069.notion.site/User-Manual-2e1ee9e36cb080e4bcc4fef7fea8bf2a?source=copy_link',
                     );
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    }
                   }
                 },
                 itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -201,6 +171,7 @@ class ProfileHeaderContent extends StatelessWidget {
               PopupMenuButton<String>(
                 // Set offset to position the menu directly below the icon/profile area
                 offset: const Offset(0, 48),
+                tooltip: 'Profile', // Set tooltip to "Profile"
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

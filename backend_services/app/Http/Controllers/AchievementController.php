@@ -216,6 +216,10 @@ class AchievementController extends Controller
             // Note: We include 'created_at' because your Flutter app uses it as a fallback date
             $query->leftJoin('users', 'achievements.created_by', '=', 'users.user_id')
                 ->leftJoin('levels', 'achievements.associated_level', '=', 'levels.level_id')
+                ->leftJoin('achievement_user', function ($join) {
+                    $join->on('achievements.achievement_id', '=', 'achievement_user.achievement_id')
+                         ->where('achievement_user.user_id', '=', Auth::id());
+                })
                 ->select(
                     'achievements.achievement_id',
                     'achievements.title',
@@ -225,7 +229,8 @@ class AchievementController extends Controller
                     'achievements.associated_level',
                     'achievements.created_at', 
                     'users.name as creator_name',
-                    'levels.level_name'
+                    'levels.level_name',
+                    'achievement_user.timer'
                 );
         } else {
             // ADMINS/TEACHERS: See everything (including updated_at, raw IDs, etc.)
@@ -235,7 +240,8 @@ class AchievementController extends Controller
                     'achievements.*', 
                     'users.name as creator_name',
                     'users.email as creator_email', // Example: Admins might need to contact the creator
-                    'levels.level_name'
+                    'levels.level_name',
+                    'levels.timer'
                 );
         }
 
@@ -427,8 +433,13 @@ class AchievementController extends Controller
         $user = $request->user(); 
         
         // FIX: We pass a second array with extra column values (the pivot 'id')
+        $pivotData = ['id' => (string) Str::uuid7()];
+        if ($request->has('timer')) {
+            $pivotData['timer'] = $request->input('timer');
+        }
+
         $user->achievements()->syncWithoutDetaching([
-            $request->input('achievement_id') => ['id' => (string) Str::uuid7()]
+            $request->input('achievement_id') => $pivotData
         ]);
 
         Log::info("ACHIEVEMENT_UNLOCKED: Achievement {$request->input('achievement_id')} unlocked by Student " . Auth::id());
@@ -454,6 +465,7 @@ class AchievementController extends Controller
             ->select(
                 'achievements.*',
                 'achievement_user.created_at as unlocked_at', // Will be NULL if locked
+                'achievement_user.timer',
                 'users.name as creator_name'
             )
             // Order by: Unlocked first (descending date), then Locked (by creation date)

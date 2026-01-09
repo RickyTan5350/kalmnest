@@ -1,11 +1,11 @@
 {
+    "Pengesahan.php": [
+        "Pengesahan.php",
+        "Sah.php"
+    ],
     "Senarai.php": [
         "Senarai.php",
         "KemasKini.php",
         "ProsesKemasKini.php"
-    ],
-    "Pengesahan.php": [
-        "Pengesahan.php",
-        "Sah.php"
     ]
 }

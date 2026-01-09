@@ -160,16 +160,23 @@ class _GamePageState extends State<GamePage> {
     final response = await GameAPI.deleteLevel(levelId);
     if (response.success) {
       fetchLevels(topic: _selectedTopic, forceRefresh: true);
-      showSnackBar(context, response.message, Colors.green);
+      showSnackBar(context, "Successfully deleted 1 level(s).", Colors.green);
     } else {
       showSnackBar(context, response.message, Colors.red);
     }
   }
 
   void showSnackBar(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: color,
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -178,7 +185,7 @@ class _GamePageState extends State<GamePage> {
     final bool isStudent = widget.userRole.trim().toLowerCase() == 'student';
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(2.0, 2.0, 16.0, 16.0),
       child: Card(
         elevation: 2.0,
         child: SizedBox(
@@ -227,28 +234,32 @@ class _GamePageState extends State<GamePage> {
                 const SizedBox(height: 16),
 
                 // SEARCH BAR
-                SizedBox(
-                  width: 300,
-                  child: SearchBar(
-                    controller: _searchController,
-                    hintText: "Search levels...",
-                    onChanged: _onSearchChanged,
-                    onSubmitted: _onSearchChanged,
-                    trailing: <Widget>[
-                      if (_searchQuery.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            _onSearchChanged('');
-                          },
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 300,
+                      child: SearchBar(
+                        controller: _searchController,
+                        hintText: "Search levels...",
+                        padding: const WidgetStatePropertyAll<EdgeInsets>(
+                          EdgeInsets.symmetric(horizontal: 16.0),
                         ),
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {},
+                        onChanged: _onSearchChanged,
+                        onSubmitted: _onSearchChanged,
+                        leading: const Icon(Icons.search),
+                        trailing: <Widget>[
+                          if (_searchQuery.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 
@@ -468,7 +479,7 @@ class _GamePageState extends State<GamePage> {
           foregroundColor: color,
           child: Icon(icon),
         ),
-        trailing: isStudent ? null : _buildAdminActions(level, iconSize: 20),
+        trailing: isStudent ? null : _buildAdminActions(level, iconSize: 28),
         onTap: () => _onLevelTap(level),
       ),
     );
@@ -569,7 +580,7 @@ class _GamePageState extends State<GamePage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _buildVisibilityBadge(level),
-                      if (!isStudent) _buildAdminActions(level, iconSize: 20),
+                      if (!isStudent) _buildAdminActions(level, iconSize: 28),
                     ],
                   ),
                 ),
@@ -605,22 +616,21 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  Widget _buildAdminActions(LevelModel level, {double iconSize = 20}) {
-    final bool isQuiz = level.levelTypeName == 'Quiz';
+  Widget _buildAdminActions(LevelModel level, {double iconSize = 28}) {
     final String role = widget.userRole.trim().toLowerCase();
     final bool isAdmin = role == 'admin';
     final bool isTeacher = role == 'teacher';
     final bool isStaff = isAdmin || isTeacher;
-    final bool canViewResults =
-        isAdmin || (isTeacher && (level.isCreatedByMe ?? false));
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isQuiz && isStaff && canViewResults) ...[
+        // Show View Results button for all admins and teachers on all level types
+        // Teachers can view results for any level, not just their own
+        if (isStaff) ...[
           IconButton(
             icon: Icon(Icons.bar_chart, color: Colors.green, size: iconSize),
-            tooltip: 'View Quiz Results',
+            tooltip: 'View Results',
             onPressed: () {
               showTeacherQuizResults(context: context, level: level);
             },
@@ -644,15 +654,20 @@ class _GamePageState extends State<GamePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Level'),
-        content: const Text('Are you sure you want to delete this level?'),
+        title: const Text('Delete Level?'),
+        content: const Text(
+          'Are you sure you want to delete 1 level(s)? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             child: const Text('Cancel'),
             onPressed: () => Navigator.pop(context),
           ),
           TextButton(
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
             onPressed: () {
               Navigator.pop(context);
               deleteLevel(level.levelId!);
@@ -672,7 +687,10 @@ class _GamePageState extends State<GamePage> {
 
     if (canEdit) {
       // Trigger Edit for Staff
-      final currentLevel = await GameAPI.fetchLevelById(level.levelId!);
+      final currentLevel = await GameAPI.fetchLevelById(
+        level.levelId!,
+        userRole: widget.userRole,
+      );
       if (currentLevel == null) {
         showSnackBar(context, "Failed to load level data", Colors.red);
         return;
@@ -689,7 +707,10 @@ class _GamePageState extends State<GamePage> {
     }
 
     // For students or staff viewing shared levels, trigger Play
-    final currentLevel = await GameAPI.fetchLevelById(level.levelId!);
+    final currentLevel = await GameAPI.fetchLevelById(
+      level.levelId!,
+      userRole: widget.userRole,
+    );
     if (currentLevel == null) {
       showSnackBar(context, "Failed to load level data", Colors.red);
       return;

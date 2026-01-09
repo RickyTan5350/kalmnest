@@ -252,7 +252,7 @@ class UserApi {
     }
   }
 
-  Future<void> importUsers(String filePath, String fileName) async {
+  Future<void> importUsers(List<int> fileBytes, String fileName) async {
     final token = await AuthApi.getToken();
     final url = Uri.parse('$_listUrl/import');
 
@@ -262,11 +262,11 @@ class UserApi {
         'Authorization': 'Bearer $token',
       });
 
-    // Attach the Excel file
+    // Attach the Excel file using bytes
     request.files.add(
-      await http.MultipartFile.fromPath(
+      http.MultipartFile.fromBytes(
         'file', // MUST match the 'file' key in Laravel validation
-        filePath,
+        fileBytes,
         filename: fileName,
         contentType: MediaType(
           'application',
@@ -305,4 +305,3 @@ class ValidationException implements Exception {
     return 'ValidationException: $errors';
   }
 }
-

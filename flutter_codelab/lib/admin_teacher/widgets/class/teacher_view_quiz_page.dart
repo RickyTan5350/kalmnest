@@ -76,11 +76,14 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
   }
 
   void _showSnackBar(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+    scaffoldMessenger.showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(message, style: const TextStyle(color: Colors.white)),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -276,12 +279,12 @@ class _TeacherViewQuizPageState extends State<TeacherViewQuizPage> {
               onPressed: () => Navigator.pop(context, false),
               child: Text(l10n.cancel),
             ),
-            FilledButton(
+            TextButton(
               onPressed: () => Navigator.pop(context, true),
-              style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error,
+              child: Text(
+                l10n.remove,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-              child: Text(l10n.remove),
             ),
           ],
         );

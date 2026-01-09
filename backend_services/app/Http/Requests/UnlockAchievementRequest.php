@@ -42,6 +42,7 @@ class UnlockAchievementRequest extends FormRequest
     {
         return [
             'achievement_id' => ['required', 'string', 'exists:achievements,achievement_id'],
+            'timer' => ['nullable', 'integer'],
         ];
     }
 

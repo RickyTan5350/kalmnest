@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import 'package:code_play/utils/web_utils.dart';
 
 /// Service to manage level data storage on local device
 /// Handles saving and retrieving level data for Unity to use
@@ -56,6 +57,49 @@ class LocalLevelStorage {
     String? userRole, // Added userRole
   }) async {
     final cleanLevelId = levelId.trim();
+    if (kIsWeb) {
+      try {
+        final levelDataObj = jsonDecode(jsonEncode(levelDataJson));
+        final winDataObj = jsonDecode(jsonEncode(winConditionJson));
+        final levelTypes = ['html', 'css', 'js', 'php'];
+
+        final bool skipProgress =
+            userRole != null &&
+            (userRole.toLowerCase() == 'admin' ||
+                userRole.toLowerCase() == 'teacher');
+
+        for (final levelType in levelTypes) {
+          final levelData = levelDataObj[levelType];
+          if (levelData != null) {
+            WebUtils.setToLocalStorage(
+              'unity_levels_${userId ?? "null"}_${cleanLevelId}_${levelType}_levelData',
+              levelData,
+            );
+
+            if (!skipProgress) {
+              final progressKey =
+                  'unity_levels_${userId ?? "null"}_${cleanLevelId}_progress_${levelType}_saved_data';
+              if (WebUtils.getFromLocalStorage(progressKey) == null) {
+                WebUtils.setToLocalStorage(progressKey, levelData);
+              }
+            }
+          }
+
+          final winData = winDataObj[levelType];
+          if (winData != null) {
+            WebUtils.setToLocalStorage(
+              'unity_levels_${userId ?? "null"}_${cleanLevelId}_${levelType}_winData',
+              winData,
+            );
+          }
+        }
+        return true;
+      } catch (e) {
+        if (kDebugMode) print('Error saving level data (web): $e');
+        return false;
+      }
+    }
+
     try {
       final levelDir = await _getLevelDirectory(userId: userId);
       final levelTypeDirPath = p.normalize(p.join(levelDir.path, cleanLevelId));
@@ -81,6 +125,34 @@ class LocalLevelStorage {
               userRole.toLowerCase() == 'teacher');
 
       for (final levelType in levelTypes) {
+        if (kIsWeb) {
+          // Web storage
+          final levelData = levelDataObj[levelType];
+          if (levelData != null) {
+            WebUtils.setToLocalStorage(
+              'unity_levels_${userId ?? "null"}_${cleanLevelId}_${levelType}_levelData',
+              levelData,
+            );
+
+            if (!skipProgress) {
+              final progressKey =
+                  'unity_levels_${userId ?? "null"}_${cleanLevelId}_progress_${levelType}_saved_data';
+              if (WebUtils.getFromLocalStorage(progressKey) == null) {
+                WebUtils.setToLocalStorage(progressKey, levelData);
+              }
+            }
+          }
+
+          final winData = winDataObj[levelType];
+          if (winData != null) {
+            WebUtils.setToLocalStorage(
+              'unity_levels_${userId ?? "null"}_${cleanLevelId}_${levelType}_winData',
+              winData,
+            );
+          }
+          continue;
+        }
+
         final typeDirPath = p.normalize(p.join(levelTypeDir.path, levelType));
         final typeDir = Directory(typeDirPath);
         if (!await typeDir.exists()) {
@@ -154,6 +226,29 @@ class LocalLevelStorage {
     String? userId,
   }) async {
     final cleanLevelId = levelId.trim();
+
+    if (kIsWeb) {
+      try {
+        if (savedDataJson == null) return true;
+        final savedDataObj = jsonDecode(savedDataJson);
+        final levelTypes = ['html', 'css', 'js', 'php'];
+
+        for (final levelType in levelTypes) {
+          final progressData = savedDataObj[levelType];
+          if (progressData != null) {
+            WebUtils.setToLocalStorage(
+              'unity_levels_${userId ?? "null"}_${cleanLevelId}_progress_${levelType}_saved_data',
+              progressData,
+            );
+          }
+        }
+        return true;
+      } catch (e) {
+        if (kDebugMode) print('Error saving student progress (web): $e');
+        return false;
+      }
+    }
+
     try {
       if (savedDataJson == null) return true;
 
@@ -171,6 +266,17 @@ class LocalLevelStorage {
       final levelTypes = ['html', 'css', 'js', 'php'];
 
       for (final levelType in levelTypes) {
+        if (kIsWeb) {
+          final progressData = savedDataObj[levelType];
+          if (progressData != null) {
+            WebUtils.setToLocalStorage(
+              'unity_levels_${userId ?? "null"}_${cleanLevelId}_progress_${levelType}_saved_data',
+              progressData,
+            );
+          }
+          continue;
+        }
+
         final typeDirPath = p.normalize(p.join(progressDir.path, levelType));
         final typeDir = Directory(typeDirPath);
         if (!await typeDir.exists()) {
@@ -210,6 +316,10 @@ class LocalLevelStorage {
     final cleanLevelId = levelId.trim();
     final cleanType = type.trim().toLowerCase();
     try {
+      if (kIsWeb) {
+        return 'web_storage://$cleanLevelId/$cleanType/$dataType';
+      }
+
       final levelDir = await _getLevelDirectory(userId: userId);
       final filePath = p.normalize(
         p.join(levelDir.path, cleanLevelId, cleanType, '$dataType.json'),
@@ -269,6 +379,38 @@ class LocalLevelStorage {
     }
 
     try {
+      if (kIsWeb) {
+        String key;
+        if (cleanDataType == 'index') {
+          key =
+              'unity_levels_${userId ?? "null"}_${cleanLevelId}_Index_index.$cleanType';
+        } else {
+          final folder = effectiveUseProgress ? 'progress_' : '';
+          final dataTypeKey =
+              (folder == 'progress_' && cleanDataType == 'level')
+              ? 'saved_data'
+              : '${cleanDataType}Data';
+          key =
+              'unity_levels_${userId ?? "null"}_${cleanLevelId}_${folder}${cleanType}_$dataTypeKey';
+        }
+
+        String? content = WebUtils.getFromLocalStorage(key);
+
+        if (content == null &&
+            effectiveUseProgress &&
+            cleanDataType == 'level' &&
+            !isStaff) {
+          // Fallback to base
+          final baseKey =
+              'unity_levels_${userId ?? "null"}_${cleanLevelId}_${cleanType}_levelData';
+          content = WebUtils.getFromLocalStorage(baseKey);
+          if (content != null) {
+            WebUtils.setToLocalStorage(key, content);
+          }
+        }
+        return content;
+      }
+
       final levelDir = await _getLevelDirectory(userId: userId);
       final folder = effectiveUseProgress ? 'progress' : '';
 
@@ -319,7 +461,16 @@ class LocalLevelStorage {
         if (await baseFile.exists()) {
           final content = await baseFile.readAsString();
           // Initialize the progress file for next time
-          final progressFile = File(filePath);
+          final progressFilePath = p.normalize(
+            p.join(
+              levelDir.path,
+              cleanLevelId,
+              'progress',
+              cleanType,
+              'saved_data.json',
+            ),
+          );
+          final progressFile = File(progressFilePath);
           final progressDir = progressFile.parent;
           if (!await progressDir.exists()) {
             await progressDir.create(recursive: true);
@@ -352,6 +503,9 @@ class LocalLevelStorage {
     final cleanLevelId = levelId.trim();
     final cleanType = type.trim().toLowerCase();
     try {
+      if (kIsWeb) {
+        return 'web_storage://$cleanLevelId/Index/index.$cleanType';
+      }
       final levelDir = await _getLevelDirectory(userId: userId);
       final filePath = p.normalize(
         p.join(levelDir.path, cleanLevelId, 'Index', 'index.$cleanType'),
@@ -381,6 +535,14 @@ class LocalLevelStorage {
     final cleanLevelId = levelId.trim();
     final cleanType = type.trim().toLowerCase();
     try {
+      if (kIsWeb) {
+        WebUtils.setToLocalStorage(
+          'unity_levels_${userId ?? "null"}_${cleanLevelId}_Index_index.$cleanType',
+          content,
+        );
+        return true;
+      }
+
       final levelDir = await _getLevelDirectory(userId: userId);
       final typeDirPath = p.normalize(
         p.join(levelDir.path, cleanLevelId, 'Index'),
@@ -437,6 +599,14 @@ class LocalLevelStorage {
     }
 
     try {
+      if (kIsWeb) {
+        WebUtils.setToLocalStorage(
+          'unity_levels_${userId ?? "null"}_${cleanLevelId}_${cleanType}_${cleanDataType}Data',
+          content,
+        );
+        return true;
+      }
+
       final levelDir = await _getLevelDirectory(userId: userId);
       final typeDirPath = p.normalize(
         p.join(levelDir.path, cleanLevelId, cleanType),
@@ -475,6 +645,24 @@ class LocalLevelStorage {
   Future<bool> clearLevelData(String levelId, {String? userId}) async {
     final cleanLevelId = levelId.trim();
     try {
+      if (kIsWeb) {
+        //localStorage.clear() might be too aggressive, ideally we'd remove specific keys
+        //For simplicity in temp data case:
+        final levelTypes = ['html', 'css', 'js', 'php'];
+        for (final type in levelTypes) {
+          WebUtils.removeFromLocalStorage(
+            'unity_levels_${userId ?? "null"}_${cleanLevelId}_${type}_levelData',
+          );
+          WebUtils.removeFromLocalStorage(
+            'unity_levels_${userId ?? "null"}_${cleanLevelId}_${type}_winData',
+          );
+          WebUtils.removeFromLocalStorage(
+            'unity_levels_${userId ?? "null"}_${cleanLevelId}_Index_index.$type',
+          );
+        }
+        return true;
+      }
+
       final levelDir = await _getLevelDirectory(userId: userId);
       final levelTypeDirPath = p.normalize(p.join(levelDir.path, cleanLevelId));
       final levelTypeDir = Directory(levelTypeDirPath);
@@ -502,6 +690,16 @@ class LocalLevelStorage {
   }) async {
     final cleanLevelId = levelId.trim();
     try {
+      if (kIsWeb) {
+        final levelTypes = ['html', 'css', 'js', 'php'];
+        for (final type in levelTypes) {
+          final ext = type == 'js' ? 'js' : type;
+          WebUtils.removeFromLocalStorage(
+            'unity_levels_${userId ?? "null"}_${cleanLevelId}_Index_index.$ext',
+          );
+        }
+        return;
+      }
       final levelDir = await _getLevelDirectory(userId: userId);
       final indexDirPath = p.normalize(
         p.join(levelDir.path, cleanLevelId, 'Index'),
@@ -538,6 +736,20 @@ class LocalLevelStorage {
     final cleanLevelId = levelId.trim();
     final Map<String, String> indexFiles = {};
     try {
+      if (kIsWeb) {
+        final levelTypes = ['html', 'css', 'js', 'php'];
+        for (final type in levelTypes) {
+          final ext = type == 'js' ? 'js' : type;
+          final content = WebUtils.getFromLocalStorage(
+            'unity_levels_${userId ?? "null"}_${cleanLevelId}_Index_index.$ext',
+          );
+          if (content != null) {
+            indexFiles[type] = content;
+          }
+        }
+        return indexFiles;
+      }
+
       final levelDir = await _getLevelDirectory(userId: userId);
       final indexDirPath = p.normalize(
         p.join(levelDir.path, cleanLevelId, 'Index'),
@@ -560,12 +772,6 @@ class LocalLevelStorage {
             }
           }
         }
-      } else {
-        if (kDebugMode) {
-          print(
-            'DEBUG: [LocalLevelStorage] Index directory NOT found: $indexDirPath',
-          );
-        }
       }
     } catch (e) {
       if (kDebugMode) {
@@ -577,6 +783,7 @@ class LocalLevelStorage {
 
   /// Get the base path for serving files via HTTP (for Unity WebGL)
   Future<String> getBasePath({String? userId}) async {
+    if (kIsWeb) return 'web_storage';
     final levelDir = await _getLevelDirectory(userId: userId);
     return p.normalize(levelDir.path);
   }

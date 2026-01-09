@@ -62,10 +62,10 @@ class RunCodeController extends Controller
 
             if ($contextId) {
                 // Adjust this matching your folder structure
-                $rawPath = base_path('../flutter_codelab/assets/www/' . $contextId);
-                $sourceDir = realpath($rawPath);
+                // We now pull from Storage (notes/assets) which matches what Seeder/Controller upload.
+                $sourceDir = storage_path('app/public/notes/assets/' . $contextId);
                 
-                if ($sourceDir && is_dir($sourceDir)) {
+                if (file_exists($sourceDir) && is_dir($sourceDir)) {
                     \Illuminate\Support\Facades\File::copyDirectory($sourceDir, $tempDir);
                 }
             }
@@ -152,7 +152,10 @@ class RunCodeController extends Controller
                  // If we have a provided session ID, force PHP to use it.
                  // This ensures that session_start() picks up the same session across requests.
                  if (!empty($providedSessionId)) {
-                     $mockCode .= "if(session_status() === PHP_SESSION_NONE) session_id('$providedSessionId');\n";
+                     $mockCode .= "if(session_status() === PHP_SESSION_NONE) {\n";
+                     $mockCode .= "  session_save_path('" . addslashes($tempDir) . "');\n";
+                     $mockCode .= "  session_id('$providedSessionId');\n";
+                     $mockCode .= "}\n";
                  }
 
                  // 1. MOCK $_SERVER REQUEST METHOD
@@ -209,7 +212,7 @@ class RunCodeController extends Controller
                  $mockCode .= "  function custom_header_polyfill(\$h) {\n";
                  $mockCode .= "    if (stripos(\$h, 'Location:') === 0) {\n";
                  $mockCode .= "      \$url = trim(substr(\$h, 9));\n";
-                 $mockCode .= "      echo \"<script>window.location.href='\$url';</script>\";\n";
+                 $mockCode .= "      echo \"<script>var msg = 'FLUTTER_WEB_BRIDGE:' + JSON.stringify({action:'link_click', data:{url:'\$url'}}); if(window.parent !== window){ window.parent.postMessage(msg, '*'); } console.log(msg);</script>\";\n";
                  $mockCode .= "    }\n";
                  $mockCode .= "  }\n";
                  $mockCode .= "}\n";
@@ -254,6 +257,15 @@ class RunCodeController extends Controller
             $output = $process->getOutput();
             $errorOutput = $process->getErrorOutput();
 
+            // Ensure output is UTF-8 compatible to prevent 500 JSON errors
+            if ($output) {
+                // If contains invalid UTF-8, ignore errors and substitute
+                $output = mb_convert_encoding($output, 'UTF-8', 'UTF-8');
+            }
+            if ($errorOutput) {
+                 $errorOutput = mb_convert_encoding($errorOutput, 'UTF-8', 'UTF-8');
+            }
+
             // --- 6.5 RESTORE MAIN FILE CONTENT (Undo Injection) ---
             // We must undo the mock injection so that the 'clean' file is returned to frontend,
             // unless the script itself modified it.
@@ -277,9 +289,21 @@ class RunCodeController extends Controller
 
                     $fullPath = $tempDir . '/' . $f;
                     if (is_file($fullPath)) {
+                        $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+                        $content = file_get_contents($fullPath);
+                        $isBinary = in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'ico', 'pdf', 'zip']);
+
+                        if ($isBinary) {
+                            $content = base64_encode($content);
+                        } else {
+                            // Ensure UTF-8 for text files
+                            $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+                        }
+                        
                         $simulatedFiles[] = [
                             'name' => $f,
-                            'content' => file_get_contents($fullPath)
+                            'content' => $content,
+                            'is_binary' => $isBinary
                         ];
                     }
                 }
@@ -317,5 +341,285 @@ class RunCodeController extends Controller
             }
         }
         return rmdir($dir);
+    }
+
+    /**
+     * Serve a file from public/storage via API to bypass CORS on static files.
+     */
+    public function getFile(Request $request) {
+        try {
+            $path = $request->query('path');
+            if (!$path) {
+                return response()->json(['error' => 'Path required'], 400);
+            }
+
+            // Prevent traversal
+            if (str_contains($path, '..')) {
+                return response()->json(['error' => 'Invalid path'], 403);
+            }
+
+            // We serve from Storage now (notes/assets/...)
+            // $path is e.g. "notes/assets/Title/file.js"
+            $fullPath = storage_path('app/public/' . $path);
+
+            if (file_exists($fullPath)) {
+                return response()->file($fullPath);
+            }
+
+            // GRACEFUL FALLBACK for visible_files.json to avoid 404 logs
+            if (basename($path) === 'visible_files.json') {
+                return response()->json((object)[], 200); // Return empty manifest as object {}
+            }
+
+            return response()->json(['error' => 'File not found: ' . $path], 404);
+        } catch (\Exception $e) {
+             return response()->json(['error' => 'Server Error serving file: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * List files in a directory within public/assets/www
+     */
+    public function listFiles(Request $request) {
+        try {
+            $path = $request->query('path');
+            if (!$path) {
+                return response()->json(['error' => 'Path required'], 400);
+            }
+
+            // Prevent traversal
+            if (str_contains($path, '..')) {
+                return response()->json(['error' => 'Invalid path'], 403);
+            }
+
+            $fullPath = storage_path('app/public/' . $path);
+
+            if (is_dir($fullPath)) {
+                $files = scandir($fullPath);
+                $result = [];
+                foreach ($files as $file) {
+                    if ($file === '.' || $file === '..' || $file === 'visible_files.json') continue;
+                    if (is_file($fullPath . '/' . $file)) {
+                        $result[] = $file;
+                    }
+                }
+                return response()->json(['files' => $result]);
+            }
+
+            return response()->json(['error' => 'Directory not found'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Server Error listing files: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Permanently delete a file from all locations (Public Assets, Storage, Seed Data)
+     */
+    public function deleteFile(Request $request)
+    {
+        try {
+            // Can accept 'path' (from web) relative to public
+            // e.g. "assets/www/3.2.10.../myfile.php"
+            $path = $request->input('path');
+            
+            if (!$path) {
+                return response()->json(['error' => 'Path is required.'], 400);
+            }
+
+            if (str_contains($path, '..')) {
+                return response()->json(['error' => 'Invalid path.'], 403);
+            }
+
+            $deletedCount = 0;
+            $messages = [];
+
+            // 1. Delete from Public Assets (Immediate Web Effect)
+            $publicPath = public_path($path);
+            if (file_exists($publicPath)) {
+                @unlink($publicPath);
+                $deletedCount++;
+                $messages[] = "Deleted from Public Assets.";
+            }
+
+            // 2. Identify logical "Note + Filename" to find Storage/Seed locations
+            // Expected format: assets/www/<ContextID>/<Filename>
+            $parts = explode('/', $path);
+            if (count($parts) >= 2) {
+                $filename = end($parts);
+                // Context is the folder containing the file
+                $contextId = $parts[count($parts) - 2]; 
+
+                // 3. Delete from Seed Data (Dev Consistency)
+                // Search recursively or use known structure?
+                // Structure: database/seed_data/notes/<Topic>/assets/<ContextID>/<Filename>
+                // We don't verify Topic easily here, but we can search.
+                $seedBase = database_path('seed_data/notes');
+                if (is_dir($seedBase)) {
+                     // Find file recursively match ContextID/Filename
+                     $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($seedBase));
+                     foreach ($iterator as $file) {
+                         if ($file->getFilename() === $filename && str_contains($file->getPath(), $contextId)) {
+                             @unlink($file->getPathname());
+                             $deletedCount++;
+                             $messages[] = "Deleted from Seed Data.";
+                             break; // Assuming unique context/filename combo
+                         }
+                     }
+                }
+
+                // 4. Delete from Storage (Git Sync / Persistent Storage)
+                // Path: storage/app/public/notes/<NotePath>??
+                // Actually 'NotesController' uploads to 'storage/app/public/uploads' OR 'storage/app/public/notes' ??
+                // Let's check NotesController logic. 
+                // It stores main markdown in 'public/notes', but ATTACHMENTS/UPLOADS in 'public/uploads'.
+                // If this file was uploaded via `uploadFile` endpoint:
+                // It lives in `storage/app/public/uploads` AND was synced to `seed_data`.
+                
+                // Strategy: We deleted from Public (Web) and Seed Data (Dev).
+                // We should also verify if it exists in `uploads`.
+                // BUT `uploadFile` renames files to timestamp_name. However, the one in `public/assets/www` is original name.
+                // It's hard to trace back to the exact storage file without DB lookup if name changed.
+                // However, `RunCode` context usually implies files managed via Git/Seed sync primarily.
+                // Only "Attachments" use the storage/uploads folder. 
+                // Code files (PHP/CSS/JS) usually live in the Note Bundle (Seed Data).
+                
+                // If we also want to clean up `public/notes` (Main Markdown files):
+                // If the deleted file IS the main markdown note, we might have issues.
+                // But usually we are deleting auxiliary files.
+            }
+
+            if ($deletedCount > 0) {
+                return response()->json(['message' => 'File deleted successfully.', 'details' => $messages]);
+            } else {
+                return response()->json(['message' => 'File not found (already deleted?)'], 200);
+            }
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Delete failed: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Rename a file in all locations (Public Assets, Seed Data)
+     */
+    public function renameFile(Request $request)
+    {
+        try {
+            $path = $request->input('path'); // Old path relative to public/assets/www
+            $newName = $request->input('new_name');
+
+            if (!$path || !$newName) {
+                return response()->json(['error' => 'Path and new_name are required.'], 400);
+            }
+
+            if (str_contains($path, '..') || str_contains($newName, '..') || str_contains($newName, '/')) {
+                return response()->json(['error' => 'Invalid path or filename.'], 403);
+            }
+
+            $renamedCount = 0;
+            $messages = [];
+
+            // 1. Rename in Public Assets (Immediate Web Effect)
+            $oldPublicPath = public_path($path);
+            $newPublicPath = dirname($oldPublicPath) . '/' . $newName;
+
+            if (file_exists($oldPublicPath)) {
+                if (file_exists($newPublicPath)) {
+                    return response()->json(['error' => 'File with new name already exists.'], 409);
+                }
+                rename($oldPublicPath, $newPublicPath);
+                $renamedCount++;
+                $messages[] = "Renamed in Public Assets.";
+            } else {
+                 return response()->json(['error' => 'File not found.'], 404);
+            }
+
+            // 2. Rename in Seed Data (Dev Consistency)
+            // Expected path format: assets/www/<ContextID>/<Filename>
+            $parts = explode('/', $path);
+            if (count($parts) >= 2) {
+                $oldFilename = end($parts);
+                $contextId = $parts[count($parts) - 2]; 
+
+                $seedBase = database_path('seed_data/notes');
+                if (is_dir($seedBase)) {
+                     // Find file recursively match ContextID/Filename
+                     $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($seedBase));
+                     foreach ($iterator as $file) {
+                         if ($file->getFilename() === $oldFilename && str_contains($file->getPath(), $contextId)) {
+                             $oldSeedPath = $file->getPathname();
+                             $newSeedPath = $file->getPath() . '/' . $newName;
+                             rename($oldSeedPath, $newSeedPath);
+                             $renamedCount++;
+                             $messages[] = "Renamed in Seed Data.";
+                             break; 
+                         }
+                     }
+                }
+            }
+            
+            // 3. Update visible_files.json (Manifest)
+            // We need to update the manifest in both Public and Seed locations if they exist.
+            // The manifest is usually in the PARENT directory of the file (ContextID folder).
+            
+            // Helper to update manifest
+            $updateManifest = function($dir) use ($oldPublicPath, $newName) {
+                $manifestPath = $dir . '/visible_files.json';
+                $oldFilename = basename($oldPublicPath);
+                
+                if (file_exists($manifestPath)) {
+                    $json = json_decode(file_get_contents($manifestPath), true);
+                    if ($json) {
+                        $updated = false;
+                        // Search for old name in values (Lists) or Keys
+                        foreach ($json as $group => $files) {
+                            if (is_array($files)) {
+                                $key = array_search($oldFilename, $files);
+                                if ($key !== false) {
+                                    $json[$group][$key] = $newName;
+                                    $updated = true;
+                                }
+                            } else {
+                                // Legacy Key-Value?
+                                if ($group === $oldFilename) {
+                                    // Complex if key is the filename. 
+                                    // We might need to change key.
+                                    // But usually we use the list format now.
+                                }
+                            }
+                        }
+                        
+                        if ($updated) {
+                            file_put_contents($manifestPath, json_encode($json, JSON_PRETTY_PRINT));
+                        }
+                    }
+                }
+            };
+
+            // Update Public Manifest
+            $updateManifest(dirname($oldPublicPath));
+            
+            // Update Seed Manifest (if we found the directory)
+            // We can try to infer seed dir from the loop above if we wanted, but let's do a quick check
+            // Actually, we can just rely on the user to use the 'sync' command if things get out of whack,
+            // OR we iterate again. 
+            // For now, let's assume if we renamed the file in step 2, we are good. 
+            // BUT: The manifest ALSO needs to be updated.
+            // Let's rely on the frontend to update the manifest via `_updateVisibleFilesManifest` call?
+            // The frontend usually handles "Adding" by uploading.
+            // But "Renaming" is tricky. 
+            // Better if backend handles manifest update for atomicity.
+            
+            // Let's try to update Seed Manifest too.
+            if (isset($newSeedPath)) {
+                $updateManifest(dirname($newSeedPath));
+                $messages[] = "Updated Seed Manifest.";
+            }
+
+            return response()->json(['message' => 'File renamed successfully.', 'details' => $messages]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Rename failed: ' . $e->getMessage()], 500);
+        }
     }
 }

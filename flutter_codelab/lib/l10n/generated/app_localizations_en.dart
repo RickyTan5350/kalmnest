@@ -332,7 +332,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String deleteUsersConfirmation(int count) {
-    return 'Are you sure you want to delete $count users? This action cannot be undone.';
+    return 'Are you sure you want to delete $count user(s)? This action cannot be undone.';
   }
 
   @override
@@ -340,7 +340,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String deletedUsersSuccess(int count) {
-    return 'Successfully deleted $count users';
+    return 'Successfully deleted $count user(s).';
   }
 
   @override
@@ -779,7 +779,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get classDeletedSuccessfully => 'Class deleted successfully!';
+  String get classDeletedSuccessfully => 'Successfully deleted 1 class(es).';
 
   @override
   String errorDeletingClass(String error) {
@@ -813,7 +813,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String classesDeletedSuccessfully(int count) {
-    return '$count class(es) deleted successfully!';
+    return 'Successfully deleted $count class(es).';
   }
 
   @override
@@ -955,7 +955,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get remove => 'Remove';
 
   @override
-  String get quizRemovedSuccessfully => 'Quiz removed successfully!';
+  String get quizRemovedSuccessfully => 'Successfully removed 1 quiz(zes).';
 
   @override
   String quizzesAvailable(int count) {

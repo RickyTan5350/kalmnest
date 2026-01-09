@@ -46,6 +46,11 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin flutter_secure_storage, com.it_nomads.fluttersecurestorage.FlutterSecureStoragePlugin", e);
     }
     try {
+      flutterEngine.getPlugins().add(new com.xraph.plugin.flutter_unity_widget.FlutterUnityWidgetPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin flutter_unity_widget, com.xraph.plugin.flutter_unity_widget.FlutterUnityWidgetPlugin", e);
+    }
+    try {
       flutterEngine.getPlugins().add(new com.ryanheise.just_audio.JustAudioPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin just_audio, com.ryanheise.just_audio.JustAudioPlugin", e);

@@ -111,25 +111,39 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
     });
   }
 
-  void _deleteSelectedNotes() async {
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Future<void> _deleteSelectedNotes() async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Delete Notes"),
+        title: const Text("Delete Notes?"),
         content: Text(
-          "Are you sure you want to delete ${_selectedIds.length} notes?",
+          "Are you sure you want to delete ${_selectedIds.length} note(s)? This action cannot be undone.",
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text("Cancel"),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+            child: Text(
+              "Delete",
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            child: const Text("Delete"),
           ),
         ],
       ),
@@ -137,9 +151,10 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
 
     if (confirm == true) {
       await _api.deleteNotes(_selectedIds.toList());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("${_selectedIds.length} notes deleted")),
-      ); // Show message while deleting
+      _showSnackBar(
+        "Successfully deleted ${_selectedIds.length} note(s).",
+        Colors.green,
+      );
 
       refreshData(); // Reload list
       // Exit selection mode after deletion
@@ -630,4 +645,3 @@ class AdminViewNotePageState extends State<AdminViewNotePage> {
     );
   }
 }
-

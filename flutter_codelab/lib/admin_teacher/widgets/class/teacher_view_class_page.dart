@@ -48,6 +48,20 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
     }
   }
 
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   Future<void> _deleteClass() async {
     final l10n = AppLocalizations.of(context)!;
     final bool? confirmed = await showDialog<bool>(
@@ -66,12 +80,10 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: ButtonStyle(
-              foregroundColor: WidgetStateProperty.all(
-                Theme.of(context).colorScheme.error,
-              ),
+            child: Text(
+              l10n.delete,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -81,21 +93,14 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
       try {
         await ClassApi.deleteClass(widget.classId);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.classDeletedSuccessfully),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          );
+          _showSnackBar(l10n.classDeletedSuccessfully, Colors.green);
           Navigator.of(context).pop(true); // Return true to indicate change
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.errorDeletingClass(e.toString())),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
+          _showSnackBar(
+            l10n.errorDeletingClass(e.toString()),
+            Theme.of(context).colorScheme.error,
           );
         }
       }

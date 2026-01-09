@@ -1,0 +1,5 @@
+Khadijah,malaysia,Siti Khadijah,4Bistari1,Perempuan,Kedah
+Amri,kjh98786,Amri bin Hassan,4Bistari2,Lelaki,Johor
+Chong,cwh1234,Chong Wei Hong,5Sains1,Lelaki,Pulau Pinang
+Muthu,muthu00,Muthusamy A/L Raju,4Bistari1,Lelaki,Perak
+Sarah,srh555,Sarah binti Rosli,3Amanah,Perempuan,Melaka

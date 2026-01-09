@@ -3,6 +3,7 @@ import 'package:code_play/api/user_api.dart';
 import 'package:code_play/utils/formatters.dart';
 import 'package:code_play/models/user_data.dart';
 import 'package:code_play/l10n/generated/app_localizations.dart';
+import 'package:code_play/widgets/password_strength_indicator.dart';
 
 // Utility function to show the dialog
 Future<bool?> showEditUserDialog({
@@ -60,9 +61,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
   late bool _accountStatus;
   final Map<String, String> _serverErrors = {}; // Store server-side errors
 
+  bool _isPasswordVisible = false;
+
   bool _isLoading = false;
 
-  final List<String> _genders = ['Male', 'Female', 'Other'];
+  final List<String> _genders = ['Male', 'Female'];
   final List<String> _roles = ['Admin', 'Student', 'Teacher'];
 
   @override
@@ -112,8 +115,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
         return l10n.male;
       case 'female':
         return l10n.female;
-      case 'other':
-        return l10n.other;
+
       default:
         return gender;
     }
@@ -134,12 +136,13 @@ class _EditUserDialogState extends State<EditUserDialog> {
   }
 
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Clear previous server errors on new submission attempt
+    // 1. Reset Errors
     setState(() {
       _serverErrors.clear();
     });
+
+    // 2. Client-Side Validation
+    if (!_formKey.currentState!.validate()) return;
 
     final newPassword = _passwordController.text.trim();
 
@@ -149,7 +152,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
       widget.showSnackBar(
         context,
         AppLocalizations.of(context)!.passwordsMatchError,
-        Colors.red,
+        Theme.of(context).colorScheme.error,
       );
       return;
     }
@@ -194,44 +197,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
         // Pop dialog and return 'true' to signal a successful update/refresh needed
         Navigator.of(context).pop(true);
       }
-    } on ValidationException catch (e) {
-      if (mounted) {
-        setState(() {
-          // Map the errors: key -> first error message in list
-          e.errors.forEach((key, value) {
-            if (value is List && value.isNotEmpty) {
-              _serverErrors[key] = value.first.toString();
-            }
-          });
-        });
-        // Re-trigger validation to show the errors in the fields
-        _formKey.currentState!.validate();
-      }
     } catch (e) {
       if (mounted) {
-        // Handle validation and network errors
-        String errorString = e.toString();
-        String displayMessage = 'An unknown error occurred.';
-        Color errorColor = Theme.of(
-          context,
-        ).colorScheme.error; // Standardize color
-
-        if (errorString.contains('403:')) {
-          // Explicit message for 403 Forbidden
-          displayMessage = AppLocalizations.of(
-            context,
-          )!.accessDeniedAdminModify;
-        } else {
-          displayMessage = AppLocalizations.of(
-            context,
-          )!.errorUpdatingProfile(errorString.replaceAll('Exception: ', ''));
-        }
-
-        widget.showSnackBar(
-          context,
-          displayMessage,
-          errorColor,
-        ); // Use theme error color
+        _handleSubmissionError(e);
       }
     } finally {
       if (mounted) {
@@ -242,15 +210,69 @@ class _EditUserDialogState extends State<EditUserDialog> {
     }
   }
 
+  void _handleSubmissionError(Object e) {
+    String errorString = e.toString();
+
+    // --- CASE 1: Validation Error ---
+    if (e is ValidationException) {
+      setState(() {
+        // Map the errors: key -> first error message in list
+        e.errors.forEach((key, value) {
+          if (value is List && value.isNotEmpty) {
+            _serverErrors[key] = value.first.toString();
+          }
+        });
+      });
+      // Re-trigger validation to show the errors in the fields
+      _formKey.currentState!.validate();
+
+      widget.showSnackBar(
+        context,
+        'Please fill in all required fields correctly.',
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 2: Forbidden Error ---
+    else if (errorString.contains('403:')) {
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(context)!.accessDeniedAdminModify,
+        Theme.of(context).colorScheme.error,
+      );
+    }
+    // --- CASE 3: General Error ---
+    else {
+      widget.showSnackBar(
+        context,
+        AppLocalizations.of(
+          context,
+        )!.errorUpdatingProfile(errorString.replaceAll('Exception: ', '')),
+        Theme.of(context).colorScheme.error,
+      );
+    }
+  }
+
   InputDecoration _inputDecoration({
     required String labelText,
     required IconData icon,
     String? hintText,
     required ColorScheme colorScheme,
     bool enabled = true,
+    bool isMandatory = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: labelText),
+            if (isMandatory)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       hintText: hintText,
       prefixIcon: Icon(
         icon,
@@ -320,6 +342,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     labelText: AppLocalizations.of(context)!.name,
                     icon: Icons.person,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   validator: (value) {
                     if (_serverErrors.containsKey('name')) {
@@ -346,6 +369,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     labelText: AppLocalizations.of(context)!.email,
                     icon: Icons.email,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -375,12 +399,24 @@ class _EditUserDialogState extends State<EditUserDialog> {
                 TextFormField(
                   controller: _passwordController,
                   style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: AppLocalizations.of(context)!.newPassword,
-                    icon: Icons.lock,
-                    colorScheme: colorScheme,
-                  ),
-                  obscureText: true,
+                  decoration:
+                      _inputDecoration(
+                        labelText: AppLocalizations.of(context)!.newPassword,
+                        icon: Icons.lock,
+                        colorScheme: colorScheme,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
+                        ),
+                      ),
+                  obscureText: !_isPasswordVisible,
                   validator: (value) {
                     if (_serverErrors.containsKey('password')) {
                       return _serverErrors['password'];
@@ -394,20 +430,36 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     if (_serverErrors.containsKey('password')) {
                       setState(() => _serverErrors.remove('password'));
                     }
+                    setState(() {}); // Trigger rebuild for strength indicator
                   },
                 ),
+                PasswordStrengthIndicator(password: _passwordController.text),
                 const SizedBox(height: 16),
 
                 // Password Confirmation Field
                 TextFormField(
                   controller: _passwordConfirmationController,
                   style: TextStyle(color: colorScheme.onSurface),
-                  decoration: _inputDecoration(
-                    labelText: AppLocalizations.of(context)!.confirmNewPassword,
-                    icon: Icons.lock_open,
-                    colorScheme: colorScheme,
-                  ),
-                  obscureText: true,
+                  decoration:
+                      _inputDecoration(
+                        labelText: AppLocalizations.of(
+                          context,
+                        )!.confirmNewPassword,
+                        icon: Icons.lock_open,
+                        colorScheme: colorScheme,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
+                        ),
+                      ),
+                  obscureText: !_isPasswordVisible,
                   validator: (value) {
                     if (_passwordController.text.isNotEmpty &&
                         (value == null || value.isEmpty)) {
@@ -432,6 +484,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     icon: Icons.phone,
                     colorScheme: colorScheme,
                     hintText: 'e.g. 012-3456789',
+                    isMandatory: true,
                   ),
                   keyboardType: TextInputType.phone,
                   inputFormatters: [MalaysianPhoneFormatter()],
@@ -466,6 +519,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     labelText: AppLocalizations.of(context)!.address,
                     icon: Icons.location_on,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
                   maxLines: 2,
                   validator: (value) {
@@ -486,15 +540,32 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     labelText: AppLocalizations.of(context)!.genderLabel,
                     icon: Icons.people,
                     colorScheme: colorScheme,
+                    isMandatory: true,
                   ),
-                  items: _genders
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(_getLocalizedGender(value)),
-                        ),
-                      )
-                      .toList(),
+                  items: _genders.map((value) {
+                    IconData icon;
+                    if (value.toLowerCase() == 'male') {
+                      icon = Icons.male;
+                    } else if (value.toLowerCase() == 'female') {
+                      icon = Icons.female;
+                    } else {
+                      icon = Icons.person_outline;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(_getLocalizedGender(value)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (value) =>
                       setState(() => _selectedGender = value!),
                   validator: (value) {
@@ -523,15 +594,38 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     icon: Icons.badge,
                     colorScheme: colorScheme,
                     enabled: !widget.isSelfEdit,
+                    isMandatory: true,
                   ),
-                  items: _roles
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(_getLocalizedRole(value)),
-                        ),
-                      )
-                      .toList(),
+                  items: _roles.map((value) {
+                    IconData icon;
+                    switch (value.toLowerCase()) {
+                      case 'admin':
+                        icon = Icons.admin_panel_settings;
+                        break;
+                      case 'teacher':
+                        icon = Icons.school;
+                        break;
+                      case 'student':
+                        icon = Icons.person;
+                        break;
+                      default:
+                        icon = Icons.person_outline;
+                    }
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(_getLocalizedRole(value)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.pleaseSelectRole;
@@ -623,4 +717,3 @@ class _EditUserDialogState extends State<EditUserDialog> {
     );
   }
 }
-

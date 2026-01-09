@@ -695,7 +695,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteUsersConfirmation.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete {count} users? This action cannot be undone.'**
+  /// **'Are you sure you want to delete {count} user(s)? This action cannot be undone.'**
   String deleteUsersConfirmation(int count);
 
   /// No description provided for @deletingUsers.
@@ -707,7 +707,7 @@ abstract class AppLocalizations {
   /// No description provided for @deletedUsersSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Successfully deleted {count} users'**
+  /// **'Successfully deleted {count} user(s).'**
   String deletedUsersSuccess(int count);
 
   /// No description provided for @errorDeletingUsers.
@@ -1493,7 +1493,7 @@ abstract class AppLocalizations {
   /// No description provided for @classDeletedSuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'Class deleted successfully!'**
+  /// **'Successfully deleted 1 class(es).'**
   String get classDeletedSuccessfully;
 
   /// No description provided for @errorDeletingClass.
@@ -1547,7 +1547,7 @@ abstract class AppLocalizations {
   /// No description provided for @classesDeletedSuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'{count} class(es) deleted successfully!'**
+  /// **'Successfully deleted {count} class(es).'**
   String classesDeletedSuccessfully(int count);
 
   /// No description provided for @noName.
@@ -1817,7 +1817,7 @@ abstract class AppLocalizations {
   /// No description provided for @quizRemovedSuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'Quiz removed successfully!'**
+  /// **'Successfully removed 1 quiz(zes).'**
   String get quizRemovedSuccessfully;
 
   /// No description provided for @quizzesAvailable.

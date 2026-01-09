@@ -353,19 +353,18 @@ class _EditAchievementDialogState extends State<EditAchievementDialog> {
     bool isRequired = false,
   }) {
     return InputDecoration(
-      label: isRequired
-          ? Text.rich(
-              TextSpan(
-                text: labelText,
-                children: [
-                  TextSpan(
-                    text: ' *',
-                    style: TextStyle(color: colorScheme.error),
-                  ),
-                ],
+      label: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: labelText),
+            if (isRequired)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
               ),
-            )
-          : Text(labelText),
+          ],
+        ),
+      ),
       hintText: hintText,
       errorText: errorText, // Display server error
       prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),

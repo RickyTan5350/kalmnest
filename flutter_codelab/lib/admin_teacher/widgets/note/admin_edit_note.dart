@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/services.dart';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:code_play/admin_teacher/widgets/note/file_picker.dart';
@@ -13,7 +14,7 @@ import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:code_play/constants/api_constants.dart';
 import 'package:code_play/admin_teacher/services/breadcrumb_navigation.dart';
-import 'run_code_page.dart';
+import 'run_code_launcher.dart';
 import 'quiz_widget.dart';
 import 'package:code_play/admin_teacher/widgets/note/search_note.dart';
 import 'package:code_play/theme.dart';
@@ -54,7 +55,7 @@ class _EditNotePageState extends State<EditNotePage> {
   final List<String> _topics = ['HTML', 'CSS', 'JS', 'PHP'];
 
   bool _isLoading = false;
-  List<UploadedAttachment> _attachments = [];
+  final List<UploadedAttachment> _attachments = [];
 
   // --- Search State ---
   bool _isSearching = false;
@@ -68,8 +69,8 @@ class _EditNotePageState extends State<EditNotePage> {
   bool _isHoveringInput = false;
   final ScrollController _inputScrollController = ScrollController();
   List<GlobalKey> _matchKeys = [];
-  Timer? _quizHoverTimer;
-  bool _showQuizPopup = false;
+  // Timer? _quizHoverTimer; // Removed
+  // bool _showQuizPopup = false; // Removed
 
   @override
   void initState() {
@@ -114,7 +115,7 @@ class _EditNotePageState extends State<EditNotePage> {
     _searchFocusNode.dispose();
 
     _pageFocusNode.dispose();
-    _quizHoverTimer?.cancel();
+    // _quizHoverTimer?.cancel();
     super.dispose();
   }
 
@@ -126,9 +127,21 @@ class _EditNotePageState extends State<EditNotePage> {
     required String labelText,
     IconData? icon,
     required ColorScheme colorScheme,
+    bool isMandatory = false,
   }) {
     return InputDecoration(
-      labelText: labelText,
+      label: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: labelText),
+            if (isMandatory)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
       prefixIcon: icon != null
           ? Icon(icon, size: 20, color: colorScheme.onSurfaceVariant)
           : null,
@@ -147,15 +160,6 @@ class _EditNotePageState extends State<EditNotePage> {
       contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
       isDense: true,
     );
-  }
-
-  // Helper to ensure absolute URLs
-  String _processMarkdown(String content) {
-    // Replace relative paths starting with /storage/
-    // Example: ](/storage/...) -> ](https://domain.com/storage/...)
-    // Also handle existing partials if any
-    final domain = ApiConstants.domain;
-    return content.replaceAll('](/storage/', ']($domain/storage/');
   }
 
   void _insertMarkdownLink(String fileName, String url, bool isImage) {
@@ -182,7 +186,9 @@ class _EditNotePageState extends State<EditNotePage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Link inserted!'),
+        content: Text('Link inserted!', style: TextStyle(color: Colors.white)),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.green,
         duration: Duration(seconds: 1),
       ),
     );
@@ -217,6 +223,7 @@ class _EditNotePageState extends State<EditNotePage> {
               localFile: _attachments[i].localFile,
               serverFileId: result['id'],
               publicUrl: result['url'],
+              rawUrl: result['raw_url'],
               isUploading: false,
             );
           } else {
@@ -236,13 +243,26 @@ class _EditNotePageState extends State<EditNotePage> {
     String? content;
 
     try {
-      if (file.path != null) {
+      if (file.bytes != null) {
+        // WEB
+        content = utf8.decode(file.bytes!);
+      } else if (file.path != null) {
+        // MOBILE
         content = await File(file.path!).readAsString();
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to read file: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to read file: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
       return;
     }
 
@@ -273,12 +293,19 @@ class _EditNotePageState extends State<EditNotePage> {
         selection: TextSelection.collapsed(offset: newCursorPos),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Code block inserted!'),
-          duration: Duration(seconds: 1),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Code block inserted!',
+              style: TextStyle(color: Colors.white),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
       setState(() {});
     }
   }
@@ -310,9 +337,12 @@ class _EditNotePageState extends State<EditNotePage> {
                       int idx = entry.key;
                       return Row(
                         children: [
+                          // ignore: deprecated_member_use
                           Radio<int>(
                             value: idx,
+                            // ignore: deprecated_member_use
                             groupValue: correctIndex,
+                            // ignore: deprecated_member_use
                             onChanged: (val) {
                               setStateDialog(() => correctIndex = val!);
                             },
@@ -345,7 +375,7 @@ class _EditNotePageState extends State<EditNotePage> {
                           ),
                         ],
                       );
-                    }).toList(),
+                    }),
                     TextButton.icon(
                       icon: const Icon(Icons.add),
                       label: const Text('Add Option'),
@@ -466,9 +496,16 @@ class _EditNotePageState extends State<EditNotePage> {
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
     if (_attachments.any((a) => a.isUploading)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Wait for uploads...')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Wait for uploads...',
+            style: TextStyle(color: Colors.white),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
       return;
     }
 
@@ -490,9 +527,13 @@ class _EditNotePageState extends State<EditNotePage> {
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to update'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text(
+              'Failed to update',
+              style: TextStyle(color: Colors.white),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -520,7 +561,7 @@ class _EditNotePageState extends State<EditNotePage> {
     int newTotal = 0;
     if (term.isNotEmpty) {
       String htmlContent = md.markdownToHtml(
-        _processMarkdown(_contentController.text),
+        _contentController.text,
         extensionSet: md.ExtensionSet.gitHubFlavored,
       );
       final pattern = RegExp(
@@ -594,18 +635,18 @@ class _EditNotePageState extends State<EditNotePage> {
     _matchKeys = [];
 
     String htmlContent = md.markdownToHtml(
-      _processMarkdown(_contentController.text),
+      _contentController.text,
       extensionSet: md.ExtensionSet.gitHubFlavored,
     );
 
     final String activeBg =
-        '#${colorScheme.primary.value.toRadixString(16).substring(2)}';
+        '#${colorScheme.primary.toARGB32().toRadixString(16).substring(2)}';
     final String activeText =
-        '#${colorScheme.onPrimary.value.toRadixString(16).substring(2)}';
+        '#${colorScheme.onPrimary.toARGB32().toRadixString(16).substring(2)}';
     final String inactiveBg =
-        '#${colorScheme.primaryContainer.value.toRadixString(16).substring(2)}';
+        '#${colorScheme.primaryContainer.toARGB32().toRadixString(16).substring(2)}';
     final String inactiveText =
-        '#${colorScheme.onPrimaryContainer.value.toRadixString(16).substring(2)}';
+        '#${colorScheme.onPrimaryContainer.toARGB32().toRadixString(16).substring(2)}';
 
     if (_searchTerm.isNotEmpty) {
       try {
@@ -631,9 +672,15 @@ class _EditNotePageState extends State<EditNotePage> {
 
     return HtmlWidget(
       htmlContent,
-      baseUrl: Uri.parse(ApiConstants.domain),
+      baseUrl: Uri.tryParse(ApiConstants.domain),
       textStyle: TextStyle(color: colorScheme.onSurface, fontSize: 15),
       customWidgetBuilder: (element) {
+        if (element.localName == 'img') {
+          final src = element.attributes['src'];
+          if (src != null) {
+            return _buildImageWidget(src);
+          }
+        }
         if (element.localName == 'pre') {
           if (element.children.isNotEmpty &&
               element.children.first.localName == 'code') {
@@ -744,21 +791,24 @@ class _EditNotePageState extends State<EditNotePage> {
         return null;
       },
       customStylesBuilder: (element) {
-        if (element.localName == 'h1')
+        if (element.localName == 'h1') {
           return {
             'margin-bottom': '10px',
             'font-weight': 'bold',
             'border-bottom':
-                '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
+                '1px solid ${colorScheme.outlineVariant.toARGB32().toRadixString(16).substring(2)}',
           };
-        if (element.localName == 'table')
+        }
+        if (element.localName == 'table') {
           return {'border-collapse': 'collapse', 'width': '100%'};
-        if (element.localName == 'th' || element.localName == 'td')
+        }
+        if (element.localName == 'th' || element.localName == 'td') {
           return {
             'border':
-                '1px solid ${colorScheme.outlineVariant.value.toRadixString(16).substring(2)}',
+                '1px solid ${colorScheme.outlineVariant.toARGB32().toRadixString(16).substring(2)}',
             'padding': '8px',
           };
+        }
         return null;
       },
     );
@@ -792,6 +842,152 @@ class _EditNotePageState extends State<EditNotePage> {
     // Clamp to ensure it doesn't go too far up/down if wanted,
     // but allowing negative values hides it correctly if scrolled out.
     return position;
+  }
+
+  String _fixUrl(String url) {
+    // 1. Double slash fix
+    String fixedUrl = url;
+    final slashParts = fixedUrl.split('://');
+    if (slashParts.length > 1) {
+      fixedUrl = '${slashParts[0]}://${slashParts[1].replaceAll('//', '/')}';
+    } else {
+      fixedUrl = fixedUrl.replaceAll('//', '/');
+    }
+
+    // 2. Domain replacement (kalmnest.test -> current environment domain)
+    try {
+      final uri = Uri.parse(fixedUrl);
+      if (uri.hasAuthority && uri.host == 'kalmnest.test') {
+        final targetBase = Uri.parse(ApiConstants.domain);
+        fixedUrl = uri
+            .replace(
+              scheme: targetBase.scheme,
+              host: targetBase.host,
+              port: targetBase.port,
+            )
+            .toString();
+      }
+    } catch (e) {
+      debugPrint('Error fixing domain: $e');
+    }
+
+    // 3. Web Proxy
+    if (kIsWeb) {
+      if (fixedUrl.contains('/storage/')) {
+        final apiBase = ApiConstants.baseUrl;
+        return '$apiBase/file-proxy?url=${Uri.encodeComponent(fixedUrl)}';
+      }
+    }
+
+    return fixedUrl;
+  }
+
+  Widget _buildImageWidget(String src) {
+    if (src.startsWith('http')) {
+      return Image.network(
+        _fixUrl(src),
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.red),
+      );
+    }
+
+    final folders = ['HTML', 'CSS', 'JS', 'PHP', 'General'];
+    final fileName = src.split('/').last;
+    // Use selected topic or fallback
+    final currentTopic = _selectedTopic ?? widget.currentTopic;
+
+    return FutureBuilder<String?>(
+      future: _resolveLocalAsset(src, fileName, folders, currentTopic),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final resolvedPath = snapshot.data;
+        if (resolvedPath != null) {
+          return Image.asset(resolvedPath);
+        }
+
+        final networkUrl = src.startsWith('/')
+            ? "${ApiConstants.domain}$src"
+            : (src.startsWith('pictures/')
+                  ? "${ApiConstants.domain}/storage/notes/$src"
+                  : (src.startsWith('http')
+                        ? src
+                        : "${ApiConstants.domain}/storage/notes/pictures/$src"));
+
+        // Fallback network URL with topic if primary fails
+        final topicNetworkUrl = src.startsWith('pictures/')
+            ? "${ApiConstants.domain}/storage/notes/$currentTopic/$src"
+            : null;
+
+        return Image.network(
+          _fixUrl(networkUrl),
+          errorBuilder: (context, error, stackTrace) {
+            if (topicNetworkUrl != null) {
+              return Image.network(
+                _fixUrl(topicNetworkUrl),
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildErrorWidget(fileName),
+              );
+            }
+            return _buildErrorWidget(fileName);
+          },
+        );
+      },
+    );
+  }
+
+  Future<String?> _resolveLocalAsset(
+    String originalPath,
+    String fileName,
+    List<String> folders,
+    String currentTopic,
+  ) async {
+    // A. Only try the original path if it looks like a full asset path
+    if (originalPath.startsWith('assets/')) {
+      try {
+        await rootBundle.load(originalPath);
+        return originalPath;
+      } catch (_) {}
+    }
+
+    // 1. Try flattened global path
+    final flattened = 'assets/www/pictures/$fileName';
+    try {
+      await rootBundle.load(flattened);
+      return flattened;
+    } catch (_) {}
+
+    // 2. Try topic-specific subfolder using the current/selected topic
+    final topicFlattened = 'assets/www/pictures/$currentTopic/$fileName';
+    try {
+      await rootBundle.load(topicFlattened);
+      return topicFlattened;
+    } catch (_) {}
+
+    // 3. Search in known topic subfolders (backward compatibility)
+    for (final folder in folders) {
+      final candidate = 'assets/www/pictures/$folder/$fileName';
+      try {
+        await rootBundle.load(candidate);
+        return candidate;
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Widget _buildErrorWidget(String fileName) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.broken_image, color: Colors.red),
+        Text("Failed to load: $fileName", style: const TextStyle(fontSize: 10)),
+      ],
+    );
   }
 
   Widget _buildHoverFileInserter(ColorScheme colorScheme) {
@@ -857,14 +1053,15 @@ class _EditNotePageState extends State<EditNotePage> {
                 } else if (isCode) {
                   iconData = Icons.code;
                   if (brandColors != null) {
-                    if (ext == 'html')
+                    if (ext == 'html') {
                       iconColor = brandColors.html;
-                    else if (ext == 'css')
+                    } else if (ext == 'css') {
                       iconColor = brandColors.css;
-                    else if (ext == 'js')
+                    } else if (ext == 'js') {
                       iconColor = brandColors.javascript;
-                    else if (ext == 'php')
+                    } else if (ext == 'php') {
                       iconColor = brandColors.php;
+                    }
                   }
                 } else {
                   if (brandColors != null) iconColor = brandColors.other;
@@ -876,7 +1073,11 @@ class _EditNotePageState extends State<EditNotePage> {
                     if (isCode) {
                       _insertCodeBlock(item);
                     } else {
-                      _insertMarkdownLink(file.name, item.publicUrl!, isImage);
+                      _insertMarkdownLink(
+                        file.name,
+                        item.rawUrl ?? item.publicUrl!,
+                        isImage,
+                      );
                     }
                   },
                   child: Padding(
@@ -951,6 +1152,24 @@ class _EditNotePageState extends State<EditNotePage> {
     );
   }
 
+  Widget _buildHoverControls(ColorScheme colorScheme) {
+    final showFiles = _attachments.any(
+      (a) => !a.isFailed && a.publicUrl != null,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _buildHoverQuizPopup(colorScheme),
+        if (showFiles) ...[
+          const SizedBox(height: 8),
+          _buildHoverFileInserter(colorScheme),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -988,7 +1207,7 @@ class _EditNotePageState extends State<EditNotePage> {
               ),
               backgroundColor: context
                   .getBrandColorForTopic(_selectedTopic ?? widget.currentTopic)
-                  .withOpacity(0.2),
+                  .withValues(alpha: 0.2),
               elevation: 0,
               iconTheme: IconThemeData(color: colorScheme.onSurface),
               actions: [
@@ -1032,7 +1251,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                           flex: 1,
                                           child:
                                               DropdownButtonFormField<String>(
-                                                value: _selectedTopic,
+                                                initialValue: _selectedTopic,
                                                 dropdownColor: colorScheme
                                                     .surfaceContainer,
                                                 style: TextStyle(
@@ -1042,6 +1261,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                                   labelText: 'Topic',
                                                   icon: Icons.category,
                                                   colorScheme: colorScheme,
+                                                  isMandatory: true,
                                                 ),
                                                 items: _topics
                                                     .map(
@@ -1123,7 +1343,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                                               _noteVisibility =
                                                                   value,
                                                         ),
-                                                    activeColor:
+                                                    activeThumbColor:
                                                         colorScheme.primary,
                                                   ),
                                                 ),
@@ -1145,6 +1365,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                         labelText: 'Title',
                                         icon: Icons.title,
                                         colorScheme: colorScheme,
+                                        isMandatory: true,
                                       ),
                                       validator: (v) =>
                                           v!.isEmpty ? 'Required' : null,
@@ -1171,7 +1392,7 @@ class _EditNotePageState extends State<EditNotePage> {
                                         if (item.publicUrl != null) {
                                           _insertMarkdownLink(
                                             item.localFile.name,
-                                            item.publicUrl!,
+                                            item.rawUrl ?? item.publicUrl!,
                                             isImage,
                                           );
                                         }
@@ -1255,22 +1476,10 @@ class _EditNotePageState extends State<EditNotePage> {
                                   child: MouseRegion(
                                     onEnter: (_) {
                                       setState(() => _isHoveringInput = true);
-                                      _quizHoverTimer = Timer(
-                                        const Duration(seconds: 2),
-                                        () {
-                                          if (mounted && _isHoveringInput) {
-                                            setState(
-                                              () => _showQuizPopup = true,
-                                            );
-                                          }
-                                        },
-                                      );
                                     },
                                     onExit: (_) {
-                                      _quizHoverTimer?.cancel();
                                       setState(() {
                                         _isHoveringInput = false;
-                                        _showQuizPopup = false;
                                       });
                                     },
                                     child: Stack(
@@ -1298,20 +1507,11 @@ class _EditNotePageState extends State<EditNotePage> {
                                           validator: (v) =>
                                               v!.isEmpty ? 'Required' : null,
                                         ),
-                                        if (_attachments.isNotEmpty &&
-                                            _isHoveringInput)
+                                        if (_isHoveringInput)
                                           Positioned(
                                             top: _getCursorVerticalPosition(),
                                             right: 16,
-                                            child: _buildHoverFileInserter(
-                                              colorScheme,
-                                            ),
-                                          ),
-                                        if (_showQuizPopup)
-                                          Positioned(
-                                            top: _getCursorVerticalPosition(),
-                                            left: 16,
-                                            child: _buildHoverQuizPopup(
+                                            child: _buildHoverControls(
                                               colorScheme,
                                             ),
                                           ),

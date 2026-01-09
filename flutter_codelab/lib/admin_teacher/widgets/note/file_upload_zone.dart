@@ -7,6 +7,7 @@ class UploadedAttachment {
   final PlatformFile localFile;
   final String? serverFileId;
   final String? publicUrl;
+  final String? rawUrl;
   final bool isUploading;
   final bool isFailed;
 
@@ -14,6 +15,7 @@ class UploadedAttachment {
     required this.localFile,
     this.serverFileId,
     this.publicUrl,
+    this.rawUrl,
     this.isUploading = false,
     this.isFailed = false,
   });
@@ -198,16 +200,31 @@ class FileUploadZone extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 clipBehavior: Clip.hardEdge,
-                child: isImage && file.path != null
-                    ? Image.file(
-                        File(file.path!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => Icon(
-                          Icons.broken_image,
-                          size: 20,
-                          color: colorScheme.error,
-                        ),
-                      )
+                child: isImage
+                    ? (file.bytes != null
+                          ? Image.memory(
+                              file.bytes!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (c, e, s) => Icon(
+                                Icons.broken_image,
+                                size: 20,
+                                color: colorScheme.error,
+                              ),
+                            )
+                          : (file.path != null
+                                ? Image.file(
+                                    File(file.path!),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (c, e, s) => Icon(
+                                      Icons.broken_image,
+                                      size: 20,
+                                      color: colorScheme.error,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.image,
+                                    color: colorScheme.primary,
+                                  )))
                     : isCode
                     ? Icon(Icons.code, color: iconColor)
                     : Icon(Icons.insert_drive_file, color: colorScheme.primary),
