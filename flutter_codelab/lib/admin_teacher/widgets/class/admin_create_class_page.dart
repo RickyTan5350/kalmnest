@@ -396,8 +396,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     decoration: _inputDecoration(
                       context: context,
                       labelText: l10n.description,
-                      hintText:
-                          '${l10n.enterDescription} (${l10n.atLeast10Words})',
+                      hintText: l10n.enterDescription,
                       icon: Icons.description,
                       isRequired: true,
                     ),
