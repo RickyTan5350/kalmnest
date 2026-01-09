@@ -17,19 +17,29 @@ class ApiConstants {
   );
   static const String customBaseUrl = String.fromEnvironment(
     'CUSTOM_BASE_URL',
-  ); // For Expose/Ngrok
+    defaultValue: '',
+  ); // For production (Vercel) or Expose/Ngrok
+  
+  // Production backend URL (Render)
+  static const String productionBackendUrl = 'https://kalmnest-9xvv.onrender.com';
   // ---------------------
 
   /// Base URL for API endpoints (e.g. http://domain/api)
   static String get baseUrl {
-    // 1. Priority: Custom URL (Expose)
+    // 1. Priority: Custom URL (from environment variable)
     if (customBaseUrl.isNotEmpty) {
-      return '$customBaseUrl/api';
+      // Remove trailing slash if present
+      final url = customBaseUrl.endsWith('/') 
+          ? customBaseUrl.substring(0, customBaseUrl.length - 1) 
+          : customBaseUrl;
+      return '$url/api';
     }
 
     if (kIsWeb) {
-      // Local development API URL (Laravel Herd)
-      return 'https://kalmnest.test/api';
+      // In production (Vercel), use Render backend as default
+      // If CUSTOM_BASE_URL is not set, assume production environment
+      // For local development, set CUSTOM_BASE_URL to 'https://kalmnest.test'
+      return '$productionBackendUrl/api';
     }
 
     // If we are debugging on a physical device (Android OR iOS)
@@ -54,14 +64,19 @@ class ApiConstants {
   /// Base Domain URL (e.g. http://domain) without /api suffix
   /// Useful for constructing file/image URLs
   static String get domain {
-    // 1. Priority: Custom URL (Expose)
+    // 1. Priority: Custom URL (from environment variable)
     if (customBaseUrl.isNotEmpty) {
-      return customBaseUrl;
+      // Remove trailing slash if present
+      return customBaseUrl.endsWith('/') 
+          ? customBaseUrl.substring(0, customBaseUrl.length - 1) 
+          : customBaseUrl;
     }
 
     if (kIsWeb) {
-      // Local development domain (Laravel Herd)
-      return 'https://kalmnest.test';
+      // In production (Vercel), use Render backend as default
+      // If CUSTOM_BASE_URL is not set, assume production environment
+      // For local development, set CUSTOM_BASE_URL to 'https://kalmnest.test'
+      return productionBackendUrl;
     }
 
     // Physical Device Support
