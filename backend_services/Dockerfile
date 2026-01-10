@@ -26,6 +26,9 @@ RUN a2enmod rewrite
 # Copy application files
 COPY . /var/www/html
 
+# Ensure cert directory exists for Aiven SSL certificate
+RUN mkdir -p /var/www/html/storage/cert
+
 # Set permissions for storage and bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage \

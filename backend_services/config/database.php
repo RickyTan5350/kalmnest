@@ -67,10 +67,29 @@ return [
                 
                 // Enable SSL for Aiven or if explicitly configured
                 if ($isAiven || env('DB_SSL', false)) {
-                    // If CA certificate is provided, use it with verification
-                    if (env('MYSQL_ATTR_SSL_CA')) {
-                        $options[PDO::MYSQL_ATTR_SSL_CA] = env('MYSQL_ATTR_SSL_CA');
-                        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', true);
+                    $sslCa = env('MYSQL_ATTR_SSL_CA');
+                    
+                    // Normalize path (handle Windows paths that might be in env)
+                    if ($sslCa) {
+                        // Convert Windows paths to Linux paths
+                        $sslCa = str_replace('\\', '/', $sslCa);
+                        $sslCa = preg_replace('/^[A-Z]:/', '', $sslCa); // Remove C: drive
+                        $sslCa = preg_replace('/^\/\//', '/', $sslCa); // Fix double slashes
+                        
+                        // If path doesn't start with /, assume it's relative to Laravel root
+                        if (!str_starts_with($sslCa, '/')) {
+                            $sslCa = base_path($sslCa);
+                        }
+                        
+                        // Check if file exists
+                        if (file_exists($sslCa)) {
+                            $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+                            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', true);
+                        } else {
+                            // File doesn't exist, fall back to no verification
+                            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                            $options[PDO::MYSQL_ATTR_SSL_CIPHER] = 'DEFAULT';
+                        }
                     } else {
                         // For Aiven without CA cert: enable SSL but disable verification
                         // This allows connection to Aiven MySQL without CA certificate
@@ -109,10 +128,29 @@ return [
                 
                 // Enable SSL for Aiven or if explicitly configured
                 if ($isAiven || env('DB_SSL', false)) {
-                    // If CA certificate is provided, use it with verification
-                    if (env('MYSQL_ATTR_SSL_CA')) {
-                        $options[PDO::MYSQL_ATTR_SSL_CA] = env('MYSQL_ATTR_SSL_CA');
-                        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', true);
+                    $sslCa = env('MYSQL_ATTR_SSL_CA');
+                    
+                    // Normalize path (handle Windows paths that might be in env)
+                    if ($sslCa) {
+                        // Convert Windows paths to Linux paths
+                        $sslCa = str_replace('\\', '/', $sslCa);
+                        $sslCa = preg_replace('/^[A-Z]:/', '', $sslCa); // Remove C: drive
+                        $sslCa = preg_replace('/^\/\//', '/', $sslCa); // Fix double slashes
+                        
+                        // If path doesn't start with /, assume it's relative to Laravel root
+                        if (!str_starts_with($sslCa, '/')) {
+                            $sslCa = base_path($sslCa);
+                        }
+                        
+                        // Check if file exists
+                        if (file_exists($sslCa)) {
+                            $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+                            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', true);
+                        } else {
+                            // File doesn't exist, fall back to no verification
+                            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                            $options[PDO::MYSQL_ATTR_SSL_CIPHER] = 'DEFAULT';
+                        }
                     } else {
                         // For Aiven without CA cert: enable SSL but disable verification
                         // This allows connection to Aiven MySQL without CA certificate
