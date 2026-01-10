@@ -60,18 +60,27 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? (function() {
                 $options = [];
-                // Only enable SSL if explicitly configured
-                if (env('DB_SSL', false)) {
+                $host = env('DB_HOST', '');
+                
+                // Aiven MySQL requires SSL - detect by hostname pattern
+                $isAiven = strpos($host, 'aivencloud.com') !== false || strpos($host, 'aiven.io') !== false;
+                
+                // Enable SSL for Aiven or if explicitly configured
+                if ($isAiven || env('DB_SSL', false)) {
+                    // If CA certificate is provided, use it with verification
                     if (env('MYSQL_ATTR_SSL_CA')) {
                         $options[PDO::MYSQL_ATTR_SSL_CA] = env('MYSQL_ATTR_SSL_CA');
+                        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', true);
+                    } else {
+                        // For Aiven without CA cert: enable SSL but disable verification
+                        // This allows connection to Aiven MySQL without CA certificate
+                        // Note: Setting this to false enables SSL but skips certificate verification
+                        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                        // Explicitly enable SSL (required for Aiven)
+                        $options[PDO::MYSQL_ATTR_SSL_CIPHER] = 'DEFAULT';
                     }
-                    // For Aiven: disable SSL verification if CA cert not provided
-                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', false);
-                } else {
-                    // For Aiven: if SSL is required but not configured, disable verification
-                    // This allows connection without SSL certificate
-                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
                 }
+                
                 return array_filter($options);
             })() : [],
         ],
@@ -93,18 +102,27 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? (function() {
                 $options = [];
-                // Only enable SSL if explicitly configured
-                if (env('DB_SSL', false)) {
+                $host = env('DB_HOST', '');
+                
+                // Aiven MySQL requires SSL - detect by hostname pattern
+                $isAiven = strpos($host, 'aivencloud.com') !== false || strpos($host, 'aiven.io') !== false;
+                
+                // Enable SSL for Aiven or if explicitly configured
+                if ($isAiven || env('DB_SSL', false)) {
+                    // If CA certificate is provided, use it with verification
                     if (env('MYSQL_ATTR_SSL_CA')) {
                         $options[PDO::MYSQL_ATTR_SSL_CA] = env('MYSQL_ATTR_SSL_CA');
+                        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', true);
+                    } else {
+                        // For Aiven without CA cert: enable SSL but disable verification
+                        // This allows connection to Aiven MySQL without CA certificate
+                        // Note: Setting this to false enables SSL but skips certificate verification
+                        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                        // Explicitly enable SSL (required for Aiven)
+                        $options[PDO::MYSQL_ATTR_SSL_CIPHER] = 'DEFAULT';
                     }
-                    // For Aiven: disable SSL verification if CA cert not provided
-                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', false);
-                } else {
-                    // For Aiven: if SSL is required but not configured, disable verification
-                    // This allows connection without SSL certificate
-                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
                 }
+                
                 return array_filter($options);
             })() : [],
         ],
