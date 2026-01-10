@@ -20,5 +20,30 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Add CORS headers to exception responses
+        $exceptions->render(function (\Throwable $e, $request) {
+            if ($request->is('api/*')) {
+                $origin = $request->headers->get('Origin');
+                $vercelPattern = '#^https://kalmnest-.*\.vercel\.app$#';
+                
+                $response = response()->json([
+                    'message' => 'Server error',
+                    'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                ], 500);
+                
+                // Add CORS headers to error response
+                if ($origin && preg_match($vercelPattern, $origin)) {
+                    $response->headers->set('Access-Control-Allow-Origin', $origin);
+                    $response->headers->set('Access-Control-Allow-Credentials', 'true');
+                } elseif ($origin) {
+                    $response->headers->set('Access-Control-Allow-Origin', $origin);
+                    $response->headers->set('Access-Control-Allow-Credentials', 'true');
+                }
+                
+                $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+                $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-XSRF-TOKEN');
+                
+                return $response;
+            }
+        });
     })->create();

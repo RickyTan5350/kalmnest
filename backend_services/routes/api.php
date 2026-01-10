@@ -55,6 +55,17 @@ Route::get('/health', function () {
 Route::get('/test', function () {
     return response()->json(['message' => 'Laravel connected successfully!']);
 });
+// CORS Test endpoint
+Route::options('/cors-test', function () {
+    return response('', 200);
+});
+Route::get('/cors-test', function (Request $request) {
+    return response()->json([
+        'message' => 'CORS test successful',
+        'origin' => $request->headers->get('Origin'),
+        'headers' => $request->headers->all(),
+    ]);
+});
 
 
 /*

@@ -17,56 +17,44 @@ class CorsMiddleware
     {
         $origin = $request->headers->get('Origin');
         
-        // Define allowed origins (hardcoded for reliability)
-        $allowedOrigins = [
-            'https://kalmnest-one.vercel.app',
-            'https://kalmnest-git-main-tan-li-jis-projects.vercel.app',
-            'https://kalmnest-mclv2vdnk-tan-li-jis-projects.vercel.app',
-            'http://localhost',
-            'http://localhost:3000',
-            'http://127.0.0.1:8000',
-            'https://kalmnest.test',
-        ];
-        
         // Pattern for Vercel preview deployments
         $vercelPattern = '#^https://kalmnest-.*\.vercel\.app$#';
         
-        // Check if origin is allowed
-        $isAllowed = false;
-        if ($origin) {
-            // Check exact match
-            if (in_array($origin, $allowedOrigins)) {
-                $isAllowed = true;
-            } 
-            // Check Vercel pattern
-            elseif (preg_match($vercelPattern, $origin)) {
-                $isAllowed = true;
-            }
-        }
-
         // Handle preflight OPTIONS request
         if ($request->getMethod() === 'OPTIONS') {
-            $response = response('', 200);
+            $response = response()->json([], 200);
         } else {
             $response = $next($request);
         }
 
-        // Add CORS headers
-        if ($isAllowed && $origin) {
-            $response->headers->set('Access-Control-Allow-Origin', $origin);
-            $response->headers->set('Access-Control-Allow-Credentials', 'true');
-        } elseif ($origin && preg_match($vercelPattern, $origin)) {
-            // Allow Vercel preview deployments
-            $response->headers->set('Access-Control-Allow-Origin', $origin);
-            $response->headers->set('Access-Control-Allow-Credentials', 'true');
-        } else {
-            // For debugging: allow the origin if provided
-            if ($origin) {
+        // ALWAYS add CORS headers - check origin and set accordingly
+        if ($origin) {
+            // Check if it's a Vercel domain (pattern match)
+            if (preg_match($vercelPattern, $origin)) {
+                $response->headers->set('Access-Control-Allow-Origin', $origin);
+                $response->headers->set('Access-Control-Allow-Credentials', 'true');
+            } 
+            // Check exact matches
+            elseif (in_array($origin, [
+                'https://kalmnest-one.vercel.app',
+                'https://kalmnest-git-main-tan-li-jis-projects.vercel.app',
+                'https://kalmnest-mclv2vdnk-tan-li-jis-projects.vercel.app',
+                'http://localhost',
+                'http://localhost:3000',
+                'http://127.0.0.1:8000',
+                'https://kalmnest.test',
+            ])) {
+                $response->headers->set('Access-Control-Allow-Origin', $origin);
+                $response->headers->set('Access-Control-Allow-Credentials', 'true');
+            }
+            // Allow any origin for debugging (can be restricted later)
+            else {
                 $response->headers->set('Access-Control-Allow-Origin', $origin);
                 $response->headers->set('Access-Control-Allow-Credentials', 'true');
             }
         }
 
+        // Always add these CORS headers
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-XSRF-TOKEN');
         $response->headers->set('Access-Control-Max-Age', '3600');
