@@ -58,9 +58,22 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('DB_SSL', false) ? env('MYSQL_ATTR_SSL_CA') : null,
-            ]) : [],
+            'options' => extension_loaded('pdo_mysql') ? (function() {
+                $options = [];
+                // Only enable SSL if explicitly configured
+                if (env('DB_SSL', false)) {
+                    if (env('MYSQL_ATTR_SSL_CA')) {
+                        $options[PDO::MYSQL_ATTR_SSL_CA] = env('MYSQL_ATTR_SSL_CA');
+                    }
+                    // For Aiven: disable SSL verification if CA cert not provided
+                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', false);
+                } else {
+                    // For Aiven: if SSL is required but not configured, disable verification
+                    // This allows connection without SSL certificate
+                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                }
+                return array_filter($options);
+            })() : [],
         ],
 
         'mariadb' => [
@@ -78,9 +91,22 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('DB_SSL', false) ? env('MYSQL_ATTR_SSL_CA') : null,
-            ]) : [],
+            'options' => extension_loaded('pdo_mysql') ? (function() {
+                $options = [];
+                // Only enable SSL if explicitly configured
+                if (env('DB_SSL', false)) {
+                    if (env('MYSQL_ATTR_SSL_CA')) {
+                        $options[PDO::MYSQL_ATTR_SSL_CA] = env('MYSQL_ATTR_SSL_CA');
+                    }
+                    // For Aiven: disable SSL verification if CA cert not provided
+                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = env('DB_SSL_VERIFY', false);
+                } else {
+                    // For Aiven: if SSL is required but not configured, disable verification
+                    // This allows connection without SSL certificate
+                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                }
+                return array_filter($options);
+            })() : [],
         ],
 
         'pgsql' => [
