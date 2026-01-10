@@ -40,6 +40,9 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-script
     (composer update --no-dev --optimize-autoloader --no-interaction --no-scripts && \
      composer install --no-dev --optimize-autoloader --no-interaction --no-scripts)
 
+# Regenerate autoloader to ensure all classes are properly mapped
+RUN composer dump-autoload --optimize --no-interaction
+
 # Don't cache config during build (env vars not set yet)
 # Cache will be created at runtime via startup script
 RUN php artisan route:cache || true \
