@@ -13,8 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
-        // Enable CORS
+        // Enable CORS - use both Laravel's HandleCors and custom middleware for reliability
         $middleware->api(prepend: [
+            \App\Http\Middleware\CorsMiddleware::class,
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
     })

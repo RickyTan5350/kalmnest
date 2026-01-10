@@ -17,15 +17,15 @@ return [
 
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['*'],
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
     'allowed_origins' => array_filter([
         // Vercel frontend domains
         'https://kalmnest-one.vercel.app',
         'https://kalmnest-git-main-tan-li-jis-projects.vercel.app',
         'https://kalmnest-mclv2vdnk-tan-li-jis-projects.vercel.app',
-        // Additional frontend URLs from environment
-        env('FRONTEND_URL'),
+        // Additional frontend URLs from environment (remove https:// if present)
+        env('FRONTEND_URL') ? preg_replace('#^https?://#', '', env('FRONTEND_URL')) : null,
         // Local development
         'http://localhost',
         'http://localhost:3000',
@@ -38,7 +38,7 @@ return [
         '#^https://kalmnest-.*\.vercel\.app$#',
     ],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
 
     'exposed_headers' => [],
 
