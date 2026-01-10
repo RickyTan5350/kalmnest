@@ -263,4 +263,81 @@ Kalmnest 是一个教育平台项目，包含 Flutter 前端和 Laravel 后端�
 
 ---
 
+### 2025年1月 - 修复存储权限和 MySQL SSL 配置问题
+
+#### 会话主要目的
+解决生产环境中的两个关键问题：
+1. Laravel 无法写入日志文件（权限被拒绝）
+2. MySQL SSL 连接失败（Aiven 数据库）
+
+#### 完成的主要任务
+1. **修复存储权限问题**
+   - 在 `start.sh` 启动脚本中添加运行时权限修复
+   - 确保 `storage/logs` 目录可写
+   - 修复 `laravel.log` 文件权限
+
+2. **修复 MySQL SSL 配置**
+   - 更新 `config/database.php` 以更好地处理 Aiven MySQL SSL 要求
+   - 使 SSL 配置可选，支持禁用 SSL 验证（当 CA 证书不可用时）
+   - 同时修复 MySQL 和 MariaDB 配置
+
+3. **修复 Apache .htaccess 错误**
+   - 移除 `Header` 指令（Render 的 Apache 未启用 `mod_headers`）
+   - CORS 完全由 PHP 中间件处理
+
+#### 关键决策和解决方案
+
+1. **存储权限修复**
+   - 问题：Docker 构建时设置的权限可能在运行时被重置
+   - 解决方案：在启动脚本中运行时修复权限
+   - 确保日志目录和文件可写
+
+2. **MySQL SSL 配置**
+   - 问题：Aiven MySQL 需要 SSL，但配置不正确导致连接失败
+   - 解决方案：使 SSL 可选，支持禁用 SSL 验证
+   - 允许在没有 CA 证书的情况下连接（适用于 Aiven）
+
+3. **Apache 配置**
+   - 问题：`.htaccess` 中的 `Header` 指令导致 500 错误
+   - 解决方案：移除 Apache 级别的 CORS 配置，完全依赖 PHP 中间件
+
+#### 使用的技术栈
+- **后端框架**: Laravel (PHP 8.4)
+- **Web服务器**: Apache
+- **数据库**: Aiven MySQL (需要 SSL)
+- **部署平台**: Render.com
+- **容器化**: Docker
+
+#### 修改的文件
+1. `backend_services/docker/start.sh`
+   - 添加运行时权限修复
+   - 确保 `storage/logs` 目录和文件可写
+   - 修复 `laravel.log` 文件权限
+
+2. `backend_services/config/database.php`
+   - 更新 MySQL SSL 配置，使其可选
+   - 支持禁用 SSL 验证（适用于 Aiven）
+   - 同时修复 MySQL 和 MariaDB 配置
+
+3. `backend_services/public/.htaccess`
+   - 移除 `Header` 指令（之前已修复）
+   - CORS 完全由 PHP 中间件处理
+
+#### 环境变量配置
+对于 Aiven MySQL SSL 连接，在 Render Dashboard 中设置：
+- `DB_SSL=false` - 如果不需要 SSL（不推荐）
+- `DB_SSL=true` - 如果需要 SSL
+- `MYSQL_ATTR_SSL_CA` - SSL CA 证书路径（如果可用）
+- `DB_SSL_VERIFY=false` - 禁用 SSL 验证（当 CA 证书不可用时）
+
+**注意**：Aiven 通常需要 SSL 连接。如果无法提供 CA 证书，可以设置 `DB_SSL_VERIFY=false` 来禁用 SSL 验证（安全性较低，但可以工作）。
+
+#### 测试验证
+- ✅ 存储权限修复完成
+- ✅ MySQL SSL 配置更新完成
+- ✅ 启动脚本包含权限修复
+- ✅ 数据库配置支持 Aiven SSL 要求
+
+---
+
 **本次回答使用的大模型**: Claude Sonnet 4.5 (Auto - Cursor AI Assistant)
