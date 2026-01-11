@@ -19,9 +19,10 @@ class ApiConstants {
     'CUSTOM_BASE_URL',
     defaultValue: '',
   ); // For production (Vercel) or Expose/Ngrok
-  
+
   // Production backend URL (Render)
-  static const String productionBackendUrl = 'https://kalmnest-9xvv.onrender.com';
+  static const String productionBackendUrl =
+      'https://kalmnest-k2os.onrender.com';
   // ---------------------
 
   /// Base URL for API endpoints (e.g. http://domain/api)
@@ -29,8 +30,8 @@ class ApiConstants {
     // 1. Priority: Custom URL (from environment variable)
     if (customBaseUrl.isNotEmpty) {
       // Remove trailing slash if present
-      final url = customBaseUrl.endsWith('/') 
-          ? customBaseUrl.substring(0, customBaseUrl.length - 1) 
+      final url = customBaseUrl.endsWith('/')
+          ? customBaseUrl.substring(0, customBaseUrl.length - 1)
           : customBaseUrl;
       return '$url/api';
     }
@@ -67,8 +68,8 @@ class ApiConstants {
     // 1. Priority: Custom URL (from environment variable)
     if (customBaseUrl.isNotEmpty) {
       // Remove trailing slash if present
-      return customBaseUrl.endsWith('/') 
-          ? customBaseUrl.substring(0, customBaseUrl.length - 1) 
+      return customBaseUrl.endsWith('/')
+          ? customBaseUrl.substring(0, customBaseUrl.length - 1)
           : customBaseUrl;
     }
 
