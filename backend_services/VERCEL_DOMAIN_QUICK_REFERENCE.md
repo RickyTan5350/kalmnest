@@ -8,7 +8,7 @@
 - `kalmnest-one.vercel.app` (自定义域名)
 
 ### Render 后端
-- `https://kalmnest-9xvv.onrender.com`
+- `https://kalmnest-k2os.onrender.com`
 
 ## ⚡ 快速配置（复制粘贴）
 
@@ -34,11 +34,11 @@ FRONTEND_URL=https://kalmnest-one.vercel.app
 
 ```bash
 # 根据你的框架选择其中一个：
-VITE_API_URL=https://kalmnest-9xvv.onrender.com
+VITE_API_URL=https://kalmnest-k2os.onrender.com
 # 或
-NEXT_PUBLIC_API_URL=https://kalmnest-9xvv.onrender.com
+NEXT_PUBLIC_API_URL=https://kalmnest-k2os.onrender.com
 # 或
-REACT_APP_API_URL=https://kalmnest-9xvv.onrender.com
+REACT_APP_API_URL=https://kalmnest-k2os.onrender.com
 ```
 
 ## ✅ 配置检查清单
@@ -59,12 +59,12 @@ REACT_APP_API_URL=https://kalmnest-9xvv.onrender.com
 
 ```javascript
 // 测试健康检查
-fetch('https://kalmnest-9xvv.onrender.com/api/health', {
+fetch('https://kalmnest-k2os.onrender.com/api/health', {
   credentials: 'include'
 }).then(r => r.json()).then(console.log);
 
 // 测试登录
-fetch('https://kalmnest-9xvv.onrender.com/api/login', {
+fetch('https://kalmnest-k2os.onrender.com/api/login', {
   method: 'POST',
   credentials: 'include',
   headers: { 'Content-Type': 'application/json' },

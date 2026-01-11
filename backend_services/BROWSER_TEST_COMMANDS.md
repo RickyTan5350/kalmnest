@@ -10,7 +10,7 @@
 ## Test 1: Check CORS Configuration (OPTIONS Preflight)
 
 ```javascript
-fetch('https://kalmnest-9xvv.onrender.com/api/login', {
+fetch('https://kalmnest-k2os.onrender.com/api/login', {
   method: 'OPTIONS',
   headers: {
     'Origin': 'https://kalmnest-one.vercel.app',
@@ -47,7 +47,7 @@ fetch('https://kalmnest-9xvv.onrender.com/api/login', {
 ## Test 2: Test Health Endpoint (Simple GET)
 
 ```javascript
-fetch('https://kalmnest-9xvv.onrender.com/api/health', {
+fetch('https://kalmnest-k2os.onrender.com/api/health', {
   method: 'GET',
   credentials: 'include',
   headers: {
@@ -75,7 +75,7 @@ fetch('https://kalmnest-9xvv.onrender.com/api/health', {
 ## Test 3: Test Login Endpoint (POST with device_name)
 
 ```javascript
-fetch('https://kalmnest-9xvv.onrender.com/api/login', {
+fetch('https://kalmnest-k2os.onrender.com/api/login', {
   method: 'POST',
   credentials: 'include',
   headers: {
@@ -132,7 +132,7 @@ curl -X OPTIONS \
   -H "Origin: https://kalmnest-one.vercel.app" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: content-type, authorization" \
-  -v https://kalmnest-9xvv.onrender.com/api/login 2>&1 | grep -i "access-control"
+  -v https://kalmnest-k2os.onrender.com/api/login 2>&1 | grep -i "access-control"
 
 # Test actual POST request
 curl -X POST \
@@ -140,14 +140,14 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{"email":"test@example.com","password":"test","device_name":"curl-test"}' \
-  -v https://kalmnest-9xvv.onrender.com/api/login 2>&1 | grep -i "access-control"
+  -v https://kalmnest-k2os.onrender.com/api/login 2>&1 | grep -i "access-control"
 ```
 
 ## Test 6: Check Response Headers (Detailed)
 
 ```javascript
 // This will show ALL headers in a readable format
-fetch('https://kalmnest-9xvv.onrender.com/api/health', {
+fetch('https://kalmnest-k2os.onrender.com/api/health', {
   method: 'GET',
   credentials: 'include',
 })

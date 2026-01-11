@@ -295,7 +295,7 @@ CACHE_STORE=file
 ### Q: 新服务的 URL 会不同吗？
 
 **A**: 是的，新服务会有新的 URL。例如：
-- 旧: `https://kalmnest-9xvv.onrender.com`
+- 旧: `https://kalmnest-k2os.onrender.com`
 - 新: `https://kalmnest-xxxx.onrender.com` (不同的 ID)
 
 **解决方案**: 更新前端配置中的后端 URL。

@@ -7,13 +7,13 @@ Kalmnest 是一个教育平台项目，包含 Flutter 前端和 Laravel 后端�
 ## 🚀 部署信息
 
 ### 后端服务
-- **生产环境**: https://kalmnest-9xvv.onrender.com
+- **生产环境**: https://kalmnest-k2os.onrender.com
 - **部署平台**: Render.com
 - **技术栈**: Laravel (PHP 8.4) + Apache
 
 ### API 测试
-- **健康检查**: https://kalmnest-9xvv.onrender.com/api/health
-- **连接测试**: https://kalmnest-9xvv.onrender.com/api/test
+- **健康检查**: https://kalmnest-k2os.onrender.com/api/health
+- **连接测试**: https://kalmnest-k2os.onrender.com/api/test
 
 详细测试指南请参考：
 - `backend_services/API_TESTING_GUIDE.md` - 完整API测试文档

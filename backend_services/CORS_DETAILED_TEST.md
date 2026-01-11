@@ -33,7 +33,7 @@ After deployment, test the new CORS test endpoint:
 
 ```javascript
 // Test OPTIONS on CORS test endpoint
-fetch('https://kalmnest-9xvv.onrender.com/api/cors-test', {
+fetch('https://kalmnest-k2os.onrender.com/api/cors-test', {
   method: 'OPTIONS',
   headers: {
     'Origin': 'https://kalmnest-one.vercel.app',
@@ -48,7 +48,7 @@ fetch('https://kalmnest-9xvv.onrender.com/api/cors-test', {
 .catch(console.error);
 
 // Test GET on CORS test endpoint
-fetch('https://kalmnest-9xvv.onrender.com/api/cors-test', {
+fetch('https://kalmnest-k2os.onrender.com/api/cors-test', {
   method: 'GET',
   credentials: 'include',
   headers: {
@@ -76,7 +76,7 @@ fetch('https://kalmnest-9xvv.onrender.com/api/cors-test', {
 ### Step 3: Test Health Endpoint (Should Work)
 
 ```javascript
-fetch('https://kalmnest-9xvv.onrender.com/api/health', {
+fetch('https://kalmnest-k2os.onrender.com/api/health', {
   method: 'GET',
   credentials: 'include',
 })
@@ -109,12 +109,12 @@ curl -X OPTIONS \
   -H "Origin: https://kalmnest-one.vercel.app" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: content-type" \
-  -i https://kalmnest-9xvv.onrender.com/api/login
+  -i https://kalmnest-k2os.onrender.com/api/login
 
 # Test GET health
 curl -X GET \
   -H "Origin: https://kalmnest-one.vercel.app" \
-  -i https://kalmnest-9xvv.onrender.com/api/health
+  -i https://kalmnest-k2os.onrender.com/api/health
 
 # Test POST login (with device_name)
 curl -X POST \
@@ -122,7 +122,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{"email":"test@example.com","password":"test","device_name":"curl-test"}' \
-  -i https://kalmnest-9xvv.onrender.com/api/login
+  -i https://kalmnest-k2os.onrender.com/api/login
 ```
 
 **Look for** `Access-Control-Allow-Origin` in the response headers.

@@ -1,7 +1,7 @@
 # 🚀 快速API测试指南
 
 ## 后端地址
-**Base URL**: `https://kalmnest-9xvv.onrender.com`
+**Base URL**: `https://kalmnest-k2os.onrender.com`
 
 ## ✅ 立即测试（无需工具）
 
@@ -9,19 +9,19 @@
 
 1. **健康检查**（最简单）:
    ```
-   https://kalmnest-9xvv.onrender.com/api/health
+   https://kalmnest-k2os.onrender.com/api/health
    ```
    应该返回：`{"status":"ok","time":"..."}`
 
 2. **连接测试**:
    ```
-   https://kalmnest-9xvv.onrender.com/api/test
+   https://kalmnest-k2os.onrender.com/api/test
    ```
    应该返回：`{"message":"Laravel connected successfully!"}`
 
 3. **根路径**（修复后）:
    ```
-   https://kalmnest-9xvv.onrender.com/
+   https://kalmnest-k2os.onrender.com/
    ```
    应该返回API信息
 
@@ -30,17 +30,17 @@
 1. 打开浏览器（Chrome/Firefox）
 2. 按 `F12` 打开开发者工具
 3. 切换到 "Network"（网络）标签
-4. 在地址栏输入：`https://kalmnest-9xvv.onrender.com/api/health`
+4. 在地址栏输入：`https://kalmnest-k2os.onrender.com/api/health`
 5. 查看响应内容
 
 ## 📱 使用 PowerShell 测试（Windows）
 
 ```powershell
 # 测试健康检查
-Invoke-RestMethod -Uri "https://kalmnest-9xvv.onrender.com/api/health" -Method GET
+Invoke-RestMethod -Uri "https://kalmnest-k2os.onrender.com/api/health" -Method GET
 
 # 测试连接
-Invoke-RestMethod -Uri "https://kalmnest-9xvv.onrender.com/api/test" -Method GET
+Invoke-RestMethod -Uri "https://kalmnest-k2os.onrender.com/api/test" -Method GET
 
 # 测试登录（需要先有用户）
 $loginData = @{
@@ -48,7 +48,7 @@ $loginData = @{
     password = "your-password"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri "https://kalmnest-9xvv.onrender.com/api/login" -Method POST -Body $loginData -ContentType "application/json"
+Invoke-RestMethod -Uri "https://kalmnest-k2os.onrender.com/api/login" -Method POST -Body $loginData -ContentType "application/json"
 ```
 
 ## 🔍 诊断500错误
@@ -76,7 +76,7 @@ Invoke-RestMethod -Uri "https://kalmnest-9xvv.onrender.com/api/login" -Method PO
 
 3. **检查环境变量**（在Render Dashboard中）:
    - `APP_KEY` - 必须设置
-   - `APP_URL` - 应该是 `https://kalmnest-9xvv.onrender.com`
+   - `APP_URL` - 应该是 `https://kalmnest-k2os.onrender.com`
    - `DB_*` - 数据库配置
    - `APP_DEBUG` - 生产环境应该是 `false`
 
@@ -92,21 +92,21 @@ Invoke-RestMethod -Uri "https://kalmnest-9xvv.onrender.com/api/login" -Method PO
 ### cURL（如果已安装）
 ```bash
 # 健康检查
-curl https://kalmnest-9xvv.onrender.com/api/health
+curl https://kalmnest-k2os.onrender.com/api/health
 
 # 测试连接
-curl https://kalmnest-9xvv.onrender.com/api/test
+curl https://kalmnest-k2os.onrender.com/api/test
 ```
 
 ### JavaScript (在浏览器控制台)
 ```javascript
 // 健康检查
-fetch('https://kalmnest-9xvv.onrender.com/api/health')
+fetch('https://kalmnest-k2os.onrender.com/api/health')
   .then(r => r.json())
   .then(console.log);
 
 // 测试连接
-fetch('https://kalmnest-9xvv.onrender.com/api/test')
+fetch('https://kalmnest-k2os.onrender.com/api/test')
   .then(r => r.json())
   .then(console.log);
 ```

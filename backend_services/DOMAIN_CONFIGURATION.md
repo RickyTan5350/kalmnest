@@ -16,7 +16,7 @@
 
 ### Render 后端域名
 
--   **后端地址**: `https://kalmnest-9xvv.onrender.com`
+-   **后端地址**: `https://kalmnest-k2os.onrender.com`
 
 ## ⚙️ Render 后端环境变量配置
 
@@ -41,7 +41,7 @@ SESSION_SAME_SITE=none
 FRONTEND_URL=https://kalmnest-one.vercel.app
 
 # 应用 URL（后端地址）
-APP_URL=https://kalmnest-9xvv.onrender.com
+APP_URL=https://kalmnest-k2os.onrender.com
 ```
 
 ### 详细说明
@@ -107,11 +107,11 @@ FRONTEND_URL=https://kalmnest-one.vercel.app
 
 ```bash
 # 后端 API 地址
-VITE_API_URL=https://kalmnest-9xvv.onrender.com
+VITE_API_URL=https://kalmnest-k2os.onrender.com
 # 或
-NEXT_PUBLIC_API_URL=https://kalmnest-9xvv.onrender.com
+NEXT_PUBLIC_API_URL=https://kalmnest-k2os.onrender.com
 # 或
-REACT_APP_API_URL=https://kalmnest-9xvv.onrender.com
+REACT_APP_API_URL=https://kalmnest-k2os.onrender.com
 ```
 
 **注意**: 根据你使用的前端框架选择正确的变量名：
@@ -130,7 +130,7 @@ APP_NAME=kalmnest
 APP_ENV=production
 APP_KEY=你的应用密钥
 APP_DEBUG=false
-APP_URL=https://kalmnest-9xvv.onrender.com
+APP_URL=https://kalmnest-k2os.onrender.com
 
 # Sanctum 配置
 SANCTUM_STATEFUL_DOMAINS=kalmnest-git-main-tan-li-jis-projects.vercel.app,kalmnest-mclv2vdnk-tan-li-jis-projects.vercel.app,kalmnest-one.vercel.app,localhost,localhost:3000
@@ -164,7 +164,7 @@ LOG_LEVEL=error
 在浏览器控制台（前端域名）运行：
 
 ```javascript
-fetch("https://kalmnest-9xvv.onrender.com/api/health", {
+fetch("https://kalmnest-k2os.onrender.com/api/health", {
     method: "GET",
     credentials: "include", // 重要：包含 cookies
     headers: {
@@ -179,7 +179,7 @@ fetch("https://kalmnest-9xvv.onrender.com/api/health", {
 ### 2. 测试登录
 
 ```javascript
-fetch("https://kalmnest-9xvv.onrender.com/api/login", {
+fetch("https://kalmnest-k2os.onrender.com/api/login", {
     method: "POST",
     credentials: "include", // 重要：包含 cookies
     headers: {

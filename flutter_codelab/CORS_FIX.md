@@ -18,14 +18,14 @@
 
 `lib/constants/api_constants.dart` 已更新：
 - 在 Web 环境下，如果没有设置 `CUSTOM_BASE_URL`，默认使用 Render 后端地址
-- 生产后端 URL: `https://kalmnest-9xvv.onrender.com`
+- 生产后端 URL: `https://kalmnest-k2os.onrender.com`
 
 ### 环境变量配置（可选但推荐）
 
 在 **Vercel Dashboard** → 你的项目 → **Settings** → **Environment Variables** 中设置：
 
 **Key**: `CUSTOM_BASE_URL`  
-**Value**: `https://kalmnest-9xvv.onrender.com`  
+**Value**: `https://kalmnest-k2os.onrender.com`  
 **Environment**: ✅ Production, ✅ Preview
 
 **注意**:
@@ -51,7 +51,7 @@
 3. **检查网络请求**：
    - 打开浏览器开发者工具（F12）
    - 查看 Network 标签
-   - API 请求应该指向 `https://kalmnest-9xvv.onrender.com/api/...`
+   - API 请求应该指向 `https://kalmnest-k2os.onrender.com/api/...`
 
 ## 本地开发配置
 

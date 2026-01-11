@@ -2,14 +2,14 @@
 
 ## 🎯 后端服务地址
 
-**Base URL**: `https://kalmnest-9xvv.onrender.com`
+**Base URL**: `https://kalmnest-k2os.onrender.com`
 
 ## ✅ 健康检查端点（无需认证）
 
 ### 1. 基础健康检查
 
 ```bash
-GET https://kalmnest-9xvv.onrender.com/api/health
+GET https://kalmnest-k2os.onrender.com/api/health
 ```
 
 **预期响应**:
@@ -24,7 +24,7 @@ GET https://kalmnest-9xvv.onrender.com/api/health
 ### 2. 连接测试
 
 ```bash
-GET https://kalmnest-9xvv.onrender.com/api/test
+GET https://kalmnest-k2os.onrender.com/api/test
 ```
 
 **预期响应**:
@@ -40,7 +40,7 @@ GET https://kalmnest-9xvv.onrender.com/api/test
 ### 3. 用户注册
 
 ```bash
-POST https://kalmnest-9xvv.onrender.com/api/user
+POST https://kalmnest-k2os.onrender.com/api/user
 Content-Type: application/json
 
 {
@@ -54,7 +54,7 @@ Content-Type: application/json
 ### 4. 用户登录
 
 ```bash
-POST https://kalmnest-9xvv.onrender.com/api/login
+POST https://kalmnest-k2os.onrender.com/api/login
 Content-Type: application/json
 
 {
@@ -82,10 +82,10 @@ Content-Type: application/json
 
 ```powershell
 # 健康检查
-Invoke-WebRequest -Uri "https://kalmnest-9xvv.onrender.com/api/health" -Method GET
+Invoke-WebRequest -Uri "https://kalmnest-k2os.onrender.com/api/health" -Method GET
 
 # 连接测试
-Invoke-WebRequest -Uri "https://kalmnest-9xvv.onrender.com/api/test" -Method GET
+Invoke-WebRequest -Uri "https://kalmnest-k2os.onrender.com/api/test" -Method GET
 
 # 登录（需要先注册用户）
 $body = @{
@@ -93,20 +93,20 @@ $body = @{
     password = "password123"
 } | ConvertTo-Json
 
-Invoke-WebRequest -Uri "https://kalmnest-9xvv.onrender.com/api/login" -Method POST -Body $body -ContentType "application/json"
+Invoke-WebRequest -Uri "https://kalmnest-k2os.onrender.com/api/login" -Method POST -Body $body -ContentType "application/json"
 ```
 
 ### Linux/Mac (cURL)
 
 ```bash
 # 健康检查
-curl https://kalmnest-9xvv.onrender.com/api/health
+curl https://kalmnest-k2os.onrender.com/api/health
 
 # 连接测试
-curl https://kalmnest-9xvv.onrender.com/api/test
+curl https://kalmnest-k2os.onrender.com/api/test
 
 # 登录
-curl -X POST https://kalmnest-9xvv.onrender.com/api/login \
+curl -X POST https://kalmnest-k2os.onrender.com/api/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"password123"}'
 ```
@@ -115,8 +115,8 @@ curl -X POST https://kalmnest-9xvv.onrender.com/api/login \
 
 直接在浏览器中访问以下 URL：
 
-1. **健康检查**: https://kalmnest-9xvv.onrender.com/api/health
-2. **连接测试**: https://kalmnest-9xvv.onrender.com/api/test
+1. **健康检查**: https://kalmnest-k2os.onrender.com/api/health
+2. **连接测试**: https://kalmnest-k2os.onrender.com/api/test
 
 ## 🧪 使用 Postman 测试
 
@@ -132,12 +132,12 @@ curl -X POST https://kalmnest-9xvv.onrender.com/api/login \
 **健康检查**:
 
 -   Method: `GET`
--   URL: `https://kalmnest-9xvv.onrender.com/api/health`
+-   URL: `https://kalmnest-k2os.onrender.com/api/health`
 
 **登录**:
 
 -   Method: `POST`
--   URL: `https://kalmnest-9xvv.onrender.com/api/login`
+-   URL: `https://kalmnest-k2os.onrender.com/api/login`
 -   Headers: `Content-Type: application/json`
 -   Body (raw JSON):
 
@@ -159,7 +159,7 @@ Authorization: Bearer {your_token}
 ### 示例：获取当前用户信息
 
 ```bash
-GET https://kalmnest-9xvv.onrender.com/api/user
+GET https://kalmnest-k2os.onrender.com/api/user
 Headers:
   Authorization: Bearer 1|xxxxxxxxxxxxx
 ```

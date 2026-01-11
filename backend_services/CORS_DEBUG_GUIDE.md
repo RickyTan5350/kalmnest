@@ -4,7 +4,7 @@
 
 ### Current Error
 ```
-Access to fetch at 'https://kalmnest-9xvv.onrender.com/api/login' 
+Access to fetch at 'https://kalmnest-k2os.onrender.com/api/login' 
 from origin 'https://kalmnest-one.vercel.app' 
 has been blocked by CORS policy: 
 No 'Access-Control-Allow-Origin' header is present on the requested resource.
@@ -62,7 +62,7 @@ Open your frontend at `https://kalmnest-one.vercel.app` and run:
 
 ```javascript
 // Test OPTIONS preflight request
-fetch('https://kalmnest-9xvv.onrender.com/api/login', {
+fetch('https://kalmnest-k2os.onrender.com/api/login', {
   method: 'OPTIONS',
   headers: {
     'Origin': 'https://kalmnest-one.vercel.app',
@@ -88,7 +88,7 @@ fetch('https://kalmnest-9xvv.onrender.com/api/login', {
 ### Step 2: Test Health Endpoint
 
 ```javascript
-fetch('https://kalmnest-9xvv.onrender.com/api/health', {
+fetch('https://kalmnest-k2os.onrender.com/api/health', {
   method: 'GET',
   credentials: 'include',
   headers: {
@@ -105,7 +105,7 @@ fetch('https://kalmnest-9xvv.onrender.com/api/health', {
 ### Step 3: Test Login Endpoint
 
 ```javascript
-fetch('https://kalmnest-9xvv.onrender.com/api/login', {
+fetch('https://kalmnest-k2os.onrender.com/api/login', {
   method: 'POST',
   credentials: 'include',
   headers: {
@@ -139,7 +139,7 @@ curl -X OPTIONS \
   -H "Origin: https://kalmnest-one.vercel.app" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: content-type" \
-  -v https://kalmnest-9xvv.onrender.com/api/login
+  -v https://kalmnest-k2os.onrender.com/api/login
 
 # Test actual request
 curl -X POST \
@@ -147,7 +147,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{"email":"test@example.com","password":"test"}' \
-  -v https://kalmnest-9xvv.onrender.com/api/login
+  -v https://kalmnest-k2os.onrender.com/api/login
 ```
 
 **Expected Result**: Should see CORS headers in response.
@@ -171,7 +171,7 @@ SESSION_SAME_SITE=none
 FRONTEND_URL=https://kalmnest-one.vercel.app
 
 # App URL
-APP_URL=https://kalmnest-9xvv.onrender.com
+APP_URL=https://kalmnest-k2os.onrender.com
 ```
 
 ### Vercel Frontend (Optional)
@@ -179,7 +179,7 @@ APP_URL=https://kalmnest-9xvv.onrender.com
 In **Vercel Dashboard** → **Settings** → **Environment Variables**:
 
 ```bash
-CUSTOM_BASE_URL=https://kalmnest-9xvv.onrender.com
+CUSTOM_BASE_URL=https://kalmnest-k2os.onrender.com
 ```
 
 ## Debugging Checklist
